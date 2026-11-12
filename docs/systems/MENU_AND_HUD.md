@@ -1,6 +1,6 @@
 # MENU AND HUD
 
-**Status:** Current · **Last updated:** 2026-10-03 · **Verified against:** the playtest menu commit
+**Status:** Current · **Last updated:** 2026-11-12 · **Verified against:** the playtest menu commit
 
 ## What happens in the game
 
@@ -8,11 +8,13 @@ The game opens on a menu card over the scene: the title, whether you're on Steam
 
 In game the menu is gone: a crosshair in the centre, **Esc · Menu** top-left and the network readout bottom-left. **Esc** opens the menu again. While the menu is open the mouse is free and your character stands still, so clicking never moves, jumps or fires.
 
+In a scene with the briefcase match ([MATCH.md](MATCH.md)) the card also carries a match section above the in-game buttons: where the match stands, the result and how it was won, and the host's **Start the match** / **Rematch** (clients read "The host can start a rematch."). The match opens the menu when it ends. The HUD adds the clock (top centre), both firms' briefcase and checkpoint (top right, yours first, cyan and amber), the countdown, the F / G prompt under the crosshair and one-off lines at the bottom.
+
 Greybox: this is a playtest tool, not the final lobby. The final one lives in the reception with the secretary (GDD).
 
 ## Rules the menu keeps
 
-- **Menu open ⇔ mouse free ⇔ player idle.** One script (`GameMenu`) owns all three so they can't disagree. If something else frees the mouse (the editor's own Esc, alt-tab), the menu opens to match.
+- **Menu open ⇔ mouse free ⇔ player idle.** One script (`GameMenu`) owns all three so they can't disagree; others open it only through `GameMenu.Open()` and close it through `Resume()`. If something else frees the mouse (the editor's own Esc, alt-tab), the menu opens to match.
 - The menu opens by itself whenever you have no player: before joining, after leaving, and when the connection drops.
 - Every wait says what it's doing in the status line ("Creating a Steam lobby…", "Joining lobby…", "Connecting to Adam's game…").
 - A failed join explains itself in the status line, in plain words: friends-only, full, a version mismatch, or a host that can't be reached.

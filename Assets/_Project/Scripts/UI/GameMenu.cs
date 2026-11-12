@@ -103,6 +103,13 @@ namespace CloseTheDeal.UI
                 SetOpen(false);
         }
 
+        /// <summary>Opens the menu from outside (the match ending, say). The rule holds: mouse free, player idle.</summary>
+        public void Open()
+        {
+            if (_inGame && !_open)
+                SetOpen(true);
+        }
+
         void SetOpen(bool open)
         {
             _open = open;
