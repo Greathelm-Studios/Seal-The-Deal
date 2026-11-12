@@ -7,10 +7,10 @@ using UnityEngine;
 namespace CloseTheDeal.MatchMode
 {
     /// <summary>
-    /// The briefcase game mode: two firms, one briefcase each, first to carry theirs onto
-    /// their roof wins. This scene object holds the whole match as read-only state for the
-    /// HUD and menu, synced from the host only when something changes, with an event for
-    /// every change. The host's decisions are in MatchDirector.Host.cs and MatchReferee.
+    /// The briefcase game mode: two firms, one shared briefcase, and the firm whose player
+    /// carries it onto a roof wins. This scene object holds the whole match as read-only state
+    /// for the HUD and menu, synced from the host only when something changes, with an event
+    /// for every change. The host's decisions are in MatchDirector.Host.cs and MatchReferee.
     /// A firm's index is the index of the building it climbs. Design: docs/systems/MATCH.md.
     /// </summary>
     [DisallowMultipleComponent]
@@ -32,25 +32,28 @@ namespace CloseTheDeal.MatchMode
         /// <summary>Previous phase, new phase.</summary>
         public event Action<MatchPhase, MatchPhase> OnPhaseChanged;
 
-        /// <summary>Whole seconds left before the briefcases unlock.</summary>
+        /// <summary>Whole seconds left before the briefcase unlocks.</summary>
         public event Action<int> OnCountdownChanged;
 
         /// <summary>Whole seconds left on the match clock.</summary>
         public event Action<int> OnClockChanged;
 
-        /// <summary>A firm's briefcase or checkpoint changed: firm, before, after.</summary>
-        public event Action<int, FirmStatus, FirmStatus> OnFirmChanged;
+        /// <summary>Anything about the briefcase changed: before, after.</summary>
+        public event Action<BriefcaseStatus, BriefcaseStatus> OnBriefcaseChanged;
 
+        /// <summary>Picked up: the carrier's firm.</summary>
         public event Action<int> OnBriefcasePickedUp;
+
+        /// <summary>Let go: the firm that was carrying it.</summary>
         public event Action<int> OnBriefcaseDropped;
 
-        /// <summary>A briefcase left its building and is on its way back to the checkpoint.</summary>
-        public event Action<int> OnBriefcaseReturning;
+        /// <summary>It left the buildings and is on its way back.</summary>
+        public event Action OnBriefcaseReturning;
 
-        /// <summary>A briefcase reappeared at its firm's checkpoint.</summary>
-        public event Action<int> OnBriefcaseReturned;
+        /// <summary>It reappeared on a skybridge or the plaza.</summary>
+        public event Action OnBriefcaseReturned;
 
-        /// <summary>Firm, checkpoint floor.</summary>
+        /// <summary>Firm, checkpoint floor: where that firm's players now come back after a fall.</summary>
         public event Action<int, int> OnCheckpointSaved;
 
         public event Action<MatchSnapshot> OnMatchEnded;
@@ -63,11 +66,15 @@ namespace CloseTheDeal.MatchMode
         [Tooltip("Tuning for the match: firms, clock, briefcase handling. Read at runtime, never written.")]
         [SerializeField] MatchProfile _profile;
 
+        [Tooltip("The plaza and skybridges between the towers. Without them the briefcase spawns on Building A's reception desk and nobody can cross.")]
+        [SerializeField] MatchCrossings _crossings;
+
         // ---- Synced state --------------------------------------------------------------------
 
         readonly SyncVar<MatchSnapshot> _snapshot = new();
-        readonly SyncVar<FirmStatus> _firmA = new();
-        readonly SyncVar<FirmStatus> _firmB = new();
+        readonly SyncVar<BriefcaseStatus> _briefcase = new();
+        readonly SyncVar<byte> _checkpointA = new();
+        readonly SyncVar<byte> _checkpointB = new();
 
         readonly MatchArena _arena = new();
         TowerBuilder _tower;
@@ -86,6 +93,10 @@ namespace CloseTheDeal.MatchMode
 
         public MatchPhase Phase => _snapshot.Value.Phase;
         public MatchSnapshot Snapshot => _snapshot.Value;
+        public BriefcaseStatus CaseStatus => _briefcase.Value;
+
+        /// <summary>The firm's last checkpoint floor; 0 = its reception.</summary>
+        public int CheckpointFloor(int firm) => firm == 0 ? _checkpointA.Value : _checkpointB.Value;
 
         /// <summary>Whole seconds left on the match clock; the full match length before it starts.</summary>
         public int SecondsLeft
@@ -99,8 +110,6 @@ namespace CloseTheDeal.MatchMode
             }
         }
 
-        public FirmStatus Firm(int firm) => firm == 0 ? _firmA.Value : _firmB.Value;
-
         public FirmDefinition Definition(int firm) => _profile.FirmInTower(firm);
 
         public string FirmName(int firm)
@@ -109,22 +118,25 @@ namespace CloseTheDeal.MatchMode
             return definition != null ? definition.DisplayName : "Firm " + (firm + 1);
         }
 
-        /// <summary>The player carrying this firm's briefcase on this machine, or null.</summary>
-        public FirmMember Carrier(int firm)
+        /// <summary>The player carrying the briefcase on this machine, or null.</summary>
+        public FirmMember Carrier()
         {
-            FirmStatus status = Firm(firm);
+            BriefcaseStatus status = _briefcase.Value;
             return status.State == BriefcaseState.Carried ? FirmMember.Find(status.CarrierId) : null;
         }
 
         public bool IsCarrying(FirmMember member)
         {
-            FirmStatus status = Firm(member.Firm);
+            BriefcaseStatus status = _briefcase.Value;
             return status.State == BriefcaseState.Carried && status.CarrierId == member.ObjectId;
         }
 
         /// <summary>How this firm is coloured on this screen: your own firm, the rival, or its own colour when you have no side.</summary>
         public Color ColourFor(int firm)
         {
+            if (firm == NoFirm)
+                return _profile.LooseColour;
+
             FirmMember local = FirmMember.Local;
             if (local == null)
             {
@@ -135,24 +147,34 @@ namespace CloseTheDeal.MatchMode
             return local.Firm == firm ? _profile.OwnFirmColour : _profile.RivalFirmColour;
         }
 
+        /// <summary>Where the briefcase is, in words for the HUD: "Floor 3, your tower", "the skybridge on Checkpoint 1", "the plaza".</summary>
+        public string PlaceLabel(byte place, int floor)
+        {
+            if (place == MatchArena.Neutral)
+                return floor == 0 ? "the plaza" : "the skybridge on " + _arena.FloorLabel(floor);
+            if (place >= FirmCount)
+                return "outside the buildings";
+
+            FirmMember local = FirmMember.Local;
+            string tower = local == null ? FirmName(place) + "'s tower" : local.Firm == place ? "your tower" : "the rival tower";
+            return _arena.FloorLabel(floor) + ", " + tower;
+        }
+
         /// <summary>What the member's interact or drop key would do right now.</summary>
         public MatchPrompt PromptFor(FirmMember member)
         {
             if (!_live || Phase != MatchPhase.Running)
                 return MatchPrompt.None;
-
-            FirmStatus own = Firm(member.Firm);
-            if (own.State == BriefcaseState.Carried)
-                return own.CarrierId == member.ObjectId ? MatchPrompt.DropBriefcase : MatchPrompt.None;
-
-            return CanGrab(member, member.Firm) ? MatchPrompt.PickUpBriefcase : MatchPrompt.None;
+            if (IsCarrying(member))
+                return MatchPrompt.DropBriefcase;
+            return CanGrab(member) ? MatchPrompt.PickUpBriefcase : MatchPrompt.None;
         }
 
-        /// <summary>The firm's briefcase lies loose, within the member's reach, with nothing solid between it and their eye.</summary>
-        bool CanGrab(FirmMember member, int firm)
+        /// <summary>The briefcase lies loose, within the member's reach, with nothing solid between it and their eye.</summary>
+        bool CanGrab(FirmMember member)
         {
-            Briefcase briefcase = Briefcase.Of(firm);
-            if (briefcase == null || Firm(firm).State != BriefcaseState.Dropped)
+            Briefcase briefcase = Briefcase.Current;
+            if (briefcase == null || _briefcase.Value.State != BriefcaseState.Dropped)
                 return false;
 
             Vector3 centre = briefcase.Centre;
@@ -160,14 +182,8 @@ namespace CloseTheDeal.MatchMode
             if ((centre - member.Chest).sqrMagnitude > range * range)
                 return false;
 
-            return InReach(member, centre);
-        }
-
-        /// <summary>Nothing solid between the member's eye and the point: no reaching or kicking through walls.</summary>
-        internal bool InReach(FirmMember member, Vector3 point)
-        {
             Vector3 eye = member.Position + Vector3.up * member.Motor.EyeHeight;
-            return !Physics.Linecast(eye, point, _solidMask, QueryTriggerInteraction.Ignore);
+            return !Physics.Linecast(eye, centre, _solidMask, QueryTriggerInteraction.Ignore);
         }
 
         // ---- Lifecycle -----------------------------------------------------------------------
@@ -201,8 +217,9 @@ namespace CloseTheDeal.MatchMode
             _secondsLeft = -1;
 
             _snapshot.OnChange += OnSnapshotChanged;
-            _firmA.OnChange += OnFirmAChanged;
-            _firmB.OnChange += OnFirmBChanged;
+            _briefcase.OnChange += OnBriefcaseStatusChanged;
+            _checkpointA.OnChange += OnCheckpointAChanged;
+            _checkpointB.OnChange += OnCheckpointBChanged;
             TimeManager.OnPostTick += OnPostTick;
 
             if (_tower == null)
@@ -211,10 +228,13 @@ namespace CloseTheDeal.MatchMode
                 return;
             }
 
+            if (_crossings == null)
+                Debug.LogWarning("[Match] No MatchCrossings on the Match object: no plaza or skybridges, so the briefcase starts in Building A's reception and nobody can cross.");
+
             _tower.OnBuilt += OnTowerBuilt;
             _tower.OnCleared += OnTowerCleared;
             if (_tower.IsBuilt)
-                _arena.Refresh(_tower);
+                RefreshArena();
         }
 
         public override void OnStartClient()
@@ -223,7 +243,8 @@ namespace CloseTheDeal.MatchMode
             if (!_live)
                 return;
 
-            RefreshBriefcases();
+            if (Briefcase.Current != null)
+                Briefcase.Current.Register();
             OnStarted?.Invoke();
         }
 
@@ -232,8 +253,9 @@ namespace CloseTheDeal.MatchMode
             base.OnStopNetwork();
             _live = false;
             _snapshot.OnChange -= OnSnapshotChanged;
-            _firmA.OnChange -= OnFirmAChanged;
-            _firmB.OnChange -= OnFirmBChanged;
+            _briefcase.OnChange -= OnBriefcaseStatusChanged;
+            _checkpointA.OnChange -= OnCheckpointAChanged;
+            _checkpointB.OnChange -= OnCheckpointBChanged;
             TimeManager.OnPostTick -= OnPostTick;
             if (_tower != null)
             {
@@ -241,33 +263,34 @@ namespace CloseTheDeal.MatchMode
                 _tower.OnCleared -= OnTowerCleared;
             }
 
+            if (_crossings != null)
+                _crossings.Clear();
             _arena.Clear();
             OnClosed?.Invoke();
         }
 
         void OnTowerBuilt()
         {
-            _arena.Refresh(_tower);
-            OnArenaChanged?.Invoke();
+            RefreshArena();
             // The tower can finish building before this object has started as the server; OnStartServer prepares the round then.
             if (IsServerStarted && _referee != null)
                 ServerPrepareRound();
         }
 
-        void OnTowerCleared()
+        /// <summary>Floors, then the plaza and bridges on top of them, then everyone told.</summary>
+        void RefreshArena()
         {
-            _arena.Clear();
+            _arena.Refresh(_tower);
+            if (_crossings != null)
+                _crossings.Build(_arena, _profile);
+            OnArenaChanged?.Invoke();
         }
 
-        /// <summary>Briefcases that spawned before the match was live here take up its state now.</summary>
-        void RefreshBriefcases()
+        void OnTowerCleared()
         {
-            for (int firm = 0; firm < FirmCount; firm++)
-            {
-                Briefcase briefcase = Briefcase.Of(firm);
-                if (briefcase != null)
-                    briefcase.Register();
-            }
+            if (_crossings != null)
+                _crossings.Clear();
+            _arena.Clear();
         }
 
         // ---- Changes arriving ----------------------------------------------------------------
@@ -288,42 +311,46 @@ namespace CloseTheDeal.MatchMode
                 OnMatchEnded?.Invoke(next);
         }
 
-        void OnFirmAChanged(FirmStatus previous, FirmStatus next, bool asServer) => HandleFirmChanged(0, previous, next, asServer);
-        void OnFirmBChanged(FirmStatus previous, FirmStatus next, bool asServer) => HandleFirmChanged(1, previous, next, asServer);
-
-        void HandleFirmChanged(int firm, FirmStatus previous, FirmStatus next, bool asServer)
+        void OnBriefcaseStatusChanged(BriefcaseStatus previous, BriefcaseStatus next, bool asServer)
         {
             if (asServer != IsServerStarted)
                 return;
 
-            Briefcase briefcase = Briefcase.Of(firm);
-            if (briefcase != null)
-                briefcase.Apply(next);
+            if (Briefcase.Current != null)
+                Briefcase.Current.Apply(next);
 
-            OnFirmChanged?.Invoke(firm, previous, next);
-            if (previous.State != next.State)
-                RaiseBriefcaseEvent(firm, previous.State, next.State);
-            if (next.CheckpointFloor > previous.CheckpointFloor)
-                OnCheckpointSaved?.Invoke(firm, next.CheckpointFloor);
+            OnBriefcaseChanged?.Invoke(previous, next);
+            if (previous.State != next.State || previous.CarrierId != next.CarrierId)
+                RaiseBriefcaseEvent(previous, next);
         }
 
-        void RaiseBriefcaseEvent(int firm, BriefcaseState previous, BriefcaseState next)
+        void RaiseBriefcaseEvent(BriefcaseStatus previous, BriefcaseStatus next)
         {
-            switch (next)
+            if (previous.State == BriefcaseState.Carried && previous.CarrierFirm != NoFirm)
+                OnBriefcaseDropped?.Invoke(previous.CarrierFirm);
+
+            switch (next.State)
             {
                 case BriefcaseState.Carried:
-                    OnBriefcasePickedUp?.Invoke(firm);
+                    OnBriefcasePickedUp?.Invoke(next.CarrierFirm);
                     break;
                 case BriefcaseState.Returning:
-                    OnBriefcaseReturning?.Invoke(firm);
+                    OnBriefcaseReturning?.Invoke();
                     break;
                 default:
-                    if (previous == BriefcaseState.Returning)
-                        OnBriefcaseReturned?.Invoke(firm);
-                    else
-                        OnBriefcaseDropped?.Invoke(firm);
+                    if (previous.State == BriefcaseState.Returning)
+                        OnBriefcaseReturned?.Invoke();
                     break;
             }
+        }
+
+        void OnCheckpointAChanged(byte previous, byte next, bool asServer) => HandleCheckpoint(0, previous, next, asServer);
+        void OnCheckpointBChanged(byte previous, byte next, bool asServer) => HandleCheckpoint(1, previous, next, asServer);
+
+        void HandleCheckpoint(int firm, byte previous, byte next, bool asServer)
+        {
+            if (asServer == IsServerStarted && next > previous)
+                OnCheckpointSaved?.Invoke(firm, next);
         }
 
         // ---- Clock ---------------------------------------------------------------------------

@@ -28,6 +28,9 @@ namespace CloseTheDeal.Tower
         /// <summary>Host only. Asked first for where a joining player appears; null or false means the team lobby.</summary>
         public static SpawnChooser SpawnOverride;
 
+        /// <summary>The spawner on the NetworkManager, or null when there is none.</summary>
+        public static TeamSpawner Instance { get; private set; }
+
         [Tooltip("The networked player prefab.")]
         [SerializeField] NetworkObject _playerPrefab;
 
@@ -56,6 +59,7 @@ namespace CloseTheDeal.Tower
 
         void Awake()
         {
+            Instance = this;
             _networkManager = GetComponentInParent<NetworkManager>();
             if (_networkManager == null)
                 _networkManager = InstanceFinder.NetworkManager;
@@ -73,6 +77,8 @@ namespace CloseTheDeal.Tower
 
         void OnDestroy()
         {
+            if (Instance == this)
+                Instance = null;
             if (_networkManager == null)
                 return;
 
@@ -125,13 +131,39 @@ namespace CloseTheDeal.Tower
             }
         }
 
+        /// <summary>
+        /// Host only. Moves a connected player to the given team, as a lobby that chose the teams
+        /// decides, keeping the head counts the next joiner is balanced against. Returns their
+        /// slot in the new team (which picks their spawn point).
+        /// </summary>
+        public int AssignTeam(int clientId, int team)
+        {
+            if (_seats.Remove(clientId, out Seat old))
+            {
+                if (old.Team == team)
+                {
+                    _seats[clientId] = old;
+                    return old.Slot;
+                }
+
+                _playersPerTeam[old.Team]--;
+                _slotsInUse[old.Team] &= ~(1 << old.Slot);
+            }
+
+            return SitDown(clientId, team).Slot;
+        }
+
         /// <summary>The team with fewer players (A on a tie) and the lowest free slot in it.</summary>
         Seat TakeSeat(int clientId)
         {
             if (_seats.TryGetValue(clientId, out Seat existing))
                 return existing;
 
-            int team = _playersPerTeam[1] < _playersPerTeam[0] ? 1 : 0;
+            return SitDown(clientId, _playersPerTeam[1] < _playersPerTeam[0] ? 1 : 0);
+        }
+
+        Seat SitDown(int clientId, int team)
+        {
             int slot = 0;
             while (slot < SlotsPerTeam - 1 && (_slotsInUse[team] & (1 << slot)) != 0)
                 slot++;

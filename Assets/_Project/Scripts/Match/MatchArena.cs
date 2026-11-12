@@ -1,16 +1,23 @@
+using System.Collections.Generic;
 using CloseTheDeal.Tower;
 using UnityEngine;
 
 namespace CloseTheDeal.MatchMode
 {
     /// <summary>
-    /// Answers "where in the towers is this point": which floor, inside which building, and
-    /// what that floor is called. Worked out from the built towers on every machine, so no
-    /// trigger volumes are needed and nothing here is networked. A firm's index is its
-    /// building's index.
+    /// Answers "where in the match is this point": which floor, inside which building or on
+    /// the neutral ground between them (the plaza and the skybridges), and what that floor is
+    /// called. Worked out from the built towers on every machine, so no trigger volumes are
+    /// needed and nothing here is networked. A firm's index is its building's index.
     /// </summary>
     public sealed class MatchArena
     {
+        /// <summary>Place value for the plaza and the skybridges: neither firm's building.</summary>
+        public const byte Neutral = 2;
+
+        /// <summary>Place value for anywhere the match does not count as in play.</summary>
+        public const byte Outside = byte.MaxValue;
+
         /// <summary>How far below a floor's surface still counts as that floor, in metres: the last steps of the stairs up to it.</summary>
         const float FloorSnap = 0.3f;
 
@@ -21,17 +28,22 @@ namespace CloseTheDeal.MatchMode
         TowerProfile _profile;
         string[] _labels = new string[0];
 
+        // Neutral ground, as boxes in Building A's own space (origin at its reception's window edge).
+        readonly List<Bounds> _neutral = new();
+
         public bool Ready => _tower != null && _tower.IsBuilt && _labels.Length > 0;
         public int FloorCount => _labels.Length;
         public int RoofFloor => _labels.Length - 1;
+        public TowerProfile Profile => _profile;
 
-        /// <summary>Re-reads the towers. Call after every build.</summary>
+        /// <summary>Re-reads the towers. Call after every build. Clears the neutral ground; the crossings add it back.</summary>
         public void Refresh(TowerBuilder tower)
         {
             _tower = tower;
             _profile = tower != null ? tower.Profile : null;
             int count = tower != null ? tower.FloorCount : 0;
             _labels = new string[count];
+            _neutral.Clear();
 
             int office = 0;
             int checkpoint = 0;
@@ -42,6 +54,7 @@ namespace CloseTheDeal.MatchMode
         public void Clear()
         {
             _labels = new string[0];
+            _neutral.Clear();
         }
 
         static string Label(FloorKind kind, ref int office, ref int checkpoint)
@@ -67,17 +80,49 @@ namespace CloseTheDeal.MatchMode
             return floor > 0 && floor < _labels.Length && _tower.FloorKindAt(floor) == FloorKind.Checkpoint;
         }
 
-        /// <summary>The floor a point is on in the given building, by height alone, clamped to the building.</summary>
-        public int FloorOf(Vector3 world, int tower)
+        // ---- Neutral ground ------------------------------------------------------------------
+
+        /// <summary>Marks a box, given in Building A's own space, as neutral ground that counts as in play.</summary>
+        public void AddNeutral(Bounds inBuildingASpace)
         {
-            float height = Local(world, tower).y + FloorSnap;
+            _neutral.Add(inBuildingASpace);
+        }
+
+        public bool InNeutral(Vector3 world)
+        {
+            Vector3 local = Local(world, 0);
+            for (int i = 0; i < _neutral.Count; i++)
+            {
+                if (_neutral[i].Contains(local))
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>Building 0, building 1, Neutral, or Outside. The margin widens each building's walls.</summary>
+        public byte PlaceOf(Vector3 world, float margin)
+        {
+            if (Inside(world, 0, margin))
+                return 0;
+            if (Inside(world, 1, margin))
+                return 1;
+            return InNeutral(world) ? Neutral : Outside;
+        }
+
+        // ---- Floors and buildings ------------------------------------------------------------
+
+        /// <summary>The floor a point is on by height alone, clamped to the buildings. Both buildings and the plaza share the same ground.</summary>
+        public int FloorOf(Vector3 world)
+        {
+            float height = Local(world, 0).y + FloorSnap;
             return Mathf.Clamp(Mathf.FloorToInt(height / _profile.FloorHeight), 0, RoofFloor);
         }
 
         /// <summary>True when the point stands on the surface of that floor (or above it), not on the stairs below.</summary>
-        public bool OnFloorSurface(Vector3 world, int tower, int floor)
+        public bool OnFloorSurface(Vector3 world, int floor)
         {
-            return Local(world, tower).y >= floor * _profile.FloorHeight - 0.05f;
+            return Local(world, 0).y >= floor * _profile.FloorHeight - 0.05f;
         }
 
         /// <summary>True when the point is within the building's walls, widened by the margin, at or above its ground floor.</summary>
@@ -89,17 +134,6 @@ namespace CloseTheDeal.MatchMode
             return local.y > -1f && Mathf.Abs(local.x) <= halfWidth && local.z <= margin && local.z >= -depth;
         }
 
-        public bool InsideAny(Vector3 world, float margin)
-        {
-            for (int tower = 0; tower < TowerBuilder.TeamCount; tower++)
-            {
-                if (Inside(world, tower, margin))
-                    return true;
-            }
-
-            return false;
-        }
-
         /// <summary>True when the point has dropped well below the street: through the world, or not a real position at all.</summary>
         public bool Sunk(Vector3 world)
         {
@@ -107,7 +141,7 @@ namespace CloseTheDeal.MatchMode
             return !(y > -SunkDepth) || float.IsNaN(world.x) || float.IsNaN(world.z);
         }
 
-        /// <summary>A point given in a floor's own space (origin at the centre of its window edge, +Z facing the rival), as a world position.</summary>
+        /// <summary>A point given in a building's own space at a floor's height (origin at the centre of its window edge, +Z facing the rival), as a world position.</summary>
         public Vector3 FloorPoint(int tower, int floor, Vector3 localOnFloor)
         {
             Transform root = _tower.BuildingRoot(tower);

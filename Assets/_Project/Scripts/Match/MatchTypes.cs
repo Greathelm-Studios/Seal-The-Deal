@@ -15,22 +15,22 @@ namespace CloseTheDeal.MatchMode
     public enum MatchEndReason : byte
     {
         None = 0,
-        /// <summary>A player carried their firm's briefcase onto their roof.</summary>
+        /// <summary>A player carried the briefcase onto a roof.</summary>
         BriefcaseOnRoof = 1,
-        /// <summary>The clock ran out and one briefcase was on a higher floor.</summary>
-        ClockHighestBriefcase = 2,
-        /// <summary>The clock ran out with both briefcases on the same floor; the winner's got there first.</summary>
-        ClockFirstToFloor = 3,
-        /// <summary>The clock ran out and nothing separates the firms. No winner.</summary>
-        ClockDeadHeat = 4
+        /// <summary>The clock ran out while a player of the winning firm held the briefcase.</summary>
+        ClockHolding = 2,
+        /// <summary>The clock ran out with the briefcase lying loose; the firm that carried it last wins.</summary>
+        ClockLastCarried = 3,
+        /// <summary>The clock ran out and nobody ever picked the briefcase up. No winner.</summary>
+        ClockNeverCarried = 4
     }
 
     public enum BriefcaseState : byte
     {
-        /// <summary>Lying loose: on the reception desk, where it was dropped, or where it was put back.</summary>
+        /// <summary>Lying loose: where it spawned, where it was dropped, or where it was put back.</summary>
         Dropped = 0,
         Carried = 1,
-        /// <summary>It left its building and is on its way back to the firm's last checkpoint.</summary>
+        /// <summary>It left the buildings and is on its way back.</summary>
         Returning = 2
     }
 
@@ -47,9 +47,8 @@ namespace CloseTheDeal.MatchMode
     public enum MatchNotice : byte
     {
         RoofNeedsBriefcase = 0,
-        RivalBriefcase = 1,
-        FellOut = 2,
-        BriefcaseKnockedLoose = 3
+        FellOut = 1,
+        BriefcaseKnockedLoose = 2
     }
 
     /// <summary>What the interact or drop key would do right now, for the local player's prompt.</summary>
@@ -66,25 +65,31 @@ namespace CloseTheDeal.MatchMode
         public MatchPhase Phase;
         /// <summary>Host tick at which this phase began. Everyone works the clock out from it locally.</summary>
         public uint PhaseTick;
-        /// <summary>Tower index of the winning firm, or MatchDirector.NoFirm.</summary>
+        /// <summary>Index of the winning firm, or MatchDirector.NoFirm.</summary>
         public byte Winner;
         public MatchEndReason Reason;
         /// <summary>Seconds the match had run when it ended.</summary>
         public ushort EndSeconds;
-        /// <summary>Floor the deciding briefcase was on when the match ended.</summary>
+        /// <summary>Floor the briefcase was on when the match ended.</summary>
         public byte EndFloor;
     }
 
-    /// <summary>One firm's briefcase and progress. Synced host to everyone, only when it changes.</summary>
-    public struct FirmStatus
+    /// <summary>The one briefcase. Synced host to everyone, only when it changes.</summary>
+    public struct BriefcaseStatus
     {
         public BriefcaseState State;
         /// <summary>Network object id of the player carrying it. Only meaningful while Carried.</summary>
         public int CarrierId;
-        /// <summary>Floor the briefcase is on, counted from reception = 0, in its own tower.</summary>
-        public byte BriefcaseFloor;
-        /// <summary>The firm's last saved checkpoint floor; 0 means reception.</summary>
-        public byte CheckpointFloor;
+        /// <summary>Firm of the player carrying it, or NoFirm.</summary>
+        public byte CarrierFirm;
+        /// <summary>Firm of the last player to carry it, or NoFirm if nobody has yet. Decides the clock when it lies loose.</summary>
+        public byte LastCarrierFirm;
+        /// <summary>Where it is: building 0, building 1, or MatchArena.Neutral (the plaza or a skybridge).</summary>
+        public byte Place;
+        /// <summary>Floor it is on, counted from reception and the plaza = 0.</summary>
+        public byte Floor;
+        /// <summary>The highest checkpoint floor it has been on; where it comes back to if it leaves the buildings. 0 = its spawn.</summary>
+        public byte ReturnFloor;
         /// <summary>Where it was last let go or put back, in world space.</summary>
         public Vector3 Position;
     }

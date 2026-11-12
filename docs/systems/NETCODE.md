@@ -26,7 +26,7 @@ Stack: **FishNet 4.7.3** (the pinned tag; its own version strings still say 4.7.
 | Knockback | Host only | Inside the body state | On hit |
 | Props (furniture) | **Host** simulates; clients hold them kinematic | Position and rotation, via NetworkTransform; see [PROPS.md](PROPS.md) | While moving, 30/s |
 | Towers | Host picks a seed; everyone builds locally; see [TOWER.md](TOWER.md) | One number | Once, and per rematch |
-| Match, firms, briefcases | **Host**; see [MATCH.md](MATCH.md) | Phase and firm status SyncVars; loose briefcase transform | On change; briefcase 30/s only while moving |
+| Match, firms, the briefcase | **Host**; see [MATCH.md](MATCH.md) | Phase, briefcase status and checkpoint SyncVars; loose briefcase transform | On change; briefcase 30/s only while moving |
 
 ## Transports
 

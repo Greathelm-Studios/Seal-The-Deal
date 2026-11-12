@@ -4,10 +4,11 @@ using UnityEngine;
 namespace CloseTheDeal.MatchMode
 {
     /// <summary>
-    /// The in-game match readout: clock, each firm's briefcase and checkpoint, the countdown,
-    /// the key prompt, and one-off lines such as why the roof did nothing. Text changes only
-    /// when the match raises an event; Update only fades and pops what is already showing.
-    /// Greybox look, built by the lane setup tool. Design: docs/systems/MATCH.md.
+    /// The in-game match readout: clock, where the briefcase is and who holds it, each firm's
+    /// checkpoint, the countdown, the key prompt, and one-off lines such as why the roof did
+    /// nothing. Text changes only when the match raises an event; Update only fades and pops
+    /// what is already showing. Greybox look, built by the lane setup tool.
+    /// Design: docs/systems/MATCH.md.
     /// </summary>
     public sealed class MatchHud : MonoBehaviour
     {
@@ -15,6 +16,8 @@ namespace CloseTheDeal.MatchMode
         [SerializeField] MatchDirector _match;
         [SerializeField] GameObject _root;
         [SerializeField] TMP_Text _clockText;
+        [SerializeField] TMP_Text _briefcaseText;
+        [SerializeField] UnityEngine.UI.Image _briefcaseSwatch;
         [SerializeField] TMP_Text _ownText;
         [SerializeField] UnityEngine.UI.Image _ownSwatch;
         [SerializeField] TMP_Text _rivalText;
@@ -49,9 +52,10 @@ namespace CloseTheDeal.MatchMode
             _match.OnPhaseChanged += OnPhaseChanged;
             _match.OnCountdownChanged += OnCountdownChanged;
             _match.OnClockChanged += ShowClock;
-            _match.OnFirmChanged += OnFirmChanged;
+            _match.OnBriefcaseChanged += OnBriefcaseChanged;
             _match.OnCheckpointSaved += OnCheckpointSaved;
-            _match.OnBriefcaseReturning += OnBriefcaseReturning;
+            _match.OnBriefcasePickedUp += OnPickedUp;
+            _match.OnBriefcaseReturning += OnReturning;
             _match.OnArenaChanged += RefreshRows;
             FirmMember.OnLocalChanged += RefreshRows;
             FirmMember.OnNotice += OnNotice;
@@ -70,9 +74,10 @@ namespace CloseTheDeal.MatchMode
             _match.OnPhaseChanged -= OnPhaseChanged;
             _match.OnCountdownChanged -= OnCountdownChanged;
             _match.OnClockChanged -= ShowClock;
-            _match.OnFirmChanged -= OnFirmChanged;
+            _match.OnBriefcaseChanged -= OnBriefcaseChanged;
             _match.OnCheckpointSaved -= OnCheckpointSaved;
-            _match.OnBriefcaseReturning -= OnBriefcaseReturning;
+            _match.OnBriefcasePickedUp -= OnPickedUp;
+            _match.OnBriefcaseReturning -= OnReturning;
             _match.OnArenaChanged -= RefreshRows;
             FirmMember.OnLocalChanged -= RefreshRows;
             FirmMember.OnNotice -= OnNotice;
@@ -118,7 +123,7 @@ namespace CloseTheDeal.MatchMode
             }
 
             if (next == MatchPhase.Running)
-                Say("The quarter is open. Get your firm's briefcase to the roof.");
+                Say("The quarter is open. Get the briefcase onto a roof.");
         }
 
         // ---- Clock and countdown -------------------------------------------------------------
@@ -149,11 +154,11 @@ namespace CloseTheDeal.MatchMode
                 _countdownPopped = -1f;
         }
 
-        // ---- Firm rows -----------------------------------------------------------------------
+        // ---- Rows ----------------------------------------------------------------------------
 
-        void OnFirmChanged(int firm, FirmStatus previous, FirmStatus next)
+        void OnBriefcaseChanged(BriefcaseStatus previous, BriefcaseStatus next)
         {
-            RefreshRows();
+            RefreshBriefcaseRow();
         }
 
         void RefreshRows()
@@ -164,33 +169,48 @@ namespace CloseTheDeal.MatchMode
             FirmMember local = FirmMember.Local;
             int own = local != null ? local.Firm : 0;
             int rival = 1 - own;
-            _ownText.text = Row(own, local != null ? "YOUR FIRM" : "FIRM", local);
-            _rivalText.text = Row(rival, local != null ? "RIVAL FIRM" : "FIRM", local);
+            _ownText.text = FirmRow(own, local != null ? "YOUR FIRM" : "FIRM");
+            _rivalText.text = FirmRow(rival, local != null ? "RIVAL FIRM" : "FIRM");
             _ownSwatch.color = _match.ColourFor(own);
             _rivalSwatch.color = _match.ColourFor(rival);
+            RefreshBriefcaseRow();
         }
 
-        string Row(int firm, string tag, FirmMember local)
+        string FirmRow(int firm, string tag)
         {
-            FirmStatus status = _match.Firm(firm);
-            MatchArena arena = _match.Arena;
-            string where = arena.FloorLabel(status.BriefcaseFloor);
-            string saved = status.CheckpointFloor > 0 ? arena.FloorLabel(status.CheckpointFloor) : "Reception";
-            return $"<size=70%>{tag}</size>  <b>{_match.FirmName(firm)}</b>\nBriefcase: {BriefcaseLine(firm, status, where, local)}\n<size=85%>Comes back to: {saved}</size>";
+            int checkpoint = _match.CheckpointFloor(firm);
+            string back = checkpoint > 0 ? _match.Arena.FloorLabel(checkpoint) : "Reception";
+            return $"<size=70%>{tag}</size>  <b>{_match.FirmName(firm)}</b>\n<size=85%>Back to: {back}</size>";
         }
 
-        static string BriefcaseLine(int firm, FirmStatus status, string where, FirmMember local)
+        void RefreshBriefcaseRow()
         {
+            if (!_match.IsLive)
+                return;
+
+            BriefcaseStatus status = _match.CaseStatus;
+            byte holder = status.State == BriefcaseState.Carried ? status.CarrierFirm : MatchDirector.NoFirm;
+            _briefcaseSwatch.color = _match.ColourFor(holder);
+            string place = _match.PlaceLabel(status.Place, status.Floor);
+            string where = status.State == BriefcaseState.Returning ? "Coming back to " + place : place;
+            _briefcaseText.text = $"<size=70%>BRIEFCASE</size>  <b>{Holder(status)}</b>\n<size=85%>{where}</size>";
+        }
+
+        string Holder(BriefcaseStatus status)
+        {
+            FirmMember local = FirmMember.Local;
             switch (status.State)
             {
                 case BriefcaseState.Carried:
                     if (local != null && status.CarrierId == local.ObjectId)
-                        return $"with you, {where}";
-                    return local != null && local.Firm == firm ? $"with a colleague, {where}" : $"being carried, {where}";
+                        return "You have it";
+                    if (local != null)
+                        return status.CarrierFirm == local.Firm ? "Your firm has it" : "The rival firm has it";
+                    return _match.FirmName(status.CarrierFirm) + " has it";
                 case BriefcaseState.Returning:
-                    return "left the building, coming back";
+                    return "Left the buildings";
                 default:
-                    return $"lying loose, {where}";
+                    return "Nobody has it";
             }
         }
 
@@ -211,18 +231,15 @@ namespace CloseTheDeal.MatchMode
             if (local == null || !_match.IsLive)
                 return;
 
-            FirmStatus own = _match.Firm(local.Firm);
-            MatchArena arena = _match.Arena;
             switch (notice)
             {
                 case MatchNotice.RoofNeedsBriefcase:
-                    Say($"The roof only counts with your firm's briefcase. It is on {arena.FloorLabel(own.BriefcaseFloor)}.");
-                    break;
-                case MatchNotice.RivalBriefcase:
-                    Say("That briefcase belongs to the other firm. Walk into it to kick it away.");
+                    BriefcaseStatus status = _match.CaseStatus;
+                    Say($"The roof only counts with the briefcase. It is on {_match.PlaceLabel(status.Place, status.Floor)}.");
                     break;
                 case MatchNotice.FellOut:
-                    Say($"You left the building. Back to {arena.FloorLabel(own.CheckpointFloor)}.");
+                    int checkpoint = _match.CheckpointFloor(local.Firm);
+                    Say($"You left the building. Back to {(checkpoint > 0 ? _match.Arena.FloorLabel(checkpoint) : "Reception")}.");
                     break;
                 case MatchNotice.BriefcaseKnockedLoose:
                     Say("You dropped the briefcase.");
@@ -230,24 +247,30 @@ namespace CloseTheDeal.MatchMode
             }
         }
 
+        void OnPickedUp(int firm)
+        {
+            FirmMember local = FirmMember.Local;
+            if (local == null || _match.IsCarrying(local))
+                return;
+
+            Say(firm == local.Firm ? "Your firm has the briefcase. Keep them climbing." : "The rival firm has the briefcase. Take it off them.");
+        }
+
         void OnCheckpointSaved(int firm, int floor)
         {
+            RefreshRows();
             FirmMember local = FirmMember.Local;
             string label = _match.Arena.FloorLabel(floor);
             if (local != null && local.Firm == firm)
-                Say($"{label} saved. Your firm and its briefcase come back here.");
+                Say($"{label} reached. Your firm comes back here after a fall.");
             else
                 Say($"The rival firm reached {label}.");
         }
 
-        void OnBriefcaseReturning(int firm)
+        void OnReturning()
         {
-            FirmMember local = FirmMember.Local;
-            if (local == null || local.Firm != firm)
-                return;
-
-            string label = _match.Arena.FloorLabel(_match.Firm(firm).CheckpointFloor);
-            Say($"Your briefcase left the building. It comes back to {label}.");
+            BriefcaseStatus status = _match.CaseStatus;
+            Say($"The briefcase left the buildings. It comes back to {_match.PlaceLabel(status.Place, status.Floor)}.");
         }
 
         void Say(string line)

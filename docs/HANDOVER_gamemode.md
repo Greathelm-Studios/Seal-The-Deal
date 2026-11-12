@@ -4,93 +4,96 @@
 
 ## Goal
 
-Two rival law firms race up their towers. Each has a briefcase in reception; the first firm to carry its own briefcase onto its own roof wins. At 15:00 the higher briefcase wins. The system is in [systems/MATCH.md](systems/MATCH.md).
+Two rival law firms race for one shared briefcase; the firm whose player carries it onto either roof wins. At 15:00 the firm holding it (or that carried it last) wins. The system is in [systems/MATCH.md](systems/MATCH.md).
 
 ```
 Match (host-owned, synced on change)
 
- Waiting ──Start (host, menu)──▶ Countdown 5 s ──▶ Running ──roof with own case──▶ Ended
-   ▲                                                  │      ──clock 15:00───────▶ (winner, reason)
-   │                                                  │                              │
-   └───────────────── Rematch (host): new seed, everyone to reception ◀──────────────┘
+ Waiting ──Start (host menu) or HostStartRun (lobby)──▶ Countdown 5 s ──▶ Running ──carrier on either roof──▶ Ended
+   ▲                                                                       │      ──clock 15:00───────────▶ (winner, reason)
+   └──────────────── Rematch (host): new seed, everyone to reception, case to the plaza ◀───────────────────────┘
 
-Briefcase (one per firm, never despawned)
+The one briefcase (never despawned)
 
- Dropped ──F, own firm, in reach──▶ Carried ──G / knocked / fell out / left game──▶ Dropped
-    │  ▲                                                                              
-    │  └── back at checkpoint after 3 s ── Returning ◀── outside its building 2 s ── Dropped
-    └── rival walks into it: kicked (stays Dropped)
+ Dropped ──F, anyone in reach──▶ Carried ──G / knocked / fell out / left game──▶ Dropped
+    └── outside buildings, plaza and bridges 2 s ──▶ Returning ──3 s──▶ Dropped on the highest checkpoint's skybridge (or the plaza)
 ```
 
 ## Where it stands
 
-**Ready for review**, not approved. Committed on this branch as "Add the briefcase game mode: two firms, a match clock and a roof win".
+**Ready for review**, not approved. Three commits on this branch:
 
-- Built: firms synced to every client and late joiners, the match flow, the clock, the briefcase (pick up, carry, hand off, knock-loose, disconnect drop, rival kick, return to checkpoint), checkpoints, fall-out respawn, roof win, clock win with the tie rule, rematch, the HUD readout and the menu's match section.
-- Test scene: `Scenes/Lanes/Lane_GameMode.unity`: towers of reception, two floors, Checkpoint 1, boardroom, roof.
+- "Add the briefcase game mode: two firms, a match clock and a roof win" and "Correct the game mode handover's verification notes and doc dates": the first per-firm version, now superseded.
+- "Rework the game mode around one shared briefcase, a plaza and skybridges": the current rules.
+
+Not built yet: the floor gate (nobody climbs above the highest floor the briefcase has been carried onto). It is the next slice.
 
 ## What was checked
 
-- **Compile:** `node ~/.claude/skills/compile-check/compile-check.mjs`: PASS, 0 errors. A headless Unity open of the worktree also logged 0 `error CS`.
-- **Solo Play mode, host only** (headless editor, scripted driver; clip `gamemode_solo_run.mp4` in the lane sessions' shared notes folder, showing the earlier striped case): 18/18 checks passed.
-  - Countdown blocks pick-up; pick up; carry up; Checkpoint 1 saved; G drops.
-  - Roof without the case: notice, no win. Roof with it: win at 00:15.
-  - Rematch resets to reception with checkpoints cleared.
-  - Carrier blasted out of the boardroom window: case dropped, player back on Checkpoint 1 after 1.2 s, case returning 2 s later, back on Checkpoint 1 3 s after that.
-  - Clock end, higher floor wins. Clock end with both in reception: "No deal."
-  - Leaving clears both briefcases and every player.
+- **Compile:** `node ~/.claude/skills/compile-check/compile-check.mjs`: PASS, 0 errors.
+- **Solo Play mode, host only** (headless editor, scripted driver; clip `gamemode_shared_briefcase.mp4` in the lane sessions' shared notes folder): 26/26 checks passed.
+  - The case spawns on the plaza exactly 6 m from both window walls.
+  - Reception → plaza over the sill on real physics.
+  - Pick up; checkpoint saves firm A's respawn and the case's return floor.
+  - **Crossed the Checkpoint 1 skybridge into Building B on real physics** (over both sills, between the pillars), empty-handed.
+  - Carried it onto the **rival tower's roof**: win for the carrier's firm.
+  - A fall while the result is showing is caught.
+  - Rematch resets checkpoints and returns the case to the plaza.
+  - Roof without the case: notice, no win.
+  - Carrier blasted over the bridge rail: case dropped, player back on Checkpoint 1, case back on the bridge centre 2 s + 3 s later, still exactly one case.
+  - Clock with the case held: holder's firm wins. Dropped: last carrier's firm wins. Never carried: "No deal."
+  - `HostStartRun` moved the host to firm 1 and started a run from Building B's reception.
 - **Host + one client, then a second client** (two editors on one Mac over loopback, not Steam):
-  - The client learned its firm. Its HUD tracked the rival case live (Checkpoint 1 → Boardroom → Roof).
-  - Same-floor clock tie: both saw "Ashcombe & Pryce, got there first".
-  - Same-tick roofs: both saw Halloran Voss win (B reached the boardroom first).
-  - Rival's F on the other firm's case: told why, case not taken; walking into it kicked it about 4 m.
-  - Carrier quit mid-carry: case dropped where they stood, still exactly two cases.
-  - Mid-match joiner: spawned on their firm's saved checkpoint (reception when none).
-  - Host left: client's match closed and its HUD hid.
-- **Complexity:** `lizard -l csharp Assets/_Project/Scripts/Match`: highest CC 9 (`MatchMenuPanel.Refresh`), nothing at 11+.
-- **Bandwidth, 8 players:** match state is a few bytes per event, nothing per frame. The worst steady cost is two loose cases moving at 30/s to 7 clients, about 8 KB/s from the host, and zero once they settle.
+  - **Steal:** the host carrier was knocked, the client of the rival firm picked the case up and won on Building B's roof. Both machines showed "Halloran Voss sealed the deal."
+  - **Same-tick grab:** both players beside the case, both requests handled in the same tick: exactly one got it (the first handled).
+  - The client saw the case as amber "The rival firm has it, Checkpoint 1, the rival tower" when it joined mid-match.
+  - **Carrier quit mid-carry:** case dropped where they stood, one case.
+  - **Mid-match joiner:** spawned on their firm's Checkpoint 1.
+  - **Host left:** the client's match closed and its HUD hid.
+- **Complexity:** `lizard -l csharp Assets/_Project/Scripts/Match`: highest CC 10 (`MatchDirector.RaiseBriefcaseEvent`), nothing at 11+.
+- **Bandwidth, 8 players:** match state is a few bytes per event, nothing per frame. The worst steady cost is the loose case moving at 30/s to 7 clients, about **4 KB/s** from the host, and zero once it settles.
 - **Not seen:**
-  - The climb was teleported. Carrying up the real spiral, through a locked door, or mantling with the case was never played.
+  - Climbing the real stairs and mantling onto a bridge by key press: the climb was teleported, and the crossing was driven by knockback shoves.
+  - Steal by a real client key press (the client's grab was its own F request; the host knock was scripted).
+  - Steal while the carrier is on a bridge.
   - Steam, and real latency.
   - Pad bindings.
-  - The final briefcase look: it was rebuilt to a solid firm colour after the last capture.
-  - The rival kick after it gained a line-of-sight check (the kick pass above ran before it), and the fall-out return while waiting in reception or on the results screen (added after the multiplayer run; the solo run passed with it).
-  - A run at a frame target in a build.
+  - A run in a build.
 
-## Open questions and risks
+## Rules for Adam to confirm (most important first)
 
-Rules I had to assume, for Adam to confirm (most important first):
+1. **Interact is F, not E.** You said E, but E is lean-right in the shared controls and the shared Interact is already F. It is one constant in `FirmMember` to switch.
+2. **One shared briefcase; anyone can take it; carrying it onto either roof wins for the carrier's firm.** Your words; the "either roof" part is the orchestrator's default.
+3. **It spawns on a plaza between the two towers**, level with both receptions and the same distance from each. Assumption.
+4. **Skybridges on every checkpoint floor**, built only in the lane scene (and any scene where you run Add GameMode To Open Scene). The tower geometry is unchanged. **Crossing is a design decision**: the zipline gun is not built. Assumption.
+5. **A case that leaves the buildings comes back** after 2 s + 3 s to the skybridge of the highest checkpoint floor it has been on, or to the plaza. Assumption.
+6. **A firm's respawn point moves when any of its players stands on a checkpoint floor of their own tower.** The briefcase no longer saves anything per firm. Assumption.
+7. **At 15:00:** the firm holding the case wins; if it lies loose, the firm that carried it last; if nobody ever picked it up, no winner. Proposal.
+8. **Firm names, proposed:** Ashcombe & Pryce (Building A), Halloran Voss (Building B).
+9. **Timings:** countdown 5 s, stray 2 s plus return 3 s, fall 1.2 s.
+10. **Rematch builds new towers from a new seed.**
+11. **Teams balance by head count** when nobody chooses them; a lobby can set them with `HostStartRun`.
+12. **The host starts the match** from the menu until the lobby lane calls `HostStartRun`.
 
-1. **Interact is F, not E.** You said E, but E is lean-right in the shared actions asset, and the asset's own Interact is already F. It is one constant in `FirmMember` to switch.
-2. **Each firm has its own briefcase.** A firm wins the moment one of its players carries its own case onto its own roof.
-3. **Firm names, proposed:** Ashcombe & Pryce (Building A), Halloran Voss (Building B).
-4. **15:00 tie on the same floor goes to the case that reached that floor first** (proposal).
-5. **Dead heat** (both cases never left reception, or the same tick): no winner, "No deal." My own invention.
-6. **Both roofs in the same tick:** the case that reached the boardroom first wins, then Building A.
-7. **Rivals kick, never carry**, a loose briefcase: 0.8 m, 7 m/s, 0.6 s cooldown.
-8. **Checkpoints save only when carried onto with the briefcase.** Reaching one empty-handed saves nothing.
-9. **Clock win reads the floor the case is on now**, not the highest it reached, so a kick down the stairs costs you.
-10. **Timings:** countdown 5 s, stray 2 s plus return 3 s, fall 1.2 s.
-11. **Rematch builds new towers from a new seed.**
-12. **Teams balance by head count**, and a leaver's place is reused.
-13. **The host starts the match** from the menu until the secretary exists.
+GDD mismatches (the GDD is the authority on design; your 2026-11-12 words win for this mode; GDD not edited):
 
-GDD mismatches (GDD is the authority on design; owner's 2026-11-12 words win for this mode; GDD not edited):
+- GDD: "first team to reach the roof wins". Here reaching a roof needs the briefcase.
+- GDD: at the cap "the team that has climbed highest wins". Here the case's holder or last carrier wins.
+- GDD: the secretary starts the run. Here the host's menu button does, or the lobby.
+- GDD: killed on a floor respawns there after 5 s. There is no health in this branch; only the window-exit-to-checkpoint rule is built.
+- The brief says checkpoints on floors 3, 6 and 9. The tower inserts a checkpoint floor after every 3 offices, so they are stack floors 4, 8 and 12 (named Checkpoint 1–3).
+- The game's name is now "Seal the Deal"; the greybox menu still says "CLOSE THE DEAL" (`GreyboxUiSetup.cs`, not this lane's).
 
-- GDD: "first team to reach the roof wins". Here reaching the roof needs your briefcase.
-- GDD: at the cap "the team that has climbed highest wins". Here the highest briefcase wins.
-- GDD: the secretary starts the run. Here the host's menu button does.
-- GDD: killed on a floor respawns there after 5 s. There is no health in this branch, so only the window-exit-to-checkpoint rule is built.
-- The brief says checkpoints on floors 3, 6 and 9. The tower inserts a checkpoint floor after every 3 offices, so they are stack floors 4, 8 and 12 (named Checkpoint 1–3). Same intent, different numbering.
+## Risks and known issues
 
-Risks:
-
-- **Key clash with the pickups lane:** both use G (and d-pad down) for Drop, so one press would drop an item and the briefcase together. Their Interact is E. Settle it in the shared actions asset at merge (note in the shared notes folder).
-- **A briefcase wedged unreachably inside the building has no recovery.** Only leaving the building sends it back.
-- **The gap counts as a fall:** a future zipline crossing over 1.2 s will send the rider back.
+- **Key clash with the pickups lane:** both use G (and d-pad down) to drop, so one press would drop an item and the briefcase together. Their Interact is E. Settle it in the shared actions asset at merge.
+- **Player.prefab:** Alex's animation work rebuilds it with the STDMC model under `Graphics/Lean/Body`. Set Up GameMode adds `CarryAnchor` under `Graphics/Lean` and `FirmMember` on the root, so it survives that hierarchy, but re-run it after any Player.prefab rebuild.
+- **The bridge sits in the middle window bay,** which is clear at the default 28 m width. Another `TowerProfile` width can put a pillar in it.
+- **A briefcase wedged unreachably inside a building has no recovery.**
+- **The gap counts as a fall** except the plaza and bridges, so a future zipline crossing over 1.2 s will send its rider back.
 - **Blasts don't move the briefcase yet:** wire `Briefcase.Throw` into `Knockback.Explode`.
 - **The setup tool assigns FishNet scene ids through a FishNet internal**, `NetworkObject.CreateSceneId`, by reflection. A FishNet update could break it; the tool then logs what to do by hand.
-- Setup on the current `Player.prefab` logs "Left Player.prefab alone: it has been edited". That is the guard's check, not a failure; the component is still added.
+- Setup on an edited `Player.prefab` logs "Left Player.prefab alone: it has been edited". That is the guard's check, not a failure.
 - **The one thing that still makes it feel like a demo:** the win is a silent text card. No roof moment, no secretary line, no sound, and nothing carries into the next match.
 
 ## Merge steps
@@ -98,14 +101,25 @@ Risks:
 1. Merge this branch. Expect conflicts in:
    - `Player.prefab` and `Assets/DefaultPrefabObjects.asset`: take the other side.
    - `docs/systems/NETCODE.md` owner table and `docs/DECISIONS.md` top line: keep both lines.
-2. Open the merged project and run **Close the Deal > Lanes > Set Up GameMode**. It adds `FirmMember` and `CarryAnchor` back to `Player.prefab` and rebuilds the lane scene if it is missing. FishNet then re-adds the briefcase to its prefab list.
-3. To play the mode in another scene with the tower and game UI (for example `Greybox.unity`, once its owner agrees), open it and run **Close the Deal > Lanes > Add GameMode To Open Scene**.
-4. Fold the lane-local inputs into the shared actions asset (movement lane):
+2. Open the merged project and run **Close the Deal > Lanes > Set Up GameMode**. It re-adds `FirmMember` and `CarryAnchor` to `Player.prefab` and rebuilds the lane scene if it is missing; FishNet re-adds the briefcase to its prefab list.
+3. To play the mode in another scene with the tower and game UI, open it and run **Close the Deal > Lanes > Add GameMode To Open Scene** (adds the match, plaza and skybridges, HUD and menu section).
+4. **Lobby lane:** call `MatchDirector.Instance.HostStartRun(firmByClientId)` from `RunStartRequested`: a client id → firm (0 = Building A, 1 = Building B) map. It moves those players and their `TeamSpawner` seats, then starts the run.
+5. Fold the lane-local inputs into the shared actions asset (movement lane):
    - Interact: F / pad North.
    - Drop: G / d-pad down.
    - Then point `FirmMember` at the shared actions and settle the clash with the pickups lane.
-5. **Close the Deal > Lanes > Rebuild GameMode Briefcase** rewrites the briefcase prefab, only while nobody has edited it.
+
+## How to test it by hand
+
+Open `Scenes/Lanes/Lane_GameMode.unity`, press Play, then:
+
+1. **Host game**, then **Esc** and **Start the match**. You should see a 5-4-3-2-1 countdown.
+2. Climb over the reception window sill onto the plaza (jump at it and hold forward). Press **F** at the brown case. It turns cyan in your hand, and the top-right row says "You have it".
+3. Climb to Checkpoint 1. The bottom line says your firm comes back there.
+4. Go to the window and climb onto the skybridge; cross into the rival tower.
+5. Press **G** to drop the case, go up to a roof without it: "The roof only counts with the briefcase."
+6. Fetch it and carry it onto either roof: "Ashcombe & Pryce sealed the deal." and **Rematch**.
 
 ## Next steps
 
-Adam plays `Lane_GameMode.unity` (Host game, then Start the match in Esc) and confirms or changes the rules above; then a two-PC Steam session.
+Build the floor gate (slice B), then Adam plays the lane scene and confirms the rules above, then a two-PC Steam session.

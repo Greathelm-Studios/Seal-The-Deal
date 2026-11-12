@@ -1,79 +1,63 @@
-using System;
 using CloseTheDeal.Player;
 using FishNet.Component.Transforming;
 using FishNet.Object;
-using FishNet.Object.Synchronizing;
 using UnityEngine;
 
 namespace CloseTheDeal.MatchMode
 {
     /// <summary>
-    /// A firm's briefcase: the objective. The host simulates it while it lies loose; everyone
-    /// else holds it still and follows the host through NetworkTransform, like furniture.
-    /// While carried the networked body stays parked where it was picked up, switched off, and
-    /// only the visual follows the carrier on each machine, so carrying costs no traffic.
-    /// Its state lives on the MatchDirector; this only shows it. Design: docs/systems/MATCH.md.
+    /// The one briefcase of the match: the objective either firm can carry. The host simulates
+    /// it while it lies loose; everyone else holds it still and follows the host through
+    /// NetworkTransform, like furniture. While carried the networked body stays parked where
+    /// it was picked up, switched off, and only the visual follows the carrier on each
+    /// machine, so carrying costs no traffic. Its state lives on the MatchDirector; this only
+    /// shows it. Design: docs/systems/MATCH.md.
     /// </summary>
     [DefaultExecutionOrder(200)] // After the player camera has moved, so the carrier's own view never lags a frame.
     [RequireComponent(typeof(Rigidbody), typeof(NetworkTransform))]
     public sealed class Briefcase : NetworkBehaviour
     {
-        /// <summary>A rival kicked this briefcase. Raised on every machine, for sound and effects.</summary>
-        public static event Action<Briefcase> OnKicked;
-
         [Tooltip("The part that is seen. It leaves the body to follow the carrier's hand and comes back when dropped.")]
         [SerializeField] Transform _visual;
 
-        [Tooltip("The parts tinted by firm: your own firm's colour or the rival's, as set on the match profile.")]
+        [Tooltip("The parts tinted to show who holds it: your firm's colour, the rival's, or the loose colour from the match profile.")]
         [SerializeField] Renderer[] _firmMarkers = new Renderer[0];
 
         /// <summary>How the case sits in the carrier's view, relative to their eye: side-on, tilted a little toward them.</summary>
         static readonly Quaternion FirstPersonTilt = Quaternion.Euler(0f, 75f, 8f);
 
         static readonly int BaseColour = Shader.PropertyToID("_BaseColor");
-        static readonly Briefcase[] ByFirm = new Briefcase[MatchDirector.FirmCount];
 
-        readonly SyncVar<byte> _firm = new();
+        /// <summary>The match's briefcase on this machine, or null before it has spawned.</summary>
+        public static Briefcase Current { get; private set; }
 
         Rigidbody _rigidbody;
         Collider _collider;
         NetworkTransform _networkTransform;
         MaterialPropertyBlock _block;
         Vector3 _centreLocal;
-        byte _assignedFirm;
 
         BriefcaseState _state;
+        byte _tintFirm = MatchDirector.NoFirm;
         FirmMember _carrier;
         int _carrierId;
         float _carryStarted;
         Vector3 _blendFromPosition;
         Quaternion _blendFromRotation;
 
-        /// <summary>Host only: ticks it has lain outside its own building in a row.</summary>
+        /// <summary>Host only: ticks it has lain outside the buildings, plaza and skybridges in a row.</summary>
         internal int StrayTicks;
 
-        /// <summary>Host only: the tick it comes back at its firm's checkpoint.</summary>
+        /// <summary>Host only: the tick it comes back.</summary>
         internal uint ReturnAtTick;
-
-        /// <summary>Host only: the first tick it can be kicked again.</summary>
-        internal uint KickReadyTick;
 
         /// <summary>Host only: where its carrier last stood, in case the carrier vanishes without a word.</summary>
         internal Vector3 LastCarrierPosition;
-
-        /// <summary>Which firm it belongs to: the index of that firm's building.</summary>
-        public int Firm => _firm.Value;
 
         /// <summary>The centre of the case as it lies in the world.</summary>
         public Vector3 Centre => transform.TransformPoint(_centreLocal);
 
         public Vector3 Position => _rigidbody.position;
-
-        /// <summary>The briefcase of the given firm on this machine, or null before it has spawned.</summary>
-        public static Briefcase Of(int firm)
-        {
-            return firm >= 0 && firm < ByFirm.Length ? ByFirm[firm] : null;
-        }
 
         // ---- Lifecycle -----------------------------------------------------------------------
 
@@ -87,19 +71,11 @@ namespace CloseTheDeal.MatchMode
             _centreLocal = transform.InverseTransformPoint(_collider.bounds.center);
         }
 
-        /// <summary>Host only, before spawning: which firm this one is for.</summary>
-        public void AssignFirm(int firm)
-        {
-            _assignedFirm = (byte)firm;
-        }
-
         public override void OnStartServer()
         {
             base.OnStartServer();
-            _firm.Value = _assignedFirm;
             StrayTicks = 0;
             ReturnAtTick = 0;
-            KickReadyTick = 0;
             Register();
         }
 
@@ -121,29 +97,30 @@ namespace CloseTheDeal.MatchMode
         {
             base.OnStopNetwork();
             FirmMember.OnLocalChanged -= RefreshTint;
-            if (ByFirm[Firm] == this)
-                ByFirm[Firm] = null;
+            if (Current == this)
+                Current = null;
         }
 
-        /// <summary>Makes itself findable by firm and takes up whatever state the match already has for it.</summary>
+        /// <summary>Makes itself the match's briefcase and takes up whatever state the match already has.</summary>
         internal void Register()
         {
-            ByFirm[Firm] = this;
-            RefreshTint();
+            Current = this;
             MatchDirector match = MatchDirector.Instance;
             if (match != null && match.IsLive)
-                Apply(match.Firm(Firm));
+                Apply(match.CaseStatus);
         }
 
         // ---- Showing the state (every machine) -----------------------------------------------
 
         /// <summary>Takes up a new state from the match: where it is, whether it can be touched, who holds it.</summary>
-        internal void Apply(FirmStatus status)
+        internal void Apply(BriefcaseStatus status)
         {
             BriefcaseState previous = _state;
             _state = status.State;
             _collider.enabled = status.State == BriefcaseState.Dropped;
             _visual.gameObject.SetActive(status.State != BriefcaseState.Returning);
+            _tintFirm = status.State == BriefcaseState.Carried ? status.CarrierFirm : MatchDirector.NoFirm;
+            RefreshTint();
 
             if (status.State == BriefcaseState.Carried)
             {
@@ -189,7 +166,7 @@ namespace CloseTheDeal.MatchMode
             float t = blend > 0f ? Mathf.Clamp01((Time.time - _carryStarted) / blend) : 1f;
             if (t < 1f)
             {
-                float eased = 1f - (1f - t) * (1f - t); // ease-out: fast off the desk, soft into the hand
+                float eased = 1f - (1f - t) * (1f - t); // ease-out: fast off the floor, soft into the hand
                 position = Vector3.Lerp(_blendFromPosition, position, eased);
                 rotation = Quaternion.Slerp(_blendFromRotation, rotation, eased);
             }
@@ -213,14 +190,14 @@ namespace CloseTheDeal.MatchMode
             _carrier.CarryAnchor.GetPositionAndRotation(out position, out rotation);
         }
 
-        /// <summary>Your own firm's briefcase and the rival's are told apart by colour, on your own screen.</summary>
+        /// <summary>In your firm's colour while one of you holds it, the rival's while they do, the loose colour otherwise; on your own screen.</summary>
         void RefreshTint()
         {
             MatchDirector match = MatchDirector.Instance;
             if (match == null || match.Profile == null)
                 return;
 
-            Color colour = match.ColourFor(Firm);
+            Color colour = match.ColourFor(_tintFirm);
             foreach (Renderer marker in _firmMarkers)
             {
                 if (marker == null)
@@ -260,8 +237,8 @@ namespace CloseTheDeal.MatchMode
         }
 
         /// <summary>
-        /// Host only. Shoves a loose briefcase: a rival's kick, or anything else that should
-        /// send it flying (a blast, say). Ignored while it is carried or away.
+        /// Host only. Shoves a loose briefcase: the hook for a blast or a thrown object to send
+        /// it flying. Ignored while it is carried or away.
         /// </summary>
         public void Throw(Vector3 velocityChange)
         {
@@ -269,19 +246,6 @@ namespace CloseTheDeal.MatchMode
                 return;
 
             _rigidbody.AddForce(velocityChange, ForceMode.VelocityChange);
-        }
-
-        /// <summary>Host only. A rival's boot, told to every machine.</summary>
-        internal void ServerKick(Vector3 velocityChange)
-        {
-            Throw(velocityChange);
-            ObserversKicked();
-        }
-
-        [ObserversRpc]
-        void ObserversKicked()
-        {
-            OnKicked?.Invoke(this);
         }
     }
 }

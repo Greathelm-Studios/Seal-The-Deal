@@ -111,7 +111,7 @@ namespace CloseTheDeal.MatchMode
                     return "Match running  ·  " + MatchHud.FormatClock(_match.SecondsLeft) + " left";
                 default:
                     MatchSnapshot result = _match.Snapshot;
-                    return result.Winner == MatchDirector.NoFirm ? "No deal." : _match.FirmName(result.Winner) + " closed the deal.";
+                    return result.Winner == MatchDirector.NoFirm ? "No deal." : _match.FirmName(result.Winner) + " sealed the deal.";
             }
         }
 
@@ -134,12 +134,12 @@ namespace CloseTheDeal.MatchMode
             {
                 case MatchEndReason.BriefcaseOnRoof:
                     return $"Briefcase delivered to the roof at {clock}.";
-                case MatchEndReason.ClockHighestBriefcase:
-                    return $"The quarter closed at {clock}. Their briefcase was highest: {floor}.";
-                case MatchEndReason.ClockFirstToFloor:
-                    return $"The quarter closed at {clock}. Both briefcases were on {floor}; theirs got there first.";
+                case MatchEndReason.ClockHolding:
+                    return $"The quarter closed at {clock} with the briefcase in their hands, on {floor}.";
+                case MatchEndReason.ClockLastCarried:
+                    return $"The quarter closed at {clock}. The briefcase lay loose on {floor}; they carried it last.";
                 default:
-                    return $"The quarter closed at {clock} with the briefcases level.";
+                    return $"The quarter closed at {clock} and nobody ever picked the briefcase up.";
             }
         }
     }

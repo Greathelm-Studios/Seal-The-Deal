@@ -71,7 +71,7 @@ namespace CloseTheDeal.MatchMode
         /// <summary>Host only: ticks this player has been outside the buildings in a row.</summary>
         internal int OutsideTicks;
 
-        /// <summary>Host only: was on their own roof last tick, so the "needs the briefcase" line is said once per visit.</summary>
+        /// <summary>Host only: was on a roof last tick, so the "needs the briefcase" line is said once per visit.</summary>
         internal bool WasOnRoof;
 
         /// <summary>Which firm this player belongs to: the index of the building they climb.</summary>
@@ -218,7 +218,7 @@ namespace CloseTheDeal.MatchMode
             if (!captured)
                 return;
 
-            // Sent even with no prompt up: at the rival's briefcase the host answers with the reason.
+            // Sent even when this machine's prompt is down: the host's view of the reach decides.
             if (_interact.WasPressedThisFrame())
                 RequestInteract();
             if (_drop.WasPressedThisFrame() && prompt == MatchPrompt.DropBriefcase)
@@ -263,6 +263,19 @@ namespace CloseTheDeal.MatchMode
         }
 
         // ---- Host: moving and telling the player ---------------------------------------------
+
+        /// <summary>
+        /// Host only. Moves this player to another firm and place in it, for a lobby that
+        /// chose the firms. Synced to everyone like the firm given on join.
+        /// </summary>
+        public void ServerSetFirm(int firm, int slot)
+        {
+            if (!IsServerStarted)
+                return;
+
+            _firm.Value = (byte)firm;
+            _slot.Value = (byte)slot;
+        }
 
         /// <summary>
         /// Host only. Puts the body somewhere else, standing still. The host's next state for

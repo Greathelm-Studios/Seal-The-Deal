@@ -84,8 +84,10 @@ namespace CloseTheDeal.Editor.Lanes
             GreyboxSceneSetup.EnsurePlayRig(new Vector3(-3f, 0.1f, 0f), new Vector3(3f, 0.1f, 0f));
             EnsureTower(laneTower);
             AddMatch(profile);
-            AssignSceneIds(scene);
 
+            // Saved first: FishNet derives scene ids from the scene's path, and a new scene has none until then.
+            EditorSceneManager.SaveScene(scene, ScenePath);
+            AssignSceneIds(scene);
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
@@ -387,6 +389,12 @@ namespace CloseTheDeal.Editor.Lanes
 
             FillIfEmpty(match, "_profile", profile);
 
+            // The plaza and skybridges between the towers: runtime-built, so no tower geometry changes.
+            MatchCrossings crossings = match.GetComponent<MatchCrossings>();
+            if (crossings == null)
+                crossings = match.gameObject.AddComponent<MatchCrossings>();
+            FillIfEmpty(match, "_crossings", crossings);
+
             GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
             if (menu == null)
             {
@@ -414,9 +422,10 @@ namespace CloseTheDeal.Editor.Lanes
             TMP_Text clock = Chip(root.transform, "Clock", new Vector2(0.5f, 1f), new Vector2(0f, -24f), new Vector2(150f, 48f), 28f, TextAlignmentOptions.Center, out _);
             clock.fontStyle = FontStyles.Bold;
 
-            // Firms: top right, your own firm first.
-            TMP_Text own = FirmRow(root.transform, "OwnFirm", new Vector2(-24f, -24f), out UnityEngine.UI.Image ownSwatch);
-            TMP_Text rival = FirmRow(root.transform, "RivalFirm", new Vector2(-24f, -124f), out UnityEngine.UI.Image rivalSwatch);
+            // Top right: the briefcase, then the firms, your own first.
+            TMP_Text briefcase = FirmRow(root.transform, "Briefcase", new Vector2(-24f, -24f), out UnityEngine.UI.Image briefcaseSwatch);
+            TMP_Text own = FirmRow(root.transform, "OwnFirm", new Vector2(-24f, -106f), out UnityEngine.UI.Image ownSwatch);
+            TMP_Text rival = FirmRow(root.transform, "RivalFirm", new Vector2(-24f, -188f), out UnityEngine.UI.Image rivalSwatch);
 
             // Countdown: big, above the crosshair.
             TMP_Text countdown = Chip(root.transform, "Countdown", new Vector2(0.5f, 0.5f), new Vector2(0f, 190f), new Vector2(170f, 170f), 120f, TextAlignmentOptions.Center, out GameObject countdownChip);
@@ -437,6 +446,8 @@ namespace CloseTheDeal.Editor.Lanes
             GreyboxSceneSetup.SetReference(so, "_match", match);
             GreyboxSceneSetup.SetReference(so, "_root", root);
             GreyboxSceneSetup.SetReference(so, "_clockText", clock);
+            GreyboxSceneSetup.SetReference(so, "_briefcaseText", briefcase);
+            GreyboxSceneSetup.SetReference(so, "_briefcaseSwatch", briefcaseSwatch);
             GreyboxSceneSetup.SetReference(so, "_ownText", own);
             GreyboxSceneSetup.SetReference(so, "_ownSwatch", ownSwatch);
             GreyboxSceneSetup.SetReference(so, "_rivalText", rival);
@@ -450,10 +461,10 @@ namespace CloseTheDeal.Editor.Lanes
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>A firm's three lines on a dark chip, with a bar of the firm's colour down its left edge.</summary>
+        /// <summary>Two lines on a dark chip, with a bar of the firm's colour down its left edge.</summary>
         static TMP_Text FirmRow(Transform parent, string name, Vector2 offset, out UnityEngine.UI.Image swatch)
         {
-            TMP_Text text = Chip(parent, name, new Vector2(1f, 1f), offset, new Vector2(440f, 92f), 17f, TextAlignmentOptions.MidlineLeft, out GameObject chip);
+            TMP_Text text = Chip(parent, name, new Vector2(1f, 1f), offset, new Vector2(440f, 72f), 17f, TextAlignmentOptions.MidlineLeft, out GameObject chip);
             text.rectTransform.offsetMin = new Vector2(24f, 0f);
 
             var bar = new GameObject("Swatch", typeof(RectTransform));

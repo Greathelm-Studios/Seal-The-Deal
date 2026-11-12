@@ -17,21 +17,20 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 3d2e1f3700e07459fb1ff05a2b7d138e, type: 2}
   OwnFirmColour: {r: 0, g: 0.9, b: 1, a: 1}
   RivalFirmColour: {r: 1, g: 0.62, b: 0.106, a: 1}
+  LooseColour: {r: 0.42, g: 0.3, b: 0.22, a: 1}
   CountdownSeconds: 5
   MatchSeconds: 900
   BriefcasePrefab: {fileID: 6831599298344535723, guid: cffa4987ab56d4f5694035ec80627290, type: 3}
-  HomeInReception: {x: 8.4, y: 1.15, z: -9.1}
+  SpawnOnPlaza: {x: 0, y: 0.3, z: 0}
   PickupRange: 2.2
   DropTossSpeed: 2.5
   DropTossLift: 1.5
   StraySeconds: 2
   ReturnDelaySeconds: 3
-  KickRadius: 0.8
-  KickSpeed: 7
-  KickLift: 2.5
-  KickCooldownSeconds: 0.6
   OutsideMargin: 0.75
   FallSeconds: 1.2
+  BridgeWidth: 3
+  RailHeight: 1.1
   CarryBlendSeconds: 0.15
   FirstPersonOffset: {x: 0.42, y: -0.5, z: 0.95}
   NoticeSeconds: 4
