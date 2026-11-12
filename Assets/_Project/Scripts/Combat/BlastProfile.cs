@@ -18,6 +18,9 @@ namespace CloseTheDeal.Combat
         [Tooltip("How fast a player at the centre of the blast is thrown, in metres per second. 12 sends them a few metres; 20 clears a room.")]
         public float Speed = 12f;
 
+        [Tooltip("Health a player at the centre of the blast loses. Players have 100 by default. 0 = the blast only throws people, as the test blast does. Falls off toward the edge the same way the throw does. Glass in the radius always breaks.")]
+        [Min(0f)] public float Damage;
+
         [Tooltip("How much of the throw goes upward, as a fraction of the sideways push. 0 = straight back; 1 = as much up as back. Some lift makes it read as an explosion.")]
         public float UpBias = 0.6f;
 
