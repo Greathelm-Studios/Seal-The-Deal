@@ -1,4 +1,5 @@
 using CloseTheDeal.Combat;
+using CloseTheDeal.Editor.Art;
 using CloseTheDeal.Net;
 using CloseTheDeal.Player;
 using CloseTheDeal.Tower;
@@ -189,6 +190,16 @@ namespace CloseTheDeal.Editor.Greybox
             capsule.transform.SetParent(leanPivot, false);
             capsule.transform.localPosition = new Vector3(0f, BodyHeight * 0.5f - HipHeight, 0f);
             capsule.transform.localScale = new Vector3(BodyRadius * 2f, BodyHeight * 0.5f, BodyRadius * 2f);
+
+            // The body wears the art bible's navy suit (docs/systems/CHARACTER_SHADER.md), so the
+            // character look can be judged in play before a real model exists. The nose keeps the
+            // default grey: it is a cube, and it has to stay readable against the navy.
+            CharacterToonMaterials.Build();
+            var suit = AssetDatabase.LoadAssetAtPath<Material>(CharacterToonMaterials.SuitMaterialPath);
+            if (suit != null)
+                capsule.GetComponent<MeshRenderer>().sharedMaterial = suit;
+            else
+                Debug.LogWarning("[Greybox] Suit material missing at " + CharacterToonMaterials.SuitMaterialPath + "; the player body keeps the default material.");
 
             GameObject nose = GameObject.CreatePrimitive(PrimitiveType.Cube);
             nose.name = "Nose";
