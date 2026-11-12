@@ -26,4 +26,6 @@
 
 New material slots: `Accent_Cobalt`, `Light_Strip`, `Door_LockedRed` (and `Trim_Navy`, already added for the window bay).
 
+**2026-11-12 · Alex:** taller glass, less wall: the façade sill drops from 1 m to **0.6 m** (glass 3.2 → 3.6 m tall). Changed in the kit (`SILL`), `GreyboxTowerSetup.SillHeight` and TOWER.md. The sill is still a ledge and low cover, but less of it: the window fights get more exposed.
+
 Not kit work (room-set layer): the oversized floor number, firm branding, furniture, the copier and water cooler.

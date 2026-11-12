@@ -47,8 +47,9 @@ P = params(
     FLOOR_H=4.5,           # floor to floor, metres (DefaultTower.asset FloorHeight)
     SLAB=0.2,              # slab thickness, hangs below floor level, metres (GreyboxTowerSetup)
     WALL=0.2,              # wall thickness, metres (GreyboxTowerSetup)
-    # ---- Façade: GreyboxTowerSetup (sill 1 m, pillar 0.4 m wide)
-    SILL=1.0,              # sill height, metres
+    # ---- Façade: GreyboxTowerSetup (sill 0.6 m, pillar 0.4 m wide)
+    SILL=0.6,              # sill height, metres. WHY 0.6: Alex, 2026-11-12, wanted taller glass and less wall; was 1.0.
+                           # Still a low ledge and some cover; must match GreyboxTowerSetup.SillHeight
     COLUMN_W=0.4,          # façade column width, metres
     COLUMN_PROUD=0.02,     # column stands this far proud of both wall faces, metres.
                            # WHY: hides the sill's end and avoids two coplanar faces flickering
@@ -299,7 +300,7 @@ def window_bay(width):
 
     White Trays: a dark pocket runs along the street-top edge of the sill between the column faces, so from
     the rival tower each floor reads as a white shelf under a dark band. The pocket leaves 0.08 m of solid
-    sill behind it and the bounds unchanged, so the box collider (full metre of cover) is the same as before.
+    sill behind it and the bounds unchanged, so the box collider (the full sill height of cover) is the same as before.
     """
     c = P.COLUMN_W * 0.5
     zc = -P.WALL * 0.5

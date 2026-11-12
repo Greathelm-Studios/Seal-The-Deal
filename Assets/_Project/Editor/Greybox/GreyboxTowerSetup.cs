@@ -31,7 +31,8 @@ namespace CloseTheDeal.Editor.Greybox
 
         const float Slab = 0.2f;
         const float Wall = 0.2f;
-        const float SillHeight = 1f;
+        /// <summary>Façade sill height, metres. 0.6 since 2026-11-12 (Alex: taller glass); must match the kit's SILL.</summary>
+        const float SillHeight = 0.6f;
         const float PillarWidth = 0.4f;
         const float PillarSpacing = 4f;
         const float DoorWidth = 1.2f;
