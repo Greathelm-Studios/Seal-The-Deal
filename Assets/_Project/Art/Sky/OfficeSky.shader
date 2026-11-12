@@ -40,6 +40,12 @@
 // horizon: the flat pixel-stepped clouds with the grid, focus squares and plane. BELOW it: a
 // soft, shaded sea of cloud that the towers rise out of, from his above-the-clouds references.
 //
+// "Try lean into more of this look" (Alex, 2026-11-12, two references: a pixel-art white town
+// under a saturated cyan sky, and glass towers shot from below with the sun flaring through
+// them): the dome moves toward cyan, its gradient is stepped and dithered in screen space like
+// pixel art, glass towers catch the sun, a glare washes over the whole city, and the contrail
+// dissolves into dots. Each is a slider and can be turned off.
+//
 // Written against UnityCG, like Unity's own Skybox/Procedural, because RenderSettings.sun is
 // handed to skybox shaders as _WorldSpaceLightPos0 in every render pipeline.
 Shader "Close the Deal/Office Sky"
@@ -47,12 +53,15 @@ Shader "Close the Deal/Office Sky"
     Properties
     {
         [Header(Sky dome)]
-        _ZenithColor("Colour straight up", Color) = (0.050, 0.150, 0.580, 1)
-        _SkyColor("Colour mid sky", Color) = (0.105, 0.320, 0.850, 1)
-        _HorizonColor("Colour at the horizon", Color) = (0.600, 0.790, 0.970, 1)
-        _GroundColor("Colour of the mist below the horizon", Color) = (0.740, 0.850, 0.970, 1)
+        _ZenithColor("Colour straight up", Color) = (0.040, 0.200, 0.650, 1)
+        _SkyColor("Colour mid sky", Color) = (0.060, 0.450, 0.900, 1)
+        _HorizonColor("Colour at the horizon (keep the scene fog the same colour)", Color) = (0.620, 0.880, 0.990, 1)
+        _GroundColor("Colour of the mist below the horizon", Color) = (0.740, 0.900, 0.980, 1)
         _HorizonHeight("Height of the pale horizon band (low = more blue)", Range(0.02, 1)) = 0.14
         _ZenithHeight("How high the deep blue starts (lower = more deep blue)", Range(0.2, 1)) = 0.7
+        _SkySteps("Colour steps in the sky gradient (more = smoother)", Range(3, 16)) = 6
+        _SkyDither("Pixel-art dither in the sky (0 = smooth gradient, 1 = stepped and dithered)", Range(0, 1)) = 0.85
+        _DitherPixel("Dither cell size, in screen pixels", Range(1, 6)) = 3
 
         [Header(Sun)]
         _SunColor("Sun colour", Color) = (1, 0.98, 0.94, 1)
@@ -60,17 +69,19 @@ Shader "Close the Deal/Office Sky"
         _SunGlow("Soft glow around the sun (0 = none)", Range(0, 1)) = 0.45
         _SunRing("Thin halo ring around the sun (0 = none)", Range(0, 1)) = 0.3
         _SunRingSize("Halo ring size (degrees from the sun)", Range(4, 40)) = 15
+        _SunGlare("Glare that washes over the whole sky, towers included (0 = none)", Range(0, 1)) = 0.7
 
         [Header(Distant towers)]
-        _TowerLitColor("Tower colour, sunlit face", Color) = (0.965, 0.972, 0.990, 1)
-        _TowerShadeColor("Tower colour, shaded face", Color) = (0.560, 0.680, 0.900, 1)
+        [HDR] _TowerLitColor("Tower colour, sunlit face (above 1 = glows white under the bloom)", Color) = (1.10, 1.11, 1.12, 1)
+        _TowerShadeColor("Tower colour, shaded face (pale blue, not saturated)", Color) = (0.740, 0.850, 0.970, 1)
         _TowerGlassColor("Window and glass-tower colour", Color) = (0.070, 0.125, 0.330, 1)
         _TowerAccentColor("Big graphic colour", Color) = (0.141, 0.310, 0.725, 1)
         _TowerLineColor("Thin crown line colour", Color) = (0.125, 0.830, 0.900, 1)
         _TowerHeight("Tower height (0 = no city, 1 = designed height)", Range(0, 2)) = 1
         _TowerDensity("How many towers (0 = none, 1 = wall to wall)", Range(0, 1)) = 0.34
         _TowerHeroes("How many giant foreground towers (0 = none)", Range(0, 1)) = 0.35
-        _TowerHaze("Distance haze on the towers (0 = all crisp, 1 = far ones vanish)", Range(0, 1)) = 0.62
+        _TowerGlint("Sun glints on glass towers (0 = none)", Range(0, 1)) = 0.7
+        _TowerHaze("Distance haze on the towers (0 = all crisp, 1 = far ones vanish)", Range(0, 1)) = 0.45
         _TowerVolume("How much darker a tower's side face is (0 = flat, 1 = strong)", Range(0, 1)) = 0.6
 
         [Header(Clouds)]
@@ -137,10 +148,20 @@ Shader "Close the Deal/Office Sky"
             float _GridStrength, _GridSize, _TraceStrength, _TraceSize, _TraceSpeed;
             float _PlaneEvery, _PlaneCrossing, _PlaneSize, _PlaneTrail;
             float _SeaAmount, _SeaSize, _SeaRim, _SeaGlow, _SeaMatch;
+            float _SkySteps, _SkyDither, _DitherPixel, _SunGlare, _TowerGlint;
 
             #define TWO_PI 6.28318530718
             #define DEG_TO_RAD 0.01745329252
             #define RAD_TO_DEG 57.2957795131
+
+            // ---- Glare ----
+            /// The glare is two cosine powers laid over everything, added last. The tight one is
+            /// the white-out around the sun, the wide one the haze across a third of the sky that
+            /// the reference's photograph has. Picked by eye.
+            #define GLARE_TIGHT 18.0
+            #define GLARE_WIDE 3.0
+            #define GLARE_TIGHT_STRENGTH 0.8
+            #define GLARE_WIDE_STRENGTH 0.22
 
             // ---- Sun ----
             /// Tightness of the sun's two glows (cosine powers). The tight one is the hot core,
@@ -205,11 +226,11 @@ Shader "Close the Deal/Office Sky"
             // Facade. Only the near row and the heroes draw any of this.
             /// Facade styles by share (cumulative): horizontal window bands, vertical window
             /// strips, dark glass curtain wall. The rest are white slabs with one glass ribbon.
-            #define TOWER_STYLE_BANDS 0.34
-            #define TOWER_STYLE_STRIPS 0.52
-            #define TOWER_STYLE_GLASS 0.74
+            #define TOWER_STYLE_BANDS 0.20
+            #define TOWER_STYLE_STRIPS 0.28
+            #define TOWER_STYLE_GLASS 0.72
             /// Fraction of each floor that is white wall; the rest is the dark window band.
-            #define TOWER_BAND_GAP 0.58
+            #define TOWER_BAND_GAP 0.5
             /// Windows come in zones with a blank belt between them (plant floors, sky lobbies),
             /// this many zones up a tower, each this fraction windows. An unbroken ladder of
             /// windows from foot to roof was the single most "generated" thing about the towers.
@@ -224,7 +245,7 @@ Shader "Close the Deal/Office Sky"
             #define TOWER_SLOT_HALF 0.018
             #define TOWER_RIBBON_HALF 0.07
             /// Mullions across and floors up a glass curtain wall.
-            #define TOWER_MULLIONS 7.0
+            #define TOWER_MULLIONS 12.0
             /// Share of towers that carry the big blue graphic (a diagonal slash on the front,
             /// a solid block on the side), and share that carry a ring mark at the head instead.
             #define TOWER_ACCENT_SHARE 0.3
@@ -404,6 +425,16 @@ Shader "Close the Deal/Office Sky"
                 float3 p3 = frac(float3(p.xyx) * 0.1031);
                 p3 += dot(p3, p3.yzx + 33.33);
                 return frac((p3.x + p3.y) * p3.z);
+            }
+
+            /// A threshold between 0 and 1 from the classic 4 x 4 ordered-dither pattern, for one
+            /// screen cell. Comparing a value to it turns a smooth gradient into the dotted bands
+            /// of pixel art.
+            float Bayer4(float2 cell)
+            {
+                static const float pattern[16] = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
+                int2 at = int2(fmod(cell, 4.0));
+                return (pattern[at.y * 4 + at.x] + 0.5) / 16.0;
             }
 
             /// 0 below an edge, 1 above it, one pixel wide: a hard edge without stair-steps.
@@ -668,6 +699,17 @@ Shader "Close the Deal/Office Sky"
                 float floorLine = step(0.8, frac(bandCoord)) * bandFade;
                 color = lerp(color, lerp(glass, wall, saturate(floorLine * 0.55 + mullion * 0.4) * detailed), isGlass * glassBody * lerp(0.75, 1.0, detailed));
 
+                // Sun on glass: in the reference the towers facing the sun go near-white in the
+                // upper part, with bright diagonal streaks across them. Here: three flat steps of
+                // lift toward the top, and one streak, only on glass turned toward the sun.
+                // WHY abs(cos): glass catches the sun looking toward it (the reference) and with it behind
+                // you, and is dull only when you look across the sun's line.
+                float sunFacing = smoothstep(0.3, 0.9, abs(cos(sunAngle - 0.3))) * (1.0 - side);
+                float lift = floor(saturate(sunFacing * (0.3 + 0.9 * saturate(t))) * 3.0) / 3.0;
+                float streakCoord = u * 3.2 + t * 2.2;
+                float glintStreak = step(0.82, frac(streakCoord)) * saturate(1.0 - fwidth(streakCoord) * 1.5);
+                color = lerp(color, _TowerLitColor.rgb, isGlass * glassBody * saturate(lift * 0.75 + glintStreak * sunFacing * 0.65) * _TowerGlint);
+
                 // The big blue graphic: a diagonal slash on the front, a solid block on the side.
                 float markRoll = Hash21(float2(column, seed + 9.6));
                 float accented = step(1.0 - TOWER_ACCENT_SHARE, markRoll) * (1.0 - isGlass);
@@ -711,8 +753,16 @@ Shader "Close the Deal/Office Sky"
                 float drift = _Time.y * _CloudDrift;
 
                 // ---- Dome: a narrow pale horizon, saturated blue, deep blue overhead ----
-                float3 color = lerp(_HorizonColor.rgb, _SkyColor.rgb, smoothstep(0.0, _HorizonHeight, up));
-                color = lerp(color, _ZenithColor.rgb, smoothstep(_HorizonHeight, _ZenithHeight, up));
+                // The gradient is one number, g: 0 at the horizon, 0.5 at mid sky, 1 straight up.
+                // Dithering it in SCREEN space (a fixed pixel grid, not the sky's) is what makes
+                // it read as pixel art; at Sky dither 0 it is the plain smooth gradient.
+                float dither = Bayer4(floor(input.positionCS.xy / _DitherPixel));
+                float g = 0.5 * (smoothstep(0.0, _HorizonHeight, up) + smoothstep(_HorizonHeight, _ZenithHeight, up));
+                float levels = max(_SkySteps, 2.0);
+                g = lerp(g, saturate(floor(g * levels + dither) / levels), _SkyDither);
+                float3 color = g < 0.5
+                    ? lerp(_HorizonColor.rgb, _SkyColor.rgb, g * 2.0)
+                    : lerp(_SkyColor.rgb, _ZenithColor.rgb, g * 2.0 - 1.0);
                 // Below the horizon: a soft sea of cloud seen from above, fading to plain mist
                 // when Cloud sea is turned down. `sea` is also what the towers sink into.
                 float3 plainMist = lerp(_HorizonColor.rgb, _GroundColor.rgb, smoothstep(0.0, 0.3, -height));
@@ -779,7 +829,11 @@ Shader "Close the Deal/Office Sky"
                 // Contrail: a hairline behind the tail that fades out in flat steps.
                 float behind = -planeAhead - 1.0;
                 float trailLeft = 1.0 - behind / max(PLANE_TRAIL_LENGTHS * _PlaneTrail, 0.0001);
-                float trail = ceil(saturate(trailLeft) * PLANE_TRAIL_STEPS) / PLANE_TRAIL_STEPS * step(0.0, behind) * step(0.0001, _PlaneTrail);
+                // The tail dissolves into dots (screen-space dither) as the sky gets pixel-art
+                // dithered; at Sky dither 0 it is the old four flat fading steps.
+                float trailSteps = ceil(saturate(trailLeft) * PLANE_TRAIL_STEPS) / PLANE_TRAIL_STEPS;
+                float trailDots = step(dither, saturate(trailLeft) * 1.15);
+                float trail = lerp(trailSteps, trailDots, _SkyDither) * step(0.0, behind) * step(0.0001, _PlaneTrail);
                 trail *= Edge(max(0.09, planePixel * 1.3) - planeOut, planePixel) * 0.9;
                 // The wake: how much cloud is torn away at this spot. Widest and shallowest far
                 // behind, so the channel opens sharply at the plane and heals raggedly.
@@ -885,7 +939,9 @@ Shader "Close the Deal/Office Sky"
                 // ---- City: far, mid, near, heroes. Each row is hazier the
                 //      further it is, and every row sinks into the mist below the horizon so no
                 //      tower has a visible foot. ----
-                float3 hazeColor = lerp(_HorizonColor.rgb, _SkyColor.rgb, 0.45);
+                // WHY 0.25 (was 0.45): distant towers fade toward this colour, and the old mid-blue greyed
+                // every row of the city. Mostly the pale horizon colour keeps them white.
+                float3 hazeColor = lerp(_HorizonColor.rgb, _SkyColor.rgb, 0.25);
                 float sink = smoothstep(lerp(0.05, 0.02, _SeaAmount), lerp(-0.45, SEA_SWALLOWS_TOWERS, _SeaAmount), rise);
                 float3 sunk = lerp(hazeColor, sea, sink);
 
@@ -895,10 +951,10 @@ Shader "Close the Deal/Office Sky"
                 float4 midRow = TowerRow(azimuth01, rise, sunAngle, TOWERS_MID, TOWER_TALL_MID, 0.0, _TowerDensity, 1.0, 11.0);
                 color = lerp(color, lerp(midRow.rgb, sunk, saturate(_TowerHaze * 1.05 + sink)), midRow.a);
 
-                float4 nearRow = TowerRow(azimuth01, rise, sunAngle, TOWERS_NEAR, TOWER_TALL_NEAR, 46.0, _TowerDensity, 1.0, 23.0);
+                float4 nearRow = TowerRow(azimuth01, rise, sunAngle, TOWERS_NEAR, TOWER_TALL_NEAR, 60.0, _TowerDensity, 1.0, 23.0);
                 color = lerp(color, lerp(nearRow.rgb, sunk, saturate(_TowerHaze * 0.42 + sink)), nearRow.a);
 
-                float4 heroRow = TowerRow(azimuth01, rise, sunAngle, TOWERS_HERO, TOWER_TALL_HERO, 26.0, _TowerHeroes, TOWER_HERO_WIDTH, 41.0);
+                float4 heroRow = TowerRow(azimuth01, rise, sunAngle, TOWERS_HERO, TOWER_TALL_HERO, 38.0, _TowerHeroes, TOWER_HERO_WIDTH, 41.0);
                 color = lerp(color, lerp(heroRow.rgb, sunk, saturate(_TowerHaze * 0.08 + sink)), heroRow.a);
 
                 // ---- Cloud tops along the horizon, in FRONT of the city, so the towers rise out
@@ -923,6 +979,12 @@ Shader "Close the Deal/Office Sky"
                     // Below the horizon the rim hands over to the sea itself.
                     color = lerp(color, rimColor, rim * _SeaAmount * smoothstep(-0.03, 0.0, height));
                 }
+
+                // ---- Glare: the sun washes over everything, towers and clouds included, the way
+                //      it flares through the glass in the reference. Last, so nothing in the sky
+                //      can block it. Blended to white, not added, so it cannot overshoot. ----
+                float glare = pow(saturate(sunCos), GLARE_TIGHT) * GLARE_TIGHT_STRENGTH + pow(saturate(sunCos), GLARE_WIDE) * GLARE_WIDE_STRENGTH;
+                color = lerp(color, _SunColor.rgb, saturate(glare * _SunGlare));
 
                 return fixed4(color, 1);
             }

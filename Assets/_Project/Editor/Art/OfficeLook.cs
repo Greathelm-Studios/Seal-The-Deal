@@ -108,11 +108,11 @@ namespace CloseTheDeal.Editor.Art
         // ---- Haze -------------------------------------------------------------------------
 
         /// <summary>
-        /// Haze colour: the sky shader's default "Colour at the horizon" (0.60, 0.79, 0.97), so
+        /// Haze colour: the sky shader's default "Colour at the horizon" (0.62, 0.88, 0.99), so
         /// distant geometry fades into the sky instead of into a paler band. If the horizon colour
         /// is changed in the sky material, change this to match.
         /// </summary>
-        static readonly Color HazeColour = Hex(0x99C9F7);
+        static readonly Color HazeColour = Hex(0x9EE0FC);
         /// <summary>
         /// Haze starts this far from the camera, metres. WHY: well beyond the street gap and a few
         /// floors' diagonal, so the rival tower is never fogged; only the distant city fades.
