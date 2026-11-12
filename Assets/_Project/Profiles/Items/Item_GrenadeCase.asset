@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99a76e4b3eda24ecf8ac56785d740601, type: 3}
+  m_Name: Item_GrenadeCase
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Items.ItemDefinition
+  DisplayName: Grenade Case
+  Kind: 2
+  WhatItDoes: Arm it and throw it. It beeps, then clears the room. Hold on too long
+    and it clears you.
+  WeightKg: 4
+  HeldOffset: {x: 0.22, y: -0.45, z: 0.6}
+  HeldEuler: {x: 0, y: 0, z: 0}
+  HoldClearance: 0.2
+  CoverWhileCarried: 0
+  ThrowSpeed: 11
+  ThrowTumble: 0.8
+  UseVerb: Arm
+  ReturnsAfterUsedSeconds: 20

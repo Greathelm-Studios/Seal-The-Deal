@@ -1,0 +1,111 @@
+# ITEMS
+
+**Status:** Current · **Last updated:** 2026-11-12 · **Verified against:** the pickups lane commit
+
+## What happens in the game
+
+Look at something within reach and a prompt names it: **F · Pick up Chair**. Press **F** and it is in your hands.
+
+A player has **one hands slot**. While it is full: **left mouse** throws, **G** drops, **right mouse** uses the item if it has a use. Full hands cannot shoot.
+
+- **Furniture** (chair, monitor, filing cabinet, cubicle panel) is carried in front of you. Heavy things slow you down and shorten your jump. A thrown chair shoves whoever it hits and hurts them by how fast and how heavy it was. A desk or copier is too heavy and the prompt says so.
+- **Cubicle panel:** stays solid in your hands, so it is moving cover. It stops shots and other players; it does not stop you.
+- **Grenade Case:** right mouse arms it. It beeps faster and faster for 3.5 seconds, then explodes wherever it is, throwing players and furniture and hurting anything in the blast. Hold it too long and it goes off in your hands.
+- **Fire Extinguisher:** right mouse pulls the pin. It pours a wall of smoke for 6 seconds and cannot be stopped. Carried, it lays smoke where you walk. Let go, the gas drives it spinning round the floor into whoever is in the way.
+- **Wet Floor Sign:** right mouse puts it down ahead of you and the floor around it is wet. Anyone who runs through, from either firm, goes flying; walking is safe. Picking the sign up, or knocking it away, clears the trap.
+- **Pistol and AR-15:** real pickups with their own definitions. Until the shooting lane's weapon holder is merged they are carried and thrown like any object; see "Guns" below.
+
+Anything knocked out of your hands (a blast, a heavy hit, leaving the game) stays in the level where it fell. Anything that falls out of the building is put back where it started two seconds later. A used-up item (an exploded case, an empty extinguisher) comes back fresh at its starting place after the time on its definition.
+
+## Who owns what (AGENTS.md §3)
+
+| Thing | Owner | Synced | Rate |
+|---|---|---|---|
+| Who holds an item | **Host.** A client asks; the host checks reach, weight, empty hands and that the item is still loose, and the first valid request wins | One value per item: the holder (`Pickup`) | On change |
+| Out of play / back in play | Host | One flag per item (`Pickup`) | On change |
+| A loose item's motion | Host; it is an ordinary prop ([PROPS.md](PROPS.md)) | NetworkTransform | While moving, 30/s |
+| A carried item's solid part | Host moves it to the carrier's hands each tick | NetworkTransform | While the carrier moves, 30/s |
+| A carried item's look | Each machine, locally: the visual child follows the carrier's view (own camera) or body (other players) every frame | Nothing | — |
+| Throw, drop, use | Owner asks (one message each, the throw carries the aim direction); host does it | Arrives as holder change plus motion | On press |
+| Impact damage and shove | Host only, from the host's own collision | Damage is whatever the target syncs; shove rides the player's body state | On hit |
+| Grenade Case fuse | Host | The tick it goes off | On arm |
+| Explosion | Host: `Knockback.Explode` plus `ItemBlast.Damage` | One message with the point, for the flash and sound | Once |
+| Extinguisher smoke | Host owns the timing and the motion | The tick the smoke stops, and an empty flag. The smoke itself is drawn locally: no particle is ever sent | On pull |
+| Wet floor | Host decides every slip | One flag (down or not); one message per slip for sound | On change |
+| Carry slowdown | Derived on every machine from what is held, so the owner's prediction and the host use the same speeds | Nothing extra | — |
+
+A refused request is answered to that player only, with the reason (`DenyReason`), so the UI can say "Someone else got it".
+
+**From a client:** see [HANDOVER_pickups.md](../HANDOVER_pickups.md) for exactly what has been seen from a second machine. Not yet seen over Steam or with real latency.
+
+## Designer-authored vs runtime-derived (AGENTS.md §4)
+
+**Authored**, all under `Assets/_Project/Profiles/Items/`:
+
+- `Item_*.asset` (`ItemDefinition`): name, kind, weight, how it sits in the hands, throw speed and tumble, the word for its use, and how long a used-up one takes to come back.
+- `DefaultCarry.asset` (`CarryProfile`): reach, the weight limit (35 kg) and slowdown, what is kept of the carrier's speed on release, the impact rules for thrown objects, and the fall-out-of-the-building rule.
+- `GrenadeCase.asset`, `GrenadeCaseBlast.asset`, `Extinguisher.asset`, `WetFloor.asset`: each gadget's own numbers.
+
+**Derived at runtime:** who holds what, fuses, the slowed copy of the movement profile (the authored movement profile is never written), each item's starting place (where the host first spawned it).
+
+An item's weight is authored twice, on its definition and as its prefab body's mass. Keep them equal: the definition drives the weight limit and the slowdown, the body mass drives the impact.
+
+## Rules
+
+- **Weight:** up to 3 kg carries free. From there to the 35 kg limit, speed falls evenly to 45% and jump height to 50%.
+- **Impact:** only a thrown object hurts, for 3 seconds after the throw or until it has hit someone. Damage = (impact speed − 4 m/s) × kg × 0.35. Shove = impact speed × kg × 0.08 m/s, capped at 12.
+- **Prop cap:** every item is a prop and counts toward the 16 per floor in [PROPS.md](PROPS.md). Nothing here spawns extra objects: an explosion scatters what is already on the floor, smoke is local particles, the puddle is part of the sign. Using an item up hides it and later puts it back; it is not despawned and respawned unless its definition says it never returns.
+- **Out of the building:** a loose item more than 6 m below where it started is taken out of play and is back at its starting place 2 seconds later.
+- **Layers:** a carried panel's solid part sits on the **Player** layer while carried, so its carrier's own footing and ledge-climbing never treat it as ground, and it ignores its carrier's body. It goes back to the **Prop** layer when let go.
+- **Telling the Grenade Case from a firm's briefcase:** it is never called a briefcase in any text a player reads; it is red with a yellow hazard band, a keypad and a warning light, where the objective is the firm's own case; and it beeps and flashes from the moment it is armed.
+
+## Guns
+
+`ItemCarrier.ServerItemTaken` fires on the host whenever a player takes any item, with the carrier and the pickup. The weapon holder (shooting lane) grants guns from it:
+
+```csharp
+ItemCarrier.ServerItemTaken += (carrier, pickup) =>
+{
+    if (pickup.Definition.Kind != ItemKind.Gun) return;
+    weaponHolderOf(carrier).Grant(pickup.Definition);
+    pickup.ServerUseUp(); // out of the hands, out of play
+};
+```
+
+Until that line exists, a pistol or AR-15 is carried and thrown like any other object.
+
+## Hooks for sound, effects and UI
+
+Every moment has a C# event and a UnityEvent on the prefab, firing on every machine unless marked:
+
+- `Pickup`: Taken, Released (dropped / thrown / placed / knocked), Impact (speed), Returned.
+- `ItemCarrier`: HeldChanged, PromptChanged (owner), Denied (owner), `ServerItemTaken` (host, static).
+- `GrenadeCase`: Armed, Beeped, Exploded (point). `FireExtinguisher`: PinPulled, RanEmpty. `WetFloorSign`: PutDown, Cleared, Slipped (point).
+
+The beep, hiss and explosion thump are stand-in sounds made in code (`ItemTones`); assigning real clips on the prefabs replaces them. `ItemPromptLabel` is the lane's own two lines of on-screen text and is only in the lane's test scene.
+
+## Scripts
+
+Under [Assets/_Project/Scripts/Items/](../../Assets/_Project/Scripts/Items/):
+
+- `ItemDefinition.cs`, `CarryProfile.cs`, `GrenadeCaseProfile.cs`, `ExtinguisherProfile.cs`, `WetFloorProfile.cs`: the tuning assets.
+- `Pickup.cs`: on every item, next to `Prop`. Holder and out-of-play state, release, impact, the fall rule, and showing the item in the hands.
+- `ItemCarrier.cs`: on `Player.prefab`. The lane's inputs, the look prompt, the requests to the host, the host's rules, dropping when knocked or leaving.
+- `ItemBehaviour.cs`: base for what a particular item does. `GrenadeCase.cs`, `FireExtinguisher.cs`, `WetFloorSign.cs`.
+- `ItemBlast.cs`: damage in a radius. `MotorSpeedOverride.cs`: the carry slowdown. `ItemLayers.cs`, `ItemTones.cs`: layer masks and stand-in sounds.
+- `DamageDummy.cs`: the practice target. `ItemPromptLabel.cs`: the on-screen prompt.
+
+Shared with other lanes: [Core/IDamageable.cs](../../Assets/_Project/Scripts/Core/IDamageable.cs).
+
+Setup: **Close the Deal > Lanes > Set Up Pickups** ([PickupsLaneSetup.cs](../../Assets/_Project/Editor/Lanes/PickupsLaneSetup.cs)) creates any missing profile and item prefab, adds `Pickup` to the greybox furniture prefabs and `ItemCarrier` to `Player.prefab` where missing, and builds `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`. It never changes an asset or component that already exists. **Run Pickups Check** on the same menu plays that scene by script and writes a report and frames.
+
+## Known limitations
+
+- **Carry slowdown is a labelled workaround.** `PlayerMotor` has no public way to take a different movement profile and this lane could not edit it, so `MotorSpeedOverride` swaps a slowed runtime copy in through the motor's private `_profile` field. The real fix is one public method on `PlayerMotor`; then the reflection goes. If the field is renamed, carrying stops slowing players and an error says so once.
+- **Death is not hooked up.** There is no player health in this branch. `ItemCarrier.ServerForceDrop()` is the call for it; being knocked about and leaving the game already use it.
+- **Other players' carried items do not tilt** with where that player looks up or down: the host does not know a remote player's pitch. They see it level at chest height.
+- **A carried panel is a moving wall on the host.** It pushes loose props and other players out of its way and cannot be pushed back. Whether that is fun or an exploit needs a playtest.
+- **Smoke only blocks sight.** It is drawn per machine, so the exact puffs differ between players; the cloud's place and timing are the same.
+- **Throwing has one strength per item.** No charge, no lob.
+- Items are placed by hand in the lane scene. Putting them in the tower means a `PropMarker` per item in the floor templates, inside the per-floor cap.
+- The sounds are generated stand-ins and there are no hand or arm visuals: the item floats in view.
