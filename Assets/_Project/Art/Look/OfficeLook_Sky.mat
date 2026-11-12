@@ -38,14 +38,24 @@ Material:
     - _GridSize: 2.5
     - _GridStrength: 0.3
     - _HorizonHeight: 0.14
+    - _PlaneCrossing: 13
+    - _PlaneEvery: 40
+    - _PlaneSize: 1
+    - _PlaneTrail: 1
+    - _SeaAmount: 1
+    - _SeaGlow: 0.6
+    - _SeaMatch: 0.5
+    - _SeaRim: 0.1
+    - _SeaSize: 1
     - _SunGlow: 0.45
     - _SunRing: 0.3
     - _SunRingSize: 15
     - _SunSize: 2.4
-    - _TowerDensity: 0.5
-    - _TowerHaze: 0.55
+    - _TowerDensity: 0.34
+    - _TowerHaze: 0.62
     - _TowerHeight: 1
-    - _TowerHeroes: 0.5
+    - _TowerHeroes: 0.35
+    - _TowerVolume: 0.6
     - _TraceSize: 1
     - _TraceSpeed: 0.55
     - _TraceStrength: 0.75
@@ -57,6 +67,9 @@ Material:
     - _GroundColor: {r: 0.74, g: 0.85, b: 0.96999997, a: 1}
     - _HorizonColor: {r: 0.6, g: 0.78999996, b: 0.96999997, a: 1}
     - _OverlayColor: {r: 1, g: 1, b: 1, a: 1}
+    - _PlaneColor: {r: 1, g: 1, b: 1, a: 1}
+    - _SeaLitColor: {r: 1, g: 1, b: 1, a: 1}
+    - _SeaShadeColor: {r: 0.65999997, g: 0.76, b: 0.96, a: 1}
     - _SkyColor: {r: 0.10499997, g: 0.31999996, b: 0.85, a: 1}
     - _SunColor: {r: 1, g: 0.97999996, b: 0.94, a: 1}
     - _TowerAccentColor: {r: 0.14099997, g: 0.30999997, b: 0.725, a: 1}

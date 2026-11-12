@@ -3,6 +3,8 @@
 //  Generator : Claude Opus 5.5 (Claude Code)
 //  Generated : 2026-11-12
 //  Prompt    : Alex: "where is ur scene" -> build a Unity scene of the whole dressed office floor
+//  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-12 — Alex: "remove the other building".
+//              The rival tower (façade, slabs, stand-ins, massing) is no longer built.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Lays out whole office floors from the kit prefabs, as ArtSource/Kit/interior_scene.py
 //              does in Blender, so the approved White Trays + Cobalt Portal kit can be walked and lit in
@@ -23,7 +25,7 @@ using UnityEngine.SceneManagement;
 namespace CloseTheDeal.Editor.Art
 {
     /// <summary>
-    /// Builds <c>KitOffice.unity</c>: three stacked office floors and the rival façade, from the kit prefabs.
+    /// Builds <c>KitOffice.unity</c>: three stacked office floors, from the kit prefabs.
     /// Menu: <c>Close the Deal &gt; Art &gt; Build Kit Office Scene</c>.
     /// </summary>
     /// <remarks>
@@ -58,9 +60,13 @@ namespace CloseTheDeal.Editor.Art
         static readonly Vector3 StairCentre = new Vector3(14f, 0f, -10f);
         /// <summary>Spine dividers: WC 0–8, STORE 8–20, UTIL 20–28 (kit README proposal 3).</summary>
         const float WcEnd = 8f, UtilStart = 20f;
-        /// <summary>Façade to rival façade, metres (TOWER.md).</summary>
+        /// <summary>
+        /// Width of the street, façade to rival façade, metres (TOWER.md). The rival tower itself is
+        /// no longer built in this scene (Alex, 2026-11-12: "remove the other building"); this is
+        /// now only where the across-the-street review camera stands.
+        /// </summary>
         const float Gap = 12f;
-        /// <summary>Floors stacked here, so the rival view shows the floors above and below as well.</summary>
+        /// <summary>Floors stacked here, so the view from across the street shows the floors above and below as well.</summary>
         const int Floors = 3;
         /// <summary>Cage: 12 panel slots every 30°, first at 15°, open from 300° where the flight arrives (kit README).</summary>
         const float CageFirst = 15f, CageStep = 30f, CageOpenFrom = 300f;
@@ -74,9 +80,8 @@ namespace CloseTheDeal.Editor.Art
         const float MassingHeight = 30f;
         /// <summary>Stand-in size: the 1.8 m player and a shoulder-width capsule.</summary>
         const float FigureHeight = 1.8f, FigureRadius = 0.25f;
-        /// <summary>Where stand-ins stand on each floor of ours, and on the rival's (x, z).</summary>
+        /// <summary>Where stand-ins stand on each floor (x, z).</summary>
         static readonly Vector2[] OurSpots = { new Vector2(6f, -3f), new Vector2(13f, -5.5f), new Vector2(4f, -8f), new Vector2(24f, -4f) };
-        static readonly Vector2[] RivalSpots = { new Vector2(10f, Gap + 1.5f), new Vector2(18f, Gap + 2f) };
 
         // ---- Review captures
         const float Eye = 1.6f;
@@ -146,15 +151,13 @@ namespace CloseTheDeal.Editor.Art
                 floor.SetParent(root, false);
                 floor.localPosition = new Vector3(0f, f * FloorHeight, 0f);
                 BuildFloor(floor, P);
-                BuildRivalFloor(floor, P);
                 Figures(floor);
             }
             // The top of the stack: the slab over the highest floor is its ceiling.
             var roof = new GameObject("Roof slab").transform;
             roof.SetParent(root, false);
             roof.localPosition = new Vector3(0f, Floors * FloorHeight, 0f);
-            Slabs(roof, P, ours: true);
-            Slabs(roof, P, ours: false);
+            Slabs(roof, P);
             Massing(root);
             AddCamera();
             return count;
@@ -162,16 +165,11 @@ namespace CloseTheDeal.Editor.Art
 
         delegate GameObject Placer(Transform parent, string piece, float x, float y, float z, float yaw = 0f);
 
-        static void Slabs(Transform t, Placer P, bool ours)
+        static void Slabs(Transform t, Placer P)
         {
             for (int i = 0; i < Bays; i++)
             {
                 float x = i * Bay;
-                if (!ours)
-                {
-                    P(t, "Slab_4x4", x + Bay, 0f, Gap, 180f);   // the rival's one-bay-deep room
-                    continue;
-                }
                 P(t, "Slab_4x2", x, 0f, 0f);
                 for (int r = 0; r < Rows; r++)
                 {
@@ -181,14 +179,14 @@ namespace CloseTheDeal.Editor.Art
                 }
                 P(t, "Slab_4x4", x, 0f, SpineZ);
             }
-            if (ours) P(t, "Slab_Stairwell", Stairwell.x, 0f, Stairwell.z);
+            P(t, "Slab_Stairwell", Stairwell.x, 0f, Stairwell.z);
         }
 
         static void BuildFloor(Transform floor, Placer P)
         {
             Transform G(string name) { var g = new GameObject(name).transform; g.SetParent(floor, false); return g; }
 
-            Slabs(G("Slabs"), P, ours: true);
+            Slabs(G("Slabs"), P);
 
             var facade = G("Facade");
             for (int i = 0; i < Bays; i++)
@@ -270,27 +268,13 @@ namespace CloseTheDeal.Editor.Art
                         }
         }
 
-        static void BuildRivalFloor(Transform floor, Placer P)
-        {
-            var rival = new GameObject("Rival facade").transform;
-            rival.SetParent(floor, false);
-            Slabs(rival, P, ours: false);
-            for (int i = 0; i < Bays; i++)
-            {
-                P(rival, "Window_4m", (i + 1) * Bay, 0f, Gap, 180f);
-                P(rival, "Wall_Solid_4m", i * Bay, 0f, Gap + Bay);
-                if (i > 0) P(rival, "Column_Facade", i * Bay, 0f, Gap, 180f);
-            }
-        }
-
-        /// <summary>Dark-suited capsules at player height, on our floor and the rival's: the read the art bible asks for.</summary>
+        /// <summary>Dark-suited capsules at player height on each floor: the read the art bible asks for.</summary>
         static void Figures(Transform floor)
         {
             var navy = AssetDatabase.LoadAssetAtPath<Material>(NavyPath);
             var group = new GameObject("Stand-ins").transform;
             group.SetParent(floor, false);
             foreach (Vector2 s in OurSpots) Figure(group, navy, s);
-            foreach (Vector2 s in RivalSpots) Figure(group, navy, s);
         }
 
         static void Figure(Transform parent, Material navy, Vector2 at)
@@ -305,7 +289,7 @@ namespace CloseTheDeal.Editor.Art
             go.GetComponent<Renderer>().sharedMaterial = navy;
         }
 
-        /// <summary>White blocks above and below both towers, so the views read as two tall buildings.</summary>
+        /// <summary>White blocks above and below the tower, so the views read as one tall building.</summary>
         static void Massing(Transform root)
         {
             var white = AssetDatabase.LoadAssetAtPath<Material>(PaperWhitePath);
@@ -325,8 +309,6 @@ namespace CloseTheDeal.Editor.Art
             }
             Block("Our tower below", -MassingHeight, -slab - gapUnderSlab, -Depth, 0f);
             Block("Our tower above", top + gapUnderSlab, top + MassingHeight, -Depth, 0f);
-            Block("Rival below", -MassingHeight, -slab - gapUnderSlab, Gap, Gap + Bay);
-            Block("Rival above", top + gapUnderSlab, top + MassingHeight, Gap, Gap + Bay);
         }
 
         static void AddCamera()
@@ -404,15 +386,16 @@ namespace CloseTheDeal.Editor.Art
 
         // ------------------------------------------------------------------ captures
 
-        /// <summary>The concept shots: entry to stair, stair close, main floor to windows, the rival's view, a cutaway.</summary>
+        /// <summary>The concept shots: entry to stair, stair close, main floor to windows, the view from across the street, a cutaway.</summary>
         static (string name, Vector3 eye, Vector3 target)[] Views()
         {
-            float mid = FloorHeight;   // the middle floor, so floors above and below show from the rival
+            float mid = FloorHeight;   // the middle floor, so floors above and below show from across the street
             return new[]
             {
                 ("A_entry_to_stair", new Vector3(1.5f, mid + Eye, -12.5f), new Vector3(14f, mid + 1.4f, -6f)),
                 ("G_stair_close", new Vector3(9f, mid + Eye, -3.5f), new Vector3(14f, mid + 2f, -10f)),
                 ("B_stair_to_windows", new Vector3(14f, mid + Eye, -5f), new Vector3(14f, mid + 1.6f, 6f)),
+                // The view a rival player would have. The name is kept so earlier captures still line up.
                 ("H_rival_view", new Vector3(14f, mid + Eye, Gap + 1.5f), new Vector3(14f, mid + 1.8f, -8f)),
                 ("E_spine_to_facade", new Vector3(14f, mid + Eye, -13.5f), new Vector3(8f, mid + 1.6f, 0f)),
             };

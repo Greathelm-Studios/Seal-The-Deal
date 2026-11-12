@@ -36,6 +36,10 @@
 //     small square outlines tracing the cloud edges. Clouds are now drawn that way: no soft
 //     gradients, no streaks.
 //
+// The sky has two cloud languages on purpose (Alex, 2026-11-12: "why not both?"). ABOVE the
+// horizon: the flat pixel-stepped clouds with the grid, focus squares and plane. BELOW it: a
+// soft, shaded sea of cloud that the towers rise out of, from his above-the-clouds references.
+//
 // Written against UnityCG, like Unity's own Skybox/Procedural, because RenderSettings.sun is
 // handed to skybox shaders as _WorldSpaceLightPos0 in every render pipeline.
 Shader "Close the Deal/Office Sky"
@@ -64,9 +68,10 @@ Shader "Close the Deal/Office Sky"
         _TowerAccentColor("Big graphic colour", Color) = (0.141, 0.310, 0.725, 1)
         _TowerLineColor("Thin crown line colour", Color) = (0.125, 0.830, 0.900, 1)
         _TowerHeight("Tower height (0 = no city, 1 = designed height)", Range(0, 2)) = 1
-        _TowerDensity("How many towers (0 = none, 1 = wall to wall)", Range(0, 1)) = 0.5
-        _TowerHeroes("How many giant foreground towers (0 = none)", Range(0, 1)) = 0.5
-        _TowerHaze("Distance haze on the towers (0 = all crisp, 1 = far ones vanish)", Range(0, 1)) = 0.55
+        _TowerDensity("How many towers (0 = none, 1 = wall to wall)", Range(0, 1)) = 0.34
+        _TowerHeroes("How many giant foreground towers (0 = none)", Range(0, 1)) = 0.35
+        _TowerHaze("Distance haze on the towers (0 = all crisp, 1 = far ones vanish)", Range(0, 1)) = 0.62
+        _TowerVolume("How much darker a tower's side face is (0 = flat, 1 = strong)", Range(0, 1)) = 0.6
 
         [Header(Clouds)]
         _CloudLitColor("Cloud colour, brightest step", Color) = (1, 1, 1, 1)
@@ -83,6 +88,15 @@ Shader "Close the Deal/Office Sky"
         _CloudContour("Contour lines between the tone steps (0 = none)", Range(0, 1)) = 0.7
         _CloudDrift("Drift speed (0 = still)", Range(0, 1)) = 0.15
 
+        [Header(Cloud sea below)]
+        _SeaLitColor("Cloud sea colour, sunlit tops", Color) = (1, 1, 1, 1)
+        _SeaShadeColor("Cloud sea colour, hollows", Color) = (0.660, 0.760, 0.960, 1)
+        _SeaAmount("Cloud sea below the horizon (0 = plain mist)", Range(0, 1)) = 1
+        _SeaSize("Cloud sea billow size (bigger number = bigger billows)", Range(0.3, 4)) = 1
+        _SeaRim("How high the cloud tops rise over the horizon, in front of the towers", Range(0, 0.25)) = 0.1
+        _SeaGlow("White glow where the cloud sea meets the sky (0 = none)", Range(0, 1)) = 0.6
+        _SeaMatch("Match the pixel clouds above (0 = fully soft, 1 = same flat stepped look)", Range(0, 1)) = 0.5
+
         [Header(Overlay)]
         _OverlayColor("Grid and square line colour", Color) = (1, 1, 1, 1)
         _GridStrength("Hairline grid across the sky (0 = none)", Range(0, 1)) = 0.3
@@ -90,6 +104,13 @@ Shader "Close the Deal/Office Sky"
         _TraceStrength("Small squares tracing cloud edges (0 = none)", Range(0, 1)) = 0.75
         _TraceSize("Square size (higher = smaller squares)", Range(0.3, 3)) = 1
         _TraceSpeed("How often each square re-focuses, times per second (0 = frozen)", Range(0, 3)) = 0.55
+
+        [Header(Plane)]
+        _PlaneColor("Plane and contrail colour", Color) = (1, 1, 1, 1)
+        _PlaneEvery("Seconds between planes (0 = no planes)", Range(0, 300)) = 40
+        _PlaneCrossing("Seconds a plane takes to cross the sky", Range(2, 60)) = 13
+        _PlaneSize("Plane size", Range(0.3, 4)) = 1
+        _PlaneTrail("Contrail length (0 = none)", Range(0, 3)) = 1
     }
 
     SubShader
@@ -107,12 +128,15 @@ Shader "Close the Deal/Office Sky"
 
             fixed4 _ZenithColor, _SkyColor, _HorizonColor, _GroundColor, _SunColor;
             fixed4 _TowerLitColor, _TowerShadeColor, _TowerGlassColor, _TowerAccentColor, _TowerLineColor;
-            fixed4 _CloudLitColor, _CloudShadeColor, _CloudInkColor, _OverlayColor;
+            fixed4 _CloudLitColor, _CloudShadeColor, _CloudInkColor, _OverlayColor, _PlaneColor;
+            fixed4 _SeaLitColor, _SeaShadeColor;
             float _HorizonHeight, _ZenithHeight, _SunSize, _SunGlow, _SunRing, _SunRingSize;
-            float _TowerHeight, _TowerDensity, _TowerHeroes, _TowerHaze;
+            float _TowerHeight, _TowerDensity, _TowerHeroes, _TowerHaze, _TowerVolume;
             float _CloudAmount, _CloudScatter, _CloudBase, _CloudTop;
             float _CloudSize, _CloudBillow, _CloudPixel, _CloudBands, _CloudContour, _CloudDrift;
             float _GridStrength, _GridSize, _TraceStrength, _TraceSize, _TraceSpeed;
+            float _PlaneEvery, _PlaneCrossing, _PlaneSize, _PlaneTrail;
+            float _SeaAmount, _SeaSize, _SeaRim, _SeaGlow, _SeaMatch;
 
             #define TWO_PI 6.28318530718
             #define DEG_TO_RAD 0.01745329252
@@ -147,34 +171,74 @@ Shader "Close the Deal/Office Sky"
             #define TOWER_HERO_WIDTH 0.5
             /// Where the front face ends and the side face begins, across the tower's width.
             #define TOWER_FACE_SPLIT 0.64
-            /// Half the towers step in near the top; the crown starts this far up and is inset
-            /// by this much of the width on each side.
-            #define TOWER_CROWN_START 0.72
-            #define TOWER_CROWN_INSET 0.2
-            /// Some roofs are cut on a slant; the low corner drops this fraction of the height.
-            #define TOWER_SLANT_SHARE 0.3
+            /// At full Tower volume the side face is the shade colour times this, and a wall's
+            /// foot is this much darker than its roof. Picked by eye for a clear two-face block.
+            #define TOWER_SIDE_DARK 0.8
+            #define TOWER_FOOT_DARK 0.12
+
+            // Massing. WHY all this: a tower that is one box with a ladder of windows is what a
+            // formula makes by default, and it read as generated. Real towers of the kind in
+            // reference 04 are two or three volumes stacked off-centre, with a shaped crown.
+            /// Share of towers built from three stacked volumes; the rest are single slabs.
+            #define TOWER_STACKED_SHARE 0.68
+            /// The second volume starts between these heights, the crown between these (0..1).
+            #define TOWER_TIER_A_MIN 0.36
+            #define TOWER_TIER_A_MAX 0.62
+            #define TOWER_TIER_B_MIN 0.74
+            #define TOWER_TIER_B_MAX 0.9
+            /// How much width each step takes off in total. It is split unevenly between the
+            /// two sides, which is what makes the stack sit off-centre.
+            #define TOWER_TIER_A_INSET 0.2
+            #define TOWER_TIER_B_INSET 0.16
+            /// Crown shapes by share (cumulative): slanted, tapered to a spire, rounded. The rest
+            /// are flat, and some of those carry a mast.
+            #define TOWER_ROOF_SLANT 0.2
+            #define TOWER_ROOF_SPIRE 0.36
+            #define TOWER_ROOF_ROUND 0.52
             #define TOWER_SLANT_DROP 0.13
-            /// Some stepped towers carry a mast this much taller than the roof, this wide.
-            #define TOWER_MAST_SHARE 0.45
+            /// A rounded crown bulges this far above the tower's nominal height.
+            #define TOWER_ROUND_RISE 0.06
+            #define TOWER_MAST_SHARE 0.5
             #define TOWER_MAST_RISE 1.16
             #define TOWER_MAST_HALF_WIDTH 0.02
-            /// Facade styles by share: horizontal window bands, vertical window strips, dark
-            /// glass tower. Whatever is left is a plain white slab. Thresholds are cumulative.
-            #define TOWER_STYLE_BANDS 0.38
-            #define TOWER_STYLE_STRIPS 0.56
-            #define TOWER_STYLE_GLASS 0.78
+
+            // Facade. Only the near row and the heroes draw any of this.
+            /// Facade styles by share (cumulative): horizontal window bands, vertical window
+            /// strips, dark glass curtain wall. The rest are white slabs with one glass ribbon.
+            #define TOWER_STYLE_BANDS 0.34
+            #define TOWER_STYLE_STRIPS 0.52
+            #define TOWER_STYLE_GLASS 0.74
             /// Fraction of each floor that is white wall; the rest is the dark window band.
             #define TOWER_BAND_GAP 0.58
+            /// Windows come in zones with a blank belt between them (plant floors, sky lobbies),
+            /// this many zones up a tower, each this fraction windows. An unbroken ladder of
+            /// windows from foot to roof was the single most "generated" thing about the towers.
+            #define TOWER_ZONES 3.6
+            #define TOWER_ZONE_FILL 0.8
+            /// Windows stop this far up, leaving a blank head for the logo mark or the crown.
+            #define TOWER_WINDOWS_TOP 0.86
             /// Vertical window strips across a front face.
             #define TOWER_STRIPS 5.0
-            /// Share of towers that carry the big blue graphic: a diagonal slash across the
-            /// front face and a solid block on the side (bible: "one large blue graphic").
-            #define TOWER_ACCENT_SHARE 0.45
+            /// Half-width of the recessed vertical slot that runs up some front faces, and of
+            /// the glass ribbon on white slabs (fractions of the tower's width).
+            #define TOWER_SLOT_HALF 0.018
+            #define TOWER_RIBBON_HALF 0.07
+            /// Mullions across and floors up a glass curtain wall.
+            #define TOWER_MULLIONS 7.0
+            /// Share of towers that carry the big blue graphic (a diagonal slash on the front,
+            /// a solid block on the side), and share that carry a ring mark at the head instead.
+            #define TOWER_ACCENT_SHARE 0.3
+            #define TOWER_MARK_SHARE 0.22
             #define TOWER_SLASH_AT 0.6
             #define TOWER_SLASH_SLOPE 0.55
             #define TOWER_SLASH_HALF 0.075
             #define TOWER_BLOCK_FROM 0.42
             #define TOWER_BLOCK_TO 0.9
+            /// The ring mark sits this far up the tower; its radius is this fraction of the
+            /// front face's width, and its line is this fraction of the radius thick.
+            #define TOWER_MARK_AT 0.92
+            #define TOWER_MARK_RADIUS 0.3
+            #define TOWER_MARK_LINE 0.22
 
             // ---- Clouds ----
             /// Cumulus masses round the full circle at Cloud size 1. Must stay even: the base
@@ -196,6 +260,17 @@ Shader "Close the Deal/Office Sky"
             /// reference (a thresholded low-resolution photo) has roughly 40 steps along a cloud.
             #define CLOUD_BLOCKS_FINE 150.0
             #define CLOUD_BLOCKS_COARSE 24.0
+            /// View heights between which clouds thin out toward the horizon (0 = horizon).
+            #define CLOUD_FADE_FROM 0.03
+            #define CLOUD_FADE_TO 0.36
+            /// How hard the overhead field is eaten away at the horizon, in noise units. Above
+            /// about 0.3 nothing survives at the horizon, which is the point.
+            #define FIELD_THIN_OUT 0.36
+            /// How far the lowest clouds are tinted to the horizon colour (0 = stay white).
+            #define CLOUD_LOW_HAZE 0.55
+            /// How ragged the underside of a horizon cumulus is, as a fraction of the bank height.
+            /// At 0 every base is a ruled line.
+            #define CLOUD_BASE_RAG 0.4
             /// Broken cloud field overhead. Added to the view height before projecting onto the
             /// flat cloud layer: without it the lookup runs to infinity at the horizon.
             #define FIELD_CURVE 0.18
@@ -212,6 +287,32 @@ Shader "Close the Deal/Office Sky"
             /// How deep into a field cloud (in noise units) the tone runs from brightest to
             /// darkest. Seen from below, the thin rim is bright and the thick middle is shaded.
             #define FIELD_TONE_DEPTH 0.24
+
+            // ---- Cloud sea ----
+            // Seen from above: the view ray is projected down onto a flat layer below the camera,
+            // the mirror image of how the overhead field is projected up.
+            /// Added to the downward view angle before projecting, for the same reason as
+            /// FIELD_CURVE: without it the lookup runs to infinity at the horizon.
+            #define SEA_CURVE 0.16
+            /// Billows per layer unit at Cloud sea billow size 1.
+            #define SEA_SCALE 1.1
+            /// The sea is two noises added: big slow swells and the billows on them. This is the
+            /// swells' size relative to the billows, and their share of the total.
+            #define SEA_SWELL_SCALE 0.3
+            #define SEA_SWELL_SHARE 0.45
+            /// How far toward the sun the second sample is taken; the difference lights the
+            /// sun-facing side of each billow. Picked by eye.
+            #define SEA_LIGHT_STEP 0.3
+            /// The sea fades into the horizon glow over this much downward view angle.
+            #define SEA_HAZE_REACH 0.22
+            /// Cloud tops along the horizon: masses round the full circle, and how soft their
+            /// edge is as a fraction of their height.
+            #define SEA_RIM_MASSES 26.0
+            #define SEA_RIM_SOFT 0.3
+            /// Towers have vanished into the sea by this far below the horizon (rise over
+            /// distance, negative = below). Was -0.45 when they sank into plain mist. WHY so shallow:
+            /// any deeper and the towers show through the sea like reflections on water.
+            #define SEA_SWALLOWS_TOWERS -0.045
 
             // ---- Overlay ----
             /// Square outlines per cloud width, for the two overlapping sets. Unrelated counts
@@ -239,6 +340,39 @@ Shader "Close the Deal/Office Sky"
             #define TRACE_ON_SHARE 0.8
             /// Turn of the grid from the compass axes, radians, so it runs diagonally.
             #define GRID_TURN 0.35
+
+            // ---- Plane ----
+            // The plane flies a straight line across the same flat layer the clouds are on, so
+            // perspective makes it rise from the horizon, pass large overhead and shrink away.
+            /// Half the plane's length at Plane size 1, in layer units (about 3 degrees overhead).
+            #define PLANE_HALF_LENGTH 0.05
+            /// The flight runs from this far behind the middle of the sky to this far beyond it,
+            /// in layer units. 5 is close to the horizon in both directions.
+            #define PLANE_RUN 5.0
+            /// Flights pass within this distance of straight overhead, in layer units, so each
+            /// one takes a different lane.
+            #define PLANE_LANE 3.0
+            /// Contrail length at Contrail length 1, in plane lengths.
+            #define PLANE_TRAIL_LENGTHS 45.0
+            /// The contrail fades out in this many flat steps (no soft gradients in this sky).
+            #define PLANE_TRAIL_STEPS 4.0
+            /// The plane tears a channel through the cloud field. The channel is this deep at the
+            /// plane (in field noise units; 0.4 clears even thick cloud), starts this wide and
+            /// spreads by this much per plane length behind (in plane half-lengths), and has
+            /// closed again this many plane lengths back.
+            #define PLANE_WAKE_DEPTH 0.42
+            #define PLANE_WAKE_WIDTH 1.6
+            #define PLANE_WAKE_SPREAD 0.07
+            #define PLANE_WAKE_LENGTHS 110.0
+            /// The flight keeps going this far past the far horizon (as a fraction of the
+            /// crossing) so its wake leaves the sky instead of vanishing when the plane does.
+            #define PLANE_OVERRUN 1.6
+            /// The tracking bracket's half-size, in plane half-lengths, once it has locked on.
+            #define PLANE_BRACKET 2.0
+            /// The bracket starts this much oversized and snaps down during this first fraction
+            /// of the flight, like the other focus squares.
+            #define PLANE_BRACKET_OVERSHOOT 0.6
+            #define PLANE_BRACKET_HUNT 0.1
 
             struct Attributes
             {
@@ -358,8 +492,10 @@ Shader "Close the Deal/Office Sky"
                 lump = CloudNoise(lumpUV, period * CLOUD_BILLOW_SCALE, octaves);
                 float lumpy = p.y + (lump - 0.5) * bankHeight * _CloudBillow * 0.6;
                 lift = saturate((lumpy - baseHere) / max(top - baseHere, 0.001));
-                // Inside = under the lumpy top AND above the flat base.
-                float depth = min(top - lumpy, (p.y - baseHere) * 4.0) / bankHeight;
+                // Inside = under the lumpy top AND above the base. The base is pushed up and down
+                // by the same lumps, more gently, so it is uneven but still reads as a base.
+                float raggedBase = baseHere + (lump - 0.5) * bankHeight * CLOUD_BASE_RAG;
+                float depth = min(top - lumpy, (p.y - raggedBase) * 2.0) / bankHeight;
                 return mass > 0.001 ? depth : -1.0;
             }
 
@@ -399,6 +535,26 @@ Shader "Close the Deal/Office Sky"
                 return saturate(1.0 - abs(box - halfSize) / thickness) * saturate(1.6 - pixel * 7.0) * visible;
             }
 
+            /// How high the cloud sea's surface stands at this spot on its layer, 0..1: big slow
+            /// swells with billows on them. Soft on purpose; this is the one un-posterised cloud.
+            float SeaHeight(float2 uv)
+            {
+                // A huge period: this layer is not wrapped round the horizon, so it needs no seam fix.
+                float billows = CloudNoise(uv, 4096.0, CLOUD_BILLOW_OCTAVES);
+                float swells = CloudNoise(uv * SEA_SWELL_SCALE + 9.0, 4096.0, 3);
+                return lerp(billows, swells, SEA_SWELL_SHARE);
+            }
+
+            /// Brings a soft 0..1 shade partway to the flat stepped shading of the pixel clouds:
+            /// at Match 0 it is returned untouched, at 1 it is fully stepped. One more step than
+            /// the clouds above use, so the sea stays the calmer of the two.
+            float SeaShade(float soft)
+            {
+                float steps = max(floor(_CloudBands + 0.5), 2.0) + 1.0;
+                float stepped = min(floor(saturate(soft) * steps), steps - 1.0) / (steps - 1.0);
+                return lerp(soft, stepped, _SeaMatch);
+            }
+
             /// One row of towers. Returns the tower's own colour in rgb and its coverage in a.
             /// `rise` is rise over distance (so vertical edges stay vertical and floors stay
             /// evenly spaced), `sunAngle` is the compass angle from this direction to the sun.
@@ -423,66 +579,119 @@ Shader "Close the Deal/Office Sky"
                 float pixelT = pixelRise / max(top, 0.0001);
                 float t = rise / max(top, 0.0001);
 
-                // Roof: flat, or cut on a slant toward one corner.
-                float roofRoll = Hash21(float2(column, seed + 12.4));
-                float slanted = step(1.0 - TOWER_SLANT_SHARE, roofRoll);
-                float slantAcross = roofRoll > 1.0 - TOWER_SLANT_SHARE * 0.5 ? u : 1.0 - u;
-                float roof = 1.0 - slanted * TOWER_SLANT_DROP * saturate(slantAcross);
+                // ---- Massing: up to three volumes stacked off-centre ----
+                float rollA = Hash21(float2(column, seed + 6.3));
+                float rollB = Hash21(float2(column, seed + 12.4));
+                float rollC = Hash21(float2(column, seed + 14.8));
+                float rollD = Hash21(float2(column, seed + 18.5));
+                float stacked = step(rollC, TOWER_STACKED_SHARE);
+                float tierA = lerp(TOWER_TIER_A_MIN, TOWER_TIER_A_MAX, rollA);
+                float tierB = lerp(TOWER_TIER_B_MIN, TOWER_TIER_B_MAX, rollB);
+                float inA = stacked * step(tierA, t);
+                float inB = stacked * step(tierB, t);
+                // Each step's inset is shared unevenly between the two sides.
+                float insetL = inA * TOWER_TIER_A_INSET * rollB + inB * TOWER_TIER_B_INSET * rollD;
+                float insetR = inA * TOWER_TIER_A_INSET * (1.0 - rollB) + inB * TOWER_TIER_B_INSET * (1.0 - rollD);
+                // 0..1 across whichever volume this height is in.
+                float v = saturate((u - insetL) / max(1.0 - insetL - insetR, 0.05));
 
-                // Crown: half the towers step in near the top.
-                float stepped = step(0.5, Hash21(float2(column, seed + 6.3)));
-                float inCrown = stepped * step(TOWER_CROWN_START, t);
-                float inset = TOWER_CROWN_INSET * inCrown;
-                float body = Edge(u - inset, pixelU) * Edge(1.0 - inset - u, pixelU) * Edge(roof - t, pixelT);
+                // ---- Crown ----
+                float roofRoll = Hash21(float2(column, seed + 21.7));
+                float isSlant = step(roofRoll, TOWER_ROOF_SLANT);
+                float isSpire = step(TOWER_ROOF_SLANT, roofRoll) * step(roofRoll, TOWER_ROOF_SPIRE) * stacked;
+                float isRound = step(TOWER_ROOF_SPIRE, roofRoll) * step(roofRoll, TOWER_ROOF_ROUND);
+                float isFlat = 1.0 - saturate(isSlant + isSpire + isRound);
+                float roof = 1.0;
+                roof -= isSlant * TOWER_SLANT_DROP * (rollD > 0.5 ? v : 1.0 - v);
+                // Spire: the crown volume closes to a point at the nominal height.
+                roof = lerp(roof, tierB + (1.0 - tierB) * (1.0 - abs(v - 0.5) * 2.0), isSpire);
+                // Rounded: a shallow arc over the top volume.
+                float arc = sqrt(saturate(1.0 - (v * 2.0 - 1.0) * (v * 2.0 - 1.0)));
+                roof += isRound * TOWER_ROUND_RISE * (arc - 0.5);
+                float body = Edge(u - insetL, pixelU) * Edge(1.0 - insetR - u, pixelU) * Edge(roof - t, pixelT);
 
-                // Mast on some stepped towers.
-                float masted = stepped * (1.0 - slanted) * step(1.0 - TOWER_MAST_SHARE, Hash21(float2(column, seed + 14.8)));
-                float mast = masted * Edge(TOWER_MAST_HALF_WIDTH - abs(u - 0.5), pixelU) * Edge(t - 1.0, pixelT) * Edge(TOWER_MAST_RISE - t, pixelT);
+                float masted = isFlat * step(1.0 - TOWER_MAST_SHARE, rollA);
+                float mastAt = insetL + (1.0 - insetL - insetR) * lerp(0.3, 0.7, rollD);
+                float mast = masted * Edge(TOWER_MAST_HALF_WIDTH - abs(u - mastAt), pixelU) * Edge(t - 1.0, pixelT) * Edge(TOWER_MAST_RISE - t, pixelT);
 
-                // Two faces. A face is bright when the sun is behind the viewer, pale blue when
-                // the viewer looks toward the sun, so the city reads as solid blocks.
+                // ---- Light: two faces, the side one always a step darker ----
                 float side = Edge(u - TOWER_FACE_SPLIT, pixelU);
                 float frontLit = smoothstep(-0.25, 0.55, -cos(sunAngle - 0.5));
                 float sideLit = smoothstep(-0.25, 0.55, -cos(sunAngle + 1.1));
                 float faceLit = lerp(frontLit, sideLit, side);
                 float3 wall = lerp(_TowerShadeColor.rgb, _TowerLitColor.rgb, faceLit);
+                // WHY: with both faces lit from the sun's direction alone, a tower seen with the sun
+                // behind it had two equal faces and read as a flat card.
+                wall = lerp(wall, _TowerShadeColor.rgb * TOWER_SIDE_DARK, side * _TowerVolume);
+                wall *= lerp(1.0 - TOWER_FOOT_DARK * _TowerVolume, 1.0, saturate(t));
                 float3 color = wall;
+                // A shadow line under each step, so the stacked volumes read as separate masses.
+                float ledge = stacked * saturate(Edge(0.012 - abs(t - tierA + 0.012), pixelT) + Edge(0.012 - abs(t - tierB + 0.012), pixelT));
+                color = lerp(color, _TowerShadeColor.rgb * TOWER_SIDE_DARK, ledge * _TowerVolume);
 
-                // Facade style. Detail only on rows close enough to resolve it (bands > 0).
+                // ---- Facade: only on rows close enough to resolve it (bands > 0) ----
                 float detailed = step(0.5, bands);
                 float style = Hash21(float2(column, seed + 8.2));
-                float front = (1.0 - side) * Edge(u - inset - 0.07, pixelU) * Edge(TOWER_FACE_SPLIT - 0.06 - u, pixelU) * Edge(roof - 0.03 - t, pixelT);
+                float isBands = step(style, TOWER_STYLE_BANDS);
+                float isStrips = step(TOWER_STYLE_BANDS, style) * step(style, TOWER_STYLE_STRIPS);
+                float isGlass = step(TOWER_STYLE_STRIPS, style) * step(style, TOWER_STYLE_GLASS);
+                float isSlab = step(TOWER_STYLE_GLASS, style);
+
+                float front = (1.0 - side) * Edge(u - insetL - 0.07, pixelU) * Edge(TOWER_FACE_SPLIT - 0.06 - u, pixelU) * Edge(roof - 0.03 - t, pixelT);
                 float bandCoord = rise * bands;
                 // Fade fine lines out before they get thinner than a pixel, or they shimmer.
                 float bandFade = saturate(1.0 - fwidth(bandCoord) * 1.5);
                 float stripCoord = u * TOWER_STRIPS / TOWER_FACE_SPLIT;
                 float stripFade = saturate(1.0 - fwidth(stripCoord) * 1.5);
+                // Window zones with blank belts between them, and a blank head above.
+                float zone = step(frac(t * TOWER_ZONES + rollA), TOWER_ZONE_FILL) * step(t, TOWER_WINDOWS_TOP);
 
-                float isBands = step(style, TOWER_STYLE_BANDS);
-                float isStrips = step(TOWER_STYLE_BANDS, style) * step(style, TOWER_STYLE_STRIPS);
-                float isGlass = step(TOWER_STYLE_STRIPS, style) * step(style, TOWER_STYLE_GLASS);
-
-                float bandMask = step(TOWER_BAND_GAP, frac(bandCoord)) * bandFade;
-                float stripMask = step(0.5, frac(stripCoord)) * stripFade;
+                float bandMask = step(TOWER_BAND_GAP, frac(bandCoord)) * bandFade * zone;
+                float stripMask = step(0.5, frac(stripCoord)) * stripFade * zone;
                 color = lerp(color, _TowerGlassColor.rgb, detailed * front * (isBands * bandMask + isStrips * stripMask) * 0.9);
 
-                // Glass tower: dark body, a little brighter where lit, thin white floor lines.
+                // A recessed vertical slot up the front of some banded and stripped towers.
+                float slotAt = lerp(0.16, TOWER_FACE_SPLIT - 0.16, rollD);
+                float slot = step(0.45, rollB) * (isBands + isStrips) * (1.0 - side) * Edge(TOWER_SLOT_HALF - abs(u - slotAt), pixelU) * Edge(roof - 0.02 - t, pixelT) * Edge(u - insetL, pixelU);
+                color = lerp(color, _TowerGlassColor.rgb, detailed * slot);
+
+                // White slab: one full-height glass ribbon, off-centre, and nothing else.
+                float ribbon = isSlab * (1.0 - side) * Edge(TOWER_RIBBON_HALF - abs(u - slotAt), pixelU) * Edge(roof - 0.05 - t, pixelT) * Edge(u - insetL - 0.03, pixelU);
+                float ribbonFloors = step(0.82, frac(bandCoord)) * bandFade;
+                color = lerp(color, lerp(_TowerGlassColor.rgb, wall, ribbonFloors * 0.5), detailed * ribbon);
+
+                // Glass curtain wall: dark body in a white frame, mullions across, floor lines up.
                 float3 glass = lerp(_TowerGlassColor.rgb, lerp(_TowerGlassColor.rgb, _TowerAccentColor.rgb, 0.7), faceLit);
-                float glassBody = Edge(u - inset - 0.03, pixelU) * Edge(0.97 - inset - u, pixelU) * Edge(roof - 0.02 - t, pixelT);
+                float glassBody = Edge(u - insetL - 0.03, pixelU) * Edge(0.97 - insetR - u, pixelU) * Edge(roof - 0.02 - t, pixelT);
+                float mullionCoord = u * TOWER_MULLIONS;
+                float mullion = step(0.9, frac(mullionCoord)) * saturate(1.0 - fwidth(mullionCoord) * 1.5);
                 float floorLine = step(0.8, frac(bandCoord)) * bandFade;
-                color = lerp(color, lerp(glass, wall, floorLine * 0.55), isGlass * glassBody * lerp(0.75, 1.0, detailed));
+                color = lerp(color, lerp(glass, wall, saturate(floorLine * 0.55 + mullion * 0.4) * detailed), isGlass * glassBody * lerp(0.75, 1.0, detailed));
 
                 // The big blue graphic: a diagonal slash on the front, a solid block on the side.
-                float accented = step(1.0 - TOWER_ACCENT_SHARE, Hash21(float2(column, seed + 9.6))) * (1.0 - isGlass);
+                float markRoll = Hash21(float2(column, seed + 9.6));
+                float accented = step(1.0 - TOWER_ACCENT_SHARE, markRoll) * (1.0 - isGlass);
                 float slashDir = Hash21(float2(column, seed + 16.1)) > 0.5 ? 1.0 : -1.0;
                 float slashDistance = abs(t - TOWER_SLASH_AT - (u - TOWER_FACE_SPLIT * 0.5) * TOWER_SLASH_SLOPE * slashDir);
-                float slash = Edge(TOWER_SLASH_HALF - slashDistance, pixelT) * (1.0 - side) * Edge(u - inset, pixelU);
-                float block = side * Edge(t - TOWER_BLOCK_FROM, pixelT) * Edge(TOWER_BLOCK_TO - t, pixelT) * Edge(1.0 - inset - u, pixelU);
-                color = lerp(color, _TowerAccentColor.rgb, accented * saturate(slash + block) * lerp(0.6, 1.0, detailed));
+                float slash = Edge(TOWER_SLASH_HALF - slashDistance, pixelT) * (1.0 - side) * Edge(u - insetL, pixelU);
+                float block = side * Edge(t - TOWER_BLOCK_FROM, pixelT) * Edge(TOWER_BLOCK_TO - t, pixelT) * Edge(1.0 - insetR - u, pixelU);
+                color = lerp(color, _TowerAccentColor.rgb, accented * saturate(slash + block) * body * lerp(0.6, 1.0, detailed));
 
-                // A hairline of cyan where the crown steps in (bible: cyan as thin lines only).
-                float crownLine = stepped * detailed * Edge(0.006 - abs(t - TOWER_CROWN_START), pixelT);
+                // Or a ring mark at the head: a logo without being anyone's logo.
+                float marked = step(markRoll, TOWER_MARK_SHARE) * (1.0 - isGlass) * detailed * isFlat * (1.0 - stacked);
+                float slotAngle = TWO_PI / columns * width;
+                float markRadius = TOWER_MARK_RADIUS * TOWER_FACE_SPLIT * slotAngle;
+                float2 fromMark = float2((u - TOWER_FACE_SPLIT * 0.5) * slotAngle, rise - TOWER_MARK_AT * top) / max(markRadius, 0.00001);
+                float markPixel = pixelRise / max(markRadius, 0.00001);
+                float ring = Edge(TOWER_MARK_LINE - abs(length(fromMark) - 1.0), markPixel);
+                color = lerp(color, _TowerAccentColor.rgb, marked * ring * body);
+
+                // A hairline of cyan under the crown (bible: cyan as thin lines only).
+                float crownLine = stacked * detailed * Edge(0.006 - abs(t - tierB), pixelT) * body;
                 color = lerp(color, _TowerLineColor.rgb, crownLine);
+                // A bright hairline down the corner where the two faces meet.
+                float corner = detailed * Edge(0.012 - abs(u - TOWER_FACE_SPLIT), pixelU) * body;
+                color = lerp(color, _TowerLitColor.rgb, corner * 0.7 * _TowerVolume);
 
                 return float4(lerp(color, wall, mast * (1.0 - body)), saturate(body + mast) * present);
             }
@@ -504,9 +713,31 @@ Shader "Close the Deal/Office Sky"
                 // ---- Dome: a narrow pale horizon, saturated blue, deep blue overhead ----
                 float3 color = lerp(_HorizonColor.rgb, _SkyColor.rgb, smoothstep(0.0, _HorizonHeight, up));
                 color = lerp(color, _ZenithColor.rgb, smoothstep(_HorizonHeight, _ZenithHeight, up));
-                // Below the horizon: mist, so a fall or a long look down never shows a hard edge.
-                float3 mist = lerp(_HorizonColor.rgb, _GroundColor.rgb, smoothstep(0.0, 0.3, -height));
-                color = lerp(color, mist, step(height, 0.0));
+                // Below the horizon: a soft sea of cloud seen from above, fading to plain mist
+                // when Cloud sea is turned down. `sea` is also what the towers sink into.
+                float3 plainMist = lerp(_HorizonColor.rgb, _GroundColor.rgb, smoothstep(0.0, 0.3, -height));
+                float3 horizonGlow = lerp(_HorizonColor.rgb, float3(1.0, 1.0, 1.0), _SeaGlow);
+                float3 sea = plainMist;
+                // Only worked out near and below the horizon; it is the costliest part of the sky.
+                if (height < 0.02 && _SeaAmount > 0.001)
+                {
+                    float2 seaUV = dir.xz / (max(-height, 0.0) + SEA_CURVE) * (SEA_SCALE / _SeaSize) + float2(drift * 0.012, drift * 0.004);
+                    // WHY the pixel grid here too: it is what ties the soft sea to the stepped
+                    // clouds above. Any Match above 0 snaps the sea to the same blocks, so the two
+                    // share one "resolution" even though the sea keeps its soft shading.
+                    float2 seaLookup = _SeaMatch > 0.001 ? Blocky(seaUV) : seaUV;
+                    float seaHigh = SeaHeight(seaLookup);
+                    float seaToward = SeaHeight(seaLookup + normalize(sunDir.xz + 0.0001) * SEA_LIGHT_STEP);
+                    // Bright on the tops and on the sides facing the sun, blue in the hollows.
+                    float seaTone = SeaShade(smoothstep(0.2, 0.9, 0.55 + (seaHigh - 0.5) * 1.6 + (seaHigh - seaToward) * 2.5));
+                    float3 seaColor = lerp(_SeaShadeColor.rgb, _SeaLitColor.rgb, seaTone);
+                    // Toward the horizon the sea flattens into a band of white glow.
+                    seaColor = lerp(horizonGlow, seaColor, smoothstep(0.0, SEA_HAZE_REACH, -height));
+                    sea = lerp(plainMist, seaColor, _SeaAmount);
+                }
+                color = lerp(color, sea, step(height, 0.0));
+                // The same glow reaches a little way up into the sky, so sea and sky meet softly.
+                color = lerp(color, horizonGlow, (1.0 - smoothstep(0.0, 0.06, height)) * step(0.0, height) * _SeaAmount * _SeaGlow);
 
                 // ---- Sun: hot core, wide pale bloom, a hairline halo ring ----
                 float sunCos = dot(dir, sunDir);
@@ -516,23 +747,73 @@ Shader "Close the Deal/Office Sky"
                 float ring = saturate(1.0 - abs(sunDegrees - _SunRingSize) / SUN_RING_WIDTH);
                 color += _SunColor.rgb * ring * _SunRing * 0.5;
 
+                // ---- Plane: worked out here, drawn after the clouds it tears through ----
+                float2 skyLayer = dir.xz / (max(height, 0.0) + FIELD_CURVE);
+                float planeLength = PLANE_HALF_LENGTH * _PlaneSize;
+                float2 planeLocal = float2(0.0, 0.0);
+                float planeProgress = 2.0;
+                float planeOn = 0.0;
+                if (_PlaneEvery > 0.001)
+                {
+                    // One flight per period. Each flight rolls its own heading and lane.
+                    float planePeriod = max(_PlaneEvery, _PlaneCrossing);
+                    float flight = floor(_Time.y / planePeriod);
+                    planeProgress = (_Time.y - flight * planePeriod) / _PlaneCrossing;
+                    float heading = Hash21(float2(flight, 3.7)) * TWO_PI;
+                    float2 forward = float2(cos(heading), sin(heading));
+                    float2 sideways = float2(-forward.y, forward.x);
+                    float2 planeAt = sideways * (Hash21(float2(flight, 9.1)) - 0.5) * PLANE_LANE + forward * lerp(-PLANE_RUN, PLANE_RUN, planeProgress);
+                    // x = ahead of the plane (in plane half-lengths), y = out along the wing.
+                    planeLocal = float2(dot(skyLayer - planeAt, forward), dot(skyLayer - planeAt, sideways)) / planeLength;
+                    // The flight overruns the far horizon so the wake it cut can drift out of view.
+                    planeOn = step(planeProgress, PLANE_OVERRUN) * smoothstep(0.03, 0.14, height);
+                }
+                float planeAhead = planeLocal.x;
+                float planeOut = abs(planeLocal.y);
+                float planePixel = clamp(max(fwidth(planeLocal.x), fwidth(planeLocal.y)), 0.00001, 4.0);
+                // A plan-view jet: fuselage, swept-back wings, small tailplane.
+                float fuselage = Edge(0.11 - planeOut, planePixel) * Edge(1.0 - abs(planeAhead), planePixel);
+                float wings = Edge(0.9 * saturate((0.3 - planeAhead) / 0.7) - planeOut, planePixel) * Edge(planeAhead + 0.4, planePixel) * Edge(0.3 - planeAhead, planePixel);
+                float tail = Edge(0.38 * saturate((-0.65 - planeAhead) / 0.3) - planeOut, planePixel) * Edge(planeAhead + 1.0, planePixel) * Edge(-0.65 - planeAhead, planePixel);
+                float planeShape = max(fuselage, max(wings, tail));
+                // Contrail: a hairline behind the tail that fades out in flat steps.
+                float behind = -planeAhead - 1.0;
+                float trailLeft = 1.0 - behind / max(PLANE_TRAIL_LENGTHS * _PlaneTrail, 0.0001);
+                float trail = ceil(saturate(trailLeft) * PLANE_TRAIL_STEPS) / PLANE_TRAIL_STEPS * step(0.0, behind) * step(0.0001, _PlaneTrail);
+                trail *= Edge(max(0.09, planePixel * 1.3) - planeOut, planePixel) * 0.9;
+                // The wake: how much cloud is torn away at this spot. Widest and shallowest far
+                // behind, so the channel opens sharply at the plane and heals raggedly.
+                float wakeBack = saturate(1.0 - behind / PLANE_WAKE_LENGTHS) * step(-1.0, behind);
+                float wakeHalf = PLANE_WAKE_WIDTH + max(behind, 0.0) * PLANE_WAKE_SPREAD;
+                float wake = saturate(1.0 - planeOut / wakeHalf) * wakeBack * planeOn * PLANE_WAKE_DEPTH;
+
                 // ---- Clouds, kind 1: a broken field overhead, seen in perspective ----
                 // One continuous sheet of noise on a flat layer above the city, cut into clouds.
                 // Perspective does the variety: clouds overhead are huge, the same clouds far
                 // away are small and packed. Everything is flat steps and hard edges.
                 float2 fieldUV = dir.xz / (max(height, 0.0) + FIELD_CURVE) * (FIELD_SCALE / _CloudSize) + float2(drift * 0.02, drift * 0.007);
-                float fieldFade = smoothstep(0.08, 0.3, height);
+                float fieldFade = smoothstep(CLOUD_FADE_FROM, CLOUD_FADE_TO, height);
                 float fieldDepth = FieldDepth(Blocky(fieldUV), CLOUD_BILLOW_OCTAVES);
                 // Thin the field out toward the horizon, where perspective would otherwise pack it solid.
-                fieldDepth -= (1.0 - fieldFade) * 0.2;
-                float field = Edge(fieldDepth, max(fwidth(fieldDepth), 0.00001)) * step(0.02, height);
+                // WHY subtract instead of fading: lowering the depth eats each cloud away from its
+                // edges inward, so the field breaks up into smaller and smaller pieces as it nears
+                // the horizon. A plain fade or a height cut-off left a ruled line across the sky.
+                fieldDepth -= (1.0 - fieldFade) * FIELD_THIN_OUT;
+                // The plane's wake eats the cloud the same way, so the channel has the same
+                // broken, stepped edge as every other cloud edge.
+                fieldDepth -= wake;
+                float field = Edge(fieldDepth, max(fwidth(fieldDepth), 0.00001));
                 // Seen from below: the thin rim is the brightest step, the thick middle the darkest.
                 float fieldTone = Poster(1.0 - fieldDepth / FIELD_TONE_DEPTH);
                 float3 fieldColor = lerp(_CloudShadeColor.rgb, _CloudLitColor.rgb, fieldTone);
                 // A contour line wherever the tone steps. fwidth of a stepped value is only
                 // non-zero on the pixels where it jumps.
                 float fieldInk = step(0.0001, fwidth(fieldTone)) * _CloudContour;
-                color = lerp(color, lerp(fieldColor, _CloudInkColor.rgb, fieldInk), field);
+                // Low clouds take on the horizon colour, in the same flat steps, so they sink into
+                // the distance instead of standing white against it.
+                float lowHaze = Poster(1.0 - fieldFade) * CLOUD_LOW_HAZE;
+                fieldColor = lerp(lerp(fieldColor, _CloudInkColor.rgb, fieldInk), _HorizonColor.rgb, lowHaze);
+                color = lerp(color, fieldColor, field);
 
                 // ---- Overlay: hairline grid over the sky, squares tracing the field's edges ----
                 float gridSin = sin(GRID_TURN);
@@ -567,6 +848,7 @@ Shader "Close the Deal/Office Sky"
                 float cumulusTone = Poster(0.2 + 0.75 * cumulusLift + (cumulusLump - 0.5) * 1.3);
                 float cumulusInk = step(0.0001, fwidth(cumulusTone)) * _CloudContour;
                 float3 cumulusColor = lerp(lerp(_CloudShadeColor.rgb, _CloudLitColor.rgb, cumulusTone), _CloudInkColor.rgb, cumulusInk);
+                cumulusColor = lerp(cumulusColor, _HorizonColor.rgb, lowHaze);
 
                 float slotLiftA;
                 float slotLiftB;
@@ -586,29 +868,61 @@ Shader "Close the Deal/Office Sky"
                 float disc = smoothstep(discCos, lerp(discCos, 1.0, 0.2), sunCos) * step(0.0001, _SunSize);
                 color += _SunColor.rgb * disc * (1.0 - saturate(cumulus + field));
 
-                // ---- City: far, mid, [cumulus], near, heroes. Each row is hazier the
-                //      further it is, and every row sinks into the mist below the horizon so no
-                //      tower has a visible foot. ----
-                float3 hazeColor = lerp(_HorizonColor.rgb, _SkyColor.rgb, 0.45);
-                float sink = smoothstep(0.05, -0.45, rise);
-                float3 sunk = lerp(hazeColor, mist, sink);
-
-                float4 farRow = TowerRow(azimuth01, rise, sunAngle, TOWERS_FAR, TOWER_TALL_FAR, 0.0, _TowerDensity, 1.0, 3.0);
-                color = lerp(color, lerp(farRow.rgb, sunk, saturate(_TowerHaze * 1.15 + sink)), farRow.a);
-
-                float4 midRow = TowerRow(azimuth01, rise, sunAngle, TOWERS_MID, TOWER_TALL_MID, 80.0, _TowerDensity, 1.0, 11.0);
-                color = lerp(color, lerp(midRow.rgb, sunk, saturate(_TowerHaze * 0.7 + sink)), midRow.a);
-
-                // The big cumulus stand IN FRONT of the far city and behind the near one. This
-                // is what gives the sky depth: weather between the buildings.
+                // All cloud is drawn BEHIND the whole city. WHY: with cumulus between the tower
+                // rows, the nearer towers sliced through the clouds and it read as clipping.
                 color = lerp(color, cumulusColor, cumulus);
                 color = lerp(color, _OverlayColor.rgb, cumulusSquares);
 
+                // The plane and its contrail, in front of the clouds it has just cut through.
+                color = lerp(color, _PlaneColor.rgb, max(planeShape, trail) * planeOn);
+
+                // One focus bracket locks onto the plane and tracks it across.
+                float bracketHunt = ceil((1.0 - saturate(planeProgress / PLANE_BRACKET_HUNT)) * TRACE_HUNT_JUMPS) / TRACE_HUNT_JUMPS;
+                float bracketHalf = PLANE_BRACKET * (1.0 + bracketHunt * PLANE_BRACKET_OVERSHOOT);
+                float bracket = saturate(1.0 - abs(max(abs(planeAhead), planeOut) - bracketHalf) / planePixel);
+                color = lerp(color, _OverlayColor.rgb, bracket * planeOn * _TraceStrength);
+
+                // ---- City: far, mid, near, heroes. Each row is hazier the
+                //      further it is, and every row sinks into the mist below the horizon so no
+                //      tower has a visible foot. ----
+                float3 hazeColor = lerp(_HorizonColor.rgb, _SkyColor.rgb, 0.45);
+                float sink = smoothstep(lerp(0.05, 0.02, _SeaAmount), lerp(-0.45, SEA_SWALLOWS_TOWERS, _SeaAmount), rise);
+                float3 sunk = lerp(hazeColor, sea, sink);
+
+                float4 farRow = TowerRow(azimuth01, rise, sunAngle, TOWERS_FAR, TOWER_TALL_FAR, 0.0, _TowerDensity, 1.0, 3.0);
+                color = lerp(color, lerp(farRow.rgb, sunk, saturate(_TowerHaze * 1.45 + sink)), farRow.a);
+
+                float4 midRow = TowerRow(azimuth01, rise, sunAngle, TOWERS_MID, TOWER_TALL_MID, 0.0, _TowerDensity, 1.0, 11.0);
+                color = lerp(color, lerp(midRow.rgb, sunk, saturate(_TowerHaze * 1.05 + sink)), midRow.a);
+
                 float4 nearRow = TowerRow(azimuth01, rise, sunAngle, TOWERS_NEAR, TOWER_TALL_NEAR, 46.0, _TowerDensity, 1.0, 23.0);
-                color = lerp(color, lerp(nearRow.rgb, sunk, saturate(_TowerHaze * 0.25 + sink)), nearRow.a);
+                color = lerp(color, lerp(nearRow.rgb, sunk, saturate(_TowerHaze * 0.42 + sink)), nearRow.a);
 
                 float4 heroRow = TowerRow(azimuth01, rise, sunAngle, TOWERS_HERO, TOWER_TALL_HERO, 26.0, _TowerHeroes, TOWER_HERO_WIDTH, 41.0);
-                color = lerp(color, lerp(heroRow.rgb, sunk, saturate(_TowerHaze * 0.06 + sink)), heroRow.a);
+                color = lerp(color, lerp(heroRow.rgb, sunk, saturate(_TowerHaze * 0.08 + sink)), heroRow.a);
+
+                // ---- Cloud tops along the horizon, in FRONT of the city, so the towers rise out
+                //      of the sea instead of standing on a line ----
+                if (height > -0.03 && height < _SeaRim * 1.5 + 0.03 && _SeaAmount > 0.001 && _SeaRim > 0.0001)
+                {
+                    // Laid out in a space where up is scaled like along, so a billow is as tall as
+                    // it is wide, and snapped to the pixel grid like the sea when Match is on.
+                    float2 rimUV = float2(frac(azimuth01 + drift * 0.0004) * SEA_RIM_MASSES, height * SEA_RIM_MASSES / TWO_PI);
+                    rimUV = _SeaMatch > 0.001 ? Blocky(rimUV) : rimUV;
+                    float rimAt = rimUV.y * TWO_PI / SEA_RIM_MASSES;
+                    float rimMass = CloudNoise(float2(rimUV.x, 0.5), SEA_RIM_MASSES, 3);
+                    float rimLump = CloudNoise(rimUV * 3.0, SEA_RIM_MASSES * 3.0, 4);
+                    float rimTop = _SeaRim * (0.25 + 1.1 * rimMass);
+                    float rimHeight = rimAt + (rimLump - 0.5) * _SeaRim * 0.5;
+                    // The edge firms up as Match rises: soft fog bank at 0, a cut-out at 1.
+                    float rimSoft = lerp(SEA_RIM_SOFT, 0.04, _SeaMatch);
+                    float rim = smoothstep(rimTop, rimTop * (1.0 - rimSoft), rimHeight);
+                    float rimTone = SeaShade(saturate(0.35 + 0.6 * saturate(rimHeight / max(rimTop, 0.0001)) + (rimLump - 0.5) * 0.9));
+                    float3 rimColor = lerp(_SeaShadeColor.rgb, _SeaLitColor.rgb, rimTone);
+                    rimColor = lerp(rimColor, horizonGlow, 0.35);
+                    // Below the horizon the rim hands over to the sea itself.
+                    color = lerp(color, rimColor, rim * _SeaAmount * smoothstep(-0.03, 0.0, height));
+                }
 
                 return fixed4(color, 1);
             }

@@ -12,7 +12,7 @@
 
 **Status:** Current (used by Apply Office Look; not measured for frame cost) · **Last updated:** 2026-11-12
 
-Outside the windows is a saturated cobalt sky over a city of white towers that sink into blue mist.
+Outside the windows is a saturated cobalt sky over a city of white towers that rise out of a soft sea of cloud.
 The clouds are flat, posterised shapes with chunky pixel-stepped edges.
 A hairline grid runs across the sky, and small square outlines hunt along the cloud edges like a camera's autofocus brackets.
 
@@ -32,16 +32,20 @@ Tune the material, not the tool. The Inspector is grouped as:
 |---|---|
 | Sky dome | Zenith, mid, horizon and mist colours; how tall the pale horizon band is. |
 | Sun | Disc size, glow, and the thin halo ring. |
-| Distant towers | Wall, glass, graphic and crown-line colours; height, density, how many giant foreground towers, distance haze. |
+| Distant towers | Wall, glass, graphic and crown-line colours; height, density, how many giant foreground towers, distance haze, and how much darker the side faces are. Towers are up to three volumes stacked off-centre with flat, slanted, tapered or rounded crowns. Only the nearest row and the giant towers carry facades (window zones with blank belts, glass curtain walls, a glass ribbon, the blue slash or a ring mark); the two far rows are plain hazed silhouettes. |
 | Clouds | Amount of horizon cumulus and of the broken field overhead; size; pixel chunkiness; number of flat tone steps; contour lines; drift. |
+| Cloud sea below | Sunlit and hollow colours, amount (0 = plain mist), billow size, how high the cloud tops rise in front of the towers, the white glow where sea meets sky, and how far it matches the pixel clouds above (0 = fully soft, 1 = the same flat stepped look; 0.5 by default, which snaps it to the same pixel grid and half-steps its shading). This is the one softly shaded cloud in the sky: the pixel clouds are above the horizon, the sea is below it, and the towers rise out of it. |
 | Overlay | Grid strength and size; focus-square strength, size, and how often each one re-focuses (0 freezes them). |
+| Plane | Seconds between planes (0 = none), seconds to cross, size, contrail length. A small jet flies a straight line in front of the cloud field and tears a channel through it that spreads behind the plane and closes again; one focus bracket tracks it. Each flight takes a new heading and lane. |
 
 The scene fog colour in [OfficeLook.cs](../../Assets/_Project/Editor/Art/OfficeLook.cs) is set to the sky's default horizon colour.
 If the horizon colour is changed in the material, change the fog to match, or far geometry will fade to a different colour from the sky behind it.
 
 ## Known limitations
 
+- **The cloud sea hides the street.** It is sky, drawn below the horizon; real ground geometry would show through it as normal. Whether the game still has a street under the towers is a design question, not settled here.
 - **The city is painted into the sky.** It never shifts as the player climbs, so it only works as the far city. Anything meant to feel close needs real geometry.
 - **Pixel blocks live in the sky, not on the screen**, so they are larger overhead than near the horizon. This keeps them still when the camera turns.
+- **All cloud is drawn behind the whole city.** Clouds between the tower rows were tried and read as the towers clipping through them.
 - **Clouds are noise, not painted.** They vary in size and spacing but have no composed shapes.
 - **Not checked:** frame cost (it is a heavy full-screen pass), Play Mode, the Mobile renderer, and how the squares feel at full frame rate. Only still renders and a six-frame sequence have been looked at.

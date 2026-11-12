@@ -7,6 +7,9 @@
 //  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-12 — the sky material now uses the game's
 //              own sky shader instead of Skybox/Procedural, and is updated in place; haze colour
 //              follows the new horizon colour.
+//  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-12 — regraded to Alex's references: the
+//              sun crosses the street and casts hard shadows, shade is pale blue, sunlit white
+//              blows out and glows; the post-processing profile is now updated in place.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Gives any open scene the art bible's lighting in one menu step: blue procedural
 //              sky, sun raking along the street, bright cool ambient so white ceilings stay
@@ -46,10 +49,6 @@ namespace CloseTheDeal.Editor.Art
         const string VolumeObjectName = "Office Look";
         const string SunObjectName = "Sun";
 
-        // ---- Palette (art bible, ArtSource/Kit/concepts/Office/REQUEST.md "Style") ----------
-
-        /// <summary>Paper White #F3F4F4: the dominant wall colour; ambient is tuned so it stays white.</summary>
-        static readonly Color PaperWhite = Hex(0xF3F4F4);
 
         // ---- Sky --------------------------------------------------------------------------
 
@@ -65,36 +64,46 @@ namespace CloseTheDeal.Editor.Art
         // ---- Sun --------------------------------------------------------------------------
 
         /// <summary>
-        /// Sun height above the horizon, degrees. WHY: 40° throws readable shadows from columns and
-        /// sills onto the slabs without filling the façades with hard shadow.
+        /// Sun height above the horizon, degrees. WHY 32°: low enough that light coming through a
+        /// 4.3 m window reaches about 5 m across the floor, so the sun patches are a feature of
+        /// the room and not a strip under the sill. It was 40°, picked for exterior shadows only.
         /// </summary>
-        const float SunElevation = 40f;
+        const float SunElevation = 32f;
         /// <summary>
-        /// Sun heading, degrees around Y, where 90° shines straight along the street (+X). WHY: the
-        /// towers face each other across Z (TOWER.md), and a sun across the street always leaves one
-        /// tower's front in its own shadow (ArtSource/Greybox/README.md). 10° off the street axis
-        /// rakes both façades at a grazing angle instead of lighting one and darkening the other.
+        /// Sun heading, degrees around Y, where 90° shines straight along the street (+X) and 180°
+        /// straight across it (toward -Z). WHY 140°: the light has to cross the street to get in
+        /// through the glass at all. At the old 80° it ran almost parallel to the windows, which
+        /// lit both façades evenly (ArtSource/Greybox/README.md) but put no sunlight inside
+        /// either tower. 140° comes in at a diagonal, so the patches are raked parallelograms.
+        /// KNOWN COST: only the tower whose windows face +Z gets sun inside; the tower opposite
+        /// has its street face in its own shadow. One sun cannot light both street faces.
         /// </summary>
-        const float SunHeading = 80f;
+        const float SunHeading = 140f;
         /// <summary>Sun colour: a faintly warm white, so cool ambient shadows and warm lit faces separate.</summary>
         static readonly Color SunColour = Hex(0xFFF3E4);
-        /// <summary>Sun intensity (URP units, Unity default 1). Above 1 so lit white hits the bloom threshold.</summary>
-        const float SunIntensity = 1.6f;
+        /// <summary>
+        /// Sun intensity (URP units, Unity default 1). WHY 3.2: the references are white rooms
+        /// where anything the sun touches blows out to pure white and glows, while the shade
+        /// beside it stays a readable pale blue. That needs the sun several times brighter than
+        /// the ambient light, not the gentle 1.6 the first look pass used.
+        /// </summary>
+        const float SunIntensity = 3.2f;
 
         // ---- Ambient ----------------------------------------------------------------------
+        // WHY blue, when the first look pass kept these near white: in the references a white wall
+        // in shade is pale blue, and only what the sun touches is white. With white ambient the
+        // shaded and sunlit halves of a white room differ only in brightness, and the sun patches
+        // read as a faint stain. Blue shade against white sun is the whole look.
 
+        /// <summary>Ambient from above: the open sky's blue, lighting floors and anything facing up.</summary>
+        static readonly Color AmbientSky = Hex(0xD0E0F7);
+        /// <summary>Ambient from the horizon: lights walls. A little paler than the sky term so walls stay the lightest shade.</summary>
+        static readonly Color AmbientEquator = Hex(0xD4E2F6);
         /// <summary>
-        /// Ambient from above. WHY: there are no ceiling lights yet, and the Greybox review found the
-        /// slab undersides render dark without bounce light. A bright cool sky term keeps walls white.
+        /// Ambient from below: this is what lights ceilings. Kept bright, because there are still no
+        /// ceiling lights and a dark ceiling was the Greybox review's main complaint, but blue.
         /// </summary>
-        static readonly Color AmbientSky = Hex(0xDCE5F0);
-        /// <summary>Ambient from the horizon: close to Paper White, so vertical walls stay white rather than blue.</summary>
-        static readonly Color AmbientEquator = Color.Lerp(PaperWhite, AmbientSky, 0.2f);
-        /// <summary>
-        /// Ambient from below. WHY: this is what lights ceilings. Bright and neutral stands in for the
-        /// carpet and street bouncing light back up, so ceiling tiles read white, not grey.
-        /// </summary>
-        static readonly Color AmbientGround = Hex(0xC4C7CB);
+        static readonly Color AmbientGround = Hex(0xC8D6EE);
 
         // ---- Haze -------------------------------------------------------------------------
 
@@ -113,26 +122,50 @@ namespace CloseTheDeal.Editor.Art
         const float HazeEnd = 700f;
 
         // ---- Post-processing --------------------------------------------------------------
+        // Graded to Alex's references of 2026-11-12: white interiors photographed with a blue-cyan
+        // cast, shade lifted to a milky pale blue, sunlight blown out and glowing, a little grain.
 
+        /// <summary>Exposure lift, stops. High-key: the references are bright everywhere, shade included.</summary>
+        const float PostExposure = 0.3f;
+        /// <summary>Contrast, -100..100. Up from 10 so hard shadow edges and dark suits bite.</summary>
+        const float Contrast = 12f;
         /// <summary>
-        /// Exposure lift, stops. WHY: Neutral tonemapping pulls highlights down a little; this puts
-        /// Paper White walls back near white without clipping the sky.
+        /// Saturation, -100..100. WHY only 6: the cast already comes from four places (ambient, filter,
+        /// white balance, shadow tone). At 14 they stacked into a solid blue wash: royal-blue carpet
+        /// and blue suits. Keep this low and let the cast do the colouring.
         /// </summary>
-        const float PostExposure = 0.4f;
-        /// <summary>Contrast, -100..100. Mild, so dark suits separate from white walls.</summary>
-        const float Contrast = 10f;
-        /// <summary>Saturation, -100..100. Slightly up so cobalt reads as a confident block.</summary>
         const float Saturation = 6f;
-        /// <summary>White balance temperature, -100..100. Negative = cooler: the bible's cool fluorescent ambience.</summary>
-        const float Temperature = -4f;
-        /// <summary>Bloom brightness threshold (gamma space). Above 1 so only sunlit white and the sky glow.</summary>
-        const float BloomThreshold = 1.05f;
-        /// <summary>Bloom strength. Low: an airy glow on lit white, never a haze over the whole frame.</summary>
-        const float BloomIntensity = 0.3f;
-        /// <summary>Bloom spread, 0..1.</summary>
-        const float BloomScatter = 0.65f;
-        /// <summary>Vignette strength, 0..1. Very faint, just to hold the eye in the middle of the frame.</summary>
-        const float VignetteIntensity = 0.12f;
+        /// <summary>A pale cyan-blue multiplied over the whole frame: the references' overall cast.</summary>
+        static readonly Color ColourFilter = Hex(0xF0F7FF);
+        /// <summary>White balance temperature, -100..100. Negative = cooler.</summary>
+        const float Temperature = -6f;
+        /// <summary>White balance tint, -100..100. Slightly negative pulls the blue toward cyan, as in the references.</summary>
+        const float Tint = -3f;
+        /// <summary>
+        /// Shadows, midtones, highlights: a colour multiplier each (x,y,z = red, green, blue; w is
+        /// an offset, unused). Shade is pushed blue-cyan, highlights left just warm of neutral, so
+        /// sunlit white stays white instead of going blue with everything else.
+        /// </summary>
+        static readonly Vector4 ShadowsTone = new Vector4(0.92f, 0.99f, 1.08f, 0f);
+        static readonly Vector4 MidtonesTone = new Vector4(0.98f, 1.00f, 1.02f, 0f);
+        static readonly Vector4 HighlightsTone = new Vector4(1.02f, 1.00f, 0.99f, 0f);
+        /// <summary>
+        /// Lift: raises the darkest values and tints them blue (x,y,z = tint, w = how much to
+        /// raise). WHY: nothing in the references is black; their deepest shade is a milky blue.
+        /// </summary>
+        static readonly Vector4 Lift = new Vector4(0.97f, 1.00f, 1.05f, 0.012f);
+        /// <summary>Bloom brightness threshold (gamma space). Below 1 so every sunlit white surface glows, as in the references.</summary>
+        const float BloomThreshold = 0.95f;
+        /// <summary>Bloom strength. Strong: the glow off the sun patches is the references' signature.</summary>
+        const float BloomIntensity = 0.55f;
+        /// <summary>Bloom spread, 0..1. Wide and soft.</summary>
+        const float BloomScatter = 0.78f;
+        /// <summary>Bloom tint: faintly blue, so the glow belongs to the cast.</summary>
+        static readonly Color BloomTint = Hex(0xE3EFFF);
+        /// <summary>Film grain strength, 0..1. Faint: the references have a fine photographic grain.</summary>
+        const float GrainIntensity = 0.16f;
+        /// <summary>Film grain response, 0..1. High = grain mostly in the shade, little in the blown highlights.</summary>
+        const float GrainResponse = 0.8f;
 
         [MenuItem("Close the Deal/Art/Apply Office Look")]
         static void ApplyFromMenu() => Apply(askFirst: true);
@@ -198,11 +231,24 @@ namespace CloseTheDeal.Editor.Art
             var existing = AssetDatabase.LoadAssetAtPath<VolumeProfile>(ProfilePath);
             if (existing != null && !GeneratedAssetGuard.MayOverwrite(ProfilePath))
                 return existing;
-            if (existing != null)
-                AssetDatabase.DeleteAsset(ProfilePath);
-
-            var profile = ScriptableObject.CreateInstance<VolumeProfile>();
-            AssetDatabase.CreateAsset(profile, ProfilePath);
+            // WHY rebuild in place instead of delete-and-create: deleting gives the profile a new
+            // GUID on every apply, and any other scene's volume pointing at it would lose it.
+            VolumeProfile profile = existing;
+            if (profile == null)
+            {
+                profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                AssetDatabase.CreateAsset(profile, ProfilePath);
+            }
+            else
+            {
+                for (int i = profile.components.Count - 1; i >= 0; i--)
+                {
+                    VolumeComponent old = profile.components[i];
+                    profile.components.RemoveAt(i);
+                    if (old != null)
+                        Object.DestroyImmediate(old, true);
+                }
+            }
 
             // WHY Neutral, not ACES: ACES rolls whites off to grey and pushes blues toward purple,
             // fighting a Paper White and cobalt palette. Neutral keeps hues and lets white stay white.
@@ -213,22 +259,35 @@ namespace CloseTheDeal.Editor.Art
             colour.postExposure.Override(PostExposure);
             colour.contrast.Override(Contrast);
             colour.saturation.Override(Saturation);
+            colour.colorFilter.Override(ColourFilter);
 
             var balance = Add<WhiteBalance>(profile);
             balance.temperature.Override(Temperature);
+            balance.tint.Override(Tint);
+
+            var tones = Add<ShadowsMidtonesHighlights>(profile);
+            tones.shadows.Override(ShadowsTone);
+            tones.midtones.Override(MidtonesTone);
+            tones.highlights.Override(HighlightsTone);
+
+            var lift = Add<LiftGammaGain>(profile);
+            lift.lift.Override(Lift);
 
             var bloom = Add<Bloom>(profile);
             bloom.threshold.Override(BloomThreshold);
             bloom.intensity.Override(BloomIntensity);
             bloom.scatter.Override(BloomScatter);
+            bloom.tint.Override(BloomTint);
             bloom.highQualityFiltering.Override(true);
 
-            var vignette = Add<Vignette>(profile);
-            vignette.intensity.Override(VignetteIntensity);
-            vignette.smoothness.Override(1f);
+            var grain = Add<FilmGrain>(profile);
+            grain.type.Override(FilmGrainLookup.Thin1);
+            grain.intensity.Override(GrainIntensity);
+            grain.response.Override(GrainResponse);
 
-            // Deliberately absent: film grain, chromatic aberration, lens distortion and motion blur.
-            // The bible's world is pristine and straight-faced; lens dirt reads as grime.
+            // Deliberately absent: vignette (the references are bright to the edges), chromatic
+            // aberration, lens distortion and motion blur. The bible's world is pristine and
+            // straight-faced; lens dirt reads as grime. The grain is the one exception, and faint.
             EditorUtility.SetDirty(profile);
             GeneratedAssetGuard.MarkGenerated(profile);
             return profile;
@@ -312,7 +371,10 @@ namespace CloseTheDeal.Editor.Art
             sun.transform.rotation = Quaternion.Euler(SunElevation, SunHeading, 0f);
             sun.color = SunColour;
             sun.intensity = SunIntensity;
-            sun.shadows = LightShadows.Soft;
+// WHY hard: Alex asked for harsher shadows, and the references' sun patches have knife
+            // edges. Hard shadows are also cheaper than soft ones (one shadow-map tap, not several).
+            sun.shadows = LightShadows.Hard;
+            sun.shadowStrength = 1f;
             return sun;
         }
 
