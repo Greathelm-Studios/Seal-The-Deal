@@ -50,6 +50,7 @@ Shader "Close the Deal/Character Toon"
         [Header(Contour)]
         _OutlineColor("Contour colour", Color) = (0.067, 0.106, 0.220, 1)
         _OutlineWidth("Contour width in screen pixels (0 = off)", Range(0, 8)) = 0
+        _OutlineMaxSize("Contour is never thicker than this in the world (metres), so it thins with distance", Range(0.002, 0.05)) = 0.012
     }
 
     SubShader
@@ -81,6 +82,7 @@ Shader "Close the Deal/Character Toon"
             half _HighlightSize;
             half _LightInfluence;
             half _OutlineWidth;
+            half _OutlineMaxSize;
         CBUFFER_END
         ENDHLSL
 
@@ -260,6 +262,10 @@ Shader "Close the Deal/Character Toon"
             {
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
+                float4 tangentOS : TANGENT;
+                // A smoothed normal baked by Close the Deal > Art > Bake Character Outline
+                // Normals, in tangent space. All zeros on a mesh that has not been baked.
+                float3 smoothTS : TEXCOORD3;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -279,7 +285,18 @@ Shader "Close the Deal/Character Toon"
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
                 float4 positionCS = TransformObjectToHClip(input.positionOS.xyz);
-                float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+                // WHY a second normal: the shell is pushed out along the normal, and at a hard
+                // edge the artist's normals are split, so the shell splits and the line breaks
+                // into shards (seen on the first real character's hair). The baked normal is
+                // the same on both sides of every edge. It is stored relative to the vertex's
+                // own normal and tangent so it still points the right way on a rigged mesh.
+                float3 pushOS = input.normalOS;
+                if (dot(input.smoothTS, input.smoothTS) > 0.25)
+                {
+                    float3 bitangentOS = cross(input.normalOS, input.tangentOS.xyz) * input.tangentOS.w;
+                    pushOS = normalize(input.smoothTS.x * input.tangentOS.xyz + input.smoothTS.y * bitangentOS + input.smoothTS.z * input.normalOS);
+                }
+                float3 normalWS = TransformObjectToWorldNormal(pushOS);
 
                 // Direction of the normal on screen, in pixels, so the width is the same
                 // horizontally and vertically whatever the aspect ratio.
@@ -291,7 +308,13 @@ Shader "Close the Deal/Character Toon"
                 // _OutlineWidth pixels wide at 2 m and at 12 m across the street alike. A shell
                 // sized in metres shrinks to nothing at exactly the range the game is played at.
                 float2 pixel = CLIP_UNITS_PER_SCREEN / _ScaledScreenParams.xy;
-                positionCS.xy += screenDir * pixel * _OutlineWidth * positionCS.w;
+                // WHY the cap: a line that stays 3 px wide on a figure that is 100 px tall buries
+                // the hair and hands in line (seen on the first real character, from 12 m). The
+                // line is as wide as asked up close, but never thicker in the world than
+                // _OutlineMaxSize, so it thins as the character shrinks on screen.
+                float pixelsPerMetre = _ScaledScreenParams.y * 0.5 * abs(UNITY_MATRIX_P[1][1]) / max(positionCS.w, 0.0001);
+                float width = min(_OutlineWidth, _OutlineMaxSize * pixelsPerMetre);
+                positionCS.xy += screenDir * pixel * width * positionCS.w;
 
                 output.positionCS = positionCS;
                 output.fogFactor = ComputeFogFactor(positionCS.z);

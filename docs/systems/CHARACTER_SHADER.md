@@ -25,6 +25,7 @@ The bible text is at [art_bible.txt](../../ArtSource/Kit/concepts/Office/refs/ar
 - Starter materials: [Assets/_Project/Art/Toon/Materials/](../../Assets/_Project/Art/Toon/Materials/): `Char_Suit_Navy`, `Char_Shirt_White`, `Char_Skin`, `Char_Shoe_Leather`.
 - Tool: `Close the Deal > Art > Build Character Toon Materials` ([CharacterToonMaterials.cs](../../Assets/_Project/Editor/Art/CharacterToonMaterials.cs)) writes any starter material that is missing or untouched. It never overwrites one a person has edited, and touches no scene or prefab.
 - Greybox player: the greybox tool ([GreyboxSceneSetup.cs](../../Assets/_Project/Editor/Greybox/GreyboxSceneSetup.cs)) puts `Char_Suit_Navy` on the capsule body of [Player.prefab](../../Assets/_Project/Prefabs/Player.prefab) whenever it builds that prefab. The nose block keeps the default grey.
+- First real character: [Assets/_Project/Art/Characters/STDMC/](../../Assets/_Project/Art/Characters/STDMC/), with the model, seven toon materials made from its own colours, its baked outline mesh and a test prefab `STDMC_Toon` scaled to 1.8 m. The model is a static mesh with no rig.
 - Review renders: [ArtSource/Toon/review/](../../ArtSource/Toon/review/). A stand-in figure built from capsules, toon materials beside the same colours on URP Lit.
 
 ## Tuning a material
@@ -38,14 +39,16 @@ The bible text is at [art_bible.txt](../../ArtSource/Kit/concepts/Office/refs/ar
 | Cast shadows cut in too | 0 by default: the cut follows the sun's direction even indoors, where the slab above would otherwise put the whole body in shadow. |
 | Highlight size | 0 = off. For leather and shoes: one hard streak. |
 | How much room light changes the colours | 0 = colours always exactly as picked. Higher lets a dark service room darken the character. |
-| Contour width | Screen pixels, so the line is as wide at 12 m across the street as at 2 m. 0 = off. |
+| Contour width | Screen pixels, up close. 0 = off. |
+| Contour is never thicker than | A cap in metres. The line thins as the character gets smaller on screen, so from across the street it does not bury hair and hands. |
+| Contour colour | Pick the opposite value to the surface: a pale line on dark parts (suit, hair), a dark line on pale parts (skin, shirt). A dark line on a dark suit cannot be seen. |
 
 A material built with contour width 0 has its contour pass switched off to save a draw call.
 To give it a contour later, delete the material and re-run the tool with a width set in the tool, or re-enable the `SRPDefaultUnlit` pass in the material's debug Inspector.
 
 ## Known limitations
 
-- **The contour needs smooth normals.** On a hard-edged mesh (a cube) the line splits open at the corners. Character meshes should be smooth-shaded, or have smoothed normals baked for the contour when the real models arrive.
+- **The contour needs smooth normals, and hard-edged meshes need a bake.** On a hard edge the line splits open. Select the model and run `Close the Deal > Art > Bake Character Outline Normals` ([CharacterOutlineBake.cs](../../Assets/_Project/Editor/Art/CharacterOutlineBake.cs)): it writes a copy of each mesh into an `Outline` folder beside the model, with smoothed normals in an extra channel that only the contour uses. Point the character at the baked mesh, and re-run after re-exporting the model.
 - **Skin colours are placeholders.** The bible gives no skin hexes; `Char_Skin` is one neutral tone so the shader can be judged.
 - **No screen-space shadow support.** The PC renderer doesn't use that feature; the shader says where to add it if that changes.
 - **Not checked:** a real character mesh, animation, Play Mode, a client's view, frame cost with 8 players, and the Mobile renderer. Only the stand-in renders above have been looked at.

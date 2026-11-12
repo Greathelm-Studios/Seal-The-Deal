@@ -31,6 +31,7 @@ Material:
     m_Floats:
     - _HighlightSize: 0
     - _LightInfluence: 0.35
+    - _OutlineMaxSize: 0.012
     - _OutlineWidth: 3
     - _ReceiveShadows: 0
     - _ShadowSoftness: 0.01
@@ -38,7 +39,7 @@ Material:
     m_Colors:
     - _BaseColor: {r: 0.18823525, g: 0.18823525, b: 0.18823525, a: 1}
     - _HighlightColor: {r: 1, g: 1, b: 1, a: 1}
-    - _OutlineColor: {r: 0.78, g: 0.87, b: 1, a: 1}
+    - _OutlineColor: {r: 0, g: 0, b: 0, a: 1}
     - _ShadowColor: {r: 0.10352939, g: 0.11670586, b: 0.18682349, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
