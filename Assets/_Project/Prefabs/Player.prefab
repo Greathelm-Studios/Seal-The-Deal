@@ -121,7 +121,8 @@ Transform:
   m_Children:
   - {fileID: 9166367670390841661}
   - {fileID: 8819225719657048054}
-  m_Father: {fileID: 4165610245162811838}
+  - {fileID: 742116445144701182}
+  m_Father: {fileID: 2689005043321101314}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4715390566021658440
 GameObject:
@@ -137,6 +138,9 @@ GameObject:
   - component: {fileID: 4680666766096500643}
   - component: {fileID: 5842299367726580714}
   - component: {fileID: 7581206824313403346}
+  - component: {fileID: 633481949047726673}
+  - component: {fileID: 5212317098607126717}
+  - component: {fileID: 2565084199564518005}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -298,18 +302,115 @@ MonoBehaviour:
   _networkObjectCache: {fileID: 0}
   _tickCallbacks: 6
   _profile: {fileID: 11400000, guid: 9a42daef68078df4f84533e8f7508ec6, type: 2}
-  _blast: {fileID: 11400000, guid: 15ce1fd7ffc750f42a3fbc9bad10d88a, type: 2}
+  _blast: {fileID: 11400000, guid: 41dd2e2ae9dfd457095e727535776d12, type: 2}
   _groundMask:
     serializedVersion: 2
     m_Bits: 4294967231
   _playerMask:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 0
   _propMask:
     serializedVersion: 2
-    m_Bits: 128
+    m_Bits: 0
   _cameraTarget: {fileID: 4165610245162811838}
   _leanPivot: {fileID: 1549759532965773935}
+--- !u!114 &633481949047726673
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4715390566021658440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 517be800e6a4d45c886bb1faddbe1a66, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Combat.Health
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 4680666766096500643}
+  _networkObjectCache: {fileID: 0}
+  _maxHealth: 100
+  _respawnSeconds: 5
+  _defaultKillShove: 6
+  _flashColour: {r: 1, g: 0.25, b: 0.2, a: 1}
+  _flashSeconds: 0.12
+  _tipPivot: {fileID: 2689005043321101314}
+  _tipSeconds: 0.25
+--- !u!114 &5212317098607126717
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4715390566021658440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f94e0ae979eb846c990e3d82a8d84a12, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Combat.WeaponHolder
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 4680666766096500643}
+  _networkObjectCache: {fileID: 0}
+  _catalog: {fileID: 11400000, guid: 692e4684648444be0ab51302c66343b3, type: 2}
+  _solidMask:
+    serializedVersion: 2
+    m_Bits: 4294967227
+  _lagAllowanceSeconds: 0.25
+  _originTolerance: 2.5
+--- !u!114 &2565084199564518005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4715390566021658440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1645b8bd48d634bee8c2252fe79b8f53, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Combat.WeaponView
+  _thirdPersonAnchor: {fileID: 742116445144701182}
+  _flashSeconds: 0.05
+  _kickBack: 0.06
+  _kickBackRecovery: 0.6
+  _dipDistance: 0.3
+  _dipSeconds: 0.18
+  _maxKick: 14
+  _deathDrop: 1
+  _deathRoll: 40
+  _deathSeconds: 0.35
+--- !u!1 &5820790247095548550
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2689005043321101314}
+  m_Layer: 6
+  m_Name: Fall
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2689005043321101314
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5820790247095548550}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1549759532965773935}
+  m_Father: {fileID: 4165610245162811838}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7111191965594976901
 GameObject:
   m_ObjectHideFlags: 0
@@ -339,8 +440,39 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1549759532965773935}
+  - {fileID: 2689005043321101314}
   m_Father: {fileID: 862908408527760071}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &7640310228200470112
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 742116445144701182}
+  m_Layer: 6
+  m_Name: Hand
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &742116445144701182
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7640310228200470112}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.3, y: 0.4, z: 0.3}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1549759532965773935}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8449192116113492465
 GameObject:
