@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 8902758464943799034}
   - component: {fileID: 7375410522538818901}
   - component: {fileID: 3465346923219573304}
+  - component: {fileID: 5195352075505745973}
   m_Layer: 7
   m_Name: Copier
   m_TagString: Untagged
@@ -204,6 +205,39 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 8902758464943799034}
   _networkObjectCache: {fileID: 0}
   _throwResistance: 0.7
+--- !u!114 &5195352075505745973
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1154268299555348150}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f5f7d8ebd1104f7ca032ae759721d2e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Items.Pickup
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 8902758464943799034}
+  _networkObjectCache: {fileID: 0}
+  _definition: {fileID: 11400000, guid: e269de72fb172442e96d2f8f15b31d47, type: 2}
+  _rules: {fileID: 11400000, guid: 1de3a4bfb8c0041aeb851f7023c0c0b6, type: 2}
+  _visual: {fileID: 6688407594372284925}
+  _onTaken:
+    m_PersistentCalls:
+      m_Calls: []
+  _onDropped:
+    m_PersistentCalls:
+      m_Calls: []
+  _onThrown:
+    m_PersistentCalls:
+      m_Calls: []
+  _onImpact:
+    m_PersistentCalls:
+      m_Calls: []
+  _onReturned:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &3337648550671074598
 GameObject:
   m_ObjectHideFlags: 0
