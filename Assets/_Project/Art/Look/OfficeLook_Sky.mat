@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: OfficeLook_Sky
+  m_Shader: {fileID: 4800000, guid: 0c6407ecc6273e746889cbfd17a51c53, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _CloudAmount: 0.42
+    - _CloudBands: 3
+    - _CloudBase: 0.13
+    - _CloudBillow: 0.8
+    - _CloudContour: 0.7
+    - _CloudDrift: 0.15
+    - _CloudPixel: 0.45
+    - _CloudScatter: 0.5
+    - _CloudSize: 1
+    - _CloudTop: 0.5
+    - _GridSize: 2.5
+    - _GridStrength: 0.3
+    - _HorizonHeight: 0.14
+    - _SunGlow: 0.45
+    - _SunRing: 0.3
+    - _SunRingSize: 15
+    - _SunSize: 2.4
+    - _TowerDensity: 0.5
+    - _TowerHaze: 0.55
+    - _TowerHeight: 1
+    - _TowerHeroes: 0.5
+    - _TraceSize: 1
+    - _TraceSpeed: 0.55
+    - _TraceStrength: 0.75
+    - _ZenithHeight: 0.7
+    m_Colors:
+    - _CloudInkColor: {r: 0.42999998, g: 0.56999993, b: 0.88, a: 1}
+    - _CloudLitColor: {r: 1, g: 1, b: 1, a: 1}
+    - _CloudShadeColor: {r: 0.6399999, g: 0.76, b: 0.96, a: 1}
+    - _GroundColor: {r: 0.74, g: 0.85, b: 0.96999997, a: 1}
+    - _HorizonColor: {r: 0.6, g: 0.78999996, b: 0.96999997, a: 1}
+    - _OverlayColor: {r: 1, g: 1, b: 1, a: 1}
+    - _SkyColor: {r: 0.10499997, g: 0.31999996, b: 0.85, a: 1}
+    - _SunColor: {r: 1, g: 0.97999996, b: 0.94, a: 1}
+    - _TowerAccentColor: {r: 0.14099997, g: 0.30999997, b: 0.725, a: 1}
+    - _TowerGlassColor: {r: 0.06999998, g: 0.12499998, b: 0.32999998, a: 1}
+    - _TowerLineColor: {r: 0.12499998, g: 0.83, b: 0.9, a: 1}
+    - _TowerLitColor: {r: 0.965, g: 0.97199994, b: 0.98999995, a: 1}
+    - _TowerShadeColor: {r: 0.56, g: 0.68, b: 0.9, a: 1}
+    - _ZenithColor: {r: 0.049999982, g: 0.14999998, b: 0.58, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
