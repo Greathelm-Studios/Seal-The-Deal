@@ -1,6 +1,6 @@
 # NETCODE
 
-**Status:** Current · **Last updated:** 2026-10-03 · **Verified against:** the playtest menu commit
+**Status:** Current · **Last updated:** 2026-11-12 · **Verified against:** the playtest menu commit
 
 ## What happens in the game
 

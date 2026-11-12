@@ -1,6 +1,6 @@
 # TOWER
 
-**Status:** Current · **Last updated:** 2026-10-03 · **Verified against:** the tower commit
+**Status:** Current · **Last updated:** 2026-11-12 · **Verified against:** the tower commit
 
 ## What happens in the game
 

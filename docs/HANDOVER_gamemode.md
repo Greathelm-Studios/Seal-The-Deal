@@ -32,7 +32,7 @@ Briefcase (one per firm, never despawned)
 ## What was checked
 
 - **Compile:** `node ~/.claude/skills/compile-check/compile-check.mjs`: PASS, 0 errors. A headless Unity open of the worktree also logged 0 `error CS`.
-- **Solo Play mode, host only** (headless editor, scripted driver, captured to `gamemode_solo_run.mp4` in the session scratchpad): 18/18 checks passed.
+- **Solo Play mode, host only** (headless editor, scripted driver; clip `gamemode_solo_run.mp4` in the lane sessions' shared notes folder, showing the earlier striped case): 18/18 checks passed.
   - Countdown blocks pick-up; pick up; carry up; Checkpoint 1 saved; G drops.
   - Roof without the case: notice, no win. Roof with it: win at 00:15.
   - Rematch resets to reception with checkpoints cleared.
@@ -54,6 +54,7 @@ Briefcase (one per firm, never despawned)
   - Steam, and real latency.
   - Pad bindings.
   - The final briefcase look: it was rebuilt to a solid firm colour after the last capture.
+  - The rival kick after it gained a line-of-sight check (the kick pass above ran before it), and the fall-out return while waiting in reception or on the results screen (added after the multiplayer run; the solo run passed with it).
   - A run at a frame target in a build.
 
 ## Open questions and risks
