@@ -53,11 +53,59 @@ namespace CloseTheDeal.Tower
                 Instance = null;
         }
 
+        /// <summary>How many floors each building has, reception and roof included. 0 until built.</summary>
+        public int FloorCount => _built ? _layout.Count : 0;
+
+        /// <summary>What the floor at this height is, counted from reception = 0. Both buildings share the same order of kinds.</summary>
+        public FloorKind FloorKindAt(int floor) => _layout[floor].Kind;
+
+        /// <summary>The root of a team's building: its origin is the centre of the reception's window edge. Null until built.</summary>
+        public Transform BuildingRoot(int team)
+        {
+            GameObject building = team >= 0 && team < TeamCount ? _buildings[team] : null;
+            return building != null ? building.transform : null;
+        }
+
+        public override void OnStartNetwork()
+        {
+            base.OnStartNetwork();
+            _seed.OnChange += OnSeedChanged;
+        }
+
+        public override void OnStopNetwork()
+        {
+            base.OnStopNetwork();
+            _seed.OnChange -= OnSeedChanged;
+        }
+
         public override void OnStartServer()
         {
             base.OnStartServer();
             _seed.Value = PickSeed();
             Build(_seed.Value);
+        }
+
+        /// <summary>
+        /// Host only. Picks a new seed and builds both towers again, for a fresh match: new
+        /// layouts, and the props and locked doors put back. Clients rebuild when the seed arrives.
+        /// </summary>
+        public void Rebuild()
+        {
+            if (!IsServerStarted)
+                return;
+
+            uint seed = PickSeed();
+            if (seed == _seed.Value)
+                seed++;
+            _seed.Value = seed == 0 ? 1u : seed;
+            Build(_seed.Value);
+        }
+
+        /// <summary>A pure client follows the host's rebuild; the first seed is handled in OnStartClient.</summary>
+        void OnSeedChanged(uint previous, uint next, bool asServer)
+        {
+            if (!asServer && !IsServerStarted && _built)
+                Build(next);
         }
 
         public override void OnStartClient()

@@ -25,7 +25,8 @@ Stack: **FishNet 4.7.3** (the pinned tag; its own version strings still say 4.7.
 | Player body | **Host.** Spawned by the host, owned by the connecting client, which predicts its own moves | Inputs up (~30 B), host state down (~80 B) | Every tick |
 | Knockback | Host only | Inside the body state | On hit |
 | Props (furniture) | **Host** simulates; clients hold them kinematic | Position and rotation, via NetworkTransform; see [PROPS.md](PROPS.md) | While moving, 30/s |
-| Towers | Host picks a seed; everyone builds locally; see [TOWER.md](TOWER.md) | One number | Once |
+| Towers | Host picks a seed; everyone builds locally; see [TOWER.md](TOWER.md) | One number | Once, and per rematch |
+| Match, firms, briefcases | **Host**; see [MATCH.md](MATCH.md) | Phase and firm status SyncVars; loose briefcase transform | On change; briefcase 30/s only while moving |
 
 ## Transports
 
