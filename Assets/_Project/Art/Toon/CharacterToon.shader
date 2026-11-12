@@ -49,7 +49,7 @@ Shader "Close the Deal/Character Toon"
 
         [Header(Contour)]
         _OutlineColor("Contour colour", Color) = (0.067, 0.106, 0.220, 1)
-        _OutlineWidth("Contour width in screen pixels (0 = off)", Range(0, 4)) = 0
+        _OutlineWidth("Contour width in screen pixels (0 = off)", Range(0, 8)) = 0
     }
 
     SubShader
