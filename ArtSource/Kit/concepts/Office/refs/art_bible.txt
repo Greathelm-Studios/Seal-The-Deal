@@ -1,0 +1,641 @@
+
+CLOSE THE DEAL
+
+ART DIRECTION HANDOVER BIBLE
+Working visual bible / master reference for production
+VISUAL THESIS
+A clean corporate future imagined from the year 2001 — bright, graphic, immaculate and slightly artificial; inhabited by sharp, stylised lawyers rendered with restrained editorial cel shading.
+
+PROJECT
+Close the Deal
+TAGLINE
+Terms and Conditions Apply.
+CORE DIRECTION
+2001 Corporate Futurism / Gen X Soft Club / Graphic Cel
+DOCUMENT PURPOSE
+Give artists, designers and external collaborators one coherent visual target.
+STATUS  •  APPROVED WORKING DIRECTION
+This document records the direction already established for the project and separates locked principles from items that still need final production tests.
+
+NAVIGATION
+00  CONTENTS
+
+01
+Art-direction north star
+02
+Reference hierarchy
+03
+Colour system
+04
+Lighting &amp; atmosphere
+05
+Cel-shading language
+06
+Character design system
+07
+Clothing &amp; corporate fashion
+08
+Hands, faces &amp; anatomy simplification
+09
+Environment architecture
+10
+Interior office language
+11
+Materials &amp; texture strategy
+12
+Windows, sightlines &amp; gameplay readability
+13
+Graphic design, signage &amp; typography
+14
+UI / HUD direction
+15
+Props &amp; technology
+16
+Weapons &amp; disruptive objects
+17
+VFX &amp; feedback
+18
+Modular asset handoff rules
+19
+Composition &amp; marketing imagery
+20
+Do / Don’t master sheet
+21
+Production review checklist
+22
+Open questions / TBD
+23
+One-page quick reference
+CORE IDENTITY
+01  ART-DIRECTION NORTH STAR
+
+The project should look like an optimistic corporate future designed around 1999–2003 rather than a contemporary sci-fi world dressed in retro references. The visual language is clean, cool, sharply designed and intentionally artificial. The world is aspirational on the surface: white towers, blue skies, immaculate signage, glass, brushed metal and luminous office light. The game itself then abuses that immaculate world with slapstick PvP chaos.
+The key contrast is deliberate: the environment is airy and architecturally clean, while characters are graphic, exaggerated and immediately readable. The result should feel like an early-2000s design agency built the city, a fashion illustrator designed the employees, and then somebody started a workplace war.
+THE SHORTEST POSSIBLE BRIEF
+2001 corporate futurism outside. Sharp graphic lawyers inside. Clean enough to feel expensive; strange enough to feel fictional; simple enough to read during chaos.
+
+Four visual pillars
+STATUS
+ITEM
+HANDOVER NOTE
+LOCKED
+Corporate futurism
+White architecture, cobalt sky, glass, clean geometric branding, controlled blue/cyan accents, sparse futuristic infrastructure.
+LOCKED
+Graphic characters
+Long-limbed, angular, fashion-led characters with simplified faces and deliberate cel-shadow shapes.
+LOCKED
+Soft-club atmosphere
+Air, negative space, thin graphic lines, understated technology, cool light, fashion/editorial influence rather than loud cyberpunk.
+LOCKED
+Straight-faced corporate comedy
+Corporate/legal naming and presentation stay serious. The joke comes from what players do inside the serious visual system.
+
+What this is not
+PROTECT THE IDENTITY
+■ Cold, clean and highly controlled.
+■ Large simple shapes before surface detail.
+■ Blue/white/charcoal as structural colours.
+■ Fashion and editorial design influence.
+■ Hard graphic character shadows inside softer environments.
+AVOID DRIFTING INTO
+■ Vaporwave nostalgia.
+■ Frutiger Aero greenery/bubbles.
+■ Generic neon cyberpunk.
+■ Overly cute anime proportions.
+■ Modern glossy anime-game cel shading.
+■ Dense sci-fi greeble/detail for its own sake.
+
+REFERENCE HIERARCHY
+02  PRIMARY REFERENCE PLATES
+
+These four user-selected references define the core graphic and environmental lane. They are not to be copied literally. They establish the project’s rules for colour, air, geometry, typography and visual restraint.
+
+
+Reference 01 — early-2000s editorial game graphic: thin line systems, sparse copy, blue field, flare and airy negative space.
+Reference 02 — Gen X Soft Club / techno-minimal composition: pale surfaces, thin geometry, sky photography, soft translucent forms.
+
+Reference 03 — white field, sky inserts, black technical linework and abstract sculptural form. Strong example of graphic restraint.
+PRIMARY WORLD REFERENCE
+Reference 04 — the environmental anchor
+
+Reference 04 — PRIMARY environmental anchor: white-blue corporate city, immaculate massing, giant graphic branding, clear roads, cobalt sky and restrained cyan accents.
+This image is the strongest single environment reference for the project. The most important lesson is not “make a futuristic city”; it is how little information each building needs. White slabs, dark window bands, one large blue graphic, tiny signage and clean spacing do most of the work.
+■ Take: large architectural masses, blue-white hierarchy, empty sky, polished commercial mood, billboard-scale fashion imagery, graphic branding integrated into buildings.
+■ Do not take: photoreal detail density, generic sci-fi clutter, or the idea that every surface needs a futuristic prop attached to it.
+■ Gameplay translation: across the tower gap, players should read as dark graphic figures against bright windows and sky rather than disappearing into noisy backgrounds.
+Secondary references by function
+STATUS
+ITEM
+HANDOVER NOTE
+LOCKED
+Jet Set Radio / JSRF
+Use for silhouette, long-limbed proportions, oversized graphic hands/shoes and instant readability. Do not inherit its graffiti palette wholesale.
+LOCKED
+Persona
+Use as a lesson in cohesive graphic identity: UI, typography, character presentation and world branding must feel designed together.
+LOCKED
+Gen X Soft Club
+Use for coolness, air, restraint, transparency, thin lines, blue-white space and early-digital editorial tone.
+WORKING
+Killer7-like shadow logic
+Use the principle of ruthless simplification: a base colour plus a major designed shadow shape instead of many soft lighting bands.
+WORKING
+Rez / Wipeout-era futurism
+Use selectively for abstract corporate-tech atmosphere, signage discipline and synthetic optimism — never as a direct style copy.
+
+COLOUR
+03  COLOUR SYSTEM
+
+The world should feel brand-managed. Colour is not decorative noise: it is a controlled system that makes the environment feel corporate, legible and intentionally designed. The palette should skew cool. Warmth is allowed when motivated by a specific prop, skin tone or gameplay accent, but it should not turn the project pastel or cozy.
+SWATCH
+NAME
+HEX
+USE
+
+Paper White
+#F3F4F4
+Primary architectural field; walls, signage, UI space.
+
+Silver Grey
+#C9CED3
+Secondary panels, office surfaces, quiet separators.
+
+Deep Navy
+#111B38
+Dark structural anchor; suits, window bands, text.
+
+Corporate Cobalt
+#244FB9
+Brand colour; large graphic areas and major accents.
+
+Electric Blue
+#2879EF
+Brighter active accent; UI highlights and selected signage.
+
+Cyan
+#20D4E6
+Small luminous emphasis; indicators, lines, rare highlights.
+
+Near Black
+#101116
+Maximum contrast; text, shoes, selected equipment.
+Colour behaviour
+■ White and pale grey should occupy the most visual area in architecture and interfaces.
+■ Cobalt is structural: use it in large confident blocks rather than sprinkling small blue objects everywhere.
+■ Cyan is an accent, not a base colour. It works best as a thin line, indicator, light strip or tiny digital emphasis.
+■ Black/navy provide silhouette contrast and stop the palette becoming soft or pastel.
+■ Character-specific or gameplay accents can sit on top of this system, but should be intentionally rationed.
+COLOUR DANGER
+Do not let “Y2K” become pink chrome, rainbow gradients, candy translucency or vaporwave. The desired Y2K is corporate, architectural and cold.
+
+LIGHTING
+04  LIGHTING &amp; ATMOSPHERE
+
+Lighting is where the “airy” half of the style lives. The world can be soft, luminous and slightly hazy even while character shading remains hard-edged. This contrast is essential.
+Exterior daylight
+■ Prefer strong blue sky, pale atmospheric perspective and bright architectural whites.
+■ Keep the skyline readable as large blocks; distant haze should simplify rather than add noise.
+■ Glass can tint toward blue/cyan but must not become a mirror that hides cross-building gameplay.
+■ Bloom is restrained. Bright edges may glow slightly, but the frame should remain crisp and graphic.
+Interior office light
+■ Cool fluorescent / LED-like illumination with broad soft ambient fill.
+■ White surfaces should remain white or cool grey, not warm cream.
+■ Harder directional accents can carve characters and props out of the soft ambient field.
+■ Service rooms may be darker and more enclosed, but should still belong to the same cool corporate world.
+■ Avoid dramatic cyberpunk coloured light unless a specific event or gameplay effect requires it.
+LIGHTING FORMULA
+SOFT WORLD LIGHT + HARD CHARACTER VALUE BREAKS. The environment supplies air; the character shader supplies graphic punch.
+
+RENDERING
+05  CEL-SHADING LANGUAGE
+
+The character shader must not read as a generic modern anime toon shader. The project needs fewer bands, fewer effects and stronger decisions. The target is editorial illustration logic translated into 3D.
+Core shader rule
+BASE → CUT SHADOW
+A material should usually read as one base field plus one major hard-edged shadow field. Additional shading is exceptional, not default.
+
+■ One primary shadow threshold. A second threshold only when a material or face genuinely needs it.
+■ No smooth character gradients as the default look.
+■ Shadows may shift slightly colder rather than simply becoming black.
+■ Highlights should appear as designed shapes: a hard streak on leather, a pale plane on hair, a sharp lapel reflection.
+■ Outlines are selective. Use them to protect silhouette or clarify overlaps, not as a thick black border around every object.
+■ Allow art-directed cheats. If a prettier shadow better explains the pose, silhouette or face, visual clarity wins over physical correctness.
+Material-specific treatment
+STATUS
+ITEM
+HANDOVER NOTE
+LOCKED
+Suit fabric
+Mostly flat. Broad value separation, minimal specular noise, almost no micro-normal texture.
+LOCKED
+Skin
+Clean base tone plus one controlled cool shadow mass. Keep facial planes readable without painting realistic pores.
+LOCKED
+Leather / polished shoes
+Hard graphic highlight shapes are allowed; still avoid smooth glossy CG falloff.
+LOCKED
+Hair
+Large mass first, one or two highlight planes at most. Hair detail must not dissolve the silhouette.
+WORKING
+Glass / metal props
+Environment props can be more conventionally PBR than characters, but their material response should remain simple and controlled.
+
+Shader anti-goals
+TARGET
+■ Graphic flat planes.
+■ One bold shadow shape.
+■ Material-specific hard highlights.
+■ Selective contour assistance.
+■ Readable from gameplay distance.
+AVOID
+■ Five-band anime ramps.
+■ Permanent thick ink outlines.
+■ Rim light on every material.
+■ Face-map complexity that makes every character glossy.
+■ Painterly gradients fighting the geometry.
+
+CHARACTERS
+06  CHARACTER DESIGN SYSTEM
+
+Characters should feel like fashion-forward corporate caricatures, not mascots. The agreed proportion language leans toward Jet Set Radio: compact torso, long legs and limbs, graphic hands and shoes, and a silhouette that can be recognised through a window from the opposite tower.
+Proportion rules
+■ Long legs and relatively compact torso.
+■ Lean, nimble builds rather than chibi or bulky heroic anatomy.
+■ Hands may be oversized enough to read animation and weapon poses clearly.
+■ Shoes can be chunky or elongated as a graphic counterweight, but should still feel sleek rather than toy-like.
+■ Heads and facial features stay stylised, but the whole character must not feel “cute.”
+■ The male blazer should sit in a controlled fitted zone: not cropped to the waist, not oversized or slouchy.
+■ The female silhouette can be pushed slightly for character, but not exaggerated into caricature that breaks the shared base style.
+Shape language
+■ Angular over rounded: pointed collars, triangular lapels, sharp shoulder cuts, clean crease lines and tapering shapes.
+■ Use a few large clothing shapes rather than many decorative seams, buckles or panels.
+■ Negative space between limbs matters. Avoid poses and silhouettes that collapse into one dark mass.
+■ Each character should have one or two memorable silhouette decisions, not ten surface details.
+READABILITY TEST
+If a character becomes a 100-pixel-tall silhouette against a bright window, you should still understand their stance, major clothing shape and which way they are facing.
+
+CORPORATE FASHION
+07  CLOTHING &amp; WARDROBE LANGUAGE
+
+The default wardrobe is corporate tailoring treated as graphic fashion design. It should look recognisably professional while being sharp enough to support the project’s stylisation.
+■ Neutral suit templates form the baseline for player characters.
+■ Jackets are clean and fitted with deliberate lapel geometry. Avoid both extreme crop and oversized contemporary streetwear proportions.
+■ Trousers may flare or widen toward the shoe to reinforce the long-leg silhouette and late-90s/early-2000s influence.
+■ Shirts, ties and belts should use strong simple shapes; tiny tailoring detail should not dominate.
+■ Accessories should feel like corporate/fashion objects: glasses, watches, pins, ID cards, slim bags, earpieces — used sparingly.
+■ Corporate styling should remain believable enough that the slapstick violence feels more absurd by contrast.
+Secretary / lobby visual role
+The secretary belongs to the same visual world but should read as an intentional front-of-house silhouette: glasses, no tie, a slightly unbuttoned top, clean office tailoring and a more composed stance. The design should distinguish the role without turning into a separate art style.
+Customisation principle
+Customisation should swap clear graphic categories — hair mass, eyewear, tie/shirt treatment, jacket variation, trousers, shoes and a small number of accessories — while preserving the base silhouette system. Avoid custom parts that introduce excessive visual noise or break cross-building readability.
+STYLISATION DETAILS
+08  HANDS, FACES &amp; ANATOMY SIMPLIFICATION
+
+Face language
+■ Large, readable eyes with heavier upper lids rather than rounded “cute” eyes.
+■ Expressions lean detached, tired, cocky, annoyed or self-assured rather than bubbly.
+■ Mouths can be absent or extremely reduced in the base style; eyes, brows, lids and head angle carry most expression.
+■ Faces should be sharper and more angular than earlier soft/cute tests.
+■ Avoid dense anime facial rendering, glossy lips, detailed noses or soft baby-face proportions.
+Hand construction
+The hand design is intentionally simplified for modelling and animation. It should read like a graphic cartoon hand rather than a realistic five-finger hand.
+■ Three primary masses/joints: thumb, index finger, and a single joined mass representing the middle/ring/pinky group.
+■ The joined three-finger mass must still imply three fingers through three subtle bumps/peaks in the silhouette.
+■ Hands should not look puffy or mitten-like.
+■ Avoid making the fingers long and elegant; the hand should stay compact, graphic and easy to read in action.
+■ This simplification should carry consistently across male and female base models.
+ENVIRONMENT
+09  ENVIRONMENT ARCHITECTURE
+
+The environment is not “cyberpunk office.” It is an idealised corporate future that never happened: clean, white, blue, elegant and slightly empty. Architecture should feel closer to commercial/transport design and turn-of-the-millennium concept renders than to gritty sci-fi.
+Massing rule
+LARGE FORMS FIRST
+Build the room or facade from a few confident masses. Add graphic colour zones and signage second. Add small construction detail only where it improves scale, function or gameplay readability.
+
+■ White or pale-grey slabs, dark window bands, cobalt panels and blue-tinted glass are the core vocabulary.
+■ Curves can appear, but should be clean architectural curves rather than bubbly “aero” shapes.
+■ Use bold facade graphics: a single blue rectangle across multiple floors is stronger than dozens of tiny blue props.
+■ Signage can be oversized and integrated into the building skin.
+■ External roads, bridges and infrastructure should feel neat and graphic rather than dirty or industrial.
+■ Negative space is valuable. Do not fill every wall, corner or skyline gap.
+World tone
+The ideal impression is “a multinational company’s 2001 vision of 2025.” It should feel optimistic, efficient and expensive — then become ridiculous once players begin shooting through the windows and throwing office equipment.
+INTERIORS
+10  INTERIOR OFFICE LANGUAGE
+
+The towers should combine idealised corporate futurism with recognisable office banality. The futuristic shell becomes more believable when it contains mundane real-world objects and slightly ugly workplace materials.
+The beautiful layer
+■ Glass meeting rooms and partitions.
+■ White wall planes and pale modular ceiling systems.
+■ Brushed aluminium, chrome details and blue-grey tinted glass.
+■ Large geometric wall graphics and corporate identifiers.
+■ Clean reception desks, elevator halls and long window lines.
+■ Sparse cyan status lights and electronic displays.
+The mundane layer
+■ Grey office carpet and acoustic fabric.
+■ Cheap ceiling tiles and fluorescent fixtures.
+■ Printers/copiers, paper trays and filing storage.
+■ Corded office phones, older monitors or early-flat-panel tech depending on department.
+■ Water coolers, bins, stationery, office chairs and conference furniture.
+■ Break-room and service-room equipment that looks practical rather than futuristic.
+WHY THE MUNDANE MATTERS
+Do not beautify every prop. The comedy is stronger when a pristine future contains the same annoying photocopier, carpet tiles and meeting chairs as a normal office.
+
+SURFACE LANGUAGE
+11  MATERIALS &amp; TEXTURE STRATEGY
+
+The art direction relies more on shape, colour blocking and light than on dense texture information. Materials should be identifiable at a glance without requiring high-frequency surface noise.
+STATUS
+ITEM
+HANDOVER NOTE
+LOCKED
+Painted wall / plastic
+Smooth, pale, low-noise, broad roughness. Let light and geometry explain the surface.
+LOCKED
+Glass
+Cool tint, controlled reflection, high transparency/readability where it affects gameplay sightlines.
+LOCKED
+Metal
+Brushed or clean satin aluminium more often than dirty steel.
+LOCKED
+Carpet / fabric
+Muted grey-blue, low contrast, subtle texture scale. Avoid realistic fuzz becoming visual noise.
+LOCKED
+Black trim
+Near-black/navy anchors on frames, rails, equipment and suit-like details.
+WORKING
+Wear / dirt
+Very restrained. Use where players touch, impact or damage objects; do not age the whole world into dystopian grime.
+
+Texture density rule
+A surface should not become interesting because of a 4K texture full of scratches. It should be interesting because of its proportion, silhouette, material contrast and placement in the composition. Decals are used as graphic design, wayfinding or believable functional markings — not filler.
+GAMEPLAY READABILITY
+12  WINDOWS, SIGHTLINES &amp; CROSS-TOWER COMBAT
+
+Windows are not background dressing; they are part of the combat language. The art direction must support the “window wars” premise by letting teams track each other across the gap almost constantly.
+■ Players must silhouette cleanly against windows and interior light.
+■ Glass transparency and reflection need to be tuned for visibility first, realism second.
+■ Meeting rooms can use glass walls so opponents can see activity through multiple layers.
+■ Service rooms can be fully opaque. Hiding there should intentionally trade enemy visibility for the player’s own loss of information.
+■ The main stair entrance at the centre-back of the floor should remain visually legible so opponents can understand when a team is progressing upward.
+■ Window mullions, blinds and furniture placement must not create constant visual bars across character silhouettes.
+■ Across-building architecture should frame combat rather than compete with it.
+Floor readability
+Open office floors should remain visually open/interconnected. Use furniture clusters and glass rooms to create local cover while preserving long sightlines. Dense corridor mazes work against the project’s identity and should be reserved for specific service/back-of-house moments rather than becoming the default.
+GRAPHIC DESIGN
+13  SIGNAGE, TYPOGRAPHY &amp; CORPORATE GRAPHICS
+
+The graphic system should feel like it was designed at the same time as the buildings. UI, signs, posters, elevator numbers, floor maps and branding should share a turn-of-the-millennium corporate-tech grammar.
+Core graphic motifs
+■ Thin hairline grids and alignment rules.
+■ Large cobalt rectangles or bands placed with confidence.
+■ Small cyan squares, status lights and marker elements.
+■ Oversized floor numbers and department identifiers.
+■ Tiny strings of legal/technical microtype.
+■ Crop marks, serial numbers, barcodes and form-like alignment cues used sparingly.
+■ Circles, rectangles and abstract geometric overlays rather than decorative illustration.
+■ Monochrome or cool-tinted fashion/corporate photography on billboards and internal campaigns.
+■ Large blank areas; information should feel intentionally placed, not packed.
+Typography hierarchy
+STATUS
+ITEM
+HANDOVER NOTE
+LOCKED
+Game title
+CLOSE THE DEAL should feel large, sharp and corporate rather than playful.
+LOCKED
+Subtitle
+“Terms and Conditions Apply.” should read like smaller legal fine print beneath or beside the main title.
+WORKING
+Display type
+Geometric / techno sans forms with clean proportions. Sharpness and spacing matter more than decorative gimmicks.
+WORKING
+Data type
+Monospaced or technical sans for labels, stats, room codes and legal-looking system text.
+WORKING
+Editorial type
+Thin or light-weight sans can be used for fashion/brand copy and sparse environmental slogans.
+
+TYPOGRAPHY RULE
+Do not force every word into a “futuristic” font. The future comes from spacing, scale, hierarchy and composition as much as from the typeface itself.
+
+INTERFACE
+14  UI / HUD DIRECTION
+
+The interface should feel like an extension of the same corporate operating system seen in signage and architecture. Persona is useful here as a design philosophy — not because the UI should look like Persona, but because every menu, transition and label should belong to the game’s visual identity.
+■ Use clean white/blue space, thin line systems, geometric frames and restrained transparency.
+■ Favor strong typographic hierarchy over decorative panels.
+■ Corporate/legal language is played straight. System names can sound mundane, procedural or contractual rather than videogame-fantasy.
+■ Important alerts can use cobalt/electric blue or a deliberately reserved warning colour; normal UI should stay quieter.
+■ UI animation should feel precise and designed: sliding alignment, snapping lines, form fields, document-like reveal — not bubbly app motion.
+■ Menus can reference forms, contract clauses, floor directories and corporate intranet systems without becoming literal skeuomorphic office software.
+HUD noise budget
+Because players are already tracking enemies through windows, moving props, gunfire and vertical progression, the HUD should not cover large sections of the frame. Use small high-contrast information blocks and reserve big graphics for transitions, results screens and lobby presentation.
+PROPS
+15  PROPS &amp; TECHNOLOGY
+
+Props are where the project can sell its alternate 2001-future most convincingly. The goal is not to make every stapler sci-fi. Instead, combine recognisable office objects with a small number of unusually clean or optimistic design decisions.
+■ Phones, monitors, printers and terminals can sit between late-90s corporate hardware and optimistic near-future product design.
+■ Use pale plastics, dark smoked screens, blue indicator lights and brushed metal rather than RGB lighting.
+■ Office props should remain chunky enough to read when thrown, shot or knocked across a room.
+■ Loose props can take more personality than architecture because they participate in slapstick destruction.
+■ Paper, folders and stationery should reinforce the legal/corporate theme through labels, stamps, contract formatting and firm branding.
+■ Avoid turning the office into a museum of nostalgia. The setting is a future imagined from that era, not literally an office frozen in 2001.
+COMBAT OBJECTS
+16  WEAPONS &amp; DISRUPTIVE OBJECTS
+
+Weapon presentation should preserve the window-war identity and the straight-faced corporate tone. The current weapon set is intentionally limited rather than collectible or loot-heavy. Visual design should make each tool immediately readable at distance.
+STATUS
+ITEM
+HANDOVER NOTE
+LOCKED
+Pistol
+Baseline firearm silhouette; clean, readable and not overloaded with futuristic attachments.
+LOCKED
+Sniper
+Supports long cross-building sightlines. The silhouette should clearly communicate precision/range through length and stance.
+LOCKED
+Bazooka-type weapon
+Large, unmistakable disruption silhouette. Keep the form bold and simple so it reads instantly across windows.
+LOCKED
+Fire extinguisher / smoke role
+A familiar office safety object repurposed as a smoke-like disruption tool. Its comedy comes from ordinary function being used tactically.
+WORKING
+Overall weapon styling
+Industrial/corporate utility first, stylised geometry second. Avoid military-tech clutter that drags the game toward conventional tactical shooter aesthetics.
+
+Visual philosophy
+The arsenal should look like it belongs in this world, but not demand a separate lore-heavy weapon-design language. One strong silhouette, one clear material break and one memorable functional cue is usually enough.
+FEEDBACK
+17  VFX &amp; MOMENT-TO-MOMENT FEEDBACK
+
+Detailed VFX styling is still a production-test area, but effects must obey the same visual economy as the rest of the game. They should clarify action without burying the clean architecture in constant particles.
+■ Smoke should read as a large soft volume that temporarily interrupts sightlines rather than a glittery particle cloud.
+■ Muzzle flashes and impact effects should be crisp, brief and high-contrast.
+■ Explosions can be exaggerated for slapstick impact, but debris and particles should decay quickly enough that window visibility returns.
+■ Use the established blue/cyan system for corporate/interface feedback; do not recolour every combat effect blue if the real-world material suggests otherwise.
+■ Screen-space effects should remain sparse and avoid heavy chromatic aberration, VHS noise or retro filters as a permanent look.
+PRODUCTION TEST
+VFX treatment is not fully locked. Prototype for readability first, then stylise within the blue-white corporate visual system.
+
+ENVIRONMENT PRODUCTION
+18  MODULAR ASSET HANDOFF RULES
+
+The building uses modular environment pieces and authored room sets that can support randomized floor assembly. Art assets therefore need consistent dimensions, pivots, material families and visual grammar. The goal is for procedural variation to feel like different departments of one coherent corporation, not randomly assembled asset packs.
+Asset-set rules
+■ Build the fixed architectural kit first: wall bays, window bays, floor/ceiling modules, columns, stair connections, glass partitions and service-wall pieces.
+■ Design room sets as authored compositions in Unity after the base modular pieces exist. This gives the coder clear reusable chunks while preserving art-directed layouts.
+■ Keep door, window, ceiling and structural heights consistent across sets unless a special floor intentionally breaks the rule.
+■ Use a small shared material library. Variation should come from arrangement, graphic signage and selected props more than dozens of unique materials.
+■ Furniture should snap to sensible placement zones but still allow loose objects for physics and destruction.
+■ Every room set should be evaluated from both its own tower and the opposing tower. Cross-window readability is part of the art review, not only level design.
+Visual hierarchy for modular pieces
+A module is successful when it still looks intentional in multiple combinations. Keep the base architecture quiet; reserve distinctive graphics and hero props for authored room-set layers. This prevents procedural assembly from creating accidental visual clutter.
+PRESENTATION
+19  COMPOSITION &amp; MARKETING IMAGERY
+
+Key art, menus, character cards and promotional graphics should use the same negative-space discipline as the reference material. A character does not need to fill the frame. Empty blue or white space, hairline grids and small blocks of data can make the image feel more expensive and more specific to the project.
+■ Use large crop decisions: characters can sit small in a huge field when the composition supports it.
+■ Combine clean renders with thin line geometry and sparse editorial labels.
+■ Photography-like billboards and character portraits can be cool-toned, monochrome or partially desaturated.
+■ Use lens flare rarely and intentionally as an early-digital/future-camera motif, not as a constant effect.
+■ Avoid busy collage layouts unless a screen specifically needs high energy. The default identity is controlled, not maximalist.
+Title treatment
+The main title should dominate with a sharp, confident corporate presence. The subtitle “Terms and Conditions Apply.” works as the dry legal counterpoint: smaller, secondary, almost like fine print. Avoid making the logo too jokey; the comedy is stronger when the brand takes itself seriously.
+GUARDRAILS
+20  DO / DON’T MASTER SHEET
+
+DO
+■ Think “future imagined in 2001.”
+■ Use white, navy, cobalt and cyan with restraint.
+■ Keep architecture clean and massively shaped.
+■ Use fashion-like angular character silhouettes.
+■ Simplify character shading into designed planes.
+■ Preserve cross-window readability.
+■ Let boring office objects coexist with futuristic design.
+■ Use signage as part of architecture.
+■ Keep corporate/legal humour straight-faced.
+■ Make UI and world graphics feel like one brand system.
+■ Prefer one memorable shape over ten small details.
+DON’T
+■ Drift into vaporwave or pastel Y2K.
+■ Add greenery/bubbles just to signal Frutiger Aero.
+■ Use neon cyberpunk as the default atmosphere.
+■ Make the cast cute, chibi or baby-faced.
+■ Apply thick black outlines to everything.
+■ Fill characters with complex toon-shader effects.
+■ Cover walls in random sci-fi panels and pipes.
+■ Use dirt and scratches as the main realism cue.
+■ Hide players behind reflective glass or visual clutter.
+■ Overdesign every office prop.
+■ Let procedural layouts break the visual hierarchy.
+
+Instant rejection checklist
+■ Would this still look like the project if the blue accent were removed? If not, the design may be relying on colour instead of shape language.
+■ Does the asset need a paragraph to explain why it is futuristic? If yes, simplify the design idea.
+■ Does the character look cute before they look sharp? Push angles, length and facial restraint.
+■ Does the environment look like generic cyberpunk with white paint? Remove clutter and rethink massing.
+■ Does the shader impress technically but obscure the graphic silhouette? Remove passes until the character reads again.
+APPROVAL WORKFLOW
+21  PRODUCTION REVIEW CHECKLIST
+
+CHARACTER
+■ ☐ Reads clearly at gameplay distance
+■ ☐ Silhouette is angular, not cute
+■ ☐ Suit proportions sit in fitted—not cropped/oversized—zone
+■ ☐ Hands follow simplified three-mass design
+■ ☐ Face is eyes/lids-led and restrained
+■ ☐ Shader reads as base + strong cut shadow
+■ ☐ No unnecessary material noise
+ENVIRONMENT
+■ ☐ Large forms are readable before detail
+■ ☐ White/blue hierarchy is controlled
+■ ☐ Cross-tower sightline remains clear
+■ ☐ Glass is readable rather than mirror-heavy
+■ ☐ One or two graphics do more work than many decals
+■ ☐ Mundane office layer is present
+■ ☐ No cyberpunk greeble drift
+GRAPHICS / UI
+■ ☐ Spacing and hierarchy feel intentional
+■ ☐ Blue/cyan used as system, not decoration
+■ ☐ Microtype remains secondary
+■ ☐ Legal/corporate tone stays straight
+■ ☐ No default vaporwave gradients
+■ ☐ Typography is clean and legible
+PROP / WEAPON
+■ ☐ Silhouette communicates function instantly
+■ ☐ Material palette belongs to office/corporate future
+■ ☐ Detail survives distance and motion
+■ ☐ Physics/destruction state remains readable
+■ ☐ No tactical-shooter clutter unless function demands it
+OPEN PRODUCTION ITEMS
+22  OPEN QUESTIONS / TBD
+
+The following areas should not be treated as fully locked until they have been tested in-engine. They are intentionally separated from the approved visual pillars so collaborators do not accidentally turn experiments into permanent rules.
+STATUS
+ITEM
+HANDOVER NOTE
+TBD
+Exact toon-shader thresholds
+Test under gameplay lighting at multiple distances. Protect the one-major-shadow principle.
+TBD
+Outline implementation
+Decide whether silhouettes use geometry/normal outlines, screen-space assist, or mostly no outline. Keep thickness subtle.
+TBD
+Team differentiation
+Choose how teams are distinguished without breaking the shared corporate palette.
+TBD
+Warning / damage colour
+Establish one reserved high-priority colour for danger/alerts after UI prototypes.
+TBD
+Final typeface family
+Lock licensed/open fonts after testing title, microtype, UI and world signage together.
+TBD
+VFX stylisation ceiling
+Prototype smoke, explosions, impacts and glass damage; choose the least noisy version that communicates clearly.
+TBD
+Wear / damage persistence
+Determine how much visual damage should accumulate on props and floors during a match without muddying the clean world.
+TBD
+Exterior city scope
+Define how much of the broader city is playable/visible versus backdrop, while maintaining the clean 2001-future language.
+
+Decision rule for TBD items
+When two options both work mechanically, choose the option that preserves the project’s strongest contrast: immaculate corporate world, highly readable graphic characters, and absurd action. Do not solve uncertainty by adding more visual information.
+HAND-OFF SHEET
+23  ONE-PAGE QUICK REFERENCE
+
+NORTH STAR
+A clean corporate future imagined from the year 2001. White architecture + cobalt sky + soft atmospheric world + sharp editorial cel-shaded lawyers.
+
+Character
+■ Jet Set Radio-like long-limbed proportions, but less cute.
+■ Angular suit/lawyer shape language.
+■ Eyes/lids carry expression; mouths minimal or absent.
+■ Three-mass simplified hands.
+■ Base colour + one hard shadow shape.
+■ Selective hard highlights; no shader clutter.
+Environment
+■ White / pale grey architecture with navy, cobalt and small cyan accents.
+■ Large forms first; graphic accents second; micro-detail last.
+■ Glass, brushed aluminium, smoked screens, grey carpet, office plastics.
+■ Idealised future shell + mundane office reality.
+■ Cross-tower visibility is a core art constraint.
+Graphics &amp; UI
+■ Thin grids, hairlines, big blocks, tiny legal/technical copy.
+■ Oversized floor codes and sparse corporate slogans.
+■ Title: CLOSE THE DEAL. Subtitle: Terms and Conditions Apply.
+■ Straight-faced corporate presentation; no wink-at-camera comedy.
+Avoid
+■ Vaporwave / pastel Y2K
+■ Frutiger Aero as a primary look
+■ Generic neon cyberpunk
+■ Cute/chibi character read
+■ Thick outlines everywhere
+■ Five-band anime toon shading
+■ Sci-fi greeble overload
+■ Dirty/grimy dystopia as the default
+FINAL HANDOVER PRINCIPLE
+LESS INFORMATION. STRONGER DECISIONS.
+Every character, room, sign and shader pass should make the game easier to recognise — not merely more detailed.

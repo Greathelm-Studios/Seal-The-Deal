@@ -1,0 +1,6 @@
+# Rebuildable outputs of the model scripts (see the READMEs). The .py scripts are the source.
+*.blend
+*.blend1
+*.build.json
+Kit/build/
+Kit/export/
