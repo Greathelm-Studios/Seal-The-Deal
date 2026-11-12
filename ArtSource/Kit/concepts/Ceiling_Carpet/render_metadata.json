@@ -1,0 +1,116 @@
+{
+  "01_Ribbon_Lanes/room": {
+    "camera": [
+      2.700000047683716,
+      -11.0,
+      1.7000000476837158
+    ],
+    "direction": [
+      0.3726612627506256,
+      0.9273197650909424,
+      0.034666091203689575
+    ],
+    "lens_mm": 19.0,
+    "ortho_scale_m": null,
+    "size_px": [
+      990,
+      616
+    ],
+    "notes": "12m deep office / 3 x 4m bays / eye 1.70m / approved White Trays B"
+  },
+  "01_Ribbon_Lanes/stair_up": {
+    "camera": [
+      3.200000047683716,
+      -11.100000381469727,
+      1.7000000476837158
+    ],
+    "direction": [
+      0.49224957823753357,
+      0.6827976107597351,
+      0.5398868322372437
+    ],
+    "lens_mm": 19.0,
+    "ortho_scale_m": null,
+    "size_px": [
+      990,
+      616
+    ],
+    "notes": "250mm white collar at r2.65 hole / 4.30m soffit / source ramp context"
+  },
+  "01_Ribbon_Lanes/down_proposal": {
+    "camera": [
+      6.0,
+      -11.199999809265137,
+      6.199999809265137
+    ],
+    "direction": [
+      0.0,
+      0.7071068286895752,
+      -0.7071067094802856
+    ],
+    "lens_mm": 25.0,
+    "ortho_scale_m": null,
+    "size_px": [
+      990,
+      616
+    ],
+    "notes": "Exact 45 degree depression / eye 1.70m above upper floor / identical lighting and navy suits"
+  },
+  "02_Porcelain_Squares/room": {
+    "camera": [
+      2.700000047683716,
+      -11.0,
+      1.7000000476837158
+    ],
+    "direction": [
+      0.3726612627506256,
+      0.9273197650909424,
+      0.034666091203689575
+    ],
+    "lens_mm": 19.0,
+    "ortho_scale_m": null,
+    "size_px": [
+      990,
+      616
+    ],
+    "notes": "12m deep office / 3 x 4m bays / eye 1.70m / approved White Trays B"
+  },
+  "02_Porcelain_Squares/stair_up": {
+    "camera": [
+      3.200000047683716,
+      -11.100000381469727,
+      1.7000000476837158
+    ],
+    "direction": [
+      0.49224957823753357,
+      0.6827976107597351,
+      0.5398868322372437
+    ],
+    "lens_mm": 19.0,
+    "ortho_scale_m": null,
+    "size_px": [
+      990,
+      616
+    ],
+    "notes": "250mm white collar at r2.65 hole / 4.30m soffit / source ramp context"
+  },
+  "02_Porcelain_Squares/down_proposal": {
+    "camera": [
+      6.0,
+      -11.199999809265137,
+      6.199999809265137
+    ],
+    "direction": [
+      0.0,
+      0.7071068286895752,
+      -0.7071067094802856
+    ],
+    "lens_mm": 25.0,
+    "ortho_scale_m": null,
+    "size_px": [
+      990,
+      616
+    ],
+    "notes": "Exact 45 degree depression / eye 1.70m above upper floor / identical lighting and navy suits"
+  }
+}

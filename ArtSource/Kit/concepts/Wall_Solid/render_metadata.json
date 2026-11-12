@@ -1,0 +1,730 @@
+{
+  "01_Floating_Field/room.png": {
+    "dimensions": [],
+    "camera": [
+      0.5,
+      -6.400000095367432,
+      1.7000000476837158
+    ],
+    "projection": "PERSP",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Eye 1.70m. 4+4+2m run and overlapping 4m return. No doorway.",
+    "wall_bounds_xyz": [
+      [
+        0.0,
+        10.200000762939453
+      ],
+      [
+        -4.0,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "02_Framed_Trays/room.png": {
+    "dimensions": [],
+    "camera": [
+      0.5,
+      -6.400000095367432,
+      1.7000000476837158
+    ],
+    "projection": "PERSP",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Eye 1.70m. 4+4+2m run and overlapping 4m return. No doorway.",
+    "wall_bounds_xyz": [
+      [
+        0.0,
+        10.200000762939453
+      ],
+      [
+        -4.0,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "01_Floating_Field/close_skirting.png": {
+    "dimensions": [],
+    "camera": [
+      6.699999809265137,
+      -2.200000047683716,
+      0.8500000238418579
+    ],
+    "projection": "PERSP",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Raking three-quarter at skirting, 2.67m to target.",
+    "wall_bounds_xyz": [
+      [
+        0.0,
+        10.200000762939453
+      ],
+      [
+        -4.0,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "01_Floating_Field/close_top.png": {
+    "dimensions": [],
+    "camera": [
+      6.900000095367432,
+      -2.0999999046325684,
+      2.700000047683716
+    ],
+    "projection": "PERSP",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Raking three-quarter at head band and actual slab soffit.",
+    "wall_bounds_xyz": [
+      [
+        0.0,
+        10.200000762939453
+      ],
+      [
+        -4.0,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "01_Floating_Field/corner.png": {
+    "dimensions": [],
+    "camera": [
+      5.5,
+      -4.599999904632568,
+      1.7000000476837158
+    ],
+    "projection": "PERSP",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Unmodified 2m wall meets 4m wall with 0.20m overlap.",
+    "wall_bounds_xyz": [
+      [
+        0.0,
+        10.200000762939453
+      ],
+      [
+        -4.0,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "01_Floating_Field/front.png": {
+    "dimensions": [
+      {
+        "a": [
+          233.99999141693115,
+          960.0004613399506
+        ],
+        "b": [
+          953.9999485015869,
+          960.0004613399506
+        ],
+        "label": "4.00 m",
+        "offset": 48
+      },
+      {
+        "a": [
+          1061.9999527931213,
+          960.0004613399506
+        ],
+        "b": [
+          1421.9999313354492,
+          960.0004613399506
+        ],
+        "label": "2.00 m",
+        "offset": 48
+      },
+      {
+        "a": [
+          216.00000858306885,
+          960.0004613399506
+        ],
+        "b": [
+          216.00000858306885,
+          186.00046634674072
+        ],
+        "label": "4.30 m",
+        "offset": -64
+      }
+    ],
+    "camera": [
+      3.700000047683716,
+      -16.0,
+      2.0
+    ],
+    "projection": "ORTHO",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Orthographic room front. Both real module lengths, two original pivot crosses, floor at zero.",
+    "wall_bounds_xyz": [
+      [
+        0.0,
+        6.599999904632568
+      ],
+      [
+        -0.20000000298023224,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "01_Floating_Field/side.png": {
+    "dimensions": [
+      {
+        "a": [
+          976.0565042495728,
+          1094.3663030862808
+        ],
+        "b": [
+          1026.7606616020203,
+          1094.3663030862808
+        ],
+        "label": "0.20 m",
+        "offset": 70
+      },
+      {
+        "a": [
+          1052.1127939224243,
+          1119.7183907032013
+        ],
+        "b": [
+          1052.1127939224243,
+          29.57754135131836
+        ],
+        "label": "4.30 m",
+        "offset": 80
+      }
+    ],
+    "camera": [
+      16.0,
+      -0.5,
+      2.049999952316284
+    ],
+    "projection": "ORTHO",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "True orthographic +X end. Original full rectangular snap face.",
+    "wall_bounds_xyz": [
+      [
+        0.0,
+        4.0
+      ],
+      [
+        -0.20000000298023224,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "01_Floating_Field/section.png": {
+    "dimensions": [
+      {
+        "a": [
+          950.0001311302185,
+          570.0001001358032
+        ],
+        "b": [
+          1000.0001549720764,
+          570.0001001358032
+        ],
+        "label": "0.20 m envelope",
+        "offset": 86
+      },
+      {
+        "a": [
+          1087.5001430511475,
+          1120.0001388788223
+        ],
+        "b": [
+          1087.5001430511475,
+          45.00010013580322
+        ],
+        "label": "4.30 m",
+        "offset": 76
+      },
+      {
+        "a": [
+          750.0001430511475,
+          45.00010013580322
+        ],
+        "b": [
+          750.0001430511475,
+          -4.999780654907227
+        ],
+        "label": "0.20 m slab",
+        "offset": -90
+      }
+    ],
+    "camera": [
+      15.0,
+      -0.4000000059604645,
+      2.0799999237060547
+    ],
+    "projection": "ORTHO",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Orthographic centre section. Cut faces blue. Both room-face recesses shown.",
+    "wall_bounds_xyz": [
+      [
+        1.9800000190734863,
+        2.0199999809265137
+      ],
+      [
+        -0.20000000298023224,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "01_Floating_Field/three_quarter.png": {
+    "dimensions": [],
+    "camera": [
+      8.5,
+      -9.0,
+      6.5
+    ],
+    "projection": "ORTHO",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Shaded room-side axonometric, navy suit and slab context.",
+    "wall_bounds_xyz": [
+      [
+        0.0,
+        4.0
+      ],
+      [
+        -0.20000000298023224,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "01_Floating_Field/profile_detail.png": {
+    "dimensions": [
+      {
+        "a": [
+          627.8056740760803,
+          1009.0926826000214
+        ],
+        "b": [
+          804.7331392765045,
+          1009.0926826000214
+        ],
+        "label": "65 mm recess",
+        "offset": 75
+      }
+    ],
+    "camera": [
+      6.0,
+      -0.3499999940395355,
+      0.20000000298023224
+    ],
+    "projection": "ORTHO",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Enlarged centre section of foot. No collider shaping is implied.",
+    "wall_bounds_xyz": [
+      [
+        1.9800000190734863,
+        2.0199999809265137
+      ],
+      [
+        -0.20000000298023224,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "02_Framed_Trays/close_skirting.png": {
+    "dimensions": [],
+    "camera": [
+      6.699999809265137,
+      -2.200000047683716,
+      0.8500000238418579
+    ],
+    "projection": "PERSP",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Raking three-quarter at skirting, 2.67m to target.",
+    "wall_bounds_xyz": [
+      [
+        0.0,
+        10.200000762939453
+      ],
+      [
+        -4.0,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "02_Framed_Trays/close_top.png": {
+    "dimensions": [],
+    "camera": [
+      6.900000095367432,
+      -2.0999999046325684,
+      2.700000047683716
+    ],
+    "projection": "PERSP",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Raking three-quarter at head band and actual slab soffit.",
+    "wall_bounds_xyz": [
+      [
+        0.0,
+        10.200000762939453
+      ],
+      [
+        -4.0,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "02_Framed_Trays/corner.png": {
+    "dimensions": [],
+    "camera": [
+      5.5,
+      -4.599999904632568,
+      1.7000000476837158
+    ],
+    "projection": "PERSP",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Unmodified 2m wall meets 4m wall with 0.20m overlap.",
+    "wall_bounds_xyz": [
+      [
+        0.0,
+        10.200000762939453
+      ],
+      [
+        -4.0,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "02_Framed_Trays/front.png": {
+    "dimensions": [
+      {
+        "a": [
+          233.99999141693115,
+          960.0004613399506
+        ],
+        "b": [
+          953.9999485015869,
+          960.0004613399506
+        ],
+        "label": "4.00 m",
+        "offset": 48
+      },
+      {
+        "a": [
+          1061.9999527931213,
+          960.0004613399506
+        ],
+        "b": [
+          1421.9999313354492,
+          960.0004613399506
+        ],
+        "label": "2.00 m",
+        "offset": 48
+      },
+      {
+        "a": [
+          216.00000858306885,
+          960.0004613399506
+        ],
+        "b": [
+          216.00000858306885,
+          186.00046634674072
+        ],
+        "label": "4.30 m",
+        "offset": -64
+      }
+    ],
+    "camera": [
+      3.700000047683716,
+      -16.0,
+      2.0
+    ],
+    "projection": "ORTHO",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Orthographic room front. Both real module lengths, two original pivot crosses, floor at zero.",
+    "wall_bounds_xyz": [
+      [
+        0.0,
+        6.599999904632568
+      ],
+      [
+        -0.20000000298023224,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "02_Framed_Trays/side.png": {
+    "dimensions": [
+      {
+        "a": [
+          976.0565042495728,
+          1094.3663030862808
+        ],
+        "b": [
+          1026.7606616020203,
+          1094.3663030862808
+        ],
+        "label": "0.20 m",
+        "offset": 70
+      },
+      {
+        "a": [
+          1052.1127939224243,
+          1119.7183907032013
+        ],
+        "b": [
+          1052.1127939224243,
+          29.57754135131836
+        ],
+        "label": "4.30 m",
+        "offset": 80
+      }
+    ],
+    "camera": [
+      16.0,
+      -0.5,
+      2.049999952316284
+    ],
+    "projection": "ORTHO",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "True orthographic +X end. Original full rectangular snap face.",
+    "wall_bounds_xyz": [
+      [
+        0.0,
+        4.0
+      ],
+      [
+        -0.20000000298023224,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "02_Framed_Trays/section.png": {
+    "dimensions": [
+      {
+        "a": [
+          950.0001311302185,
+          570.0001001358032
+        ],
+        "b": [
+          1000.0001549720764,
+          570.0001001358032
+        ],
+        "label": "0.20 m envelope",
+        "offset": 86
+      },
+      {
+        "a": [
+          1087.5001430511475,
+          1120.0001388788223
+        ],
+        "b": [
+          1087.5001430511475,
+          45.00010013580322
+        ],
+        "label": "4.30 m",
+        "offset": 76
+      },
+      {
+        "a": [
+          750.0001430511475,
+          45.00010013580322
+        ],
+        "b": [
+          750.0001430511475,
+          -4.999780654907227
+        ],
+        "label": "0.20 m slab",
+        "offset": -90
+      }
+    ],
+    "camera": [
+      15.0,
+      -0.4000000059604645,
+      2.0799999237060547
+    ],
+    "projection": "ORTHO",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Orthographic centre section. Cut faces blue. Both room-face recesses shown.",
+    "wall_bounds_xyz": [
+      [
+        1.9800000190734863,
+        2.0199999809265137
+      ],
+      [
+        -0.20000000298023224,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "02_Framed_Trays/three_quarter.png": {
+    "dimensions": [],
+    "camera": [
+      8.5,
+      -9.0,
+      6.5
+    ],
+    "projection": "ORTHO",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Shaded room-side axonometric, navy suit and slab context.",
+    "wall_bounds_xyz": [
+      [
+        0.0,
+        4.0
+      ],
+      [
+        -0.20000000298023224,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  },
+  "02_Framed_Trays/profile_detail.png": {
+    "dimensions": [
+      {
+        "a": [
+          627.8056740760803,
+          1009.0926826000214
+        ],
+        "b": [
+          804.7331392765045,
+          1009.0926826000214
+        ],
+        "label": "65 mm recess",
+        "offset": 75
+      }
+    ],
+    "camera": [
+      6.0,
+      -0.3499999940395355,
+      0.20000000298023224
+    ],
+    "projection": "ORTHO",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "description": "Enlarged centre section of foot. No collider shaping is implied.",
+    "wall_bounds_xyz": [
+      [
+        1.9800000190734863,
+        2.0199999809265137
+      ],
+      [
+        -0.20000000298023224,
+        0.0
+      ],
+      [
+        0.0,
+        4.300000190734863
+      ]
+    ]
+  }
+}

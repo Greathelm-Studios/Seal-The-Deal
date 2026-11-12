@@ -1,0 +1,461 @@
+{
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\01_Dark_Bands\\hero_A.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\01_Dark_Bands\\street_A.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\01_Dark_Bands\\hero_B.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\01_Dark_Bands\\street_B.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\01_Dark_Bands\\front.png": {
+    "dimensions": [
+      {
+        "a": [
+          341.0256415605545,
+          851.9234031438828
+        ],
+        "b": [
+          1058.9743375778198,
+          851.9234031438828
+        ],
+        "label": "4.00 m grid run",
+        "offset": 56
+      },
+      {
+        "a": [
+          305.1282078027725,
+          851.9234031438828
+        ],
+        "b": [
+          305.1282078027725,
+          80.12847006320953
+        ],
+        "label": "4.30 m",
+        "offset": -50
+      },
+      {
+        "a": [
+          1112.8205299377441,
+          851.9234031438828
+        ],
+        "b": [
+          1112.8205299377441,
+          672.4362179636955
+        ],
+        "label": "1.00 m solid sill",
+        "offset": 28
+      },
+      {
+        "a": [
+          376.92309617996216,
+          89.10287320613861
+        ],
+        "b": [
+          1023.0769038200378,
+          89.10287320613861
+        ],
+        "label": "3.60 m clear pane",
+        "offset": -38
+      }
+    ]
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\01_Dark_Bands\\side.png": {
+    "dimensions": [
+      {
+        "a": [
+          654.0299475193024,
+          819.7762377560139
+        ],
+        "b": [
+          704.1791677474976,
+          819.7762377560139
+        ],
+        "label": "0.24 m pier",
+        "offset": 15
+      },
+      {
+        "a": [
+          637.3135268688202,
+          903.3583333715796
+        ],
+        "b": [
+          637.3135268688202,
+          4.850730299949646
+        ],
+        "label": "4.30 m",
+        "offset": -50
+      }
+    ]
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\01_Dark_Bands\\three_quarter.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\01_Dark_Bands\\room_three_quarter.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\01_Dark_Bands\\section.png": {
+    "dimensions": [
+      {
+        "a": [
+          691.0257041454315,
+          851.9231412559748
+        ],
+        "b": [
+          726.9231796264648,
+          851.9231412559748
+        ],
+        "label": "0.20 m sill",
+        "offset": 45
+      },
+      {
+        "a": [
+          707.1795701980591,
+          349.35903549194336
+        ],
+        "b": [
+          710.7692718505859,
+          349.35903549194336
+        ],
+        "label": "0.02 m pane",
+        "offset": 65
+      },
+      {
+        "a": [
+          768.2051658630371,
+          663.4615883231163
+        ],
+        "b": [
+          768.2051658630371,
+          89.10264670848846
+        ],
+        "label": "3.20 m pane",
+        "offset": 40
+      },
+      {
+        "a": [
+          583.3334028720856,
+          887.8205414861441
+        ],
+        "b": [
+          583.3334028720856,
+          851.9231412559748
+        ],
+        "label": "0.20 m slab",
+        "offset": -55
+      }
+    ]
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\01_Dark_Bands\\infill_corners.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\02_Lit_Piers\\hero_A.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\02_Lit_Piers\\street_A.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\02_Lit_Piers\\hero_B.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\02_Lit_Piers\\street_B.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\02_Lit_Piers\\front.png": {
+    "dimensions": [
+      {
+        "a": [
+          341.0256415605545,
+          851.9234031438828
+        ],
+        "b": [
+          1058.9743375778198,
+          851.9234031438828
+        ],
+        "label": "4.00 m grid run",
+        "offset": 56
+      },
+      {
+        "a": [
+          305.1282078027725,
+          851.9234031438828
+        ],
+        "b": [
+          305.1282078027725,
+          80.12847006320953
+        ],
+        "label": "4.30 m",
+        "offset": -50
+      },
+      {
+        "a": [
+          1112.8205299377441,
+          851.9234031438828
+        ],
+        "b": [
+          1112.8205299377441,
+          672.4362179636955
+        ],
+        "label": "1.00 m solid sill",
+        "offset": 28
+      },
+      {
+        "a": [
+          376.92309617996216,
+          89.10287320613861
+        ],
+        "b": [
+          1023.0769038200378,
+          89.10287320613861
+        ],
+        "label": "3.60 m clear pane",
+        "offset": -38
+      }
+    ]
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\02_Lit_Piers\\side.png": {
+    "dimensions": [
+      {
+        "a": [
+          654.0299475193024,
+          819.7762377560139
+        ],
+        "b": [
+          704.1791677474976,
+          819.7762377560139
+        ],
+        "label": "0.24 m pier",
+        "offset": 15
+      },
+      {
+        "a": [
+          637.3135268688202,
+          903.3583333715796
+        ],
+        "b": [
+          637.3135268688202,
+          4.850730299949646
+        ],
+        "label": "4.30 m",
+        "offset": -50
+      }
+    ]
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\02_Lit_Piers\\three_quarter.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\02_Lit_Piers\\room_three_quarter.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\02_Lit_Piers\\section.png": {
+    "dimensions": [
+      {
+        "a": [
+          691.0257041454315,
+          851.9231412559748
+        ],
+        "b": [
+          726.9231796264648,
+          851.9231412559748
+        ],
+        "label": "0.20 m sill",
+        "offset": 45
+      },
+      {
+        "a": [
+          707.1795701980591,
+          349.35903549194336
+        ],
+        "b": [
+          710.7692718505859,
+          349.35903549194336
+        ],
+        "label": "0.02 m pane",
+        "offset": 65
+      },
+      {
+        "a": [
+          768.2051658630371,
+          663.4615883231163
+        ],
+        "b": [
+          768.2051658630371,
+          89.10264670848846
+        ],
+        "label": "3.20 m pane",
+        "offset": 40
+      },
+      {
+        "a": [
+          583.3334028720856,
+          887.8205414861441
+        ],
+        "b": [
+          583.3334028720856,
+          851.9231412559748
+        ],
+        "label": "0.20 m slab",
+        "offset": -55
+      }
+    ]
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\02_Lit_Piers\\infill_corners.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\03_Cobalt_Corners\\hero_A.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\03_Cobalt_Corners\\street_A.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\03_Cobalt_Corners\\hero_B.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\03_Cobalt_Corners\\street_B.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\03_Cobalt_Corners\\front.png": {
+    "dimensions": [
+      {
+        "a": [
+          341.0256415605545,
+          851.9234031438828
+        ],
+        "b": [
+          1058.9743375778198,
+          851.9234031438828
+        ],
+        "label": "4.00 m grid run",
+        "offset": 56
+      },
+      {
+        "a": [
+          305.1282078027725,
+          851.9234031438828
+        ],
+        "b": [
+          305.1282078027725,
+          80.12847006320953
+        ],
+        "label": "4.30 m",
+        "offset": -50
+      },
+      {
+        "a": [
+          1112.8205299377441,
+          851.9234031438828
+        ],
+        "b": [
+          1112.8205299377441,
+          672.4362179636955
+        ],
+        "label": "1.00 m solid sill",
+        "offset": 28
+      },
+      {
+        "a": [
+          376.92309617996216,
+          89.10287320613861
+        ],
+        "b": [
+          1023.0769038200378,
+          89.10287320613861
+        ],
+        "label": "3.60 m clear pane",
+        "offset": -38
+      }
+    ]
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\03_Cobalt_Corners\\side.png": {
+    "dimensions": [
+      {
+        "a": [
+          654.0299475193024,
+          819.7762377560139
+        ],
+        "b": [
+          704.1791677474976,
+          819.7762377560139
+        ],
+        "label": "0.24 m pier",
+        "offset": 15
+      },
+      {
+        "a": [
+          637.3135268688202,
+          903.3583333715796
+        ],
+        "b": [
+          637.3135268688202,
+          4.850730299949646
+        ],
+        "label": "4.30 m",
+        "offset": -50
+      }
+    ]
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\03_Cobalt_Corners\\three_quarter.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\03_Cobalt_Corners\\room_three_quarter.png": {
+    "dimensions": []
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\03_Cobalt_Corners\\section.png": {
+    "dimensions": [
+      {
+        "a": [
+          691.0257041454315,
+          851.9231412559748
+        ],
+        "b": [
+          726.9231796264648,
+          851.9231412559748
+        ],
+        "label": "0.20 m sill",
+        "offset": 45
+      },
+      {
+        "a": [
+          707.1795701980591,
+          349.35903549194336
+        ],
+        "b": [
+          710.7692718505859,
+          349.35903549194336
+        ],
+        "label": "0.02 m pane",
+        "offset": 65
+      },
+      {
+        "a": [
+          768.2051658630371,
+          663.4615883231163
+        ],
+        "b": [
+          768.2051658630371,
+          89.10264670848846
+        ],
+        "label": "3.20 m pane",
+        "offset": 40
+      },
+      {
+        "a": [
+          583.3334028720856,
+          887.8205414861441
+        ],
+        "b": [
+          583.3334028720856,
+          851.9231412559748
+        ],
+        "label": "0.20 m slab",
+        "offset": -55
+      }
+    ]
+  },
+  "C:\\Users\\alexf\\Documents\\GitHub\\Seal-The-Deal\\ArtSource\\Kit\\concepts\\Window_Bay_R2\\03_Cobalt_Corners\\infill_corners.png": {
+    "dimensions": []
+  }
+}
