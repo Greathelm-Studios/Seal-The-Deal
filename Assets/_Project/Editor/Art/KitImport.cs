@@ -13,6 +13,8 @@
 //              cobalt/portal walls, stair steps, locked door, strip light; Trim_Navy, Accent_Cobalt,
 //              Light_Strip (emissive), Door_LockedRed; carpet and ceiling tile textures; Stair_Flight
 //              keeps its collider but no renderer; visual-only pieces need no collider.
+//  Modified  : Claude Fable 5.2, 2026-11-12 — the glass material uses the Glass Sheen shader
+//              instead of transparent URP Lit.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 // -----------------------------------------------------------------------------
 using System.Collections.Generic;
@@ -70,6 +72,8 @@ namespace CloseTheDeal.Editor.Art
         const float TreadRadius = 1.7f;
         /// <summary>Glass opacity. The Greybox README's read test recommends 5 % for players to read through.</summary>
         const float GlassAlpha = 0.05f;
+        /// <summary>The kit glass's shader: near-clear with drawn diagonal streaks (GlassSheen.shader).</summary>
+        const string GlassShaderName = "Close the Deal/Glass Sheen";
         /// <summary>Capture size for the review renders, pixels.</summary>
         const int RenderWidth = 1280, RenderHeight = 720;
 
@@ -176,7 +180,22 @@ namespace CloseTheDeal.Editor.Art
                 if (m.glass)
                 {
                     c.a = GlassAlpha;
-                    MakeTransparent(mat);
+                    // Glass uses the game's own drawn-sheen shader (Assets/_Project/Art/Glass,
+                    // Alex 2026-11-12), not URP Lit: Lit glass is either invisible or a mirror.
+                    // The streak and edge settings are left as they are on an existing material,
+                    // so tuning them in the Inspector survives a re-import.
+                    Shader sheen = Shader.Find(GlassShaderName);
+                    if (sheen != null)
+                    {
+                        mat.shader = sheen;
+                        // -1 = take the queue from the shader (Transparent).
+                        mat.renderQueue = -1;
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[Kit Import] Shader '{GlassShaderName}' not found; {m.name} falls back to transparent URP Lit.");
+                        MakeTransparent(mat);
+                    }
                 }
                 if (Textured.Contains(m.name))
                 {
