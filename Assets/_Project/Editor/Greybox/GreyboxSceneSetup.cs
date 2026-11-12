@@ -71,6 +71,30 @@ namespace CloseTheDeal.Editor.Greybox
             Debug.Log("[Greybox] Scene set up and saved.");
         }
 
+        /// <summary>
+        /// Adds what a scene needs before Play can put a player in it: the follow script on the main
+        /// camera, two spawn points, the NetworkManager with its spawner and transports, Steam, and
+        /// the menu and HUD. Like Set Up Scene it only adds what is missing.
+        /// </summary>
+        /// <param name="spawnA">World position of the first spawn point, metres. Used only if "SpawnA" does not exist yet.</param>
+        /// <param name="spawnB">World position of the second spawn point, metres. Used only if "SpawnB" does not exist yet.</param>
+        /// <remarks>
+        /// For scenes other than Greybox.unity (the kit review scenes): no test floor, obstacles or
+        /// tower are added, so players start at the spawn points. It searches every loaded scene and
+        /// creates objects in the active one, so call it with a single scene open. Needs a camera
+        /// tagged MainCamera. Does not save the scene.
+        /// WHY not make SetUpScene call this: SetUpScene builds the tower between the NetworkManager
+        /// and the UI, and that order is left as it was.
+        /// </remarks>
+        public static void EnsurePlayRig(Vector3 spawnA, Vector3 spawnB)
+        {
+            EnsureLayers();
+            NetworkObject playerPrefab = EnsurePlayerPrefab();
+            EnsurePlayerCamera();
+            EnsureNetworkManager(playerPrefab, EnsureSpawn("SpawnA", spawnA), EnsureSpawn("SpawnB", spawnB));
+            GreyboxUiSetup.Ensure(EnsureSteam());
+        }
+
         [MenuItem("Close the Deal/Greybox/Rebuild Player Prefab")]
         public static void RebuildPlayerPrefab()
         {

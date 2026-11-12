@@ -5,6 +5,9 @@
 //  Prompt    : Alex: "where is ur scene" -> build a Unity scene of the whole dressed office floor
 //  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-12 — Alex: "remove the other building".
 //              The rival tower (façade, slabs, stand-ins, massing) is no longer built.
+//  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-12 — Alex: "when I press play on KitOffice
+//              I can't move". The menu build now adds the player rig, and Make Open Scene
+//              Playable adds it to an existing scene.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Lays out whole office floors from the kit prefabs, as ArtSource/Kit/interior_scene.py
 //              does in Blender, so the approved White Trays + Cobalt Portal kit can be walked and lit in
@@ -15,6 +18,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using CloseTheDeal.Editor.Greybox;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -82,6 +86,11 @@ namespace CloseTheDeal.Editor.Art
         const float FigureHeight = 1.8f, FigureRadius = 0.25f;
         /// <summary>Where stand-ins stand on each floor (x, z).</summary>
         static readonly Vector2[] OurSpots = { new Vector2(6f, -3f), new Vector2(13f, -5.5f), new Vector2(4f, -8f), new Vector2(24f, -4f) };
+        /// <summary>
+        /// Where players start in Play, world metres: the ground floor's open area between the façade
+        /// and the stair, clear of the stand-ins and meeting rooms, 0.1 m above the carpet as in Greybox.
+        /// </summary>
+        static readonly Vector3 SpawnA = new Vector3(10f, 0.1f, -4f), SpawnB = new Vector3(18f, 0.1f, -4f);
 
         // ---- Review captures
         const float Eye = 1.6f;
@@ -94,9 +103,37 @@ namespace CloseTheDeal.Editor.Art
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             Build(scene);
+            GreyboxSceneSetup.EnsurePlayRig(SpawnA, SpawnB);
             EditorSceneManager.SaveScene(scene, ScenePath);
             OfficeLook.Apply(askFirst: false);
             EditorSceneManager.SaveScene(scene);
+        }
+
+        /// <summary>
+        /// Adds the player rig (network manager, spawns, menu, follow camera) to the open scene so Play
+        /// puts a player on the ground floor. Adds only what is missing and does not save.
+        /// </summary>
+        /// <remarks>
+        /// Exists so a KitOffice.unity built before the rig was part of the build, or one with unsaved
+        /// work in it, can be made playable without rebuilding the scene over that work.
+        /// </remarks>
+        [MenuItem("Close the Deal/Art/Make Open Scene Playable")]
+        static void MakePlayableFromMenu()
+        {
+            // WHY one scene only: the rig is found by searching every loaded scene, so with Greybox
+            // loaded alongside it would find Greybox's rig and add nothing here.
+            if (SceneManager.sceneCount != 1)
+            {
+                EditorUtility.DisplayDialog("Make Open Scene Playable", "Close the other loaded scenes first, so the player rig lands in this one.", "OK");
+                return;
+            }
+            if (Camera.main == null)
+            {
+                EditorUtility.DisplayDialog("Make Open Scene Playable", "This scene has no camera tagged MainCamera for the player camera to use.", "OK");
+                return;
+            }
+            GreyboxSceneSetup.EnsurePlayRig(SpawnA, SpawnB);
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         }
 
         /// <summary>
