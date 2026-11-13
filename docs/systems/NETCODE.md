@@ -1,6 +1,7 @@
 # NETCODE
 
 **Status:** Current · **Last updated:** 2026-11-12 · **Verified against:** the playtest menu commit
+**Status:** Current · **Last updated:** 2026-11-13 · **Verified against:** the playtest menu commit
 
 ## What happens in the game
 
@@ -27,6 +28,17 @@ Stack: **FishNet 4.7.3** (the pinned tag; its own version strings still say 4.7.
 | Props (furniture) | **Host** simulates; clients hold them kinematic | Position and rotation, via NetworkTransform; see [PROPS.md](PROPS.md) | While moving, 30/s |
 | Towers | Host picks a seed; everyone builds locally; see [TOWER.md](TOWER.md) | One number | Once, and per rematch |
 | Match, firms, the briefcase | **Host**; see [MATCH.md](MATCH.md) | Phase, briefcase status and checkpoint SyncVars; loose briefcase transform | On change; briefcase 30/s only while moving |
+| Props (furniture) | **Host** simulates; clients hold them kinematic | Position and rotation, 13 bytes a prop, through [Switchboard](SWITCHBOARD.md) | While moving: 30/s on nearby floors, about 3/s on far ones, never more than 12 KB/s to one player |
+| Towers | Host picks a seed; everyone builds locally; see [TOWER.md](TOWER.md) | One number | Once |
+
+## What is FishNet's and what is ours
+
+FishNet is the plumbing: connections, spawning, ownership, synced values, remote calls and the predicted player body. We keep it (decided again 2026-11-13, see [DECISIONS.md](../DECISIONS.md)) because the prediction and the join, spawn and reliability code are the expensive parts of netcode and every gameplay system already sits on them.
+
+Where this game is unusual we write our own layer on top, one system at a time, each behind our own code so it would survive a change of library:
+
+- **Props:** [Switchboard](SWITCHBOARD.md), a stream with a fixed upload limit per player that favours the floors a player can see. Built; not yet seen from a client.
+- **Candidates, not built:** hit registration for shots across the gap; choosing the best-connected lobby member as host before a run.
 
 ## Transports
 
@@ -72,6 +84,8 @@ Two copies of the game on the same PC connect directly instead of through Steam.
 Everything after joining (movement, blasts, corrections) is the real network path, only over loopback, so it shows logic bugs but not lag.
 
 ### What to watch
+
+Once furniture exists, a third line on the readout shows the prop stream. On the host: upload in kB/s summed over all clients (it should never pass 12 times the number of clients), updates a second and how many props are moving. On a client: download, updates a second and the smoothing delay in milliseconds. Blast a room full of furniture and watch a client: props should fly smoothly and settle exactly where the host has them.
 
 The bottom-left readout shows the local body's state, speed and ping, and how often and how far the host has corrected it. Corrections of a few centimetres are normal; repeated corrections of half a metre or more while walking on flat ground mean prediction and host disagree, which is a bug in `PlayerMotor`, not lag.
 
