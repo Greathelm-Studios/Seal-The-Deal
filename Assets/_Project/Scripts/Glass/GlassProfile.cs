@@ -34,7 +34,7 @@ namespace CloseTheDeal.Glass
         [Range(1f, 60f)] public float ShardsPerSquareMetre = 14f;
 
         [Tooltip("The most shards one pane can throw, however big it is. Keeps a wall of glass from costing a frame.")]
-        [Range(4, 300)] public int MaxShards = 80;
+        [Range(4, 300)] public int MaxShards = 50;
 
         [Tooltip("How fast the shards fly away from what broke the pane, in metres per second.")]
         [Min(0f)] public float ShardSpeed = 3.5f;

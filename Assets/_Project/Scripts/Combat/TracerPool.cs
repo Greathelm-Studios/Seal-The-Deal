@@ -17,7 +17,11 @@ namespace CloseTheDeal.Combat
             public float Left;
             public float Total;
             public float Width;
+            public Color Colour;
         }
+
+        /// <summary>The far end of a tracer is this bright compared with the muzzle end.</summary>
+        const float TailAlpha = 0.35f;
 
         static TracerPool _instance;
 
@@ -60,9 +64,12 @@ namespace CloseTheDeal.Combat
             line.SetPosition(0, from);
             line.SetPosition(1, to);
             line.widthMultiplier = prefab.widthMultiplier;
+            // A reused line still has the faded colour of its last shot.
+            line.startColor = prefab.startColor;
+            line.endColor = prefab.endColor;
             line.gameObject.SetActive(true);
 
-            _live.Add(new Live { Line = line, Prefab = prefab, Left = seconds, Total = seconds, Width = prefab.widthMultiplier });
+            _live.Add(new Live { Line = line, Prefab = prefab, Left = seconds, Total = seconds, Width = prefab.widthMultiplier, Colour = prefab.startColor });
         }
 
         void Update()
@@ -73,8 +80,15 @@ namespace CloseTheDeal.Combat
                 live.Left -= Time.deltaTime;
                 if (live.Left > 0f)
                 {
-                    // Thins out as it goes, so a burst reads as streaks rather than a solid bar.
-                    live.Line.widthMultiplier = live.Width * (live.Left / live.Total);
+                    // Thins and fades as it goes, so a burst reads as streaks rather than a solid bar.
+                    float left = live.Left / live.Total;
+                    live.Line.widthMultiplier = live.Width * left;
+                    Color start = live.Colour;
+                    start.a *= left;
+                    Color end = start;
+                    end.a *= TailAlpha;
+                    live.Line.startColor = start;
+                    live.Line.endColor = end;
                     _live[i] = live;
                     continue;
                 }

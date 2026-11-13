@@ -91,8 +91,8 @@ namespace CloseTheDeal.Combat
         /// <summary>Rounds in the magazine of the gun in hand, then its size. Shooter's own game only.</summary>
         public event Action<int, int> AmmoChanged;
 
-        /// <summary>The host confirmed a hit: where, how much damage, and whether it killed. Shooter's own game only; this is the hit marker.</summary>
-        public event Action<Vector3, float, bool> HitConfirmed;
+        /// <summary>The host confirmed a hit: where, how much damage, whether it killed, and whether it was a head hit. Shooter's own game only; this is the hit marker.</summary>
+        public event Action<Vector3, float, bool, bool> HitConfirmed;
 
         /// <summary>The host confirmed this player's shot killed someone, with where. Shooter's own game only; raised straight after HitConfirmed, for a kill sound and marker of its own.</summary>
         public event Action<Vector3> KillConfirmed;
@@ -101,8 +101,8 @@ namespace CloseTheDeal.Combat
 
         const int PendingLength = 64;
         const byte LongAgo = byte.MaxValue;
-        /// <summary>Remote bodies are drawn about this many ticks behind the newest host tick heard (FishNet's default interpolation).</summary>
-        const int InterpolationTicks = 2;
+        /// <summary>Remote bodies are drawn about this many ticks behind the newest host tick heard: FishNet's two ticks of interpolation plus about one more, measured in the lane self-check.</summary>
+        const int InterpolationTicks = 3;
         /// <summary>How early a shot may arrive against the host's own clock before it is refused, in seconds. Covers network jitter, not a faster gun: the long-run rate is still the weapon's.</summary>
         const double RateSlackSeconds = 0.1;
         /// <summary>Ticks of grace on reload and equip timers, and on how rested the shooter claims the gun is.</summary>
@@ -161,6 +161,7 @@ namespace CloseTheDeal.Combat
         bool _hasShot;
         int _shotInBurst;
         uint _viewTick = NoViewTick;
+        float _lastShotTime;
         bool _triggerHeld;
         bool _triggerPressed;
         float _pressBufferedUntil;
@@ -180,6 +181,28 @@ namespace CloseTheDeal.Combat
 
         /// <summary>What the gun in the owner's hand is doing. Only meaningful on the owner's game.</summary>
         public WeaponState State => _state;
+
+        /// <summary>
+        /// Owner only: how far the next shot can stray from the crosshair right now, in
+        /// degrees, from the same numbers the shot will use. For a crosshair whose gap tells
+        /// the truth.
+        /// </summary>
+        public float CurrentSpreadDegrees
+        {
+            get
+            {
+                WeaponDefinition weapon = ActiveWeapon;
+                if (weapon == null)
+                    return 0f;
+
+                float bloom = Mathf.Max(0f, _bloom - weapon.BloomRecovery * (Time.time - _lastShotTime));
+                float spread = weapon.BaseSpread + bloom;
+                byte stance = Stance();
+                if ((stance & AirborneFlag) != 0)
+                    return spread * weapon.AirborneSpreadMultiplier;
+                return (stance & MovingFlag) != 0 ? spread * weapon.MovingSpreadMultiplier : spread;
+            }
+        }
 
         /// <summary>Rounds left in the gun in hand: the host's count on the host, the owner's own running count on their game.</summary>
         public int AmmoInMagazine => IsOwner ? OwnerAmmo(_localActive) : _hostAmmo[_active.Value];
@@ -482,6 +505,7 @@ namespace CloseTheDeal.Combat
             uint localTick = TimeManager.LocalTick;
             byte ticksSince = _hasShot ? (byte)Math.Min(localTick - _lastShotLocalTick, LongAgo) : LongAgo;
             _lastShotLocalTick = localTick;
+            _lastShotTime = Time.time;
             _hasShot = true;
 
             // Keep the long-run rate exact even though frames don't line up with the shot interval.
@@ -498,7 +522,7 @@ namespace CloseTheDeal.Combat
             Vector3 direction = ShotResolver.SpreadDirection(ShotResolver.UnpackDirection(packedAim), spread, ShotSeed(_seq));
 
             // Drawn straight away; the host's own trace is the one that counts.
-            ShotResult seen = ShotResolver.Trace(origin, direction, weapon.Range, _solidMask, _health, false, 0);
+            ShotResult seen = ShotResolver.Trace(origin, direction, weapon.Range, _solidMask, _health, false, 0, weapon.HeadFromHeight);
             Fired?.Invoke(new ShotInfo(weapon, origin, seen.End, seen.Stopped, true, _shotInBurst));
             RefreshOwnerAmmo();
 
@@ -686,7 +710,7 @@ namespace CloseTheDeal.Combat
                 origin = eye;
 
             Vector3 direction = ShotResolver.SpreadDirection(ShotResolver.UnpackDirection(packedAim), spread, ShotSeed(seq));
-            ShotResult shot = ShotResolver.Trace(origin, direction, weapon.Range, _solidMask, _health, true, SeenTick(viewTick, tick));
+            ShotResult shot = ShotResolver.Trace(origin, direction, weapon.Range, _solidMask, _health, true, SeenTick(viewTick, tick), weapon.HeadFromHeight);
 
             ShotResolver.BreakCrossedPanes(shot, direction, OwnerId);
             HostApplyHit(weapon, shot, direction);
@@ -704,14 +728,14 @@ namespace CloseTheDeal.Combat
 
         void HostApplyHit(WeaponDefinition weapon, in ShotResult shot, Vector3 direction)
         {
-            float damage = weapon.DamageAt(shot.Distance);
+            float damage = weapon.DamageAt(shot.Distance) * (shot.Precision ? weapon.HeadMultiplier : 1f);
 
             if (shot.Body != null)
             {
                 Vector3 shove = Knockback.ShoveVelocity(direction, weapon.HitShove, weapon.ShoveLift);
                 Vector3 killShove = Knockback.ShoveVelocity(direction, weapon.KillShove, weapon.ShoveLift);
                 if (shot.Body.ApplyHit(damage, shot.End, direction, OwnerId, shove, killShove, weapon.HitControlLoss))
-                    ConfirmHit(shot.End, damage, shot.Body.IsDead);
+                    ConfirmHit(shot.End, damage, shot.Body.IsDead, shot.Precision);
                 return;
             }
 
@@ -720,13 +744,13 @@ namespace CloseTheDeal.Combat
                 return;
 
             target.ApplyDamage(damage, shot.End, direction, OwnerId);
-            ConfirmHit(shot.End, damage, false);
+            ConfirmHit(shot.End, damage, false, false);
         }
 
-        void ConfirmHit(Vector3 point, float damage, bool killed)
+        void ConfirmHit(Vector3 point, float damage, bool killed, bool precision)
         {
             if (Owner.IsValid)
-                TargetHitConfirmed(Owner, point, damage, killed);
+                TargetHitConfirmed(Owner, point, damage, killed, precision);
         }
 
         [ServerRpc]
@@ -802,9 +826,9 @@ namespace CloseTheDeal.Combat
         }
 
         [TargetRpc]
-        void TargetHitConfirmed(NetworkConnection owner, Vector3 point, float damage, bool killed)
+        void TargetHitConfirmed(NetworkConnection owner, Vector3 point, float damage, bool killed, bool precision)
         {
-            HitConfirmed?.Invoke(point, damage, killed);
+            HitConfirmed?.Invoke(point, damage, killed, precision);
             if (killed)
                 KillConfirmed?.Invoke(point);
         }

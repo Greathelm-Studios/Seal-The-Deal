@@ -121,8 +121,39 @@ Transform:
   m_Children:
   - {fileID: 9166367670390841661}
   - {fileID: 8819225719657048054}
-  - {fileID: 742116445144701182}
-  m_Father: {fileID: 2689005043321101314}
+  - {fileID: 4543158061497326232}
+  m_Father: {fileID: 4165610245162811838}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &3240910703988354748
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4543158061497326232}
+  m_Layer: 6
+  m_Name: Hand
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4543158061497326232
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3240910703988354748}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.3, y: 0.4, z: 0.3}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1549759532965773935}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4715390566021658440
 GameObject:
@@ -138,9 +169,9 @@ GameObject:
   - component: {fileID: 4680666766096500643}
   - component: {fileID: 5842299367726580714}
   - component: {fileID: 7581206824313403346}
-  - component: {fileID: 633481949047726673}
-  - component: {fileID: 5212317098607126717}
-  - component: {fileID: 2565084199564518005}
+  - component: {fileID: 8772435297389959390}
+  - component: {fileID: 2093047514406954371}
+  - component: {fileID: 7821924877896510044}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -314,7 +345,7 @@ MonoBehaviour:
     m_Bits: 0
   _cameraTarget: {fileID: 4165610245162811838}
   _leanPivot: {fileID: 1549759532965773935}
---- !u!114 &633481949047726673
+--- !u!114 &8772435297389959390
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -334,9 +365,12 @@ MonoBehaviour:
   _defaultKillShove: 6
   _flashColour: {r: 1, g: 0.25, b: 0.2, a: 1}
   _flashSeconds: 0.12
-  _tipPivot: {fileID: 2689005043321101314}
+  _tipPivot: {fileID: 0}
   _tipSeconds: 0.25
---- !u!114 &5212317098607126717
+  _flinchPerDamage: 0.35
+  _maxFlinch: 20
+  _flinchSeconds: 0.3
+--- !u!114 &2093047514406954371
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -357,7 +391,7 @@ MonoBehaviour:
     m_Bits: 4294967227
   _lagAllowanceSeconds: 0.25
   _originTolerance: 2.5
---- !u!114 &2565084199564518005
+--- !u!114 &7821924877896510044
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -369,48 +403,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1645b8bd48d634bee8c2252fe79b8f53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Combat.WeaponView
-  _thirdPersonAnchor: {fileID: 742116445144701182}
-  _flashSeconds: 0.05
-  _kickBack: 0.06
-  _kickBackRecovery: 0.6
+  _thirdPersonAnchor: {fileID: 4543158061497326232}
   _dipDistance: 0.3
   _dipSeconds: 0.18
   _maxKick: 14
+  _swayDistance: 0.02
+  _swayRoll: 3
+  _swaySmoothing: 0.08
+  _bobDistance: 0.015
+  _bobRate: 1.9
+  _bobFullSpeed: 9
+  _bobWhileFiring: 0.2
+  _firingPoseSeconds: 0.25
   _deathDrop: 1
   _deathRoll: 40
   _deathSeconds: 0.35
---- !u!1 &5820790247095548550
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2689005043321101314}
-  m_Layer: 6
-  m_Name: Fall
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2689005043321101314
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5820790247095548550}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1549759532965773935}
-  m_Father: {fileID: 4165610245162811838}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7111191965594976901
 GameObject:
   m_ObjectHideFlags: 0
@@ -440,39 +447,8 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2689005043321101314}
+  - {fileID: 1549759532965773935}
   m_Father: {fileID: 862908408527760071}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &7640310228200470112
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 742116445144701182}
-  m_Layer: 6
-  m_Name: Hand
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &742116445144701182
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7640310228200470112}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.3, y: 0.4, z: 0.3}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1549759532965773935}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8449192116113492465
 GameObject:
