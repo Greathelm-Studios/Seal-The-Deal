@@ -226,7 +226,14 @@ namespace CloseTheDeal.Tower
             for (int team = 0; team < TeamCount; team++)
             {
                 if (_buildings[team] != null)
+                {
+                    // Off the tower at once: Destroy waits for the end of the frame, and anything
+                    // that walks the tower's children in between (the glass registry numbers panes
+                    // by building order) must see only the new buildings, as a fresh client does.
+                    _buildings[team].SetActive(false);
+                    _buildings[team].transform.SetParent(null, false);
                     Destroy(_buildings[team]);
+                }
                 _buildings[team] = null;
                 _spawns[team] = null;
             }

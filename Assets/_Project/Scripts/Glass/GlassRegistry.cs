@@ -32,6 +32,8 @@ namespace CloseTheDeal.Glass
         const int FloorShift = 12;
         const int MaxFloors = 64;
         const int MaxPanesPerFloor = 1 << FloorShift;
+        /// <summary>Thickest glass, in metres, that gets a fitted box; anything deeper is curved or bent.</summary>
+        const float MaxPaneThickness = 0.15f;
 
         // Each entry is a pane number, plus one bit for which way its shards flew.
         readonly SyncHashSet<uint> _broken = new();
@@ -241,11 +243,40 @@ namespace CloseTheDeal.Glass
             {
                 if (!IsGlass(renderer.sharedMaterial))
                     continue;
-                if (renderer.GetComponent<Collider>() == null || renderer.GetComponentInParent<GlassPane>() != null)
+                if (renderer.GetComponentInParent<GlassPane>() != null)
+                    continue;
+                if (renderer.GetComponent<Collider>() == null && !AddPaneCollider(renderer))
                     continue;
 
                 renderer.gameObject.AddComponent<GlassPane>();
             }
+        }
+
+        /// <summary>
+        /// Gives a pane of glass with no collider a box that fits what is drawn, so it can block
+        /// and be hit. Fitted to the drawn bounds, not the mesh: once the tower merges its still
+        /// parts the mesh is the whole merged floor. Right for panes turned in quarter turns, as
+        /// every kit and template pane is; a pane at another angle gets a box a little too big.
+        /// </summary>
+        bool AddPaneCollider(Renderer renderer)
+        {
+            // Inactive glass reports no size yet; it stays see-through rather than getting an empty box.
+            if (!_profile.SolidifyGlassWithoutCollider || !(renderer is MeshRenderer) || !renderer.gameObject.activeInHierarchy)
+                return false;
+
+            Transform pane = renderer.transform;
+            Bounds drawn = renderer.bounds;
+            Vector3 size = pane.InverseTransformVector(drawn.size);
+            size = new Vector3(Mathf.Abs(size.x), Mathf.Abs(size.y), Mathf.Abs(size.z));
+
+            // Only a flat pane: a curved piece's box would fill the space it wraps around (a stair cage's treads).
+            if (Mathf.Min(size.x, Mathf.Min(size.y, size.z)) * pane.lossyScale.magnitude > MaxPaneThickness * 1.7320508f)
+                return false;
+
+            var box = renderer.gameObject.AddComponent<BoxCollider>();
+            box.center = pane.InverseTransformPoint(drawn.center);
+            box.size = size;
+            return true;
         }
 
         bool IsGlass(Material material)
