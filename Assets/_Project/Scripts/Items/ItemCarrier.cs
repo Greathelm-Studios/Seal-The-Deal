@@ -60,6 +60,9 @@ namespace CloseTheDeal.Items
         /// <summary>The hands this client controls. Null on a pure host with no player.</summary>
         public static ItemCarrier Local { get; private set; }
 
+        /// <summary>This machine. Local changed: this client's player spawned (the new hands) or left (null). Bind the HUD here instead of checking Local every frame.</summary>
+        public static event Action<ItemCarrier> LocalChanged;
+
         /// <summary>
         /// Host only. A player has just taken an item. Guns are granted here: the weapon holder
         /// listens, gives the player the gun from pickup.Definition and calls pickup.ServerUseUp().
@@ -106,6 +109,9 @@ namespace CloseTheDeal.Items
         ItemDefinition _promptItem;
 
         public Pickup Held => _held;
+
+        /// <summary>Every machine. How much what is carried weighs on the carrier: 0 is weightless (up to the free weight), 1 is at the weight limit.</summary>
+        public float Load { get; private set; }
         public PlayerMotor Motor => _motor;
         public CapsuleCollider Capsule => _capsule;
         public CarryProfile Profile => _profile;
@@ -116,6 +122,9 @@ namespace CloseTheDeal.Items
             _rigidbody = GetComponent<Rigidbody>();
             _capsule = GetComponent<CapsuleCollider>();
             _speed = new MotorSpeedOverride(_motor);
+            // Loose props with no rules of their own follow the players' rules.
+            if (CarryProfile.Shared == null)
+                CarryProfile.Shared = _profile;
             enabled = false;
         }
 
@@ -155,6 +164,7 @@ namespace CloseTheDeal.Items
             Local = this;
             CreateInput();
             enabled = true;
+            LocalChanged?.Invoke(this);
         }
 
         public override void OnStopClient()
@@ -163,11 +173,14 @@ namespace CloseTheDeal.Items
             if (!IsOwner)
                 return;
 
-            if (Local == this)
-                Local = null;
             enabled = false;
             DisposeInput();
             SetPrompt(PromptKind.None, null);
+            if (Local == this)
+            {
+                Local = null;
+                LocalChanged?.Invoke(null);
+            }
         }
 
         // ---- Owner: input ---------------------------------------------------------------------
@@ -515,6 +528,7 @@ namespace CloseTheDeal.Items
                 return;
 
             _held = null;
+            Load = 0f;
             _speed.Clear();
             if (IsOwner)
                 HoldFire(false);
@@ -525,8 +539,8 @@ namespace CloseTheDeal.Items
         /// <summary>Heavier things slow the carrier: full speed up to the free weight, the profile's slowest at the weight limit.</summary>
         void ApplyWeight(float weightKg)
         {
-            float load = Mathf.InverseLerp(_profile.FreeCarryWeight, _profile.MaxCarryWeight, weightKg);
-            _speed.Set(Mathf.Lerp(1f, _profile.SpeedAtMaxWeight, load), Mathf.Lerp(1f, _profile.JumpAtMaxWeight, load));
+            Load = Mathf.InverseLerp(_profile.FreeCarryWeight, _profile.MaxCarryWeight, weightKg);
+            _speed.Set(Mathf.Lerp(1f, _profile.SpeedAtMaxWeight, Load), Mathf.Lerp(1f, _profile.JumpAtMaxWeight, Load));
         }
     }
 }
