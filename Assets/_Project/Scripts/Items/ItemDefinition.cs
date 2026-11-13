@@ -56,6 +56,10 @@ namespace CloseTheDeal.Items
         [Tooltip("How fast it tumbles in the air, in full turns per second. 0 flies level; 2 spins like a thrown chair.")]
         [Min(0f)] public float ThrowTumble = 1f;
 
+        [Header("Sound")]
+        [Tooltip("This item's own sounds. Leave empty to use the carry profile's set, which every item shares.")]
+        public ItemSoundSet Sounds;
+
         [Header("Using")]
         [Tooltip("The word shown for its right-mouse action while carried, as in \"RMB · Arm\". Leave empty for things that are only carried and thrown.")]
         public string UseVerb = "";

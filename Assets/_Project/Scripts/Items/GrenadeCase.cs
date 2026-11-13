@@ -25,13 +25,13 @@ namespace CloseTheDeal.Items
         [Tooltip("The ball of light shown where it explodes. Hidden until then.")]
         [SerializeField] Transform _flash;
 
-        [Tooltip("Plays the beeps and the explosion. Leave its clip empty to use the built-in stand-in sounds.")]
+        [Tooltip("Plays the beeps. Routed to the item sound set's mixer bus.")]
         [SerializeField] AudioSource _audio;
 
-        [Tooltip("The beep. Empty = the built-in stand-in tone.")]
+        [Tooltip("This case's own beep. Empty = the item sound set's beep; if that is empty too, the code-made stand-in tone (ItemTones, a known issue until real clips exist).")]
         [SerializeField] AudioClip _beepClip;
 
-        [Tooltip("The explosion. Empty = the built-in stand-in thump.")]
+        [Tooltip("This case's own explosion. Empty = the item sound set's; if that is empty too, the code-made stand-in thump (ItemTones, a known issue).")]
         [SerializeField] AudioClip _boomClip;
 
         [Header("Hooks for sound, effects and UI (fire on every machine)")]
@@ -85,6 +85,12 @@ namespace CloseTheDeal.Items
             if (_flash != null)
                 _flash.gameObject.SetActive(false);
             enabled = false;
+        }
+
+        public override void OnStartNetwork()
+        {
+            base.OnStartNetwork();
+            ItemAudio.Configure(_audio, Item.Sounds);
         }
 
         public override void OnStartServer()
@@ -146,10 +152,15 @@ namespace CloseTheDeal.Items
 
         void OnDetonateTickChanged(uint previous, uint next, bool asServer)
         {
+            // On the host this runs twice, as server then as client: answer once.
+            if (!ShowsChange(asServer))
+                return;
+
             bool armed = next != 0;
             if (armed && previous == 0)
             {
                 _nextBeepIn = 0f;
+                ItemAudio.PlayAt(Item.Sounds, Item.Sounds?.Arm, transform.position);
                 Armed?.Invoke(this);
                 _onArmed.Invoke();
             }
@@ -170,8 +181,7 @@ namespace CloseTheDeal.Items
                 _flash.gameObject.SetActive(true);
             enabled = true;
 
-            if (_audio != null)
-                AudioSource.PlayClipAtPoint(_boomClip != null ? _boomClip : ItemTones.Boom, point);
+            ItemAudio.PlayAt(Item.Sounds, Pick(_boomClip, Item.Sounds?.Explosion, ItemTones.Boom), point);
 
             Exploded?.Invoke(this, point);
             _onExploded.Invoke();
@@ -212,11 +222,14 @@ namespace CloseTheDeal.Items
             ShowLight(true);
             _lightOffIn = LightOnSeconds;
             if (_audio != null)
-                _audio.PlayOneShot(_beepClip != null ? _beepClip : ItemTones.Beep);
+                _audio.PlayOneShot(Pick(_beepClip, Item.Sounds?.Beep, ItemTones.Beep), Item.Sounds != null ? Item.Sounds.Volume : 1f);
 
             Beeped?.Invoke(this);
             _onBeep.Invoke();
         }
+
+        /// <summary>This case's own clip, else the shared set's, else the stand-in made in code.</summary>
+        static AudioClip Pick(AudioClip own, AudioClip shared, AudioClip standIn) => own != null ? own : shared != null ? shared : standIn;
 
         void ShowLight(bool on)
         {

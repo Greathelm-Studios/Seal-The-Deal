@@ -22,6 +22,12 @@ namespace CloseTheDeal.MatchMode
         [Tooltip("What a closed gate looks like. A see-through panel reads best: players should see the floor they can't reach yet.")]
         [SerializeField] Material _gateMaterial;
 
+        [Tooltip("Tick and bullets fly through a shut gate as through open air, while bodies are still stopped; untick and a gate stops shots like a wall. Works because the weapons' shot test skips Unity's built-in Ignore Raycast layer, which the panels then sit on.")]
+        [SerializeField] bool _letShotsThrough = true;
+
+        /// <summary>Unity's built-in layer 2. Shots skip it; bodies still collide with it.</summary>
+        const int IgnoreRaycastLayer = 2;
+
         /// <summary>Outer edge of the stair treads, metres (TOWER.md: treads out to 2.6 m), plus the gap the cage stands off them.</summary>
         public const float Radius = 2.6f + 0.15f;
 
@@ -134,6 +140,8 @@ namespace CloseTheDeal.MatchMode
                 panel.transform.SetParent(gate.transform, false);
                 panel.transform.SetPositionAndRotation(arena.FloorPoint(building, floor, local), facing * Quaternion.Euler(0f, angle, 0f));
                 panel.transform.localScale = new Vector3(width, height, PanelThickness);
+                if (_letShotsThrough)
+                    panel.layer = IgnoreRaycastLayer;
                 if (_gateMaterial != null)
                     panel.GetComponent<Renderer>().sharedMaterial = _gateMaterial;
                 _colliders.Add(panel.GetComponent<Collider>());

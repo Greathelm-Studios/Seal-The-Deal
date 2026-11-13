@@ -30,6 +30,9 @@ namespace CloseTheDeal.MatchMode
         [Tooltip("Seconds a match can run before the clock decides it: the firm holding the briefcase, or that carried it last, wins. 900 = the 15-minute cap.")]
         [Min(10f)] public float MatchSeconds = 900f;
 
+        [Tooltip("Seconds left on the clock when everyone is warned the quarter is about to close. 60 = one minute's warning; 0 = no warning.")]
+        [Min(0f)] public float CapWarningSeconds = 60f;
+
         [Header("Briefcase")]
         [Tooltip("The networked briefcase. One is spawned for the match.")]
         public NetworkObject BriefcasePrefab;
@@ -72,6 +75,19 @@ namespace CloseTheDeal.MatchMode
 
         [Tooltip("Where the carrier sees the briefcase, in metres from their eye: X right, Y up, Z forward. The default sits low on the right of the view.")]
         public Vector3 FirstPersonOffset = new(0.42f, -0.5f, 0.95f);
+
+        [Header("Beacon")]
+        [Tooltip("The see-through-walls marker above the briefcase. Leave empty for no beacon.")]
+        public Material BeaconMaterial;
+
+        [Tooltip("How far away the beacon can be seen through floors and walls, in metres. 30 covers about six floors; past it, the beacon fades out and only the case itself shows.")]
+        [Min(1f)] public float BeaconRange = 30f;
+
+        [Tooltip("How tall the beacon's column of light is above the case, in metres. Taller reads from further below; too tall pokes through the floor above everywhere.")]
+        [Min(0.5f)] public float BeaconHeight = 3.5f;
+
+        [Tooltip("Colour of the beacon while nobody carries the briefcase. Keep it clear of red, yellow and the firm colours.")]
+        public Color BeaconLooseColour = new(0.95f, 0.97f, 1f, 1f);
 
         [Header("HUD")]
         [Tooltip("Seconds a message such as 'The roof only counts with the briefcase' stays on screen.")]

@@ -26,20 +26,18 @@ namespace CloseTheDeal.Items
 
         void OnEnable()
         {
-            SetText(_prompt, "");
-            SetText(_carried, "");
+            ItemCarrier.LocalChanged += Bind;
+            Bind(ItemCarrier.Local);
         }
 
         void OnDisable()
         {
+            ItemCarrier.LocalChanged -= Bind;
             Bind(null);
         }
 
         void Update()
         {
-            if (ItemCarrier.Local != _carrier)
-                Bind(ItemCarrier.Local);
-
             if (_refusalLeft <= 0f)
                 return;
 
