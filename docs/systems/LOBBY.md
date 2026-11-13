@@ -60,7 +60,7 @@ A client never decides anything: a request the rules refuse changes nothing.
 
 ## Known limitations
 
-- **TeamSpawner ignores the firm.** It still puts players on teams by connection id (`ClientId % 2`). The game-mode lane must spawn runs from the `RunStartRequested` list instead.
+- **TeamSpawner ignores the firm** while players wait. When the desk starts a run in `Lane_Integration.unity`, the match moves everyone into the firm they signed in with (`HostStartRun`, [INTEGRATION.md](INTEGRATION.md)).
 - **Only one lobby room exists.** The GDD gives each firm its own reception; the owner asked for one shared lobby, which is what this builds.
 - Interact is **F** (pad: north button), matching the shared asset; E stays lean-right.
 - Font is LiberationSans, TextMeshPro's default; the style research's Archivo / IBM Plex Mono aren't in the project.

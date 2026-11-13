@@ -978,7 +978,7 @@ namespace CloseTheDeal.Editor.Lanes
         }
 
         /// <summary>The two lines of item text: the prompt under the crosshair, and what is carried at the bottom of the screen.</summary>
-        static void BuildPromptCanvas()
+        internal static void BuildPromptCanvas()
         {
             var canvasGo = new GameObject("Item Prompts");
             var canvas = canvasGo.AddComponent<Canvas>();

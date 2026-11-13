@@ -1,6 +1,6 @@
 # MATCH
 
-**Status:** Current · **Last updated:** 2026-11-12 · **Verified against:** the floor gate commit on the game mode lane
+**Status:** Current · **Last updated:** 2026-11-13 · **Verified against:** the floor gate commit on the game mode lane
 
 ## What happens in the game
 
@@ -65,6 +65,7 @@ The result opens the menu: who sealed the deal and how. The host gets **Rematch*
 
 - **Lobby:** `MatchDirector.HostStartRun(IReadOnlyDictionary<int, int> firmByClientId)`, host only: client id → firm (0 = Building A, 1 = Building B). Moves the listed players (and their `TeamSpawner` seats) into those firms, then starts a run as Start does. Works while waiting or after a result; returns false otherwise. Players not listed keep their firm.
 - **Blasts and throws:** `Briefcase.Throw(velocityChange)` shoves a loose briefcase (host only).
+- **Shared hands:** `MatchDirector.HandsFull` (static, every machine): return true while a player's hands hold something else; the briefcase prompt is then not offered and the host refuses the pick-up. Set by the integration glue ([INTEGRATION.md](INTEGRATION.md)).
 - **Sound, effects, UI:** every event on `MatchDirector`, plus `FirmMember.OnNotice`, `OnPromptChanged` and `OnFellOut`.
 
 ## Inputs (lane-local, for the movement lane to fold in)
@@ -76,7 +77,7 @@ Defined in code in `FirmMember` until the shared actions asset takes them:
 | Interact (pick up) | **F** | North button |
 | Drop | **G** | D-pad down |
 
-The owner asked for **E**; E is lean-right in the shared actions asset, and the asset's own `Interact` action is already F. The pickups lane also uses **G** and d-pad down to drop: see the handover.
+The owner asked for **E**; E is lean-right in the shared actions asset, and the asset's own `Interact` action is already F. Carried items use the same two keys; the briefcase and an item share the hands, so G only ever drops one thing ([INTEGRATION.md](INTEGRATION.md)).
 
 ## Scripts
 
@@ -113,5 +114,5 @@ Outside the folder: `Tower/TeamSpawner.cs` (balanced teams, a spawn hook and ove
 - **Blasts don't move the briefcase.** `Knockback.Explode` only throws `Prop`s; wire `Briefcase.Throw` in when weapons land.
 - **The gap counts as outside** except the plaza and the bridges. A zipline crossing over 1.2 s would send its rider back.
 - **A briefcase wedged unreachably inside a building** has no recovery; only leaving the buildings sends it back.
-- **The host starts the match from the menu** until the lobby lane's `RunStartRequested` calls `HostStartRun`.
+- **Outside `Lane_Integration.unity` the host starts the match from the menu.** In that scene the lobby desk starts it through `HostStartRun` ([INTEGRATION.md](INTEGRATION.md)).
 - The client's player is put back by the host's correction, so a teleport shows as one corrected tick on the owner's screen.

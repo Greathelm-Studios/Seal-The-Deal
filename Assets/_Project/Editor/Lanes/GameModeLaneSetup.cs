@@ -160,7 +160,7 @@ namespace CloseTheDeal.Editor.Lanes
         }
 
         /// <summary>The lane scene's towers: the default tower's templates and dimensions, cut down to reception, two floors, a checkpoint, the boardroom and the roof.</summary>
-        static TowerProfile EnsureLaneTower()
+        internal static TowerProfile EnsureLaneTower()
         {
             var lane = AssetDatabase.LoadAssetAtPath<TowerProfile>(LaneTowerPath);
             if (lane != null)
@@ -349,7 +349,7 @@ namespace CloseTheDeal.Editor.Lanes
         // ---- Scene ---------------------------------------------------------------------------
 
         /// <summary>First time only: the menu's backdrop looks down the street between the two towers.</summary>
-        static void FrameStreet(TowerProfile tower)
+        internal static void FrameStreet(TowerProfile tower)
         {
             Camera cam = Camera.main;
             if (cam == null)
@@ -359,7 +359,7 @@ namespace CloseTheDeal.Editor.Lanes
             cam.transform.rotation = Quaternion.Euler(-8f, 90f, 0f);
         }
 
-        static void EnsureTower(TowerProfile profile)
+        internal static void EnsureTower(TowerProfile profile)
         {
             TowerBuilder builder = Object.FindAnyObjectByType<TowerBuilder>();
             if (builder == null)
@@ -381,7 +381,7 @@ namespace CloseTheDeal.Editor.Lanes
         /// headless run, and without it the object never starts on the network. Ids that
         /// already exist are kept. FishNet's own method is internal, hence the reflection.
         /// </summary>
-        static void AssignSceneIds(Scene scene)
+        internal static void AssignSceneIds(Scene scene)
         {
             System.Reflection.MethodInfo create = typeof(NetworkObject).GetMethod(
                 "CreateSceneId",

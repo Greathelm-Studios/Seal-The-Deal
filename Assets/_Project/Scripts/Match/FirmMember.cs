@@ -220,7 +220,7 @@ namespace CloseTheDeal.MatchMode
             if (_interact == null)
                 return;
 
-            bool captured = Cursor.lockState == CursorLockMode.Locked;
+            bool captured = PlayerInputReader.Captured;
             MatchDirector match = MatchDirector.Instance;
             MatchPrompt prompt = captured && match != null ? match.PromptFor(this) : MatchPrompt.None;
             SetPrompt(prompt);
