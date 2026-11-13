@@ -7,6 +7,12 @@
 //  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-12 — the sky material now uses the game's
 //              own sky shader instead of Skybox/Procedural, and is updated in place; haze colour
 //              follows the new horizon colour.
+//  Modified  : Claude Opus 5.5 (Claude Code), 2026-11-12 — ambient at 60% so the fake bounce from
+//              the sun patches reads; sky shown at +0.6 stops instead of +0.3.
+//  Modified  : Claude Opus 5.5 (Claude Code), 2026-11-12 — sun shadows soft at the lowest filter,
+//              so edges stay crisp without stair-stepping.
+//  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-12 — post exposure raised to 1.1 so whites
+//              read white, with the sky and fog cancelled back to their designed brightness.
 //  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-12 — regraded to Alex's references: the
 //              sun crosses the street and casts hard shadows, shade is pale blue, sunlit white
 //              blows out and glows; the post-processing profile is now updated in place.
@@ -104,6 +110,14 @@ namespace CloseTheDeal.Editor.Art
         /// ceiling lights and a dark ceiling was the Greybox review's main complaint, but blue.
         /// </summary>
         static readonly Color AmbientGround = Hex(0xC8D6EE);
+        /// <summary>
+        /// How strong the ambient light is, 0–1, applied to all three colours above. WHY 0.6: at
+        /// full strength the ambient lit every surface the same, so the room read flat (a "Unity
+        /// look" tell) and the fake bounce from the sun patches could not show. At 0.6 the ceiling
+        /// is bright over the sun patches and falls to grey-blue deeper in the room. Chosen by Alex
+        /// from a sweep, 2026-11-12, together with BounceLight's strength of 4.
+        /// </summary>
+        const float AmbientLevel = 0.6f;
 
         // ---- Haze -------------------------------------------------------------------------
 
@@ -125,8 +139,27 @@ namespace CloseTheDeal.Editor.Art
         // Graded to Alex's references of 2026-11-12: white interiors photographed with a blue-cyan
         // cast, shade lifted to a milky pale blue, sunlight blown out and glowing, a little grain.
 
-        /// <summary>Exposure lift, stops. High-key: the references are bright everywhere, shade included.</summary>
-        const float PostExposure = 0.3f;
+        /// <summary>
+        /// Exposure lift, stops. WHY 1.1 (was 0.3): the whites read pale blue-grey. Mirror's Edge
+        /// Catalyst deliberately overexposed by about 1.8 stops so white surfaces read as white
+        /// (DICE's "Lighting the City of Glass" slides, work in progress). A sweep from 0.3 to 1.8
+        /// found the interior wants about 1.3, but past about 0.8 the outdoor sky washes out, so
+        /// 1.1 is taken and the sky is cancelled back out (see <see cref="SkyExposureComp"/>).
+        /// </summary>
+        const float PostExposure = 1.1f;
+        /// <summary>
+        /// The exposure the sky is shown at, stops: the sky is scaled so it looks as it would at
+        /// this exposure, whatever <see cref="PostExposure"/> is. WHY 0.6: the sky was designed at
+        /// 0.3, but cancelling the lift all the way made it look dimmer (Alex, 2026-11-12), because
+        /// bloom is worked out before exposure, so a scaled-down sky also glows less. Above about
+        /// 0.8 the cloud sea starts washing to white (exposure sweep, same day).
+        /// </summary>
+        const float SkyShownExposure = 0.6f;
+        /// <summary>
+        /// Multiplier on the sky and the haze, so they sit at <see cref="SkyShownExposure"/> while
+        /// the interior gets the full <see cref="PostExposure"/>.
+        /// </summary>
+        static readonly float SkyExposureComp = Mathf.Pow(2f, -(PostExposure - SkyShownExposure));
         /// <summary>Contrast, -100..100. Up from 10 so hard shadow edges and dark suits bite.</summary>
         const float Contrast = 12f;
         /// <summary>
@@ -193,12 +226,14 @@ namespace CloseTheDeal.Editor.Art
                 Undo.RecordObject(renderSettings, "Apply Office Look");
             RenderSettings.skybox = sky;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = AmbientSky;
-            RenderSettings.ambientEquatorColor = AmbientEquator;
-            RenderSettings.ambientGroundColor = AmbientGround;
+            RenderSettings.ambientSkyColor = AtLevel(AmbientSky);
+            RenderSettings.ambientEquatorColor = AtLevel(AmbientEquator);
+            RenderSettings.ambientGroundColor = AtLevel(AmbientGround);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = HazeColour;
+            // Fog is lit before the exposure lift like everything else, so it takes the same
+            // cancellation as the sky it has to match. Done in linear light, where exposure acts.
+            RenderSettings.fogColor = (HazeColour.linear * SkyExposureComp).gamma;
             RenderSettings.fogStartDistance = HazeStart;
             RenderSettings.fogEndDistance = HazeEnd;
             RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
@@ -336,6 +371,7 @@ namespace CloseTheDeal.Editor.Art
             // property with the same name (the old sky also had _SunSize and _GroundColor), and
             // its old keywords. This resets every property and keyword to the new shader's own.
             sky.CopyPropertiesFromMaterial(defaults);
+            sky.SetFloat("_ExposureComp", SkyExposureComp);
             Object.DestroyImmediate(defaults);
             EditorUtility.SetDirty(sky);
             GeneratedAssetGuard.MarkGenerated(sky);
@@ -371,9 +407,11 @@ namespace CloseTheDeal.Editor.Art
             sun.transform.rotation = Quaternion.Euler(SunElevation, SunHeading, 0f);
             sun.color = SunColour;
             sun.intensity = SunIntensity;
-// WHY hard: Alex asked for harsher shadows, and the references' sun patches have knife
-            // edges. Hard shadows are also cheaper than soft ones (one shadow-map tap, not several).
-            sun.shadows = LightShadows.Hard;
+            // WHY soft at the lowest filter, not hard: Alex asked for harsh shadows, but fully hard
+            // shadows stair-step along every edge, the clearest "default Unity" tell in the renders.
+            // The low filter blurs about a texel, so edges stay crisp but stop stepping.
+            sun.shadows = LightShadows.Soft;
+            sun.GetUniversalAdditionalLightData().softShadowQuality = SoftShadowQuality.Low;
             sun.shadowStrength = 1f;
             return sun;
         }
@@ -423,6 +461,9 @@ namespace CloseTheDeal.Editor.Art
                 System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
             return method?.Invoke(null, null) as Object;
         }
+
+        /// <summary>An ambient colour at <see cref="AmbientLevel"/>, keeping its hue.</summary>
+        static Color AtLevel(Color c) => new Color(c.r * AmbientLevel, c.g * AmbientLevel, c.b * AmbientLevel, 1f);
 
         static Color Hex(int rgb) => new Color(((rgb >> 16) & 0xFF) / 255f, ((rgb >> 8) & 0xFF) / 255f, (rgb & 0xFF) / 255f);
     }

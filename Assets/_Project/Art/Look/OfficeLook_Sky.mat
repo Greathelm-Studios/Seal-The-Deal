@@ -36,6 +36,7 @@ Material:
     - _CloudSize: 1
     - _CloudTop: 0.5
     - _DitherPixel: 3
+    - _ExposureComp: 0.70710677
     - _GridSize: 2.5
     - _GridStrength: 0.3
     - _HorizonHeight: 0.14

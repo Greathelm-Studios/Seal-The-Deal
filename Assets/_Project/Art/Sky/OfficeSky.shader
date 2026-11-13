@@ -71,6 +71,9 @@ Shader "Close the Deal/Office Sky"
         _SunRingSize("Halo ring size (degrees from the sun)", Range(4, 40)) = 15
         _SunGlare("Glare that washes over the whole sky, towers included (0 = none)", Range(0, 1)) = 0.7
 
+        [Header(Exposure)]
+        _ExposureComp("Sky brightness multiplier, set by Apply Office Look to cancel the post exposure lift (1 = none)", Range(0.1, 2)) = 1
+
         [Header(Distant towers)]
         [HDR] _TowerLitColor("Tower colour, sunlit face (above 1 = glows white under the bloom)", Color) = (1.10, 1.11, 1.12, 1)
         _TowerShadeColor("Tower colour, shaded face (pale blue, not saturated)", Color) = (0.740, 0.850, 0.970, 1)
@@ -148,7 +151,7 @@ Shader "Close the Deal/Office Sky"
             float _GridStrength, _GridSize, _TraceStrength, _TraceSize, _TraceSpeed;
             float _PlaneEvery, _PlaneCrossing, _PlaneSize, _PlaneTrail;
             float _SeaAmount, _SeaSize, _SeaRim, _SeaGlow, _SeaMatch;
-            float _SkySteps, _SkyDither, _DitherPixel, _SunGlare, _TowerGlint;
+            float _SkySteps, _SkyDither, _DitherPixel, _SunGlare, _TowerGlint, _ExposureComp;
 
             #define TWO_PI 6.28318530718
             #define DEG_TO_RAD 0.01745329252
@@ -985,6 +988,11 @@ Shader "Close the Deal/Office Sky"
                 //      can block it. Blended to white, not added, so it cannot overshoot. ----
                 float glare = pow(saturate(sunCos), GLARE_TIGHT) * GLARE_TIGHT_STRENGTH + pow(saturate(sunCos), GLARE_WIDE) * GLARE_WIDE_STRENGTH;
                 color = lerp(color, _SunColor.rgb, saturate(glare * _SunGlare));
+
+                // WHY: the post-processing exposure is lifted so white interiors read white, which
+                // would also blow the sky out to white. The look tool sets this multiplier to
+                // cancel the lift exactly, so the sky keeps the colours it was designed at.
+                color *= _ExposureComp;
 
                 return fixed4(color, 1);
             }
