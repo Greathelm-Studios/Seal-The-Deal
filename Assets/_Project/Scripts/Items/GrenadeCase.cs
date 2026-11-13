@@ -28,10 +28,10 @@ namespace CloseTheDeal.Items
         [Tooltip("Plays the beeps. Routed to the item sound set's mixer bus.")]
         [SerializeField] AudioSource _audio;
 
-        [Tooltip("This case's own beep. Empty = the item sound set's beep; if that is empty too, the code-made stand-in tone (ItemTones, a known issue until real clips exist).")]
+        [Tooltip("This case's own beep. Empty = the item sound set's beep.")]
         [SerializeField] AudioClip _beepClip;
 
-        [Tooltip("This case's own explosion. Empty = the item sound set's; if that is empty too, the code-made stand-in thump (ItemTones, a known issue).")]
+        [Tooltip("This case's own explosion. Empty = the item sound set's.")]
         [SerializeField] AudioClip _boomClip;
 
         [Header("Hooks for sound, effects and UI (fire on every machine)")]
@@ -181,7 +181,7 @@ namespace CloseTheDeal.Items
                 _flash.gameObject.SetActive(true);
             enabled = true;
 
-            ItemAudio.PlayAt(Item.Sounds, Pick(_boomClip, Item.Sounds?.Explosion, ItemTones.Boom), point);
+            ItemAudio.PlayAt(Item.Sounds, Pick(_boomClip, Item.Sounds?.Explosion), point);
 
             Exploded?.Invoke(this, point);
             _onExploded.Invoke();
@@ -221,15 +221,16 @@ namespace CloseTheDeal.Items
         {
             ShowLight(true);
             _lightOffIn = LightOnSeconds;
-            if (_audio != null)
-                _audio.PlayOneShot(Pick(_beepClip, Item.Sounds?.Beep, ItemTones.Beep), Item.Sounds != null ? Item.Sounds.Volume : 1f);
+            AudioClip beep = Pick(_beepClip, Item.Sounds?.Beep);
+            if (_audio != null && beep != null)
+                _audio.PlayOneShot(beep, Item.Sounds != null ? Item.Sounds.Volume : 1f);
 
             Beeped?.Invoke(this);
             _onBeep.Invoke();
         }
 
-        /// <summary>This case's own clip, else the shared set's, else the stand-in made in code.</summary>
-        static AudioClip Pick(AudioClip own, AudioClip shared, AudioClip standIn) => own != null ? own : shared != null ? shared : standIn;
+        /// <summary>This case's own clip, else the shared set's. Null plays nothing.</summary>
+        static AudioClip Pick(AudioClip own, AudioClip shared) => own != null ? own : shared;
 
         void ShowLight(bool on)
         {

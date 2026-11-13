@@ -21,7 +21,7 @@ namespace CloseTheDeal.Items
         [Tooltip("The smoke. It must simulate in world space so the cloud stays where it was laid.")]
         [SerializeField] ParticleSystem _smoke;
 
-        [Tooltip("Plays the vent loop while venting, routed to the item sound set's bus. Its own clip wins; empty uses the set's Vent Loop; if that is empty too, the code-made stand-in hiss (ItemTones, a known issue until real clips exist).")]
+        [Tooltip("Plays the vent loop while venting, routed to the item sound set's bus. Its own clip wins; empty uses the set's Vent Loop.")]
         [SerializeField] AudioSource _audio;
 
         [Header("Hooks for sound, effects and UI (fire on every machine)")]
@@ -196,7 +196,9 @@ namespace CloseTheDeal.Items
             }
 
             // Chosen each time it starts, so a clip added to the set later replaces the stand-in.
-            _audio.clip = _ownLoop != null ? _ownLoop : Item.Sounds != null && Item.Sounds.VentLoop != null ? Item.Sounds.VentLoop : ItemTones.Hiss;
+            _audio.clip = _ownLoop != null ? _ownLoop : Item.Sounds != null ? Item.Sounds.VentLoop : null;
+            if (_audio.clip == null)
+                return;
             _audio.volume = Item.Sounds != null ? Item.Sounds.Volume : 1f;
             _audio.loop = true;
             _audio.Play();

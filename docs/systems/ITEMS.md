@@ -57,6 +57,7 @@ An item's weight is authored twice, on its definition and as its prefab body's m
 - **Prop cap:** every item is a prop and counts toward the 16 per floor in [PROPS.md](PROPS.md). Nothing here spawns extra objects: an explosion scatters what is already on the floor, smoke is local particles, the puddle is part of the sign. Using an item up hides it and later puts it back; it is not despawned and respawned unless its definition says it never returns.
 - **Out of the building:** a loose item more than 6 m below where it started is taken out of play and is back at its starting place 2 seconds later.
 - **Layers:** a carried panel's solid part sits on the **Player** layer while carried, so its carrier's own footing and ledge-climbing never treat it as ground, and it ignores its carrier's body. It goes back to the **Prop** layer when let go.
+- **In the hands (drawn only):** a taken item eases from where it lay into the hands in 0.12 s (light) to 0.24 s (at the weight limit), easing out. In the carrier's own view it trails a fast turn, swinging round the eye, more for heavier things (follow 28/s light, 9/s heavy) and never more than 10°. Other players see it level at the carrier's chest with no lag. All on the carry profile, "Feel in the hands".
 - **Telling the Grenade Case from a firm's briefcase:** it is never called a briefcase in any text a player reads; it is red with a yellow hazard band, a keypad and a warning light, where the objective is the firm's own case; and it beeps and flashes from the moment it is armed.
 
 ## Any loose prop
@@ -140,7 +141,7 @@ Every sound an item makes in the world, as an event with its timing. All play at
 
 **When the vent loop stops:** when it runs empty (6 s after the pin); when it is used up or comes back; and on every machine when the extinguisher is despawned (the towers rebuilt for a new match) or that machine leaves the game (`OnStopNetwork`). Dropping it, or its carrier dying or leaving, does not stop it: it keeps venting on the floor until empty. If a match ends without despawning the props, a venting extinguisher finishes its 6 s.
 
-**Stand-ins still in the build:** until real clips exist, an empty `Beep`, `Explosion` or `VentLoop` falls back to tones made in code (`ItemTones`). They are a known issue, not a sound design, and go when the clips land. Every other slot plays nothing while empty.
+**No stand-ins:** the code-made tones are gone. An empty slot plays nothing. The twelve clips are the UI sound lane's, synthesised and measured; nobody has judged them by ear yet.
 
 ## Guns
 
@@ -155,7 +156,7 @@ Every moment has a C# event and a UnityEvent on the prefab, firing on every mach
 - Shared hands (static, set by the integration glue): `ItemCarrier.HandsTakenElsewhere` (true refuses an item as hands full, on the owner's prompt and key and on the host) and `InteractClaimedElsewhere` (owner: something else answers F this frame).
 - `GrenadeCase`: Armed, Beeped, Exploded (point). `FireExtinguisher`: PinPulled, RanEmpty. `WetFloorSign`: PutDown, Cleared, Slipped (point).
 
-Sounds: see "Item sounds" above. The beep, hiss and explosion fall back to stand-in tones made in code (`ItemTones`) until real clips exist. `ItemPromptLabel` is the lane's own two lines of on-screen text and is only in the lane's test scene.
+Sounds: see "Item sounds" above. `ItemPromptLabel` is the lane's own two lines of on-screen text and is only in the lane's test scene.
 
 ## Scripts
 
@@ -166,7 +167,7 @@ Under [Assets/_Project/Scripts/Items/](../../Assets/_Project/Scripts/Items/):
 - `ItemCarrier.cs`: on `Player.prefab`. The lane's inputs, the look prompt, the requests to the host, the host's rules, dropping when knocked or leaving.
 - `ItemBehaviour.cs`: base for what a particular item does. `GrenadeCase.cs`, `FireExtinguisher.cs`, `WetFloorSign.cs`.
 - `LooseItemDefinition.cs`: the definition worked out for a loose prop that has none. `HandsCopy.cs`: the draw-only copy shown in the hands for a prop with no Visual child.
-- `ItemBlast.cs`: damage in a radius. `MotorSpeedOverride.cs`: the carry slowdown. `ItemLayers.cs`, `ItemTones.cs`: layer masks and stand-in sounds.
+- `ItemBlast.cs`: damage in a radius. `MotorSpeedOverride.cs`: the carry slowdown. `ItemLayers.cs`: layer masks. `ItemSoundSet.cs`, `ItemAudio.cs`: the item sounds and how they play.
 - `DamageDummy.cs`: the practice target. `ItemPromptLabel.cs`: the on-screen prompt.
 
 Shared with other lanes: [Core/IDamageable.cs](../../Assets/_Project/Scripts/Core/IDamageable.cs).
