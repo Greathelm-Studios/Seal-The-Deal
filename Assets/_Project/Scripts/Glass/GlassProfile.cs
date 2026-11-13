@@ -13,6 +13,9 @@ namespace CloseTheDeal.Glass
         [Tooltip("Anything drawn with one of these materials, with its collider on the same object, is breakable glass without needing a Glass Pane added by hand. This is how the greybox stair cages and glass rooms break.")]
         public Material[] GlassMaterials = new Material[0];
 
+        [Tooltip("Tick to give glass drawn with one of the materials above a thin solid box when it has no collider of its own (the kit's window glass collides only at its frame), so the pane stops people and things until it breaks. Untick to leave such glass see-through to everything, as it was.")]
+        public bool SolidifyGlassWithoutCollider = true;
+
         [Header("Breaking by impact")]
         [Tooltip("How fast something must hit a pane head-on to go through it, in metres per second. Players sprint at 9, so 10 means a run never breaks a window but a body thrown by a blast or a killing shot does.")]
         [Min(0.1f)] public float BreakSpeed = 10f;

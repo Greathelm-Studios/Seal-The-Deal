@@ -1027,14 +1027,14 @@ namespace CloseTheDeal.Editor.Lanes
         [MenuItem("Close the Deal/Lanes/Run Shooting Self-Check (host only)")]
         static void SelfCheckFromMenu()
         {
-            StartSelfCheck("host", Path.Combine(Directory.GetCurrentDirectory(), "Temp", "ShootingSelfCheck"), false, false);
+            StartSelfCheck("host", Path.Combine(Directory.GetCurrentDirectory(), "Temp", "ShootingSelfCheck"), false, false, ScenePath);
         }
 
         public static void SelfCheckFromCommandLine()
         {
             string role = Arg("-laneRole") ?? "host";
             string output = Arg("-laneOut") ?? Path.Combine(Directory.GetCurrentDirectory(), "Temp", "ShootingSelfCheck");
-            StartSelfCheck(role, output, HasFlag("-laneWithClient"), true);
+            StartSelfCheck(role, output, HasFlag("-laneWithClient"), true, Arg("-laneScene") ?? ScenePath);
         }
 
         /// <summary>Runs Set Up from the command line and quits, so a headless run can build the lane before checking it.</summary>
@@ -1044,14 +1044,14 @@ namespace CloseTheDeal.Editor.Lanes
             EditorApplication.Exit(0);
         }
 
-        static void StartSelfCheck(string role, string output, bool withClient, bool exitWhenDone)
+        static void StartSelfCheck(string role, string output, bool withClient, bool exitWhenDone, string scenePath)
         {
             Directory.CreateDirectory(output);
             SessionState.SetString(RoleKey, role);
             SessionState.SetString(OutKey, output);
             SessionState.SetBool(WithClientKey, withClient);
             SessionState.SetBool(ExitKey, exitWhenDone);
-            EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
             EditorApplication.EnterPlaymode();
         }
 
@@ -1080,7 +1080,7 @@ namespace CloseTheDeal.Editor.Lanes
             _failures = 0;
             Application.runInBackground = true;
             Routines.Clear();
-            Routines.Push(_role == "client" ? ClientRoutine() : HostRoutine(SessionState.GetBool(WithClientKey, false)));
+            Routines.Push(_role == "client" ? ClientRoutine() : _role == "panes" ? PaneCountRoutine() : HostRoutine(SessionState.GetBool(WithClientKey, false)));
             EditorApplication.update += Step;
             Log($"=== Shooting self-check, role {_role}, Unity {Application.unityVersion} ===");
         }
@@ -1656,6 +1656,46 @@ namespace CloseTheDeal.Editor.Lanes
             Flag("host_kill_done");
 
             yield return Until(() => HasFlagFile("client_done"), 180f, "the client to finish");
+        }
+
+        // ---- Any scene: is its glass breakable? ----------------------------------------------
+
+        /// <summary>Hosts whatever scene was opened, waits for its towers, and checks the glass the registry found blocks and breaks.</summary>
+        static IEnumerator PaneCountRoutine()
+        {
+            SteamLobby lobby = null;
+            yield return Until(() => (lobby = Object.FindAnyObjectByType<SteamLobby>()) != null && lobby.Ready, 30f, "lobby ready");
+            lobby.Host();
+            yield return Until(() => GlassRegistry.Instance != null && (TowerBuilder.Instance == null || TowerBuilder.Instance.IsBuilt), 60f, "towers built");
+            yield return Seconds(2f);
+
+            GlassRegistry glass = GlassRegistry.Instance;
+            GlassPane[] panes = Object.FindObjectsByType<GlassPane>(FindObjectsSortMode.None);
+            int inTowers = 0;
+            GlassPane sample = null;
+            foreach (GlassPane pane in panes)
+            {
+                if (TowerBuilder.Instance == null || !pane.transform.IsChildOf(TowerBuilder.Instance.transform))
+                    continue;
+                inTowers++;
+                if (sample == null)
+                    sample = pane;
+            }
+
+            Log($"PANES registry {glass.PaneCount}, in the towers {inTowers}, scene {UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
+            Check("this scene's towers contain breakable glass (none means the floor templates have no panes, not a fault here)", inTowers > 0, $"{inTowers} panes in the towers; first: {(sample != null ? sample.transform.parent.name + "/" + sample.name : "none")}");
+            if (sample == null)
+                yield break;
+
+            Vector3 from = sample.Centre + sample.Normal * 2f;
+            bool blocks = Physics.Raycast(from, -sample.Normal, out RaycastHit hit, 4f, ~0, QueryTriggerInteraction.Ignore) && GlassPane.TryFind(hit.collider, out GlassPane hitPane) && hitPane == sample;
+            Check("an intact tower window stops a ray (people and things)", blocks, $"ray from 2 m out hit {(hit.collider != null ? hit.collider.name : "nothing")}");
+
+            int before = glass.BrokenCount;
+            sample.ApplyDamage(10f, sample.Centre, -sample.Normal, -1);
+            yield return Frames(3);
+            bool through = !Physics.Raycast(from, -sample.Normal, out RaycastHit after, 2.2f, ~0, QueryTriggerInteraction.Ignore) || after.collider == null || !GlassPane.TryFind(after.collider, out _);
+            Check("a shot tower window breaks for the match and lets things through", sample.IsBroken && glass.BrokenCount == before + 1 && through, $"broken {sample.IsBroken}, registry {before} -> {glass.BrokenCount}");
         }
 
         // ---- The client's run ----------------------------------------------------------------
