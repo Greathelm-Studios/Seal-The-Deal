@@ -53,7 +53,11 @@ namespace CloseTheDeal.Editor.Greybox
         {
             Scene scene = SceneManager.GetActiveScene();
             if (scene.path != ScenePath)
+            {
+                if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                    return;
                 scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            }
 
             EnsureLayers();
             NetworkObject playerPrefab = EnsurePlayerPrefab();

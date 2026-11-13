@@ -21,6 +21,8 @@ namespace CloseTheDeal.Editor.Greybox
         [MenuItem("Close the Deal/Greybox/Capture UI Preview")]
         public static void CaptureFromMenu()
         {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
             string folder = Path.Combine(Path.GetTempPath(), "CloseTheDealUiPreview");
             Capture(folder);
             EditorUtility.RevealInFinder(folder);

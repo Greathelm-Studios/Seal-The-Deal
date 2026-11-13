@@ -372,6 +372,8 @@ namespace CloseTheDeal.Editor.Lanes
 
         static void Begin(string role, string outFolder)
         {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
             EditorSceneManager.OpenScene(IntegrationLaneSetup.ScenePath, OpenSceneMode.Single);
             SessionState.SetBool(ActiveKey, true);
             SessionState.SetString(RoleKey, role);
