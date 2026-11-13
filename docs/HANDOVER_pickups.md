@@ -1,10 +1,10 @@
 # Handover: pickups, furniture and silly weapons lane
 
-**Status:** Target · **Last updated:** 2026-11-12 · **From:** Adam / Claude Code (pickups lane session)
+**Status:** Target · **Last updated:** 2026-11-13 · **From:** Adam / Claude Code (pickups lane session)
 
 ## Goal
 
-Look at a chair, press E, carry it, throw it at someone. Carry a cubicle panel as cover. Arm and throw a Grenade Case that beeps and clears the room. Pull the pin on a fire extinguisher for a smoke wall that then rockets around the floor. Put down a wet floor sign that sends runners flying. The host decides all of it.
+Look at a chair, press F, carry it, throw it at someone. Carry a cubicle panel as cover. Arm and throw a Grenade Case that beeps and clears the room. Pull the pin on a fire extinguisher for a smoke wall that then rockets around the floor. Put down a wet floor sign that sends runners flying. The host decides all of it.
 
 ## Where it stands
 
@@ -24,13 +24,17 @@ The three office weapons proposed were fire extinguisher, wet floor sign and des
 - `node ~/.claude/skills/compile-check/compile-check.mjs`: PASS, 0 errors, 0 warnings.
 - `lizard -l csharp Assets/_Project/Scripts/Items Assets/_Project/Scripts/Props`: highest CC 10 (`ItemCarrier.Update`, `Pickup.OnCollisionEnter`); nothing at 11+. Two functions at 11–12 were split.
 - Scripted play run, **host only** (one copy of the game hosting with its own player): **Close the Deal > Lanes > Run Pickups Check**, or headless `-executeMethod CloseTheDeal.Editor.Lanes.PickupsLaneRun.RunFromShell -pickupsRole solo -pickupsOut <folder>`. Results are filled in under "Run results" below.
-- The script calls the same owner-side methods the buttons call (`LocalTake`, `LocalThrow`, `LocalDrop`, `LocalUse`), so every request goes through the host. **The E, left mouse, G and right mouse bindings themselves were not pressed by anything**; that needs Adam's hands. Sprinting onto the wet floor is faked by setting the body's speed.
+- The script calls the same owner-side methods the buttons call (`LocalTake`, `LocalThrow`, `LocalDrop`, `LocalUse`), so every request goes through the host. **The F, left mouse, G and right mouse bindings themselves were not pressed by anything**; that needs Adam's hands. Sprinting onto the wet floor is faked by setting the body's speed.
 
 ### Run results
 
-- **Solo (host only): 31 passed, 2 failed.** Failed: picking the wet floor sign back up after the slip test was refused (reason not yet logged); per-frame allocations read 1123 B carrying vs 949 B empty-handed in editor play mode (an earlier run read them equal; nothing in the carry path allocates on reading; unresolved).
+Latest runs (2026-11-13, after merging main and moving every item onto Switchboard's `NetBody`):
+
+- **Solo (host only): 33 passed, 0 failed.** The earlier wet-floor re-pickup failure was the script, not the game: the slip knocks the sign about 1 m, which clears the trap as designed, and the script was standing at its old spot. It now walks to where the sign is. The allocation check passed this run; it has been flaky before.
 - Not checked in batchmode: the look prompt (the mouse cannot be captured) and walking speed under load by keys (profile numbers checked instead: chair 5.48 of 6.00 m/s).
-- **Host + client, two copies on one PC over the local connection: client 8/8 passed, host 4/4 passed** (its 'enough checks' floor of 6 was set too high for its 4 steps). Contested grab gave the chair to exactly one player and told the loser why; the client saw the host's case arm, beep 14 times and explode, and its own player was thrown; a client leaving while carrying left the chair in the level once; a thrown chair came to rest at the same point on both (-2.13, 12.90, -5.09).
+- **Host + client, two copies on one Mac over the local connection: host 4/4, client 8/8.** Contested grab gave the chair to exactly one player; the client saw the host's case arm, beep 13 times and explode, and its own player was thrown; a client leaving while carrying left the chair in the level once; a thrown chair came to rest at the same point on both through Switchboard (-1.80, 12.25, -5.78). No `[Switchboard]` warnings in either log.
+- In this run the client won the contested grab, so "the loser is told why" was only seen from the host's side.
+- **Lane scene streaming:** `Lane_Pickups.unity` now holds a real `TowerBuilder` with an empty-floor profile (`Profiles/Items/LaneTowerFrame.asset`, `Prefabs/Items/LaneEmptyFloor.prefab`), because Switchboard only streams once a tower is built and only inside its box. Log: "Built two towers of 15 floors"; nothing is drawn.
 - Prop count stayed at 15 of the cap of 16 throughout.
 
 ## Lane-local inputs (for the movement lane to move into the shared actions asset)

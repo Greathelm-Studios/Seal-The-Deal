@@ -5,7 +5,7 @@ namespace CloseTheDeal.Props
 {
     /// <summary>
     /// A loose piece of furniture. The host simulates it; everyone else holds it kinematic
-    /// and follows the host's positions through NetworkTransform. While a player carries it
+    /// and follows the host's poses through Switchboard's NetBody. While a player carries it
     /// (Items/Pickup) or it has been taken out of play, the host holds it still as well.
     /// Design: docs/systems/PROPS.md.
     /// </summary>

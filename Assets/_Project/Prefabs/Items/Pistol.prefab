@@ -191,10 +191,10 @@ GameObject:
   - component: {fileID: 1578804575138801216}
   - component: {fileID: 6477411058685065541}
   - component: {fileID: 6700126035713234456}
-  - component: {fileID: 1120929568551112997}
   - component: {fileID: 7983711547589539021}
   - component: {fileID: 2453717367567930927}
   - component: {fileID: 4131667075141476075}
+  - component: {fileID: 667228603068630967}
   m_Layer: 7
   m_Name: Pistol
   m_TagString: Untagged
@@ -302,52 +302,6 @@ MonoBehaviour:
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
   _initializedTimestamp: 0
---- !u!114 &1120929568551112997
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2567776521451004290}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a2836e36774ca1c4bbbee976e17b649c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.Transforming.NetworkTransform
-  _componentIndexCache: 255
-  _addedNetworkObject: {fileID: 6700126035713234456}
-  _networkObjectCache: {fileID: 0}
-  _componentConfiguration: 0
-  _synchronizeParent: 0
-  _packing:
-    Position: 1
-    Rotation: 1
-    Scale: 0
-  _useScaledTime: 1
-  _interpolation: 2
-  _extrapolation: 2
-  _enableTeleport: 0
-  _teleportThreshold: 1
-  _clientAuthoritative: 0
-  _sendToOwner: 1
-  _interval: 2
-  _synchronizePosition: 1
-  _positionSensitivity: 0.001
-  _positionSnapping:
-    X: 0
-    Y: 0
-    Z: 0
-  _synchronizeRotation: 1
-  _rotationSnapping:
-    X: 0
-    Y: 0
-    Z: 0
-  _synchronizeScale: 0
-  _scaleSensitivity: 0.001
-  _scaleSnapping:
-    X: 0
-    Y: 0
-    Z: 0
 --- !u!114 &7983711547589539021
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -418,6 +372,22 @@ MonoBehaviour:
   _onReturned:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &667228603068630967
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2567776521451004290}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d237e0cf9c664544966fd5bb7f4d63f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Net.NetBody
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 6700126035713234456}
+  _networkObjectCache: {fileID: 0}
+  _profile: {fileID: 11400000, guid: 2251a1d50bc577440b060b39d90a64be, type: 2}
 --- !u!1 &4570590863096221504
 GameObject:
   m_ObjectHideFlags: 0

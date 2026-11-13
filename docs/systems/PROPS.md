@@ -10,16 +10,16 @@ Office furniture is loose: chairs, desks, monitors, filing cabinets and the copi
 
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
-| Every prop's motion | **Host.** Only the host runs prop physics | Position and rotation, host → everyone, via FishNet NetworkTransform | Only while moving, every 2nd tick (30/s) |
+| Every prop's motion | **Host.** Only the host runs prop physics | Position and rotation, host → each client, through Switchboard's `NetBody` (see [SWITCHBOARD.md](SWITCHBOARD.md)) | Only while moving; up to 30/s for near floors, less for far ones, inside a fixed byte budget per player |
 | Which props exist | Host spawns them at the template markers after the towers build | FishNet spawn message per prop, once | On join |
 | Throwing a prop | Host only, from the same blast that throws players | Arrives as motion | On hit |
 | Carrying a prop | Host decides who holds it; see [ITEMS.md](ITEMS.md) | The holder, once; then motion while the carrier moves | On change |
 
-On clients a prop is a **kinematic** body that follows the host's positions. It still blocks and shoves the local player, so collisions look right; it just cannot be moved by the client itself.
+On clients a prop is a **kinematic** body that follows the host's poses. Anything that carries, throws or moves a prop must do it on the host: a client's copy is overwritten by the next pose. Switchboard only streams in a scene with a built `TowerBuilder`. It still blocks and shoves the local player, so collisions look right; it just cannot be moved by the client itself.
 
-**The known trade:** a client walking into a chair is blocked until the host reports the chair moved, then the client's body is corrected forward by a few centimetres. FishNet smooths that. It was chosen over predicting every prop on every client, which would send every prop's state every tick (the GDD's bandwidth risk). If pushing furniture feels sticky in tests, the next step is to let clients simulate props locally and blend toward the host, not to predict them.
+**The known trade:** a client walking into a chair is blocked until the host reports the chair moved, then the client's body is corrected forward by a few centimetres. Switchboard smooths the prop's side of that. It was chosen over predicting every prop on every client, which would send every prop's state every tick (the GDD's bandwidth risk). If pushing furniture feels sticky in tests, the next step is to let clients simulate props locally and blend toward the host, not to predict them.
 
-Bandwidth: sleeping props send nothing. A blast moving 15 props for two seconds sends about 15 × 40 B × 30/s ≈ 18 KB/s to each client for those two seconds, then stops.
+Bandwidth: sleeping props send nothing; moving ones cost 13 bytes per update and never exceed Switchboard's per-player budget. The numbers are in [SWITCHBOARD.md](SWITCHBOARD.md).
 
 ## Designer-authored vs runtime-derived (AGENTS.md §4)
 
