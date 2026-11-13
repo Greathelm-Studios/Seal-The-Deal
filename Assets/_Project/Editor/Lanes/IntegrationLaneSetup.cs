@@ -709,6 +709,7 @@ namespace CloseTheDeal.Editor.Lanes
             yield return CarryUpAndWin();
             yield return BackToLobby();
             yield return BothStartPaths();
+            yield return DeskRematch();
         }
 
         static IEnumerator Arrival()
@@ -718,6 +719,7 @@ namespace CloseTheDeal.Editor.Lanes
             Check("arrival: starting guns are the pistol only", Gun(guns, 0) == "Pistol" && Gun(guns, 1) == "empty", Slots(guns));
             Check("arrival: no gun fires in the lobby", WeaponHolder.FireHeld != null && WeaponHolder.FireHeld(guns));
             Check("arrival: the match is waiting", Match.Phase == MatchPhase.Waiting, Match.Phase.ToString());
+            Note($"glass: {Object.FindObjectsByType<CloseTheDeal.Glass.GlassPane>(FindObjectsSortMode.None).Length} breakable panes in the scene (tower windows only count if their template's glass has a collider).");
             yield return new Until(() => LobbyRoster.Instance != null && LobbyRoster.Instance.TryGetLocal(out _), 10f, "this player on the ready board");
         }
 
@@ -977,6 +979,33 @@ namespace CloseTheDeal.Editor.Lanes
             Check("both start paths: exactly one match started", _countdowns - countdowns == 1 && _builds - builds == 1, $"countdowns {_countdowns - countdowns}, builds {_builds - builds}");
             Check("both start paths: the desk's start was refused and the desk reopened", Flow.StartsRequested - requested == 1 && Flow.StartsTaken == taken && !roster.RunInProgress,
                 $"requested {Flow.StartsRequested - requested}, taken {Flow.StartsTaken - taken}, run in progress {roster.RunInProgress}");
+            Check("next match: back to the starting pistol only, full magazine (match 1 ended with two guns)", Slots(MyGuns) == "Pistol / empty" && MyGuns.AmmoInMagazine == MyGuns.ActiveWeapon.MagazineSize, Slots(MyGuns));
+        }
+
+        /// <summary>The real rematch path: a result, back to reception, ready, the desk starts the next match.</summary>
+        static IEnumerator DeskRematch()
+        {
+            yield return new Until(() => Match.Phase == MatchPhase.Running, 15f, "the second match to run");
+            yield return CarryUpAndWin();
+            yield return BackToLobby();
+            // Leave this match with a second gun and hurt, so the next start has something to reset.
+            var health = Me.GetComponent<Health>();
+            MyGuns.Equip(AssetDatabase.LoadAssetAtPath<WeaponDefinition>("Assets/_Project/Profiles/Weapons/AR15.asset"), 1);
+            health.ApplyHit(30f, Me.Chest, Vector3.forward, -1, Vector3.zero, Vector3.zero, 0f);
+            yield return 0.3f;
+            Note($"before the rematch: {Slots(MyGuns)}, health {health.Current:0}");
+            ReceptionDesk desk = Object.FindAnyObjectByType<ReceptionDesk>();
+            LobbyRoster roster = LobbyRoster.Instance;
+            desk.OnPress();
+            yield return new Until(() => roster.ReadyCount == 1, 5f, "ready for the rematch");
+            int countdowns = _countdowns, taken = Flow.StartsTaken;
+            desk.OnPress();
+            desk.OnHold(roster.Rules.StartHoldSeconds + 0.05f);
+            yield return new Until(() => Match.Phase == MatchPhase.Countdown, 5f, "the rematch countdown");
+            yield return 1f;
+            Check("desk rematch: the desk started the next match once, from a result", _countdowns - countdowns == 1 && Flow.StartsTaken - taken == 1, $"countdowns {_countdowns - countdowns}");
+            Check("desk rematch: back in this firm's tower reception with the starting pistol and full health", Match.Arena.PlaceOf(Me.Position, 0f) == Me.Firm && Slots(MyGuns) == "Pistol / empty" && health.Current >= health.Max,
+                $"{V(Me.Position)}, {Slots(MyGuns)}, health {health.Current:0}");
         }
         // ---- Host and client (two copies on one computer, local connection) --------------------
 
@@ -1035,7 +1064,9 @@ namespace CloseTheDeal.Editor.Lanes
             if (chair != null)
                 Teleport(them, StandBeside(chair.Body.worldCenterOfMass, 1f));
             yield return t0.AddSeconds(27);
-            Check("HOST: the client holds the chair", chair != null && theirHands.Held == chair);
+            // The client takes the chair nearest to it, which may be a neighbour of the one it was put beside.
+            chair = theirHands.Held;
+            Check("HOST: the client holds a chair", chair != null && chair.Definition.name == "Item_Chair", chair != null ? chair.Definition.name : "nothing");
             Vector3 before = chair != null ? chair.transform.position : Vector3.zero;
             yield return t0.AddSeconds(32);
             float moved = chair != null ? (chair.transform.position - before).magnitude : 0f;

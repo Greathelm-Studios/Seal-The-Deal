@@ -5,7 +5,7 @@
 Technical and process decisions, newest first. One line each: date, what, who, link.
 Design decisions live in [GDD.md](GDD.md), not here. Rules: [AGENTS.md](../AGENTS.md) §12.
 
-- 2026-11-13 — Integration: players start with the pistol only; the AR-15 is a floor-2 pickup. — Agent (integration default, Adam to confirm). [systems/INTEGRATION.md](systems/INTEGRATION.md).
+- 2026-11-13 — Integration: players start with the pistol only; the AR-15 is a floor-2 pickup; every match start resets everyone to that and full health. — Agent (integration default, Adam to confirm). [systems/INTEGRATION.md](systems/INTEGRATION.md).
 - 2026-11-13 — Integration: a gun picked up goes to the weapon slots, never the hands; one already carried is refilled; with both slots full it replaces the gun in hand, which drops as a pickup; a new gun is not drawn automatically. — Agent (integration default, Adam to confirm). [systems/INTEGRATION.md](systems/INTEGRATION.md).
 - 2026-11-13 — Integration: the briefcase and a carried item share one pair of hands ("hands full" otherwise); the briefcase wins F when both are in reach, a lobby desk, stand or mirror wins over both; F interact and G drop on every path, pad north and d-pad down. — Agent (integration default, Adam to confirm). [systems/INTEGRATION.md](systems/INTEGRATION.md).
 - 2026-11-13 — Integration: a briefcase carrier can take and fire guns; a player carrying an item can neither fire nor take a gun; nobody fires in the lobby reception. — Agent (integration default, Adam to confirm). [systems/INTEGRATION.md](systems/INTEGRATION.md).

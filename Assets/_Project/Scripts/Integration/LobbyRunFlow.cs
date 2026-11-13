@@ -15,7 +15,8 @@ namespace CloseTheDeal.Integration
     /// - the desk's start (everyone ready) starts the match with the firms chosen at the stands;
     /// - anyone arriving before a match or after a result appears in the lobby, anyone arriving
     ///   mid-match appears where the match puts them;
-    /// - a while after a result, everyone is walked back to the lobby and the desk reopens.
+    /// - a while after a result, everyone is walked back to the lobby and the desk reopens;
+    /// - every match starts level: starting guns, full health.
     /// The match itself moves everyone into their firm's reception when it starts.
     /// Owner: host. Synced: nothing of its own (positions ride the bodies, the lobby and match
     /// sync their own state). Design: docs/systems/INTEGRATION.md.
@@ -103,17 +104,43 @@ namespace CloseTheDeal.Integration
 
             _returnAt = next == MatchPhase.Ended ? Time.time + _backToLobbySeconds : -1f;
             if (next == MatchPhase.Countdown)
-                KeepDeadWhereTheyStand();
+                FreshStart();
         }
 
-        /// <summary>Anyone dead when the match moved them comes back where they were moved to, not where they died last match.</summary>
-        static void KeepDeadWhereTheyStand()
+        /// <summary>
+        /// Every match starts level, however it was started (desk or menu): the scene's starting
+        /// guns with full magazines, full health, and anyone dead when the match moved them comes
+        /// back where they were moved to, not where they died last match.
+        /// </summary>
+        static void FreshStart()
         {
+            StartingLoadout loadout = StartingLoadout.Instance;
             IReadOnlyList<FirmMember> all = FirmMember.All;
             for (int i = 0; i < all.Count; i++)
             {
-                if (all[i].TryGetComponent(out Health health) && health.IsDead)
+                ItemCarrier carrier = PlayerParts.CarrierOf(all[i]);
+                if (carrier != null)
+                    carrier.ServerForceDrop();
+                if (all[i].TryGetComponent(out WeaponHolder guns))
+                    StartingGuns(guns, loadout);
+                if (!all[i].TryGetComponent(out Health health))
+                    continue;
+                if (health.IsDead)
                     health.OverrideNextRespawn(all[i].Position);
+                else
+                    health.Restore();
+            }
+        }
+
+        static void StartingGuns(WeaponHolder guns, StartingLoadout loadout)
+        {
+            for (int slot = 0; slot < WeaponHolder.SlotCount; slot++)
+            {
+                WeaponDefinition start = loadout != null && slot < loadout.Weapons.Length ? loadout.Weapons[slot] : null;
+                if (start == null)
+                    guns.Unequip(slot);
+                else if (!guns.Equip(start, slot))
+                    Debug.LogWarning($"[Integration] Starting gun '{start.name}' is not in the weapon catalog; slot {slot + 1} kept what it had.");
             }
         }
 
