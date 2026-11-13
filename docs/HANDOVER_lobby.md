@@ -28,7 +28,24 @@ Both firms spawn into one shared ground-floor reception, ready up at the desk, p
 
 ## Verified, and how
 
-See the table at the end of this file (filled from the runs).
+All runs were headless Editor Play runs of `Lane_Lobby.unity` in local test mode (Steam not running), by scripted drivers kept out of the repo. Key presses injected through the Input System did **not** register in a headless Editor, so those actions were called on the same handlers directly (marked "direct"). Walking was done by moving the host body, not by key input. Nothing was checked in a real window, with a gamepad, or over Steam.
+
+| # | Check | Result | How |
+|---|---|---|---|
+| 1 | Compile | **0 errors** | `compile-check` skill, 0 `error CS` |
+| 2 | Scene built by menu; clip of lobby, ready, firm sign-in, fitting room with camera swing | Built and captured; frame pass done | Headless run, 1280x720 frames at 15 fps, 37 s clip and sheets in the shared notes folder. Ready, sign-in and entering the fitting room were direct calls; browsing and keep/put-back too. Frame pass: no clipping or popping seen; the character glides in a T-pose (static mesh); the camera swing is 0.45 s in, 0.35 s out, so only 4-6 frames at 15 fps. The first pass showed mirrored signs (fixed) |
+| 3a | Outfit saved and read back on relaunch | **Works** | Tour kept an outfit; a fresh Editor process loaded `Suit_Nearblack, Shirt_Paleblue, Belt_Nearblack` from the file |
+| 3b | Missing, corrupt, newer-version, unknown-name, locked saves | **Default outfit, no error on screen** | Probe loaded each: missing and corrupt (kept as `.corrupt`) and version 99 gave the default; locked and unknown names gave the default; 5 runs unlocked the white suit |
+| 4a | Host + one client each see the other's outfit and ready state | **Seen** | Second Editor process from a cloned project; host saw the client's outfit and ready, the client saw the host's |
+| 4b | A late joiner sees an outfit set before they joined | **Seen** | Client joined 35 s after the host changed suit and read it at once |
+| 4c | Invalid option id refused | **Refused by the host**, simulated | The host's judging method was called with `0xFF00` (a client RPC takes the same path); a real malicious client was not run |
+| 5a | Player leaving mid-fitting | **Not run** | Code path: the fitting room aborts when the local body is gone and the roster drops the member |
+| 5b | Host starts while someone is customising | **Blocked by rule**, not run | A player in the fitting room is not ready, so the start is refused ("NotAllReady") |
+| 5c | Menu opening mid-customisation | **Not run** | The fitting room reads input only while the cursor is captured and waits under the menu |
+| 5d | A firm empty at start | **Seen** | `NeedBothFirms` with one player; board says "Each firm needs at least one person" |
+| 5e | Steam offline / local test mode | **Seen** | Every run was local test mode. The Steam path is untouched (`SteamLobby`, `GameMenu` unchanged) and not run |
+| 6 | Lizard | 2,117 NLOC, avg CC 3.3, **nothing above CC 10** (two functions at 10) | `lizard -l csharp Scripts/Lobby Scripts/Customisation`; four CC 11+ functions refactored |
+| 7 | Run start | **Seen** | `RunStartRequested` listed both players with firms 0 and 1; both machines counted one run started |
 
 ## Lane-local inputs (for the movement lane to consolidate)
 
