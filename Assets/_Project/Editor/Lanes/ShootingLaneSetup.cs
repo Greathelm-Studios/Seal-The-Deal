@@ -672,22 +672,22 @@ namespace CloseTheDeal.Editor.Lanes
 
         /// <summary>A pivot at the feet between the smoothed visual and the lean pivot, so the whole body can fall flat without touching the motor's own lean.</summary>
         /// <summary>
-        /// Where other players see this player's gun. The character rig's right hand when it
-        /// has one (a Mixamo skeleton names it mixamorig:RightHand); otherwise a new empty
-        /// "Hand" point under the lean pivot. Adds at most one empty object and never moves,
-        /// renames or rebuilds anything already in the prefab.
+        /// Where other players see this player's gun: an empty "Hand" point under the lean
+        /// pivot, so it leans with the body. Not the rig's hand bone yet: its axes are not
+        /// known, and a gun parented to it would point the wrong way until someone checks.
+        /// Adds at most one empty object and never moves, renames or rebuilds anything.
         /// </summary>
         static Transform EnsureHandPoint(Transform root, Transform lean)
         {
             foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
             {
-                if (t.name.EndsWith("RightHand") || t.name == "Hand")
+                if (t.name == "Hand")
                     return t;
             }
 
             if (lean == null)
             {
-                Debug.LogWarning("[Shooting Lane] Player.prefab has no 'Lean' object or right-hand bone; other players won't see this player's gun.");
+                Debug.LogWarning("[Shooting Lane] Player.prefab has no 'Lean' object; other players won't see this player's gun.");
                 return null;
             }
 
@@ -1363,6 +1363,61 @@ namespace CloseTheDeal.Editor.Lanes
             }
         }
 
+        /// <summary>
+        /// Client only: ten pistol shots at the host's own player while the host throws it from
+        /// side to side at about sprint speed. Players reach a client through prediction, not
+        /// the transform sync the dummies use, so they can be drawn at a different delay.
+        /// </summary>
+        static IEnumerator MovingPlayerCheck(WeaponHolder holder, PlayerMotor me)
+        {
+            PlayerMotor host = OtherPlayer(me);
+            Health target = host.GetComponent<Health>();
+            if (holder.ActiveSlot != 0)
+                holder.Switch(0);
+            yield return Seconds(0.5f);
+            holder.Reload();
+            yield return Seconds(holder.ActiveWeapon.ReloadSeconds + 0.5f);
+
+            Flag("shoot_host_start");
+            yield return Seconds(1.5f);
+            int hitsBefore = _hitConfirmed;
+            StartClip("clip_moving_player");
+            for (int i = 0; i < 10; i++)
+            {
+                yield return Seconds(0.45f);
+                SetAimNow(host.transform.position + Vector3.up * 1.1f);
+                LogDrawn(holder, target);
+                holder.PullTrigger();
+                yield return Frames(1);
+            }
+
+            yield return Seconds(0.6f);
+            StopClip();
+            Flag("shoot_host_done");
+            int hits = _hitConfirmed - hitsBefore;
+            Check("landing pistol shots on a player thrown side to side (9 m/s at each throw, slowing to a stop)", hits >= 8,
+                $"{hits} of 10 confirmed by the host; this copy's round trip {holder.TimeManager.RoundTripTime} ms");
+        }
+
+        /// <summary>Host only: throws its own player left and right until the client is done shooting at it, healed between shots so it never dies.</summary>
+        static IEnumerator Dodge(PlayerMotor me)
+        {
+            Health health = me.GetComponent<Health>();
+
+            Teleport(me, new Vector3(-2f, SlabTop + 0.05f, -9f));
+            float side = 1f;
+            while (!HasFlagFile("shoot_host_done"))
+            {
+                // Throw towards the middle of the room each time, so the body swings across about 5 m.
+                side = me.transform.position.x > -2f ? -1f : 1f;
+                me.ApplyKnockback(new Vector3(side * 9f, 0f, 0f), 0.4f);
+                health.Restore();
+                yield return Seconds(0.55f);
+            }
+
+            health.Restore();
+        }
+
         /// <summary>The AR-15's view kick must follow the same path magazine after magazine when the aim is left alone.</summary>
         static IEnumerator PatternCheck(Subject s)
         {
@@ -1546,6 +1601,8 @@ namespace CloseTheDeal.Editor.Lanes
             Health otherHealth = other.GetComponent<Health>();
             Log($"Client joined as client id {other.OwnerId}.");
 
+            yield return Until(() => HasFlagFile("shoot_host_start"), 240f, "the client to start shooting at the host");
+            yield return Dodge(me);
             yield return Until(() => HasFlagFile("client_shot_done"), 120f, "the client's shot");
             yield return Seconds(0.5f);
             Log($"HOST STATE after the client's shot: panes broken {glass.BrokenCount}, dummies {DummyStates()}");
@@ -1608,31 +1665,55 @@ namespace CloseTheDeal.Editor.Lanes
             SteamLobby lobby = null;
             yield return Until(() => (lobby = Object.FindAnyObjectByType<SteamLobby>()) != null && lobby.Ready, 30f, "lobby ready");
             yield return Until(() => HasFlagFile("host_ready"), 900f, "the host to be ready");
-            if (long.TryParse(Arg("-laneLatency"), out long oneWay) && oneWay > 0)
-            {
-                // Adds delay to everything this copy sends and receives, to stand in for a real connection.
-                var simulator = FishNet.InstanceFinder.NetworkManager.TransportManager.LatencySimulator;
-                simulator.SetLatency(oneWay);
-                simulator.SetEnabled(true);
-                Log($"Latency simulator on: {oneWay} ms added each way.");
-            }
-
+            TurnOnLatency();
             lobby.JoinLocal();
             yield return Until(() => PlayerMotor.Local != null, 40f, "own player spawned");
             GlassPane.AnyBroken += CountPane;
             yield return Seconds(1.5f);
 
-            PlayerMotor me = PlayerMotor.Local;
-            WeaponHolder holder = me.GetComponent<WeaponHolder>();
-            Health health = me.GetComponent<Health>();
-            GlassRegistry glass = GlassRegistry.Instance;
-            Listen(holder);
+            var s = new Subject { Me = PlayerMotor.Local, Glass = GlassRegistry.Instance };
+            s.Holder = s.Me.GetComponent<WeaponHolder>();
+            s.Health = s.Me.GetComponent<Health>();
+            Listen(s.Holder);
+
+            yield return ClientJoinAndShotChecks(s);
+            yield return MovingTargetCheck(s.Holder, 8);
+            yield return MovingPlayerCheck(s.Holder, s.Me);
+            yield return AllocationCheck(s.Holder, new Vector3(-2f, SlabTop + 1.5f, 16f));
+            Log($"CLIENT STATE after own shot: panes broken {s.Glass.BrokenCount}, dummies {DummyStates()}");
+            Flag("client_shot_done");
+
+            int brokenAtLeave = 0;
+            string dummiesAtLeave = null;
+            yield return ClientDeathCheck(s, (broken, dummies) => { brokenAtLeave = broken; dummiesAtLeave = dummies; });
+            yield return ClientRejoinCheck(lobby, brokenAtLeave, dummiesAtLeave);
+            GlassPane.AnyBroken -= CountPane;
+            Flag("client_done");
+        }
+
+        /// <summary>Adds delay to everything this copy sends and receives, to stand in for a real connection.</summary>
+        static void TurnOnLatency()
+        {
+            if (!long.TryParse(Arg("-laneLatency"), out long oneWay) || oneWay <= 0)
+                return;
+
+            var simulator = FishNet.InstanceFinder.NetworkManager.TransportManager.LatencySimulator;
+            simulator.SetLatency(oneWay);
+            simulator.SetEnabled(true);
+            Log($"Latency simulator on: {oneWay} ms added each way.");
+        }
+
+        /// <summary>What a client sees on joining a match in progress, and its own first shot.</summary>
+        static IEnumerator ClientJoinAndShotChecks(Subject s)
+        {
+            WeaponHolder holder = s.Holder;
+            GlassRegistry glass = s.Glass;
 
             // Everything the host broke before this copy joined must already be broken here, quietly.
             int hidden = HiddenPanes();
             Check("joining after breaks: the same panes are already broken, without shards", glass.BrokenCount > 0 && hidden == glass.BrokenCount && _panesBroken == 0,
                 $"registry says {glass.BrokenCount} broken, {hidden} panes hidden here, {_panesBroken} shatter events on joining");
-            Log($"CLIENT STATE on joining: panes broken {glass.BrokenCount}, dummies {DummyStates()}, ping {me.TimeManager.RoundTripTime} ms");
+            Log($"CLIENT STATE on joining: panes broken {glass.BrokenCount}, dummies {DummyStates()}, ping {s.Me.TimeManager.RoundTripTime} ms");
             Check("client has both guns", holder.WeaponInSlot(0) != null && holder.WeaponInSlot(1) != null, $"in hand {Name(holder.ActiveWeapon)} with {holder.AmmoInMagazine} rounds");
 
             // One pistol shot at a dummy the host has not touched, through a near pane and a far pane.
@@ -1648,26 +1729,29 @@ namespace CloseTheDeal.Editor.Lanes
                 $"hit markers {_hitConfirmed} (damage {_lastHitDamage}), dummy health here {healthBefore} -> {far1.Current}");
             Check("client's shot: the panes it crossed are broken here", glass.BrokenCount > brokenBefore && HiddenPanes() == glass.BrokenCount && _panesBroken == glass.BrokenCount - brokenBefore,
                 $"broken {brokenBefore} -> {glass.BrokenCount}, hidden here {HiddenPanes()}, shatter events here {_panesBroken}");
+        }
 
-            yield return MovingTargetCheck(holder, 8);
-            yield return AllocationCheck(holder, new Vector3(-2f, SlabTop + 1.5f, 16f));
-            Log($"CLIENT STATE after own shot: panes broken {glass.BrokenCount}, dummies {DummyStates()}");
-            Flag("client_shot_done");
-
-            // The host now kills this player out through a window.
+        /// <summary>The host kills this player out through a window; this copy must hear its death and respawn and come back whole.</summary>
+        static IEnumerator ClientDeathCheck(Subject s, Action<int, string> stateAtEnd)
+        {
             Health.AnyDied += CountDeath;
             Health.AnyRespawned += CountRespawn;
             yield return Until(() => HasFlagFile("host_kill_done"), 120f, "the host's window kill");
             yield return Seconds(1f);
-            Check("client heard its own death and respawn, and is whole again", _deaths == 1 && _respawns == 1 && !health.IsDead && Mathf.Approximately(health.Current, health.Max) && holder.AmmoInMagazine == holder.ActiveWeapon.MagazineSize,
-                $"deaths {_deaths}, respawns {_respawns}, health {health.Current}, ammo {holder.AmmoInMagazine}, standing at {me.transform.position}");
-            int brokenAtLeave = glass.BrokenCount;
-            string dummiesAtLeave = DummyStates();
-            Log($"CLIENT STATE after the window kill: panes broken {brokenAtLeave}, dummies {dummiesAtLeave}");
+
+            Health health = s.Health;
+            bool whole = !health.IsDead && Mathf.Approximately(health.Current, health.Max) && s.Holder.AmmoInMagazine == s.Holder.ActiveWeapon.MagazineSize;
+            Check("client heard its own death and respawn, and is whole again", _deaths == 1 && _respawns == 1 && whole,
+                $"deaths {_deaths}, respawns {_respawns}, health {health.Current}, ammo {s.Holder.AmmoInMagazine}, standing at {s.Me.transform.position}");
+            Log($"CLIENT STATE after the window kill: panes broken {s.Glass.BrokenCount}, dummies {DummyStates()}");
+            stateAtEnd(s.Glass.BrokenCount, DummyStates());
             Health.AnyDied -= CountDeath;
             Health.AnyRespawned -= CountRespawn;
+        }
 
-            // Leave and join again: the late joiner.
+        /// <summary>Leave and join again: a late joiner must see every break and every dummy as the host has them.</summary>
+        static IEnumerator ClientRejoinCheck(SteamLobby lobby, int brokenAtLeave, string dummiesAtLeave)
+        {
             lobby.Leave();
             yield return Seconds(2f);
             Check("after leaving, this copy's panes are whole again", HiddenPanes() == 0, $"{HiddenPanes()} hidden");
@@ -1675,12 +1759,11 @@ namespace CloseTheDeal.Editor.Lanes
             lobby.JoinLocal();
             yield return Until(() => PlayerMotor.Local != null, 40f, "own player after rejoining");
             yield return Seconds(1.5f);
-            glass = GlassRegistry.Instance;
+
+            GlassRegistry glass = GlassRegistry.Instance;
             Check("late joiner sees every pane the match has broken, without shards", glass.BrokenCount == brokenAtLeave && HiddenPanes() == brokenAtLeave && _panesBroken == 0,
                 $"registry {glass.BrokenCount} (was {brokenAtLeave} when it left), hidden here {HiddenPanes()}, shatter events {_panesBroken}");
             Check("late joiner sees the dummies as the host has them", DummyStates() == dummiesAtLeave, $"{DummyStates()}");
-            GlassPane.AnyBroken -= CountPane;
-            Flag("client_done");
         }
 
         // ---- Self-check helpers --------------------------------------------------------------
@@ -1759,7 +1842,7 @@ namespace CloseTheDeal.Editor.Lanes
         static void LogDrawn(WeaponHolder holder, Health runner)
         {
             Vector3 p = runner.transform.position;
-            File.AppendAllText(Path.Combine(_out, _role + "_drawn.txt"), $"{runner.name}\t{ViewTickField.GetValue(holder)}\t{holder.TimeManager.Tick}\t{p.x:0.000}\n");
+            File.AppendAllText(Path.Combine(_out, _role + "_drawn.txt"), $"{runner.name}#{runner.OwnerId}\t{ViewTickField.GetValue(holder)}\t{holder.TimeManager.Tick}\t{p.x:0.000}\n");
         }
 
         /// <summary>Host only: every tick, where each runner really is.</summary>
@@ -1768,8 +1851,8 @@ namespace CloseTheDeal.Editor.Lanes
             var lines = new System.Text.StringBuilder();
             foreach (Health health in Health.All)
             {
-                if (health.GetComponent<MovingTarget>() != null)
-                    lines.Append($"{health.name}\t{health.TimeManager.Tick}\t{health.transform.position.x:0.000}\n");
+                if (health.GetComponent<MovingTarget>() != null || health.GetComponent<PlayerMotor>() != null)
+                    lines.Append($"{health.name}#{health.OwnerId}\t{health.TimeManager.Tick}\t{health.transform.position.x:0.000}\n");
             }
 
             File.AppendAllText(Path.Combine(_out, "host_ticks.txt"), lines.ToString());
@@ -1909,10 +1992,10 @@ namespace CloseTheDeal.Editor.Lanes
 
         static void StartClip(string name, Camera camera = null)
         {
-            _clipName = name;
             _clipCamera = camera;
             _clipFrame = 0;
-            Directory.CreateDirectory(Path.Combine(_out, name));
+            _clipName = _role + "_" + name;
+            Directory.CreateDirectory(Path.Combine(_out, _clipName));
         }
 
         static void StopClip()

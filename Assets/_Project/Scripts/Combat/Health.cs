@@ -124,6 +124,8 @@ namespace CloseTheDeal.Combat
         PlayerMotor _motor;
         Renderer[] _renderers;
         MaterialPropertyBlock _block;
+        Color[] _savedColours;
+        bool _flashShown;
 
         uint _respawnTick;
         Vector3 _safePosition;
@@ -152,6 +154,7 @@ namespace CloseTheDeal.Combat
             _rigidbody = GetComponent<Rigidbody>();
             _motor = GetComponent<PlayerMotor>();
             _renderers = GetComponentsInChildren<Renderer>(true);
+            _savedColours = new Color[_renderers.Length];
             _block = new MaterialPropertyBlock();
             if (_tipPivot != null)
                 _tipRest = _tipPivot.localRotation;
@@ -239,6 +242,13 @@ namespace CloseTheDeal.Combat
             RaiseDamaged(info);
             RpcDamaged(amount, point, direction, attackerClientId, shove);
             return true;
+        }
+
+        /// <summary>Host only. Back to full health, if alive. For healing pickups, checkpoints and tests.</summary>
+        public void Restore()
+        {
+            if (IsServerStarted && !_dead.Value)
+                _health.Value = _maxHealth;
         }
 
         /// <summary>Host only. Where this body comes back next time it dies, instead of the last safe ground. One use.</summary>
@@ -426,18 +436,34 @@ namespace CloseTheDeal.Combat
             _flinch.Add(Mathf.Min(_maxFlinch, info.Amount * _flinchPerDamage), _flinchSeconds, FlinchCurve);
         }
 
+        /// <summary>
+        /// Tints every body renderer, keeping whatever else other code has put in its property
+        /// block (the character's eyes use one); ending the flash puts the material's own colour back.
+        /// </summary>
         void ApplyFlash(bool on)
         {
-            if (on)
-            {
-                _block.Clear();
-                _block.SetColor(BaseColourId, _flashColour);
-            }
+            if (on == _flashShown)
+                return;
 
-            foreach (Renderer r in _renderers)
+            _flashShown = on;
+            for (int i = 0; i < _renderers.Length; i++)
             {
-                if (r != null)
-                    r.SetPropertyBlock(on ? _block : null);
+                Renderer r = _renderers[i];
+                if (r == null)
+                    continue;
+
+                _block.Clear();
+                r.GetPropertyBlock(_block);
+                if (on)
+                {
+                    // Remember the colour in force now (another script's, or the material's) to put back after.
+                    Material material = r.sharedMaterial;
+                    _savedColours[i] = _block.HasColor(BaseColourId) ? _block.GetColor(BaseColourId)
+                        : material != null && material.HasColor(BaseColourId) ? material.GetColor(BaseColourId) : Color.white;
+                }
+
+                _block.SetColor(BaseColourId, on ? _flashColour : _savedColours[i]);
+                r.SetPropertyBlock(_block);
             }
         }
 

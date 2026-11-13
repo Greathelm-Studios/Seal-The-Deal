@@ -18,7 +18,13 @@ Built (all under this lane's folders; design and ownership in [WEAPONS.md](syste
 - `DoorDamage`: bullets wear down the locked door.
 - Test scene `Assets/_Project/Scenes/Lanes/Lane_Shooting.unity`, built by **Close the Deal > Lanes > Set Up Shooting**.
 
-The commits and what was seen running are listed in the report that ends the session; this file is updated with each slice.
+Commits on `claude/lane-shooting-e0f93d`:
+
+- "Add host-decided guns, player health and breakable glass" (slice 1, merged into `buffer`).
+- "Land hits on fast targets and give each shot weight" (slice 2: fast-target hit registration and the NorseFPS-style feel pass).
+- A third commit keeps Alex's character intact on merge (the hit flash keeps other property-block values; the gun sits on a plain hand point) and adds a check of hits on a moving player.
+
+Captures for review (shared notes folder of this session group, `shooting-lane-captures/`): `host_pistol_and_rifle.mp4` (pistol shots through two panes into a dummy, then an AR-15 burst), `host_window_kill.mp4` (side view: the host's pistol kills the client's player, who goes out through the window), and stills of the pistol shot, the dead dummy, the AR-15 burst and the window kill.
 
 ## What was checked
 
@@ -27,6 +33,7 @@ The commits and what was seen running are listed in the report that ends the ses
 - **Passed on the host:** both guns on spawn; 9 panes numbered; a pistol shot breaks both panes on its path and the host confirms the hit (34 damage); three hits kill a dummy and a kill confirmation arrives; a broken pane ignores further shots; AR-15 fires 15–16 shots in 1.5 s; empty magazine dry-fires; a reload cut off by a switch gives no ammo; a full reload fills once; dead players can't fire, reload or switch and the reload drops; respawn after 5.0 s on the same floor with full magazines; the AR-15 recoil pattern is identical over two magazines (0.000° apart); the fire button does nothing while the menu has the mouse (with a check that the click reached the Input System); a blast breaks glass in its radius; a thrown 8 kg chair breaks the glass-room wall and carries on through; 0 B allocated per shot over 30 shots (main thread, editor).
 - **Passed from the client:** joining after breaks shows the same 5 panes broken with no shards; the client's own shot shows at once (tracer, ammo 11) before the host answers; the host confirms the client's hit and the damage shows on the client; the panes the client's shot crossed break on the client; 0 B per shot; the host kills the client's player and the body goes out through the window, breaks it and falls to the street; the client hears its own death and respawn and comes back whole on its floor; after leaving, its panes are whole; a client that rejoins sees every pane the match broke (8) and the dummies exactly as the host has them.
 - **Hits on fast targets (feel pass run):** pistol shots at dummies running across the far roof at 9, 18 and 24 m/s (sprint, twice sprint, the movement lane's top speed): **10/10 at every speed from the host, and 10/10 at every speed from a client on a 70–80 ms round trip**, all confirmed by the host. Fixed by sending the host tick the shooter's screen showed and testing one tick either side (measured: a client's picture sat 1–2 ticks off the tick it reported).
+- **Hits on a moving player:** a client on a 73 ms round trip landed 10/10 pistol shots on the host's own player while the host threw it side to side (9 m/s at each throw, slowing to a stop under the knockback braking, so well under sprint speed on average). How many ticks off a client draws other *players* (they arrive through prediction, not the transform sync the dummies use) could not be read from the logs: the body's swing repeats positions. A sprinting player under real input is the next thing to measure.
 - **Feel pass, seen in the captures:** the pistol shot shows a small varied flash whose light warms the window frame for a frame, a tracer to the true end point, both panes bursting into shards, sparks at the hit and the dummy flashing and rocking away; the AR-15 burst shows the gun kicked and the view climbing. Every check above still passes after the pass (host 25/25, client 13/13).
 - **Not checked:** the real mouse button with the menu closed (the cursor doesn't lock headless, so shots in the run go through `WeaponHolder.PullTrigger`); a build; Steam; more than one client; anything by hand.
 

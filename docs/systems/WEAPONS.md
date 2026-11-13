@@ -172,3 +172,5 @@ Set-up is one editor file, [ShootingLaneSetup.cs](../../Assets/_Project/Editor/L
 - **The pattern's shot count lives on the shooter's game only.** Other players' guns show no kick.
 - **Tuned on paper and against dummies, not in a playtest.** Every number above is a starting point on the gun assets.
 - Bullets don't push furniture.
+- **Fair hits on fast players are measured on dummies, not on sprinting players.** The one-tick favour was measured on the transform-synced dummies; players arrive through prediction and may sit at a different delay (see the handover).
+- **No sound at all.** Every event a gunshot, hit, kill or glass sound needs exists; nothing plays yet. This is what most makes the shooting read as a demo.
