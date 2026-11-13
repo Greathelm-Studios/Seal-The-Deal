@@ -59,6 +59,64 @@ An item's weight is authored twice, on its definition and as its prefab body's m
 - **Layers:** a carried panel's solid part sits on the **Player** layer while carried, so its carrier's own footing and ledge-climbing never treat it as ground, and it ignores its carrier's body. It goes back to the **Prop** layer when let go.
 - **Telling the Grenade Case from a firm's briefcase:** it is never called a briefcase in any text a player reads; it is red with a yellow hazard band, a keypad and a warning light, where the objective is the firm's own case; and it beeps and flashes from the moment it is armed.
 
+## Any loose prop
+
+Any loose object can be picked up and thrown, not only the items above (Alex's direction, 2026-11-13; not yet a GDD decision): monitors, tablets, plant pots, chairs, anything that is its own networked prop and weighs no more than the 35 kg limit. There is one pickup system: this one. Nothing new is synced for it.
+
+**What a prop needs** (Close the Deal > Items > **Make Selected Prefabs Throwable** adds whatever is missing to the selected prefabs and logs what it did):
+
+- Its own prefab, not merged into a desk or a floor piece, with its pivot at its base or centre.
+- One simple collider (a box or a capsule; a mesh collider must be convex) on the **Prop** layer.
+- A `Rigidbody` whose **mass is its real weight in kg**: it decides whether it can be lifted, how much it slows the carrier, how fast it is thrown and how much it hurts. The tool guesses one from its size (40 kg per cubic metre) and says so; set the real one.
+- `NetworkObject`, Switchboard's `NetBody` (the default profile), `Prop` and `Pickup`. **Set Up Pickups** also gives a `Pickup` to every prefab under `Assets/_Project` that has a `Prop` and none.
+
+**What is worked out at runtime** (`LooseItemDefinition`), when its `Pickup` has no definition:
+
+| Thing | From | Rule |
+|---|---|---|
+| Name in the prompt | The prefab's name | `SM_PlantPot_02` reads "Plant Pot": prefixes `SM_ PF_ Prop_ Kit_ Loose_` and digits dropped, words split. Name the prefab what players should read |
+| Weight | `Rigidbody.mass` | Over the carry profile's limit: "Too heavy" |
+| Throw speed | Weight | 15 m/s at 1 kg or less, falling evenly to 5 m/s at the limit (carry profile, "Any loose prop") |
+| Tumble | Weight | 2.2 turns/s light, 0.3 at the limit |
+| Damage and shove | Weight and impact speed | The same rule as every thrown thing (Rules, below) |
+| Hold pose | The size of what it draws | Centred, its near face 0.55 m ahead of the eye, its base 0.3 m + 0.7 × its height below the eye; wall clearance is half its footprint |
+| Carry rules | The players' `CarryProfile` | Unless its `Pickup` names its own |
+
+A hand-made `ItemDefinition` on the `Pickup` replaces all of it. Props sharing a name, mass and size share one worked-out definition.
+
+A prop with no `Visual` child shows a draw-only copy of its meshes in the hands, made the first time it is carried, while its own meshes are hidden; its solid part stays where the host puts it, as for every item. Skinned meshes are not copied.
+
+**Prop budget:** unchanged. Making a prop throwable adds no object: every loose object already counts toward the 16 props per floor ([PROPS.md](PROPS.md)). More throwable objects in a floor means more props in that floor, inside the same cap; a floor that wants more must take some away.
+
+**Bandwidth:** per prop, two values that change only when it is taken, let go, used up or comes back (the holder, about 2 bytes, and the out-of-play flag, 1 byte), plus one message per throw, drop or hard landing. Its motion goes through Switchboard's per-player byte budget whether it was thrown or knocked, so more throwables raise nothing past that ceiling; under load the least important bodies are sent less often.
+
+## UI contract
+
+What a HUD reads for items. All of it is events: nothing here needs checking every frame. Types are in `CloseTheDeal.Items`. "Owner" means only on the machine whose player it is; "every machine" means on the host and every client.
+
+| HUD element | Read from | Type | Fires | Where |
+|---|---|---|---|---|
+| Which hands are mine | `ItemCarrier.LocalChanged`, `ItemCarrier.Local` | `Action<ItemCarrier>` (null when the player leaves) | When this client's player spawns or goes | This machine |
+| The thing in reach, its name and verb | `ItemCarrier.PromptChanged` | `Action<PromptKind, ItemDefinition>`: `PickUp` ("F · Pick up " + `DisplayName`), `TooHeavy` (`DisplayName` + " · Too heavy"), `None` (item null) | When the look target, its kind, or the hands change; `None` while the menu is open, the hands are full, or another system claims F (briefcase, lobby desk) | Owner |
+| The hands slot | `ItemCarrier.HeldChanged`, `ItemCarrier.Held` | `Action<Pickup>` (null = empty) | Taken, thrown, dropped, placed, knocked loose, used up | Every machine |
+| What is in the slot | `Pickup.Definition` | `DisplayName`, `UseVerb` (empty = no right-mouse action), `Kind`, `WeightKg`; `Pickup.IsDerived` for a loose prop with no definition | Read when `HeldChanged` fires | Every machine |
+| How heavy it is to carry | `ItemCarrier.Load` | `float` 0..1 (0 up to 3 kg, 1 at the 35 kg limit) | Changes only with `HeldChanged` | Every machine |
+| Refusals, with reasons | `ItemCarrier.Denied` | `Action<DenyReason>`: `Gone`, `HandsFull`, `TooHeavy`, `TooFar`, `KnockedAbout`, `CannotUseHere` | Once per refused request | Owner |
+| Losing a contested grab | `Denied` with `DenyReason.Gone` | as above | When the host gave it to someone else first | Owner |
+| How it left the hands | `Pickup.Released` | `Action<Pickup, ReleaseKind>`: `Dropped`, `Thrown`, `Placed`, `Knocked` | Only a real let-go: a gun taken into the slots or a case that went off empties the hands through `HeldChanged` alone | Every machine |
+| A throw landing | `Pickup.Impact` | `Action<Pickup, float>` impact speed, m/s | Each hard landing while thrown | Every machine |
+| Gadget state | `GrenadeCase` Armed, Beeped, Exploded(point); `FireExtinguisher` PinPulled, RanEmpty; `WetFloorSign` PutDown, Cleared, Slipped(point) | C# events and UnityEvents | As named | Every machine |
+
+**Refusal wording** (the voice is corporate and plain; the UI lane may restyle, not reword the reasons): `Gone` "Someone else got it", `HandsFull` "Hands full · G to drop", `TooHeavy` "Too heavy to lift", `TooFar` "Too far away", `KnockedAbout` (no text: the player is tumbling), `CannotUseHere` "No room to put it down here".
+
+**Throw charge:** none. Every item has one throw strength (`Definition.ThrowSpeed`), so there is no charge to show. A throw arc, if the UI wants one, is drawn locally from the camera's forward, `ThrowSpeed`, the carrier's velocity × `CarryProfile.InheritVelocity`, gravity, and the release point `ItemCarrier.GetHoldPose(item, false, …)`: no synced state is needed.
+
+**Keys:** Interact F / pad north, Throw left mouse / right trigger, Drop G / d-pad down, Use right mouse / left trigger (`ItemCarrier.CreateInput`, until they move to the shared actions asset).
+
+**Sounds:** the world sounds (pick-up, throw, impact, beep, hiss) belong to the item and play on every machine from the events above. The HUD's own sounds use the UI lane's `UiSoundEvent`: `HandsFull` for a hands-full refusal, `Error` for the other refusals; a prompt appearing is a quiet `Focus`.
+
+`ItemPromptLabel` is this lane's stand-in two lines of text for the test scene; the revamped HUD replaces it and reads exactly the rows above.
+
 ## Guns
 
 `ItemCarrier.ServerItemTaken` fires on the host whenever a player takes any item, with the carrier and the pickup. In `Lane_Integration.unity`, `GunPickups` (Integration) listens: a gun goes into the weapon slots and the pickup is used up (guns never return). The rules (refill, free slot, swap) are in [INTEGRATION.md](INTEGRATION.md). Without that glue a gun is carried and thrown like any object.
@@ -67,8 +125,8 @@ An item's weight is authored twice, on its definition and as its prefab body's m
 
 Every moment has a C# event and a UnityEvent on the prefab, firing on every machine unless marked:
 
-- `Pickup`: Taken, Released (dropped / thrown / placed / knocked), Impact (speed), Returned.
-- `ItemCarrier`: HeldChanged, PromptChanged (owner), Denied (owner), `ServerItemTaken` (host, static).
+- `Pickup`: Taken, Released (dropped / thrown / placed / knocked; not when it is used up), Impact (speed), Returned.
+- `ItemCarrier`: HeldChanged, PromptChanged (owner), Denied (owner), `LocalChanged` (static), `ServerItemTaken` (host, static).
 - Shared hands (static, set by the integration glue): `ItemCarrier.HandsTakenElsewhere` (true refuses an item as hands full, on the owner's prompt and key and on the host) and `InteractClaimedElsewhere` (owner: something else answers F this frame).
 - `GrenadeCase`: Armed, Beeped, Exploded (point). `FireExtinguisher`: PinPulled, RanEmpty. `WetFloorSign`: PutDown, Cleared, Slipped (point).
 
@@ -82,6 +140,7 @@ Under [Assets/_Project/Scripts/Items/](../../Assets/_Project/Scripts/Items/):
 - `Pickup.cs`: on every item, next to `Prop`. Holder and out-of-play state, release, impact, the fall rule, and showing the item in the hands.
 - `ItemCarrier.cs`: on `Player.prefab`. The lane's inputs, the look prompt, the requests to the host, the host's rules, dropping when knocked or leaving.
 - `ItemBehaviour.cs`: base for what a particular item does. `GrenadeCase.cs`, `FireExtinguisher.cs`, `WetFloorSign.cs`.
+- `LooseItemDefinition.cs`: the definition worked out for a loose prop that has none. `HandsCopy.cs`: the draw-only copy shown in the hands for a prop with no Visual child.
 - `ItemBlast.cs`: damage in a radius. `MotorSpeedOverride.cs`: the carry slowdown. `ItemLayers.cs`, `ItemTones.cs`: layer masks and stand-in sounds.
 - `DamageDummy.cs`: the practice target. `ItemPromptLabel.cs`: the on-screen prompt.
 

@@ -70,5 +70,33 @@ namespace CloseTheDeal.Items
 
         [Tooltip("How long a thing that fell out of the building stays gone before it is back where it started, in seconds.")]
         [Min(0f)] public float FallReturnSeconds = 2f;
+
+        [Header("Any loose prop (no item definition of its own)")]
+        [Tooltip("How fast the lightest loose props (1 kg or less) leave the hands when thrown, in metres per second. Heavier ones are slower, down to the speed below at the weight limit.")]
+        [Min(0f)] public float LooseThrowSpeedLight = 15f;
+
+        [Tooltip("How fast a loose prop at the weight limit leaves the hands when thrown, in metres per second.")]
+        [Min(0f)] public float LooseThrowSpeedHeavy = 5f;
+
+        [Tooltip("How fast the lightest loose props tumble when thrown, in full turns per second.")]
+        [Min(0f)] public float LooseTumbleLight = 2.2f;
+
+        [Tooltip("How fast a loose prop at the weight limit tumbles when thrown, in full turns per second.")]
+        [Min(0f)] public float LooseTumbleHeavy = 0.3f;
+
+        [Tooltip("How far in front of the eye a loose prop's near face is held, in metres. Its own depth is added, so a big thing is held further out.")]
+        [Min(0.1f)] public float LooseHoldAhead = 0.55f;
+
+        [Tooltip("How far below the eye a loose prop's base is held, in metres, before its height is counted. With the setting below, a 1 m chair's base sits 1 m below the eye.")]
+        [Min(0f)] public float LooseHoldBelowEye = 0.3f;
+
+        [Tooltip("How much further down the base is held for each metre of the prop's height, so tall things are carried low and do not block the view. 0.7 keeps the top of most things just under the crosshair.")]
+        [Range(0f, 1f)] public float LooseHoldDropPerMetre = 0.7f;
+
+        /// <summary>
+        /// The carry rules in play, for loose props that were not given a profile of their own.
+        /// Set by the first player's ItemCarrier; null until one exists.
+        /// </summary>
+        public static CarryProfile Shared { get; internal set; }
     }
 }
