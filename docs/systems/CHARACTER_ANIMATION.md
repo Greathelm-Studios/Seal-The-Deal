@@ -19,12 +19,13 @@
 The player's body is a real ragdoll: eleven rigidbodies joined like a skeleton, the way TABS and Gang Beasts build theirs.
 It is not limp. Animation clips say what the body should be doing every frame (standing, running any way, sprinting, in the air, landing), and every joint has a motor pulling toward that. What you see is the body trying to do the clip.
 
-- **Standing:** upright, one foot a little forward, chest flat, shoulders dropped, arms hanging close at the sides, head level so the face shows in a mirror.
+- **Standing:** as on the character sheet: feet together, legs straight, arms hanging straight down at his sides, head a little forward. He breathes: the chest tips back and the shoulders lift about 3 cm, sixteen times a minute.
+- **Looking round:** standing, the head leads. Up to 50 degrees either side only the head and shoulders turn; past that the body turns to face where you are looking. Moving or in the air, the body always faces the look.
 - **Setting off:** the legs go from the stance straight into the first stride of the run, always the same first step. Most of the player's violent start (0 to 6 m/s in 0.13 s) now carries the whole body with it, so the top no longer bends back and the legs no longer trail.
 - **Running:** a full run with a forward lean, pumping bent arms and a heel kick. The legs turn over faster or slower to match the real speed across the floor.
-- **Strafing and back-pedalling:** the body keeps facing forward while the feet step sideways, diagonally or backwards (eight directions, blended).
+- **Strafing and back-pedalling:** the body keeps facing forward while the feet step sideways, diagonally or backwards (eight directions). Sideways and backwards are calm, upright steps. The legs are always on exactly one of the eight clips (the nearest to the way he is travelling), and a change of direction cross-fades to the new one over about an eighth of a second. A quick left-right flip keeps its stride instead of dropping toward the standing stance.
 - **Sprinting:** a longer, faster stride, forward only; sprinting sideways uses the run.
-- **Stopping:** the run eases into the stance in about a quarter of a second; the arms come out for a moment.
+- **Stopping:** the legs keep their stride for a fifth of a second after the speed drops (so a flip of direction is not mistaken for a stop), then ease into the stance in about a quarter of a second; the arms come out for a moment.
 - **Jumping:** a held air pose with the arms out and the legs staggered, braced harder than on the floor.
 - **Landing:** a crouch whose depth grows with how fast the body came down, then it stands up into whatever it is doing next.
 - **Hits and knock-back:** running into something, or being blasted, weakens every joint for a moment, so the body goes properly limp.
@@ -59,16 +60,18 @@ The price is that the level's colliders are in the other scene, so the ragdoll s
 
 | Slot | Clip | Source |
 |---|---|---|
-| Idle | `Idle_Relaxed_Loop` | Library 1's `Idle_Loop`, edited in Blender for Alex: lower and upper spine tipped forward 7 and 5 degrees to flatten the chest, neck and head lifted 14 and 34, both upper arms swung 16 forward, both shoulders dropped 22 with the arms let 8 closer to the body |
-| Run, forward | `Jog_Fwd_Loop` (made for 5.36 m/s) | Quaternius Universal Animation Library 1 |
-| Run, the other seven directions | `Jog_FwdR/R/BwdR/Bwd/BwdL/L/FwdL_Loop` | generated from the forward run |
-| Sprint | `Sprint_Loop` (made for 8.25 m/s) | Library 1 |
+| Idle | `Idle_Sheet_Loop` | Made to match Alex's character sheet: the whole body is the rig's own neutral pose (straight spine and legs, feet together, head as modelled), with only the arms brought down 66 degrees and the shoulders dropped 16. Nothing of the library idle is left but the finger curl; its staggered, turned stance and forward-bent torso kept reading as wrong. It does not move by itself: the breathing below is all of its motion |
+| Run, forward | `Run_Fwd_Loop` (made for 5.36 m/s) | Library 1's `Jog_Fwd_Loop` with the neck and head lifted 8 and 18 degrees, because Alex found the runner looking at the floor |
+| Run, forward-left and forward-right | `Run_FwdL_Loop`, `Run_FwdR_Loop` | generated from the forward run, same head lift |
+| Run, sideways and backwards (five directions) | `KRun_L/R/BwdL/Bwd/BwdR_Loop` (made for 4 m/s) | Kevin Iglesias, *Human Basic Motions FREE* (`Run01_Left/Right/BackwardLeft/Backward/BackwardRight`, in-place), retargeted unchanged. The hips turn into the run while the head stays forward. They replace three generated attempts (a jog-based skip, a walk whose feet crossed, a widened walk) that Alex found chaotic |
+| Sprint | `SprintUp_Loop` (made for 8.25 m/s) | Library 1's `Sprint_Loop` with the neck and head lifted 8 and 20 degrees |
 | Air | `Jump_Loop` | Library 1 |
 | Landing | `Jump_Land` | Library 1 |
 
-- **Licence:** the library is CC0 (public domain); nothing to credit.
+- **Licence:** the Quaternius library is CC0 (public domain); nothing to credit. **The Kevin Iglesias pack states no licence** on its page or in its download; the author told a commenter that a link to keviniglesias.com is enough credit. Until that is settled, treat its five clips as usable in the game but not cleared for redistribution in a public repository (Adam's call), and credit keviniglesias.com.
 - **How they were made:** retargeted onto `STDMC_Rigged.fbx`'s own skeleton in Blender with the `character-animation` skill, so each clip is plain bone animation that already fits this rig exactly.
 - **Why Generic and not Humanoid:** this model's origin is at its hips, not its feet. Unity's humanoid maths measures everything from the origin up, and with it the hips landed metres away. Generic clips are written to the bones as they are. For the same reason `PlayerAnimator` takes the humanoid avatar off the model's Animator on the first frame; the avatar is only needed at spawn, to find bones by name.
+- **Editing in Blender:** this model is 0.138 Blender units tall, so any edit given in metres (the skill's `style --width`, `pose --move`) has to be multiplied by about 0.077; rotations and factors are unaffected.
 - **Re-exporting:** the Blender armature has to have its scale applied (so `Armature` imports at scale 1, like the rig's own file) before export, or every bone is 100 times out. Import settings: Generic, no avatar, Preserve Hierarchy on, the rig's scale factor, Loop Time on every `_Loop` clip.
 
 ## Tuning
@@ -80,7 +83,17 @@ All in `DefaultAnimation.asset`.
 | Inspector value | What it does |
 |---|---|
 | Run clip speed / Sprint clip speed | The speed each clip's stride was made for. The legs speed up or slow down to cover the real distance. Lower = quicker legs; raise it if the feet skate. |
+| Side clip speed | How fast the legs step when moving sideways or backwards. At the default 6 a strafe at walking speed steps about one and a half times a second. Lower = quicker, busier steps that slide less. |
+| Head turn limit | How far you can look round with only the head and shoulders turning, in degrees either side, before the body follows. Standing only. |
+| Body turn speed | How fast the body turns to face the look once it follows, in degrees per second. |
 | Land full speed | How hard a landing has to be to play the whole crouch. An ordinary jump lands at about 9.7 m/s, so the default of 20 gives about half. Lower = deeper landings. |
+
+**Standing** header (two values are used with the clips):
+
+| Inspector value | What it does |
+|---|---|
+| Breath amount | How far the chest tips and the shoulders lift with each breath, in degrees. 0 = only what the idle clip has. Default 8, about 3 cm. |
+| Breath rate | Breaths per second. |
 
 **Ragdoll** header (the feel):
 
@@ -90,7 +103,7 @@ All in `DefaultAnimation.asset`.
 | Spine strength | The main wobble dial. Lower = the top half sways, lags and droops more. |
 | Air brace | How much harder every joint pulls in the air. 1 = a jump sprawls and tumbles; 2 = it holds its shape. |
 | Head strength | Lower = a heavier, lolling head. |
-| Arm strength | Lower = arms that trail and flail. |
+| Arm strength | Lower = arms that trail and flail. Raised from 13 to 20 when Alex asked for the arms a little less wobbly. |
 | Leg strength | Keep well above the others or the legs cannot keep up with the run. |
 | Joint damping | How long everything keeps swinging. 1 = stiff, 0.6 = swings past and settles, below 0.3 = flaps. |
 | Hips follow | How tightly the body is dragged after the player. Lower = it trails and sloshes. |
@@ -104,8 +117,9 @@ The headers marked "procedural pose only" do nothing while the clips are assigne
 
 - **Not judged by a person, and not seen in Play Mode.** It was checked by playing it on a hidden copy of the player in the Editor at 60 steps a second and reading the frames from the side and the front: standing start, steady run, stop, jump, strafe, idle. A recorded Play Mode run was attempted and did not complete (the recorder could not put the lobby into local test mode). Another player's view and frame cost with 8 players are unchecked.
 - **It follows the clips closely now.** In the preview the hips stay within about 2 degrees of the clip. If that reads as too stiff, lower Start stop carry and Spine strength before anything else.
-- **Sideways and backwards runs are generated, not captured.** Side steps read as a skip with a wide stance, and backwards is the forward run played in reverse, still leaning forward. Real strafe and back-pedal clips would be better.
-- **Feet slide when strafing.** The legs turn over at the forward run's rate in every direction, and a side step covers less ground.
+- **Sideways running turns the body.** In the side runs the hips and legs face the way he is travelling and the chest is half turned; only the head stays forward. From another player's view he runs side-on.
+- **Sideways and backward runs are made for 4 m/s** and are played faster to cover 6 (Side clip speed, now 5); some foot slide remains.
+- **Run directions snap to eight.** A gamepad stick held between two of them uses the nearer clip, so the feet can point up to about 30 degrees off the true direction.
 - **No turn-in-place, no crouch, no climb.** Mantling players use the air clip.
 - **It cannot fall over or lie on the floor.** The hips are always held up by their spring. A true free ragdoll on knock-out would need the motor to hand control over, which is netcode work.
 - **Joint limits are generic.** They are ordinary human ranges measured from the T-pose, not fitted to this character; the shoulders have none.

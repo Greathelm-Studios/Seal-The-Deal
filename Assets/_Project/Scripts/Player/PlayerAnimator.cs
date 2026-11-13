@@ -10,6 +10,11 @@
 //              sprint, air, landing) as the pose when the profile has them; Alex chose clips
 //              after the hand-written poses still read as "off". The procedural pose is kept
 //              as the fallback for a profile with an empty clip slot.
+//              2026-11-13 — breathing added on top of the idle clip, and run directions
+//              cross-fade instead of switching (Alex: "more prominent breathing", sideways
+//              legs "really chaotic and wobbly")
+//              2026-11-13 — standing, the head turns first and the body follows past a
+//              threshold (Alex: "move the head first, then body, like a threshold of rotation")
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Poses the player's humanoid skeleton every frame from how the body is moving,
 //              with no animation clips. Its own component, not part of PlayerMotor, because it
@@ -206,6 +211,9 @@ namespace CloseTheDeal.Player
         const int IdleInput = 0, RunInput = 1, SprintInput = RunInput + AnimationProfile.RunDirections,
             AirInput = SprintInput + 1, LandInput = AirInput + 1, InputCount = LandInput + 1;
 
+        /// <summary>Where the forward-going clips and one sideways clip sit in the profile's eight run directions (0 = forward, clockwise). The five sideways and backward clips are all one length, so any one of them gives it.</summary>
+        const int ForwardDirection = 0, ForwardRightDirection = 1, SideDirection = 2, ForwardLeftDirection = 7;
+
         /// <summary>Degrees between one run direction and the next.</summary>
         const float RunDirectionStep = 360f / AnimationProfile.RunDirections;
 
@@ -215,6 +223,59 @@ namespace CloseTheDeal.Player
         /// wherever the legs happened to be left by the last run. At 2% of a run nothing shows.
         /// </summary>
         const float StandingStride = 0.02f;
+
+        /// <summary>
+        /// How long the legs take to change from one run direction's clip to another's, seconds.
+        /// WHY: the direction of travel can flip in a frame (left to right on the keys). Switched
+        /// at once, the legs jump from one clip's pose to an unrelated one every reversal, which
+        /// is most of what read as chaotic sideways. About an eighth of a second is one footfall
+        /// at running cadence; longer and the feet visibly keep stepping the old way.
+        /// </summary>
+        const float RunDirectionBlendTime = 0.12f;
+
+        /// <summary>
+        /// How far past the halfway line between two run directions the travel has to swing
+        /// before the legs change clip, degrees. WHY the legs snap to one of the eight clips at
+        /// all, instead of mixing the two nearest by angle as this first did: the sideways and
+        /// backward clips are not in step with each other or with the forward ones, so a mix of
+        /// two is a pose neither has, and the measured direction of travel wanders a few degrees
+        /// every time the camera turns. That constant re-mixing was the wobble. WHY 10: wider
+        /// than that wander, narrower than the 22.5 degrees to the next clip's own middle.
+        /// </summary>
+        const float RunDirectionSlack = 10f;
+
+        /// <summary>
+        /// How long the body keeps its stride after the speed drops, seconds, before it starts
+        /// easing toward the stance. WHY: reversing direction takes the speed through zero for
+        /// about a fifth of a second (brake at 60 m/s², set off at 45). Without this the pose
+        /// went 57% of the way to the standing stance and back on every left-right flip; with it, 12%
+        /// (measured in the flip preview), which was the snap. The price is that a real stop
+        /// begins to settle this much later.
+        /// </summary>
+        const float StrideHoldTime = 0.2f;
+
+        /// <summary>
+        /// While the body is turned away from where the player is looking, the share of that
+        /// angle the upper chest turns back toward the look; the head makes up the rest, so the
+        /// face is always on the look. WHY 0.35: a head turned 50 degrees on square shoulders
+        /// reads as an owl; a real look round takes the shoulders a third of the way. Picked by eye.
+        /// </summary>
+        const float LookChestShare = 0.35f;
+
+        /// <summary>
+        /// Below this much stride and this much air the body counts as standing, and may lag
+        /// the look. Moving or airborne, it always turns to face the look. WHY 0.1: the run
+        /// clips are steered by the look direction, so a body left turned would run crab-wise;
+        /// a tenth of a stride is before the legs visibly move.
+        /// </summary>
+        const float StandingToLook = 0.1f;
+
+        /// <summary>
+        /// How a breath is shared out. Each of the two upper spine bones takes half the chest's
+        /// tip; the shoulders rise by this share of it; the head tips back down by all of it so
+        /// the face stays level. Picked by eye.
+        /// </summary>
+        const float BreathSpineShare = 0.5f, BreathShoulderShare = 1f;
 
         /// <summary>
         /// How much faster than recorded the landing clip plays. WHY 1.6: the clip takes 1.27 s
@@ -266,6 +327,8 @@ namespace CloseTheDeal.Player
 
         Transform _model;
         Bone _hips, _spine, _chest, _upperChest, _neck, _head;
+        /// <summary>The collar bones, which lift with each breath. Optional in a humanoid rig; null transforms if this one has none.</summary>
+        Bone _leftShoulder, _rightShoulder;
         Bone _leftUpperArm, _leftLowerArm, _rightUpperArm, _rightLowerArm;
         Bone _leftUpperLeg, _leftLowerLeg, _leftFoot, _rightUpperLeg, _rightLowerLeg, _rightFoot;
 
@@ -326,6 +389,19 @@ namespace CloseTheDeal.Player
         bool _usesClips;
         /// <summary>Seconds since the last touchdown, and how much of the landing clip that touchdown earned, 0–1.</summary>
         float _landTime, _landStrength;
+        /// <summary>How much of the run each direction's clip is showing, 0–1, summing to 1. Eased toward the direction of travel; starts as all forward.</summary>
+        readonly float[] _runShares = { 1f, 0f, 0f, 0f, 0f, 0f, 0f, 0f };
+        /// <summary>How far the body is turned from where the player is looking, degrees, positive to the right of the look. 0 once it has caught up.</summary>
+        float _bodyBehind;
+        /// <summary>Where the player was looking last frame, degrees round the compass.</summary>
+        float _lookYaw;
+        /// <summary>True from the moment the look passes the head's limit until the body has turned all the way to it.</summary>
+        bool _bodyTurning;
+        bool _lookStarted;
+        /// <summary>Which of the eight run clips the legs are on, 0 = forward, clockwise.</summary>
+        int _runDirection;
+        /// <summary>The stride the body is holding on to while the speed dips, 0–1, and for how long it has been dipping, seconds.</summary>
+        float _heldStride, _strideDip;
         /// <summary>Every bone of the skeleton, hips first, and where each sat relative to its parent in the T-pose. See <see cref="PoseFromClips"/> for why they are put back each frame.</summary>
         Transform[] _skeleton;
         Vector3[] _skeletonRestPositions;
@@ -355,6 +431,8 @@ namespace CloseTheDeal.Player
             _spine = Find(HumanBodyBones.Spine);
             _chest = Find(HumanBodyBones.Chest);
             _upperChest = Find(HumanBodyBones.UpperChest);
+            _leftShoulder = Find(HumanBodyBones.LeftShoulder);
+            _rightShoulder = Find(HumanBodyBones.RightShoulder);
             _neck = Find(HumanBodyBones.Neck);
             _head = Find(HumanBodyBones.Head);
             _leftUpperArm = Find(HumanBodyBones.LeftUpperArm);
@@ -478,7 +556,7 @@ namespace CloseTheDeal.Player
             bool onFloor = _motor.Grounded && _motor.State != MoveState.Mantling;
             UpdateWeights(dt, speed, sprint, onFloor);
             if (_usesClips)
-                PoseFromClips(sprint);
+                PoseFromClips(sprint, dt);
             else
                 Pose(sprint);
         }
@@ -535,7 +613,19 @@ namespace CloseTheDeal.Player
             // and stops dead, and every limb pops at both ends. This eases in and out.
             float ease = _profile.PoseBlendTime;
             float stride = Mathf.Clamp01(speed / _motor.Profile.WalkSpeed);
-            _moveWeight = Mathf.SmoothDamp(_moveWeight, stride, ref _moveWeightRate, ease, Mathf.Infinity, dt);
+            // With clips, a dip in speed shorter than the hold time does not shrink the stride.
+            if (stride >= _heldStride || !_usesClips)
+            {
+                _heldStride = stride;
+                _strideDip = 0f;
+            }
+            else
+            {
+                _strideDip += dt;
+                if (_strideDip > StrideHoldTime)
+                    _heldStride = stride;
+            }
+            _moveWeight = Mathf.SmoothDamp(_moveWeight, _heldStride, ref _moveWeightRate, ease, Mathf.Infinity, dt);
             _airWeight = Mathf.SmoothDamp(_airWeight, onFloor ? 0f : 1f, ref _airWeightRate, ease, Mathf.Infinity, dt);
             _knocked = Mathf.SmoothDamp(_knocked, _motor.State == MoveState.Knocked ? 1f : 0f, ref _knockedRate, ease, Mathf.Infinity, dt);
             _stagger = Mathf.MoveTowards(_stagger, 0f, dt / _profile.StaggerRecover);
@@ -550,6 +640,12 @@ namespace CloseTheDeal.Player
                     _profile.RunClipSpeed * _clipLengths[RunInput],
                     _profile.SprintClipSpeed * _clipLengths[SprintInput],
                     sprint * Mathf.Clamp01(_travel.z));
+                // Sideways and backwards have a step rate of their own. WHY: those clips are
+                // steps, not a run. Turned over at the run's rate they played 1.6 times faster
+                // than they were made, and in a recording of real play each foot swung 45 cm
+                // and lifted 26 cm two and a half times a second, which read as chaotic.
+                float forward = _runShares[ForwardDirection] + _runShares[ForwardRightDirection] + _runShares[ForwardLeftDirection];
+                ground = Mathf.Lerp(_profile.SideClipSpeed * _clipLengths[RunInput + SideDirection], ground, forward);
                 float matched = Mathf.Max(speed, SlowestCadence * _motor.Profile.WalkSpeed);
                 _phase = _moveWeight < StandingStride && stride < StandingStride
                     ? 0f
@@ -608,7 +704,8 @@ namespace CloseTheDeal.Player
         /// write the blend onto the skeleton.
         /// </summary>
         /// <param name="sprint">0 at walking speed or below, 1 at full sprint.</param>
-        void PoseFromClips(float sprint)
+        /// <param name="dt">Frame time, seconds.</param>
+        void PoseFromClips(float sprint, float dt)
         {
             float floor = 1f - _airWeight;
             // The landing: all of what the touchdown earned until the bottom of the crouch, then
@@ -624,23 +721,29 @@ namespace CloseTheDeal.Player
             float sprinting = moving * sprint * Mathf.Clamp01(_travel.z);
             float running = moving - sprinting;
 
-            // The two run directions either side of the way the feet are travelling.
-            float sector = Mathf.Repeat(Mathf.Atan2(_travel.x, _travel.z) * Mathf.Rad2Deg / RunDirectionStep, AnimationProfile.RunDirections);
-            int from = (int)sector % AnimationProfile.RunDirections;
-            int to = (from + 1) % AnimationProfile.RunDirections;
-            float toShare = sector - Mathf.Floor(sector);
+            // The one run direction nearest the way the feet are travelling. It only changes
+            // once the travel has swung clearly past the halfway line to the next.
+            float heading = Mathf.Atan2(_travel.x, _travel.z) * Mathf.Rad2Deg;
+            if (Mathf.Abs(Mathf.DeltaAngle(_runDirection * RunDirectionStep, heading)) > RunDirectionStep * 0.5f + RunDirectionSlack)
+                _runDirection = Mathf.RoundToInt(Mathf.Repeat(heading, 360f) / RunDirectionStep) % AnimationProfile.RunDirections;
 
             _mixer.SetInputWeight(IdleInput, ground - moving);
+            // Each direction's share eases toward all or nothing, so a change of direction
+            // cross-fades straight from one clip to the other. Every stride clip sits at the same
+            // point of its cycle, whatever its length.
+            float ease = 1f - Mathf.Exp(-dt / RunDirectionBlendTime);
             for (int i = 0; i < AnimationProfile.RunDirections; i++)
-                _mixer.SetInputWeight(RunInput + i, i == from ? running * (1f - toShare) : i == to ? running * toShare : 0f);
+            {
+                float wanted = i == _runDirection ? 1f : 0f;
+                _runShares[i] += (wanted - _runShares[i]) * ease;
+                _mixer.SetInputWeight(RunInput + i, running * _runShares[i]);
+                _clips[RunInput + i].SetTime(_phase * _clipLengths[RunInput + i]);
+            }
             _mixer.SetInputWeight(SprintInput, sprinting);
             _mixer.SetInputWeight(AirInput, _airWeight);
             _mixer.SetInputWeight(LandInput, land);
 
-            // Every stride clip sits at the same point of its cycle, whatever its length.
             _clips[IdleInput].SetTime(Mathf.Repeat(_time, _clipLengths[IdleInput]));
-            _clips[RunInput + from].SetTime(_phase * _clipLengths[RunInput + from]);
-            _clips[RunInput + to].SetTime(_phase * _clipLengths[RunInput + to]);
             _clips[SprintInput].SetTime(_phase * _clipLengths[SprintInput]);
             _clips[AirInput].SetTime(Mathf.Repeat(_time, _clipLengths[AirInput]));
             _clips[LandInput].SetTime(landAt);
@@ -652,6 +755,104 @@ namespace CloseTheDeal.Player
             for (int i = 0; i < _skeleton.Length; i++)
                 _skeleton[i].SetLocalPositionAndRotation(_skeletonRestPositions[i], _skeletonRestRotations[i]);
             _graph.Evaluate();
+            TurnHeadFirst(dt);
+            Breathe(ground - moving);
+        }
+
+        /// <summary>
+        /// Lets the head lead a look round: standing, the body stays where it was while the head
+        /// and shoulders follow the look, and only once the look has gone past the head's limit
+        /// does the body turn to face it.
+        /// </summary>
+        /// <param name="dt">Frame time, seconds.</param>
+        /// <remarks>
+        /// <para>
+        /// The model itself always faces the look (the motor turns it, and that is not this
+        /// component's to change), so the lag is put on the skeleton: the hips are turned back by
+        /// however far the body is behind, and the upper chest and head are turned forward again
+        /// by the same amount between them. Nothing here moves the player or the camera.
+        /// </para>
+        /// <para>
+        /// Once the limit is passed the body turns the whole way, not just back inside the
+        /// limit. WHY: stopping at the limit leaves him standing with his head cranked round for
+        /// as long as the player keeps looking that way; a person shuffles round to face it.
+        /// </para>
+        /// </remarks>
+        void TurnHeadFirst(float dt)
+        {
+            float look = _model.eulerAngles.y;
+            if (!_lookStarted)
+            {
+                _lookStarted = true;
+                _lookYaw = look;
+            }
+            // The body stays put in the world, so a turn of the look leaves it that much behind.
+            _bodyBehind = Mathf.DeltaAngle(look, _lookYaw + _bodyBehind);
+            _lookYaw = look;
+
+            bool standing = _moveWeight < StandingToLook && _airWeight < StandingToLook;
+            if (!standing || Mathf.Abs(_bodyBehind) > _profile.HeadTurnLimit)
+                _bodyTurning = true;
+            if (_bodyTurning)
+            {
+                _bodyBehind = Mathf.MoveTowards(_bodyBehind, 0f, _profile.BodyTurnSpeed * dt);
+                _bodyTurning = _bodyBehind != 0f;
+            }
+            if (_bodyBehind == 0f)
+                return;
+
+            Vector3 up = _model.up, feet = _model.position;
+            Quaternion back = Quaternion.AngleAxis(_bodyBehind, up);
+            // The whole skeleton hangs from the hips, so this turns all of it about the feet.
+            _hips.T.SetPositionAndRotation(feet + back * (_hips.T.position - feet), back * _hips.T.rotation);
+            float chest = _upperChest.T != null ? LookChestShare : 0f;
+            if (_upperChest.T != null)
+                _upperChest.T.rotation = Quaternion.AngleAxis(-_bodyBehind * chest, up) * _upperChest.T.rotation;
+            _head.T.rotation = Quaternion.AngleAxis(-_bodyBehind * (1f - chest), up) * _head.T.rotation;
+        }
+
+        /// <summary>
+        /// Adds a breath on top of the pose the clips just wrote: the chest tips back and up, the
+        /// shoulders lift, and the head stays level, then it all comes back down.
+        /// </summary>
+        /// <param name="standing">How much of the pose is the idle, 0–1. Breathing fades out with it.</param>
+        /// <remarks>
+        /// WHY in code and not in the clip: the library idle breathes by a degree or so, which
+        /// the ragdoll all but swallows, and how visible a breath should be is a matter of
+        /// taste. Here it is two Inspector values (Breath Amount, Breath Rate) that can be tuned
+        /// while playing. The alternative, exaggerating the clip in Blender, needs a re-export
+        /// for every change.
+        /// </remarks>
+        void Breathe(float standing)
+        {
+            // Positive while breathing in.
+            float breath = _profile.BreathAmount * standing * Mathf.Sin(_time * _profile.BreathRate * 2f * Mathf.PI);
+            if (breath == 0f)
+                return;
+
+            Vector3 across = _model.right, ahead = _model.forward;
+            // Turning about the model's right tips a bone forward, so breathing in is a negative turn.
+            Quaternion spine = Quaternion.AngleAxis(-breath * BreathSpineShare, across);
+            if (_chest.T != null) _chest.T.rotation = spine * _chest.T.rotation;
+            if (_upperChest.T != null) _upperChest.T.rotation = spine * _upperChest.T.rotation;
+
+            // The collar bones lift, and each arm turns back by as much so it still hangs straight
+            // down from the raised shoulder. The model's left is its -X: a negative turn about its
+            // forward axis lifts the left side, a positive one the right.
+            float lift = breath * BreathShoulderShare;
+            if (_leftShoulder.T != null)
+            {
+                _leftShoulder.T.rotation = Quaternion.AngleAxis(-lift, ahead) * _leftShoulder.T.rotation;
+                _leftUpperArm.T.rotation = Quaternion.AngleAxis(lift, ahead) * _leftUpperArm.T.rotation;
+            }
+            if (_rightShoulder.T != null)
+            {
+                _rightShoulder.T.rotation = Quaternion.AngleAxis(lift, ahead) * _rightShoulder.T.rotation;
+                _rightUpperArm.T.rotation = Quaternion.AngleAxis(-lift, ahead) * _rightUpperArm.T.rotation;
+            }
+
+            // The head rode back with the chest; tip it forward again so the face stays put.
+            _head.T.rotation = Quaternion.AngleAxis(breath, across) * _head.T.rotation;
         }
 
         /// <summary>Writes this frame's procedural pose onto the skeleton, parents before children. Used when the profile has no clips.</summary>

@@ -54,7 +54,7 @@ namespace CloseTheDeal.Player
         [Tooltip("Standing still. Loops.")]
         public AnimationClip IdleClip;
 
-        [Tooltip("The run in eight directions with the body facing forward, clockwise seen from above: forward, forward-right, right, back-right, back, back-left, left, forward-left. All must loop, be the same length and start on the same foot.")]
+        [Tooltip("The run in eight directions with the body facing forward, clockwise seen from above: forward, forward-right, right, back-right, back, back-left, left, forward-left. All must loop and start on the same foot; they may be different lengths.")]
         public AnimationClip[] RunClips = new AnimationClip[RunDirections];
 
         [Tooltip("The flat-out forward sprint. Loops, and starts on the same foot as the run.")]
@@ -71,6 +71,15 @@ namespace CloseTheDeal.Player
 
         [Tooltip("The same for the sprint clip, in metres per second.")]
         [Range(2f, 14f)] public float SprintClipSpeed = 8.25f;
+
+        [Tooltip("How fast the legs step when moving sideways or backwards: the speed across the floor, in metres per second, at which those clips play at the rate they were made. At 6 a strafe at walking speed steps about one and a half times a second, calmly, and the feet slide. Lower = quicker, busier steps that slide less; 3.7 was the old rate.")]
+        [Range(1f, 12f)] public float SideClipSpeed = 6f;
+
+        [Tooltip("How far you can look round, in degrees either side, with only the head and shoulders turning. Past this the body turns to face where you are looking. Lower = the body follows almost at once; higher = he looks further over his shoulder first. Only while standing: moving or in the air, the body always faces the look.")]
+        [Range(0f, 90f)] public float HeadTurnLimit = 50f;
+
+        [Tooltip("How fast the body turns to face the look once it follows, in degrees per second. Lower = a slow shuffle round; higher = a snap.")]
+        [Range(60f, 1080f)] public float BodyTurnSpeed = 300f;
 
         [Tooltip("Falling speed at touchdown, in metres per second, that plays the whole landing crouch. Slower landings sink in proportion. A 1.6 m jump lands at about 9.7, so at 20 an ordinary jump sinks about halfway. Lower = deeper landings.")]
         [Range(3f, 40f)] public float LandFullSpeed = 20f;
@@ -116,10 +125,10 @@ namespace CloseTheDeal.Player
         [Tooltip("How far the hips sit below their straight-legged height while standing, in metres, so the knees are soft. Higher = a deeper, readier stance.")]
         [Range(0f, 0.2f)] public float HipDrop = 0.04f;
 
-        [Tooltip("How far the chest rocks, and the arms rise and fall, with each breath while standing, in degrees. 0 = a statue.")]
-        [Range(0f, 6f)] public float BreathAmount = 2.2f;
+        [Tooltip("How far the chest tips back and the shoulders lift with each breath while standing, in degrees. 0 = no breathing beyond what the idle clip has. Used with the clips as well as with the procedural pose.")]
+        [Range(0f, 10f)] public float BreathAmount = 8f;
 
-        [Tooltip("Breaths per second while standing.")]
+        [Tooltip("Breaths per second while standing. 0.27 is about 16 a minute, a body at rest. Used with the clips as well as with the procedural pose.")]
         [Range(0.05f, 1f)] public float BreathRate = 0.27f;
 
         [Tooltip("How far the hips drift from side to side while standing, in metres each way. The feet stay put.")]
@@ -204,7 +213,7 @@ namespace CloseTheDeal.Player
         [Range(0.5f, 40f)] public float HeadStrength = 14f;
 
         [Tooltip("How strongly the shoulder and elbow motors pull the arms to their pose, in swings per second. Lower = arms that trail, flail and swing wide.")]
-        [Range(0.5f, 40f)] public float ArmStrength = 13f;
+        [Range(0.5f, 40f)] public float ArmStrength = 20f;
 
         [Tooltip("How strongly the hip and knee motors pull the legs through their stride, in swings per second. Keep this well above the others or the legs cannot keep up with the run.")]
         [Range(1f, 40f)] public float LegStrength = 26f;

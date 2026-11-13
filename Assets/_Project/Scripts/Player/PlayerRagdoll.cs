@@ -7,6 +7,7 @@
 //              look at TABS, gang beast"
 //  Modified  : Claude Fable 5.2, 2026-11-12 — the body is carried along with part of the
 //              player's acceleration (Alex: setting off and stopping "too floppy / wobbly")
+//              2026-11-13 — the neck keeps the pose's own bend (Alex: the idle "has a hunch")
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Gives the player a body made of real rigidbodies and joints that is driven
 //              toward the pose PlayerAnimator writes, and shows that body instead of the pose.
@@ -126,6 +127,15 @@ namespace CloseTheDeal.Player
         const float KneeStraight = 5f, KneeBent = 150f, ElbowStraight = 5f, ElbowBent = 155f, HingeSlack = 20f;
         const float SpineBend = 50f, NeckBend = 55f, HipSwing = 120f, HipTwist = 45f, HipSpread = 55f;
 
+        /// <summary>
+        /// How far the head may turn left or right of the chest part, degrees. WHY so much more
+        /// than a real neck's 80: the chest part is the lowest spine bone, and in the sideways
+        /// run that bone is turned about 90 degrees into the run while the clip keeps the face
+        /// forward, the turn being spread up the spine and neck above it. At the 55 this shared
+        /// with nodding, the head was dragged round with the body (seen in the strafe preview).
+        /// </summary>
+        const float NeckTurn = 120f;
+
         [Header("References")]
         [Tooltip("Tuning for how strongly the ragdoll is pulled to its pose. Read at runtime, never written.")]
         [SerializeField] AnimationProfile _profile;
@@ -162,9 +172,8 @@ namespace CloseTheDeal.Player
 
         readonly Part[] _parts = new Part[PartCount];
         GameObject _root;
+        /// <summary>The neck is not a part: like the upper spine, it keeps the bend the pose gave it on top of the chest part, and the head part hinges on it.</summary>
         Transform _neck, _leftFoot, _rightFoot;
-        /// <summary>T-pose local rotation of the neck, which this component puts back to rest each frame: it moves rigidly with the chest part, and the head part hinges on it.</summary>
-        Quaternion _neckRest;
         float _totalMass;
         Vector3 _hipsTargetWas;
         Vector3 _hipsTargetSpeed;
@@ -212,7 +221,6 @@ namespace CloseTheDeal.Player
             _rightFoot = Bone(HumanBodyBones.RightFoot);
             Transform leftHand = Bone(HumanBodyBones.LeftHand), rightHand = Bone(HumanBodyBones.RightHand);
 
-            if (_neck != null) _neckRest = _neck.localRotation;
 
             _root = new GameObject("Ragdoll");
             var slippery = new PhysicsMaterial("Ragdoll")
@@ -252,7 +260,8 @@ namespace CloseTheDeal.Player
             Hinge(LeftLowerArm, up, forward, ElbowStraight, ElbowBent, false);
             Hinge(RightLowerArm, up, forward, ElbowStraight, ElbowBent, true);
             Ball(Chest, SpineBend, SpineBend, SpineBend);
-            Ball(Head, NeckBend, NeckBend, NeckBend);
+            // A Mixamo head bone's own Y runs up through the skull, so Y is the turn.
+            Ball(Head, NeckBend, NeckTurn, NeckBend);
             Ball(LeftUpperLeg, HipSwing, HipTwist, HipSpread);
             Ball(RightUpperLeg, HipSwing, HipTwist, HipSpread);
 
@@ -579,9 +588,9 @@ namespace CloseTheDeal.Player
             for (int i = 1; i < PartCount; i++)
             {
                 ref Part part = ref _parts[i];
-                // The neck rides rigidly on the chest part; the head part hinges on it.
-                if (i == Head && _neck != null)
-                    _neck.localRotation = _neckRest;
+                // WHY the neck is left alone here: it used to be put back to its T-pose angle
+                // every frame, which threw away the pose's neck. A head held up on a neck left
+                // pointing straight out of the chest read as a hunch.
                 part.Bone.rotation = Quaternion.Slerp(part.WasRotation, part.Body.rotation, blend);
             }
 
