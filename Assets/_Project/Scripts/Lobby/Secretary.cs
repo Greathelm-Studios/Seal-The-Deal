@@ -74,6 +74,7 @@ namespace CloseTheDeal.Lobby
             _roster.OnFirmChosen += OnFirmChosen;
             _roster.OnFirmRefused += OnFirmRefused;
             _roster.OnStartBlocked += OnStartBlocked;
+            ReceptionDesk.OnConfirmArmed += OnConfirmArmed;
             _roster.OnRunStarting += OnRunStarting;
         }
 
@@ -84,6 +85,7 @@ namespace CloseTheDeal.Lobby
             _roster.OnFirmChosen -= OnFirmChosen;
             _roster.OnFirmRefused -= OnFirmRefused;
             _roster.OnStartBlocked -= OnStartBlocked;
+            ReceptionDesk.OnConfirmArmed -= OnConfirmArmed;
             _roster.OnRunStarting -= OnRunStarting;
         }
 
@@ -98,17 +100,19 @@ namespace CloseTheDeal.Lobby
         void OnFirmChosen(int firm) => Say(SecretaryMoment.FirmChosen, LocalName(), firm);
         void OnFirmRefused(int firm) => Say(SecretaryMoment.FirmRefused, LocalName(), firm);
         void OnStartBlocked(StartBlock block) => Say(SecretaryMoment.StartBlocked, LocalName(), 0);
+        // The short-handed lines are ordered: the first for an empty firm, the second for uneven firms.
+        void OnConfirmArmed(StartBlock block) => Say(SecretaryMoment.ShortHanded, LocalName(), _roster.SmallerFirm(), block == StartBlock.NeedBothFirms ? 0 : 1);
         void OnRunStarting() => Say(SecretaryMoment.Start, LocalName(), 0);
 
         string LocalName() => _roster != null && _roster.TryGetLocal(out LobbyMember me) ? me.Name : string.Empty;
 
-        void Say(SecretaryMoment moment, string name, int firm)
+        void Say(SecretaryMoment moment, string name, int firm, int fixedPick = -1)
         {
             string[] options = _lines != null ? _lines.For(moment) : null;
             if (options == null || options.Length == 0)
                 return;
 
-            int pick = UnityEngine.Random.Range(0, options.Length);
+            int pick = fixedPick >= 0 && fixedPick < options.Length ? fixedPick : UnityEngine.Random.Range(0, options.Length);
             if (options.Length > 1 && moment == _lastMoment && pick == _lastPick)
                 pick = (pick + 1) % options.Length; // Never the same line twice running.
             _lastPick = pick;

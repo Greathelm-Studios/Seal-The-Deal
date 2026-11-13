@@ -45,6 +45,7 @@ namespace CloseTheDeal.Lobby
         LobbyRoster _roster;
         LobbyInteractor _interactor;
         readonly StringBuilder _builder = new(256);
+        readonly StringBuilder _names = new(96);
         string _shownPrompt;
         float _shownFill = -2f;
         float _subtitleUntil = -1f;
@@ -129,7 +130,7 @@ namespace CloseTheDeal.Lobby
                 _firmLists[firm].text = _builder.ToString();
             }
 
-            _status.text = StatusLine(rules);
+            _status.text = StatusLine(rules, haveMe, me);
         }
 
         void AppendRow(LobbyMember member, bool isMe)
@@ -153,24 +154,56 @@ namespace CloseTheDeal.Lobby
             }
         }
 
-        string StatusLine(LobbyRules rules)
+        /// <summary>The guidance line: what the local player should do next and who is being waited on. Built on roster changes only.</summary>
+        string StatusLine(LobbyRules rules, bool haveMe, LobbyMember me)
         {
-            switch (_roster.WhyNotStart())
+            if (!haveMe)
+                return "Joining reception.";
+
+            LobbyStep step = _roster.StepFor(me, _roster.IsLocalHost);
+            switch (step)
             {
-                case StartBlock.RunInProgress:
-                    return "The run has started.";
-                case StartBlock.NeedBothFirms:
-                    return "Each firm needs at least one person. Sign in at a firm's stand.";
-                case StartBlock.Unbalanced:
-                    int smaller = _roster.FirmSize(0) < _roster.FirmSize(1) ? 0 : 1;
-                    return "The firms are uneven. Someone should sign in with " + rules.FirmName(smaller) + ".";
-                case StartBlock.NotAllReady:
-                    return _roster.ReadyCount + " of " + _roster.Count + " ready. Ready up at the reception desk.";
+                case LobbyStep.Fitting:
+                    return "You are in the fitting room. Keep the outfit or put it back to continue.";
+                case LobbyStep.ReadyUp:
+                    return "You are with " + rules.FirmName(me.Firm) + ". Ready up at the reception desk. To change firm, use a sign-in stand.";
+                case LobbyStep.WaitForOthers:
+                    return "Ready. Waiting for " + NotReadyNames() + ".";
+                case LobbyStep.StartRun:
+                    return "Everyone is ready. Hold F at the desk to start the run.";
+                case LobbyStep.StartShortHanded:
+                    return ShortHandedLine(rules);
+                case LobbyStep.WaitForHost:
+                    return "Everyone is ready. Waiting for the host to start the run.";
                 default:
-                    return _roster.IsLocalHost
-                        ? "Everyone is ready. Hold F at the desk to start the run."
-                        : "Everyone is ready. Waiting for the host to start the run.";
+                    return "The run has started.";
             }
+        }
+
+        string ShortHandedLine(LobbyRules rules)
+        {
+            StartBlock problem = _roster.FirmProblem();
+            string why = problem == StartBlock.NeedBothFirms
+                ? rules.FirmName(_roster.SmallerFirm()) + " has nobody"
+                : "The firms are uneven";
+            return "Everyone is ready. " + why + ", but you can still start: hold F at the desk, then hold it again to confirm.";
+        }
+
+        /// <summary>"A, B and C": the players who have not readied up yet (or are in the fitting room).</summary>
+        string NotReadyNames()
+        {
+            _names.Clear();
+            for (int i = 0; i < _roster.Count; i++)
+            {
+                if (_roster[i].State != MemberState.Ready)
+                {
+                    if (_names.Length > 0)
+                        _names.Append(", ");
+                    _names.Append(_roster[i].Name);
+                }
+            }
+
+            return _names.Length > 0 ? _names.ToString() : "the others";
         }
 
         // ---- Prompt --------------------------------------------------------------------------

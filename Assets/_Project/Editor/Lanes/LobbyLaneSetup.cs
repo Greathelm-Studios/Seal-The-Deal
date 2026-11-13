@@ -181,7 +181,7 @@ namespace CloseTheDeal.Editor.Lanes
             if (slot != null)
                 return slot;
             slot = ScriptableObject.CreateInstance<OutfitSlot>();
-            slot.EditorInit(s.DisplayName, s.Materials, options, 0);
+            slot.EditorInit(s.DisplayName, s.Materials, options, 0, s.ViewAngle, s.ViewDistance, s.ViewHeight);
             AssetDatabase.CreateAsset(slot, path);
             return slot;
         }
@@ -210,6 +210,7 @@ namespace CloseTheDeal.Editor.Lanes
         {
             public string Key, DisplayName;
             public string[] Materials;
+            public float ViewAngle, ViewDistance, ViewHeight;
             public OptionSpec[] Options;
         }
 
@@ -220,7 +221,7 @@ namespace CloseTheDeal.Editor.Lanes
         {
             new StdmcSlot
             {
-                Key = "Suit", DisplayName = "Suit", Materials = new[] { "STDMC_lambert4_Toon" },
+                Key = "Suit", DisplayName = "Suit", ViewAngle = 30f, ViewDistance = 2.5f, ViewHeight = 0.95f, Materials = new[] { "STDMC_lambert4_Toon" },
                 Options = new[]
                 {
                     new OptionSpec("Charcoal", Hex(0x2C2B2C), 0),
@@ -233,7 +234,7 @@ namespace CloseTheDeal.Editor.Lanes
             },
             new StdmcSlot
             {
-                Key = "Shirt", DisplayName = "Shirt", Materials = new[] { "STDMC_lambert5_Toon" },
+                Key = "Shirt", DisplayName = "Shirt", ViewAngle = -25f, ViewDistance = 1.7f, ViewHeight = 1.3f, Materials = new[] { "STDMC_lambert5_Toon" },
                 Options = new[]
                 {
                     new OptionSpec("White", Hex(0xFFFFFF), 0),
@@ -244,7 +245,7 @@ namespace CloseTheDeal.Editor.Lanes
             },
             new StdmcSlot
             {
-                Key = "Belt", DisplayName = "Belt", Materials = new[] { "STDMC_lambert6_Toon" },
+                Key = "Belt", DisplayName = "Belt", ViewAngle = 55f, ViewDistance = 1.8f, ViewHeight = 0.95f, Materials = new[] { "STDMC_lambert6_Toon" },
                 Options = new[]
                 {
                     new OptionSpec("Brown leather", Hex(0x6C523C), 0),
@@ -290,6 +291,11 @@ namespace CloseTheDeal.Editor.Lanes
                 {
                     "Not everyone has signed in yet. Check the board.",
                     "I can't start without everyone. Check the board."
+                },
+                shortHanded: new[]
+                {
+                    "{firm} has nobody. That is permitted. Hold again to proceed.",
+                    "The firms are not balanced. I will record that you were told. Hold again to proceed."
                 },
                 start: new[]
                 {
@@ -433,6 +439,7 @@ namespace CloseTheDeal.Editor.Lanes
             var view = model.GetComponent<OutfitView>() ?? model.gameObject.AddComponent<OutfitView>();
             var so = new SerializedObject(view);
             so.FindProperty("_catalog").objectReferenceValue = AssetDatabase.LoadAssetAtPath<OutfitCatalog>(CatalogPath);
+            so.FindProperty("_motionPivot").objectReferenceValue = model; // The model's own root takes the change bob.
             SetRenderers(so.FindProperty("_bodies"), model.GetComponentsInChildren<Renderer>(true));
             so.ApplyModifiedPropertiesWithoutUndo();
             return view;
@@ -762,6 +769,11 @@ namespace CloseTheDeal.Editor.Lanes
             for (int i = 0; i < dress.Length; i++)
                 wears.GetArrayElementAtIndex(i).intValue = dress[i];
             viewSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var idle = seat.gameObject.AddComponent<SecretaryIdle>();
+            var idleSo = new SerializedObject(idle);
+            idleSo.FindProperty("_profile").objectReferenceValue = AssetDatabase.LoadAssetAtPath<CloseTheDeal.Player.AnimationProfile>("Assets/_Project/Profiles/DefaultAnimation.asset");
+            idleSo.ApplyModifiedPropertiesWithoutUndo();
 
             var secretary = seat.gameObject.AddComponent<Secretary>();
             var so = new SerializedObject(secretary);

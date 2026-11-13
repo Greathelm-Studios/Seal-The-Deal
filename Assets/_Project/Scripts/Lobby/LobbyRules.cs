@@ -22,6 +22,13 @@ namespace CloseTheDeal.Lobby
         [Tooltip("Tick to need at least one player in each firm before the run can start. Untick only for solo testing: a one-firm run has nobody across the gap.")]
         [SerializeField] bool _requireBothFirms = true;
 
+        [Header("Starting short-handed (proposal for the owner)")]
+        [Tooltip("Tick to let the host start once everyone is ready even when a firm is empty or the firms are uneven, after a second hold at the desk to confirm. Untick and the run waits until both firms have players within the limit above. Ticked is what lets one person start a test run alone.")]
+        [SerializeField] bool _allowShortHandedStart = true;
+
+        [Tooltip("How long the host has to confirm a short-handed start with a second hold, in seconds, before the confirm is dropped and the first hold has to be repeated.")]
+        [Range(2f, 15f)] [SerializeField] float _confirmSeconds = 6f;
+
         [Header("Start")]
         [Tooltip("How long the host holds the button at the desk to start the run, in seconds. Holding stops an accidental start; 1 s feels deliberate, above 2 s feels sluggish.")]
         [Range(0.2f, 3f)] [SerializeField] float _startHoldSeconds = 1f;
@@ -62,6 +69,8 @@ namespace CloseTheDeal.Lobby
         }
         public int MaxImbalance => _maxImbalance;
         public bool RequireBothFirms => _requireBothFirms;
+        public bool AllowShortHandedStart => _allowShortHandedStart;
+        public float ConfirmSeconds => _confirmSeconds;
         public float StartHoldSeconds => _startHoldSeconds;
         public float InteractRange => _interactRange;
         public float InteractAim => _interactAim;
