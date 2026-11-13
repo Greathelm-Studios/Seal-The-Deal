@@ -254,12 +254,14 @@ namespace CloseTheDeal.Editor.Greybox
 
             Rule(card.transform);
             TMP_Text controls = Label(card.transform, "Controls",
-                "<b>WASD</b> move    <b>Shift</b> sprint    <b>Space</b> jump    <b>Mouse</b> look\n" +
-                "<b>Left click</b> blast, aimed at the crosshair\n" +
-                "<b>Climb</b> jump at a ledge and keep holding forward    <b>Esc</b> menu",
+                "<b>WASD</b> move    <b>Shift</b> sprint    <b>Mouse</b> look    <b>Q / E</b> lean\n" +
+                "<b>Space</b> jump, hold to keep hopping    <b>Space at a ledge</b> climb\n" +
+                "<b>Ctrl or C</b> crouch; at a run, slide    <b>Left click</b> blast    <b>Esc</b> menu\n" +
+                "<b>Pad</b>  sticks move and look    <b>A</b> jump    <b>B</b> crouch    <b>L3</b> sprint\n" +
+                "<b>LB / RB</b> lean    <b>RT</b> blast    <b>Start</b> menu",
                 17, Muted);
             controls.lineSpacing = 12f;
-            Row(controls, 84f);
+            Row(controls, 140f);
             return menu;
         }
 
