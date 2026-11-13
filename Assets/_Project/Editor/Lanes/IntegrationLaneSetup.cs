@@ -200,7 +200,7 @@ namespace CloseTheDeal.Editor.Lanes
         {
             LobbyLaneSetup.EnsureFolders();
             OutfitCatalog catalog = LobbyLaneSetup.EnsureCatalog();
-            LobbyLaneSetup.EnsureAsset<LobbyRules>(LobbyLaneSetup.RulesPath, null);
+            LobbyLaneSetup.EnsureRules();
             LobbyLaneSetup.EnsureAsset<SecretaryLines>(LobbyLaneSetup.LinesPath, LobbyLaneSetup.FillLines);
             GameObject character = LobbyLaneSetup.EnsureCharacterPrefab(catalog);
             LobbyLaneSetup.PatchPlayerPrefab(character);

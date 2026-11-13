@@ -67,17 +67,17 @@ Late joiners get everyone's outfit with each player's spawn.
 - Scripts: [Assets/_Project/Scripts/Customisation/](../../Assets/_Project/Scripts/Customisation/) (`PlayerOutfit`, `OutfitView`, `OutfitLoadout`, `OutfitSave`, `OutfitCatalog`, `OutfitSlot`, `OutfitOption`, `FittingRoom`, `FittingRoomScreen`, `FittingRoomMirror`).
 - Prefab: `Assets/_Project/Prefabs/Lobby/OutfitCharacter.prefab` (STDMC fitted to 1.8 m, feet at 0, facing +Z, under a `Fit` pivot the bob scales). **Set Up Lobby** puts it on `Player.prefab` under `Graphics/Lean` at y −0.9 and turns off the greybox capsule and nose renderers.
 
-## When Alex's rigged character arrives
+## The rigged character (now in the branch)
 
-- Replace the `STDMC_Toon` instance inside `OutfitCharacter.prefab` (or point **Set Up Lobby** at the new prefab path) and re-run the menu.
-- Each category points at **materials by name** (`STDMC_lambert4_Toon` and so on), found on the body renderer at run time. A rigged model that keeps those material names needs nothing; a new naming needs `Slot_*.asset` updated (render each material highlighted, as was done for STDMC, to see which is which).
-- If `Player.prefab` already has a real character at `Graphics/Lean/Body` (as Alex's player build does), **Set Up Lobby** puts `OutfitView` on that object and adds no second figure and hides nothing. That path is written but **not run**: this branch's Player.prefab only has the greybox capsule.
+- `OutfitCharacter.prefab` (the secretary, and the greybox player) is rebuilt from `STDMC_Toon` each time **Set Up Lobby** runs, measured from all its renderers together, so a changed model needs only a re-run.
+- Each category points at **materials by name** (`STDMC_lambert4_Toon` and so on), found on the body's renderers at run time (the rigged model is split into several meshes; `OutfitView` lists them all). A rigged model that keeps those material names needs nothing; a new naming needs `Slot_*.asset` updated (render each material highlighted, as was done for STDMC, to see which is which).
+- If `Player.prefab` already has a real character at `Graphics/Lean/Body` (as Alex's player build does), **Set Up Lobby** puts `OutfitView` on that object and adds no second figure and hides nothing. **Seen** on the merged player build (recolouring suit and shirt on the animated model in the fitting room).
 - Parts that are separate meshes (hair, eyewear) become show/hide categories: that needs one small addition to `OutfitView` (enable one child per choice), not done here because no such parts exist yet.
 - What the owner's categories need from the art: see [HANDOVER_lobby.md](../HANDOVER_lobby.md).
 
 ## Known limitations
 
-- **Static mesh.** The character slides along the floor when walking and stands in a T-pose; it waits on the rig.
+- **The secretary figure has no animator** (T-pose). Players use Alex's animated rig.
 - **Suit and trousers can't differ**, and **hair and shoes are one material**, so trousers, shoes and hair categories aren't shipped.
 - Mouse clicking on the form doesn't work: the cursor stays captured, because a free cursor means the game menu is open (`GameMenu`). Keys, pad and mouse movement do.
 - Skin tone is not a category: the bible has no skin palette yet (CHARACTER_SHADER.md).

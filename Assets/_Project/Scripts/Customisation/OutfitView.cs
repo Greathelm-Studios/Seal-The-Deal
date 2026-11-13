@@ -15,8 +15,8 @@ namespace CloseTheDeal.Customisation
         [Tooltip("The outfit choices this character can wear.")]
         [SerializeField] OutfitCatalog _catalog;
 
-        [Tooltip("The character's body mesh, whose material list the outfit slots point into.")]
-        [SerializeField] Renderer _body;
+        [Tooltip("Every renderer that draws the character's body: one for a single-mesh model, several where the model is split into parts. Materials are matched by name across all of them.")]
+        [SerializeField] Renderer[] _bodies = new Renderer[0];
 
         [Tooltip("What bobs when the outfit changes. Leave empty for no motion. Must be a child made for this, never the body's own placed transform.")]
         [SerializeField] Transform _motionPivot;
@@ -37,18 +37,26 @@ namespace CloseTheDeal.Customisation
         static readonly int ContourColourId = Shader.PropertyToID("_OutlineColor");
 
         MaterialPropertyBlock _block;
-        int[][] _materialIndices;
+        Target[][] _targets;
+        ShadowCastingMode[] _savedShadows;
+        bool[] _savedRenderingOff;
+
+        /// <summary>One material slot on one body renderer.</summary>
+        readonly struct Target
+        {
+            public readonly int Renderer;
+            public readonly int Material;
+            public Target(int renderer, int material) { Renderer = renderer; Material = material; }
+        }
         OutfitLoadout _shown;
         bool _hasShown;
         float _bobTime = -1f;
         Vector3 _pivotRest = Vector3.one;
         bool _forcedVisible;
-        ShadowCastingMode _savedShadows;
-        bool _savedRenderingOff;
 
         public OutfitCatalog Catalog => _catalog;
         public OutfitLoadout Shown => _shown;
-        public Renderer Body => _body;
+        public Renderer[] Bodies => _bodies;
 
         void Awake()
         {
@@ -81,7 +89,7 @@ namespace CloseTheDeal.Customisation
         /// <summary>Draws the outfit. Slots or options the catalog doesn't have are skipped, never guessed.</summary>
         public void Show(OutfitLoadout loadout, bool withMotion)
         {
-            if (_catalog == null || _body == null)
+            if (_catalog == null || _bodies.Length == 0)
                 return;
             bool alreadyShown = _hasShown && loadout == _shown;
             if (alreadyShown && !withMotion)
@@ -98,12 +106,11 @@ namespace CloseTheDeal.Customisation
 
         OutfitSlot[] _slotOrder;
 
-        /// <summary>Looks up, once, which of the body's material positions each category's material names are at.</summary>
+        /// <summary>Looks up, once, where each category's material names are on the body's renderers.</summary>
         void ResolveMaterials()
         {
-            Material[] materials = _body.sharedMaterials;
             _slotOrder = new OutfitSlot[_catalog.SlotCount];
-            _materialIndices = new int[_catalog.SlotCount][];
+            _targets = new Target[_catalog.SlotCount][];
             for (int s = 0; s < _slotOrder.Length; s++)
             {
                 OutfitSlot slot = _catalog.Slot(s);
@@ -111,18 +118,27 @@ namespace CloseTheDeal.Customisation
                 if (slot == null)
                     continue;
 
-                var found = new System.Collections.Generic.List<int>(slot.MaterialNameCount);
+                var found = new System.Collections.Generic.List<Target>();
                 for (int n = 0; n < slot.MaterialNameCount; n++)
-                {
-                    for (int i = 0; i < materials.Length; i++)
-                    {
-                        // Unity names a runtime copy "Name (Instance)"; match the start so both work.
-                        if (materials[i] != null && materials[i].name.StartsWith(slot.MaterialName(n)))
-                            found.Add(i);
-                    }
-                }
+                    FindMaterial(slot.MaterialName(n), found);
+                _targets[s] = found.ToArray();
+            }
+        }
 
-                _materialIndices[s] = found.ToArray();
+        void FindMaterial(string materialName, System.Collections.Generic.List<Target> found)
+        {
+            for (int r = 0; r < _bodies.Length; r++)
+            {
+                if (_bodies[r] == null)
+                    continue;
+
+                Material[] materials = _bodies[r].sharedMaterials;
+                for (int i = 0; i < materials.Length; i++)
+                {
+                    // Unity names a runtime copy "Name (Instance)"; match the start so both work.
+                    if (materials[i] != null && materials[i].name.StartsWith(materialName, System.StringComparison.Ordinal))
+                        found.Add(new Target(r, i));
+                }
             }
         }
 
@@ -136,23 +152,25 @@ namespace CloseTheDeal.Customisation
         /// <summary>Puts one choice's colours on every body material its category covers.</summary>
         void Paint(OutfitSlot slot, OutfitOption option)
         {
-            if (_materialIndices == null)
+            if (_targets == null)
                 ResolveMaterials();
 
             int slotIndex = System.Array.IndexOf(_slotOrder, slot);
-            int[] indices = slotIndex >= 0 ? _materialIndices[slotIndex] : null;
-            if (indices == null)
+            Target[] targets = slotIndex >= 0 ? _targets[slotIndex] : null;
+            if (targets == null)
                 return;
 
-            for (int m = 0; m < indices.Length; m++)
+            for (int t = 0; t < targets.Length; t++)
             {
-                int material = indices[m];
+                Renderer body = _bodies[targets[t].Renderer];
+                if (body == null)
+                    continue;
                 _block.Clear();
-                _body.GetPropertyBlock(_block, material);
+                body.GetPropertyBlock(_block, targets[t].Material);
                 _block.SetColor(BaseColourId, option.BaseColour);
                 _block.SetColor(ShadowColourId, option.ShadowColour);
                 _block.SetColor(ContourColourId, option.ContourColour);
-                _body.SetPropertyBlock(_block, material);
+                body.SetPropertyBlock(_block, targets[t].Material);
             }
         }
 
@@ -162,20 +180,32 @@ namespace CloseTheDeal.Customisation
         /// </summary>
         public void ForceVisible(bool visible)
         {
-            if (_body == null || visible == _forcedVisible)
+            if (_bodies.Length == 0 || visible == _forcedVisible)
                 return;
 
             if (visible)
             {
-                _savedShadows = _body.shadowCastingMode;
-                _savedRenderingOff = _body.forceRenderingOff;
-                _body.shadowCastingMode = ShadowCastingMode.On;
-                _body.forceRenderingOff = false;
+                _savedShadows = new ShadowCastingMode[_bodies.Length];
+                _savedRenderingOff = new bool[_bodies.Length];
             }
-            else
+
+            for (int i = 0; i < _bodies.Length; i++)
             {
-                _body.shadowCastingMode = _savedShadows;
-                _body.forceRenderingOff = _savedRenderingOff;
+                if (_bodies[i] == null)
+                    continue;
+
+                if (visible)
+                {
+                    _savedShadows[i] = _bodies[i].shadowCastingMode;
+                    _savedRenderingOff[i] = _bodies[i].forceRenderingOff;
+                    _bodies[i].shadowCastingMode = ShadowCastingMode.On;
+                    _bodies[i].forceRenderingOff = false;
+                }
+                else
+                {
+                    _bodies[i].shadowCastingMode = _savedShadows[i];
+                    _bodies[i].forceRenderingOff = _savedRenderingOff[i];
+                }
             }
 
             _forcedVisible = visible;
