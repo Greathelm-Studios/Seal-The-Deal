@@ -10,7 +10,7 @@ Everyone waits in their firm's reception until the host presses **Start the matc
 
 The briefcase starts on the **plaza**, the street between the two towers, the same distance from both receptions. Step over your reception's window sill to reach it.
 
-Press **F** near it to pick it up: anyone can. Everyone sees it hanging at your hip; you see it low on the right of your view. It shows in **cyan** while your firm holds it, **amber `#FF9E1B`** while the rival does, and leather brown while it lies loose, on each player's own screen. Press **G** to drop it ahead of you for a teammate.
+A soft column of light rises from the briefcase and shows through floors and walls within 30 m, so you can find it from anywhere nearby. Press **F** near it to pick it up: anyone can. Everyone sees it hanging at your hip; you see it low on the right of your view. It shows in **cyan** while your firm holds it, **amber `#FF9E1B`** while the rival does, and leather brown while it lies loose, on each player's own screen. Press **G** to drop it ahead of you for a teammate.
 
 The carrier drops it if they are knocked down, fall out of the building, or leave the game. A loose briefcase can be taken by anyone, so the rival can steal it.
 
@@ -61,6 +61,59 @@ The result opens the menu: who sealed the deal and how. The host gets **Rematch*
 - **Menu rule kept.** The match opens the menu through `GameMenu.Open()` when it ends; the menu still owns mouse-free and player-idle. Keys only act while the mouse is captured.
 - **Host leaving ends it.** `MatchDirector.OnClosed` hides the match HUD and the menu takes over.
 
+## UI contract (for the HUD, results and sound set)
+
+Everything below is on `MatchDirector.Instance` (namespace `CloseTheDeal.MatchMode`) unless named otherwise. State is synced from the host only on change; the clock is worked out locally. **Read state when an event fires, never per frame.** Events are raised on every machine, once per change (the host does not hear them twice), and only while the match is live on that machine.
+
+### State (read-only)
+
+| What | Member | Type | Notes |
+|---|---|---|---|
+| Live here | `IsLive` | `bool` | Hosting or connected. |
+| Phase | `Phase` | `MatchPhase` | `Waiting`, `Countdown`, `Running`, `Ended`. |
+| Clock | `SecondsLeft` | `int` | Whole seconds left; the full length before Running; frozen at the end. |
+| Countdown | (event only) | `int` | See `OnCountdownChanged`. |
+| Briefcase | `CaseStatus` | `BriefcaseStatus` | `State` (`Dropped` / `Carried` / `Returning`), `CarrierId` (network object id), `CarrierFirm`, `LastCarrierFirm`, `Place` (0 = Building A, 1 = Building B, `MatchArena.Neutral` = plaza or a skybridge), `Floor`, `ReturnFloor`, `Position` (where it was let go), `ReturnTick`. |
+| Carrier | `Carrier()` | `FirmMember` or null | The carrying player's object on this machine. |
+| Is it me | `IsCarrying(FirmMember.Local)` | `bool` | |
+| Return countdown | `ReturnSecondsLeft` | `int` | 0 unless Returning. |
+| Where, in words | `PlaceLabel(place, floor)` | `string` | "Floor 3, your tower", "the skybridge on Checkpoint 1", "the plaza". |
+| Open floor | `OpenFloor` | `int` | Highest floor anyone may stand on; only rises during a match. |
+| Opened by | `OpenedByFirm` | `int` | Firm whose carrier opened it, or `NoFirm` (255) at the start. |
+| Floors | `Arena.FloorCount`, `Arena.RoofFloor`, `Arena.FloorLabel(i)`, `Arena.IsCheckpoint(i)` | | For the open-floor ladder. |
+| Checkpoints | `CheckpointFloor(firm)` | `int` | 0 = reception. |
+| Firms | `FirmName(firm)`, `ColourFor(firm)` | `string`, `Color` | `ColourFor` is cyan for your own firm and amber for the rival on this screen; `ColourFor(NoFirm)` is the loose colour. Local firm: `FirmMember.Local.Firm`. |
+| Result | `Snapshot` | `MatchSnapshot` | `Winner` (firm or `NoFirm`), `Reason` (`BriefcaseOnRoof`, `ClockHolding`, `ClockLastCarried`, `ClockNeverCarried`), `EndSeconds`, `EndFloor`. |
+| Host actions | `CanHostStart`, `CanHostRematch`, `HostStart()`, `HostRematch()` | | Host only; a client shows "the host starts". |
+| Prompt | `PromptFor(FirmMember.Local)` | `MatchPrompt` | Prefer the event below. |
+| Beacon | `Briefcase.Current` | `Briefcase` | World-side beacon is drawn by the briefcase itself; an on-screen tracker reads `Briefcase.Current.Centre` locally (no traffic). Range: `Profile.BeaconRange`. |
+
+### Events
+
+| Event | Args | Fires when |
+|---|---|---|
+| `OnStarted` / `OnClosed` | | The match becomes live / goes away on this machine (join, leave, host gone). |
+| `OnPhaseChanged` | `MatchPhase previous, MatchPhase next` | Any phase change. |
+| `OnCountdownChanged` | `int secondsLeft` | Each whole second of the countdown (5, 4, … 0). |
+| `OnClockChanged` | `int secondsLeft` | Each whole second of the match clock. |
+| `OnCapWarning` | `int secondsLeft` | Once per match when the clock crosses `Profile.CapWarningSeconds` (60 s); not for a joiner already past it. |
+| `OnBriefcaseChanged` | `BriefcaseStatus previous, next` | Any change to the briefcase status (hands, place, floor, return). |
+| `OnBriefcasePickedUp` | `int firm` | Someone picked it up. |
+| `OnBriefcaseStolen` | `int byFirm, int fromFirm` | It passed from one firm to the other (after the first pick-up). |
+| `OnBriefcaseDropped` | `int firm` | The carrier let go (any reason). |
+| `OnBriefcaseReturning` / `OnBriefcaseReturned` | | It left the buildings / reappeared. |
+| `OnFloorOpened` | `int floor, int byFirm` | The open floor rose (also `OnOpenFloorChanged(int floor)`). |
+| `OnCheckpointSaved` | `int firm, int floor` | A firm's respawn point moved up. |
+| `OnMatchEnded` | `MatchSnapshot` | The result is in. |
+| `OnArenaChanged` | | Towers rebuilt: re-read floor names and counts. |
+| `FirmMember.OnNotice` | `MatchNotice` | Local player only: `RoofNeedsBriefcase`, `FellOut`, `BriefcaseKnockedLoose`, `FirstGateRefusal` (first shut gate of the match: explain the rule), `GateRefused` (later ones: a short line). |
+| `FirmMember.OnPromptChanged` | `MatchPrompt` | Local player only: `PickUpBriefcase` / `DropBriefcase` / `None`, only on change. |
+| `FirmMember.OnLocalChanged`, `OnRosterChanged`, `OnFellOut` | | The local player or the roster changed; someone fell out (for sound). |
+
+Sounds (lane 5/9's frozen `UiSoundEvent` list): `OnCountdownChanged` → `CountdownTick`, Running → `CountdownGo`, `OnFloorOpened` → `FloorOpened`, `OnBriefcasePickedUp` / `OnBriefcaseStolen` → `BriefcaseTaken`, `OnBriefcaseDropped` → `BriefcaseDropped`, `GateRefused` / `FirstGateRefusal` / `RoofNeedsBriefcase` → `Error`, `OnCapWarning` and checkpoint lines → `Notification`, `OnMatchEnded` → `MatchWon` or `MatchLost` by the local firm.
+
+Lines the current greybox HUD uses (`MatchHud.cs`) are the copy to keep or improve: corporate, played straight, refusals say why.
+
 ## Hooks for other systems
 
 - **Lobby:** `MatchDirector.HostStartRun(IReadOnlyDictionary<int, int> firmByClientId)`, host only: client id → firm (0 = Building A, 1 = Building B). Moves the listed players (and their `TeamSpawner` seats) into those firms, then starts a run as Start does. Works while waiting or after a result; returns false otherwise. Players not listed keep their firm.
@@ -104,7 +157,7 @@ Outside the folder: `Tower/TeamSpawner.cs` (balanced teams, a spawn hook and ove
 ## Known limitations
 
 - **The gates and the GDD's breakable locked doors now do the same job** (hold a team on a floor). Both are in: a door still has to be broken, and the floor above still needs the briefcase. Which to keep is a design question.
-- **A gate stops shots.** The panels are ordinary colliders that the aim ray and blasts hit; the GDD says glass never stops a projectile.
+- **Shots pass through shut gates** (`Let Shots Through` on `MatchGates`, on by default): the panels sit on Unity's built-in Ignore Raycast layer, which the weapons' shot test skips; bodies still collide. The greybox test blast (`PlayerMotor`) and the aim ray still stop at a gate.
 - **The stair cage is part of the gate.** If the cage glass is made breakable, players could leave the stairs through a broken pane above the open floor.
 - **Carrying the briefcase opens a floor just before the top step** (within 5 cm of the floor surface), so the gate opens as the carrier arrives rather than once they are through it.
 

@@ -50,7 +50,9 @@ namespace CloseTheDeal.MatchMode
         FellOut = 1,
         BriefcaseKnockedLoose = 2,
         /// <summary>A player without the briefcase reached the gate to a floor nobody has carried it onto yet.</summary>
-        GateRefused = 3
+        GateRefused = 3,
+        /// <summary>The first time this match a player reaches a shut gate: the longer line that explains the rule.</summary>
+        FirstGateRefusal = 4
     }
 
     /// <summary>What the interact or drop key would do right now, for the local player's prompt.</summary>
@@ -94,5 +96,16 @@ namespace CloseTheDeal.MatchMode
         public byte ReturnFloor;
         /// <summary>Where it was last let go or put back, in world space.</summary>
         public Vector3 Position;
+        /// <summary>While Returning: the host tick it reappears at, so a HUD can count it down. 0 otherwise.</summary>
+        public uint ReturnTick;
+    }
+
+    /// <summary>The highest floor anyone may climb to, and which firm's carrier opened it. Synced as one value, only on change.</summary>
+    public struct FloorOpening
+    {
+        /// <summary>The open floor: 0 = the ground floor.</summary>
+        public byte Floor;
+        /// <summary>The firm whose carrier opened it, or NoFirm at the start of a match.</summary>
+        public byte ByFirm;
     }
 }

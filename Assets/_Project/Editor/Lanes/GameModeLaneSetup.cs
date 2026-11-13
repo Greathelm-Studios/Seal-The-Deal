@@ -36,6 +36,7 @@ namespace CloseTheDeal.Editor.Lanes
         const string LeatherPath = PrefabFolder + "/BriefcaseLeather.mat";
         const string ShellPath = PrefabFolder + "/BriefcaseShell.mat";
         const string GatePath = PrefabFolder + "/FloorGate.mat";
+        const string BeaconPath = PrefabFolder + "/BriefcaseBeacon.mat";
         const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player.prefab";
 
         const string MatchObjectName = "Match";
@@ -138,6 +139,13 @@ namespace CloseTheDeal.Editor.Lanes
             else if (profile.BriefcasePrefab == null)
             {
                 profile.BriefcasePrefab = briefcase;
+                EditorUtility.SetDirty(profile);
+            }
+
+            // Filled only when empty: a designer's choice of beacon (or none) is kept.
+            if (profile.BeaconMaterial == null)
+            {
+                profile.BeaconMaterial = EnsureBeaconMaterial();
                 EditorUtility.SetDirty(profile);
             }
 
@@ -288,6 +296,25 @@ namespace CloseTheDeal.Editor.Lanes
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
             material.SetColor("_BaseColor", new Color(0.86f, 0.9f, 0.95f, 0.45f));
             AssetDatabase.CreateAsset(material, GatePath);
+            return material;
+        }
+
+        /// <summary>The briefcase beacon's material, on the lane's own see-through-everything shader.</summary>
+        static Material EnsureBeaconMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(BeaconPath);
+            if (material != null)
+                return material;
+
+            Shader shader = Shader.Find("Close the Deal/Briefcase Beacon");
+            if (shader == null)
+            {
+                Debug.LogWarning("[GameMode] The briefcase beacon shader is missing; no beacon.");
+                return null;
+            }
+
+            material = new Material(shader) { name = "BriefcaseBeacon" };
+            AssetDatabase.CreateAsset(material, BeaconPath);
             return material;
         }
 
