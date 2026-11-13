@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 767b5046910124ff09c8dd1671191e18, type: 3}
+  m_Name: DefaultCarry
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Items.CarryProfile
+  Reach: 2.5
+  LookRadius: 0.15
+  ReachTolerance: 0.75
+  MaxCarryWeight: 35
+  FreeCarryWeight: 3
+  SpeedAtMaxWeight: 0.45
+  JumpAtMaxWeight: 0.5
+  InheritVelocity: 1
+  ThrowerIgnoreSeconds: 0.35
+  DropWhenKnocked: 1
+  KnockedDropSpeed: 2.5
+  MinImpactSpeed: 4
+  DamagePerKgMps: 0.35
+  ShovePerKgMps: 0.08
+  MaxShoveSpeed: 12
+  ShoveControlLossSeconds: 0.5
+  LiveThrowSeconds: 3
+  FallReturnDistance: 6
+  FallReturnSeconds: 2
