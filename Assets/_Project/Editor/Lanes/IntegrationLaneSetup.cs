@@ -382,8 +382,23 @@ namespace CloseTheDeal.Editor.Lanes
         [InitializeOnLoadMethod]
         static void Resume()
         {
+            EditorApplication.playModeStateChanged += OnPlayModeChanged;
             if (SessionState.GetBool(ActiveKey, false))
                 EditorApplication.update += Pump;
+        }
+
+        /// <summary>Back in edit mode with the check still marked active means someone pressed Stop
+        /// part-way: drop it, or the next ordinary Play in any scene would run the script again.</summary>
+        static void OnPlayModeChanged(PlayModeStateChange state)
+        {
+            if (state != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool(ActiveKey, false))
+                return;
+
+            EditorApplication.update -= Pump;
+            SessionState.SetBool(ActiveKey, false);
+            PlayerInputReader.ScriptedCapture = false;
+            LobbyInput.EditorForceCaptured = false;
+            Debug.Log("[IntegrationRun] Stopped before the check finished; it will not resume on the next Play.");
         }
 
         // ---- The stepper ---------------------------------------------------------------------
