@@ -1,5 +1,5 @@
+using CloseTheDeal.Net;
 using CloseTheDeal.Props;
-using FishNet.Component.Transforming;
 using FishNet.Object;
 using UnityEditor;
 using UnityEngine;
@@ -14,7 +14,8 @@ namespace CloseTheDeal.Editor.Greybox
     public static class GreyboxPropSetup
     {
         const string Folder = "Assets/_Project/Prefabs/Props";
-        const byte SendEveryNthTick = 2;
+        const string ProfileFolder = "Assets/_Project/Profiles";
+        const string SwitchboardProfilePath = ProfileFolder + "/DefaultSwitchboard.asset";
 
         public struct PropSet
         {
@@ -70,13 +71,12 @@ namespace CloseTheDeal.Editor.Greybox
 
             root.AddComponent<NetworkObject>();
 
-            // Host-authoritative, sent every other tick, scale never changes.
-            var transformSync = root.AddComponent<NetworkTransform>();
-            var serializedSync = new SerializedObject(transformSync);
-            GreyboxSceneSetup.SetBool(serializedSync, "_clientAuthoritative", false);
-            GreyboxSceneSetup.SetInt(serializedSync, "_interval", SendEveryNthTick);
-            GreyboxSceneSetup.SetBool(serializedSync, "_synchronizeScale", false);
-            serializedSync.ApplyModifiedPropertiesWithoutUndo();
+            // The host streams the prop's motion through Switchboard (docs/systems/SWITCHBOARD.md).
+            var netBody = root.AddComponent<NetBody>();
+            var serializedBody = new SerializedObject(netBody);
+            GreyboxSceneSetup.SetReference(serializedBody, "_profile",
+                GreyboxSceneSetup.EnsureAsset<SwitchboardProfile>(ProfileFolder, SwitchboardProfilePath));
+            serializedBody.ApplyModifiedPropertiesWithoutUndo();
 
             var prop = root.AddComponent<Prop>();
             var serializedProp = new SerializedObject(prop);

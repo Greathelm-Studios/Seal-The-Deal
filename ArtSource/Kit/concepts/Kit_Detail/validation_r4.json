@@ -1,0 +1,114 @@
+{
+  "date": "2026-11-12",
+  "mode": "Static file checks and visual inspection; no automated tests",
+  "image_generation": "Built-in image_gen",
+  "total_image_tries": 10,
+  "sheet_tries": [
+    {
+      "path": "01_Facade/sheet_r4.png",
+      "image_tries": 2
+    },
+    {
+      "path": "02_Walls_Door/sheet_r4.png",
+      "image_tries": 3
+    },
+    {
+      "path": "03_Stair/sheet_r4.png",
+      "image_tries": 1
+    },
+    {
+      "path": "04_Ceiling_Floor/sheet_r4.png",
+      "image_tries": 2
+    },
+    {
+      "path": "05_Partition/sheet_r4.png",
+      "image_tries": 2
+    }
+  ],
+  "png_dimensions": {
+    "method": "[System.Drawing.Image]::FromFile(...)",
+    "files": [
+      {
+        "path": "01_Facade/sheet_r4.png",
+        "width": 1671,
+        "height": 941,
+        "bytes": 2168939
+      },
+      {
+        "path": "02_Walls_Door/sheet_r4.png",
+        "width": 1671,
+        "height": 941,
+        "bytes": 2058691
+      },
+      {
+        "path": "03_Stair/sheet_r4.png",
+        "width": 1672,
+        "height": 941,
+        "bytes": 2246912
+      },
+      {
+        "path": "04_Ceiling_Floor/sheet_r4.png",
+        "width": 1672,
+        "height": 941,
+        "bytes": 2073451
+      },
+      {
+        "path": "05_Partition/sheet_r4.png",
+        "width": 1672,
+        "height": 941,
+        "bytes": 2112827
+      },
+      {
+        "path": "contact_sheet_r4.png",
+        "width": 3840,
+        "height": 2160,
+        "bytes": 11781876
+      },
+      {
+        "path": "thumbnail_check_r4.png",
+        "width": 1120,
+        "height": 600,
+        "bytes": 1182287
+      },
+      {
+        "path": "reference_board_r4.png",
+        "width": 3000,
+        "height": 1800,
+        "bytes": 6337394
+      },
+      {
+        "path": "source_review_r4.png",
+        "width": 3300,
+        "height": 3600,
+        "bytes": 14230411
+      }
+    ]
+  },
+  "prior_round_preservation": {
+    "method": "Get-FileHash -Algorithm SHA256",
+    "checked_files": 28,
+    "unchanged_files": 28,
+    "changed": []
+  },
+  "visual_review": {
+    "selected_main_interiors": 20,
+    "small_street_insets": 10,
+    "contact_sheet_inspected": true,
+    "directions_inspected_at_200_px_width": 10,
+    "notes": [
+      "Hero/play plus a small rival inset per direction.",
+      "Inspected period form/material/sky cues, hard shadows, open sightlines and supporting room features.",
+      "Painted perspective does not establish mesh bounds, physical relief depths or exact camera positions.",
+      "Some small rival insets repeat the painted floor number; use actual per-floor numbering in a build.",
+      "Two-pane gameplay visibility and performance were not measured."
+    ]
+  },
+  "checks_not_run": [
+    "Automated tests",
+    "Unity compile",
+    "Play Mode",
+    "Multiplayer",
+    "Performance"
+  ],
+  "state_changing_git_commands_run": false
+}

@@ -28,6 +28,8 @@ The art bible plates for the office itself stay in [Kit/concepts/Office/refs/](.
 | [04_thresholded_flat_cloud_cel](sky_and_clouds/04_thresholded_flat_cloud_cel.webp) | A street photo thresholded into flat white and pale-blue cloud shapes with stepped edges. | **Alex liked this one.** The flat, pixel-edged, tone-stepped clouds above the horizon. |
 | [05_wind_turbines_cumulus_deep_blue](sky_and_clouds/05_wind_turbines_cumulus_deep_blue.png) | A deep blue sky over a bright cumulus bank on a low horizon. | The saturated blue dome and the cumulus on the horizon. |
 | [06_coastal_road_cumulus_glow](sky_and_clouds/06_coastal_road_cumulus_glow.webp) | A cobalt sky going to white glow at the horizon, a cumulus bank, a sun flare. | The pale glow where the sky meets the cloud sea, and the bloom. |
+| [07_pixel_art_white_town_cyan_sky](sky_and_clouds/07_pixel_art_white_town_cyan_sky.png) | A pixel-art white town under a saturated cyan sky: dithered gradient bands, pale-blue shade on white walls, cyan accents, a contrail that dissolves into pixels. | "Try lean into more of this look" (2026-11-12): the cyan dome, the screen-space dithered sky gradient, pale-blue shade. |
+| [08_towers_from_below_cloud_map_overlay](sky_and_clouds/08_towers_from_below_cloud_map_overlay.webp) | Glass towers shot from below, dense window grids, the sun glaring through the middle one, deep-blue cloud-shaped patches and a faint grid laid over the sky. | Same request: dense window grids, sun glints on glass, a glare that washes over the towers. |
 
 ## Light and grade
 

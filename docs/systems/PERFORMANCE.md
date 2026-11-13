@@ -13,6 +13,7 @@ A steady frame rate locked to the monitor (vSync on), on the PC quality level. F
 | vSync on (was off, with no frame cap) | `ProjectSettings/QualitySettings.asset`, PC level | Uncapped frames swing from frame to frame against the fixed 60 Hz tick, so some frames run two physics ticks and some none. That reads as stutter even at a high average. |
 | Each building's still parts are merged after it is built | `TowerBuilder.BuildBuilding`, each template's **Never Moves** list | Floors are instantiated at runtime, so Unity's build-time static batching never touches them: about 26 floors × ~40 boxes, each drawn separately and again per shadow cascade. Opt-in per template, because merging freezes things in place. |
 | Shadow cascades 4 → 2 | `Assets/Settings/PC_RPAsset.asset` | Each cascade redraws every shadow caster. Two is plenty at 50 m shadow distance in a greybox. |
+| Main-light shadow map 2048 → 4096, near cascade 25 % → 15 %, shadow distance 50 → 30 m | `Assets/Settings/PC_RPAsset.asset` | With 2 cascades the map is split into two tiles, so 2048 left each cascade only 1024 px and the near one spread over 12.5 m: shadows looked jagged. Now each tile is 2048 px, and with the shorter distance the near cascade covers 4.5 m. Shadows fade out past 30 m. Costs about 24 MB more GPU memory (shadow atlas 2048×1024 → 4096×2048), no extra draw calls; going back to 4 cascades would sharpen too but redraws every caster twice more. |
 
 ## Still suspected, in order
 

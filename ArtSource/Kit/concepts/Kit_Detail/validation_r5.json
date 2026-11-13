@@ -1,0 +1,419 @@
+{
+  "status": "Complete artifact inspection",
+  "tool": "Built-in image_gen.imagegen",
+  "image_tries": 6,
+  "selected_family_images": 5,
+  "hero_views": 10,
+  "play_views": 10,
+  "top_down_sketches": 5,
+  "preservation": {
+    "compared": 48,
+    "unchanged": 48,
+    "files": [
+      {
+        "path": "codex_r3_last_message.md",
+        "sha256_before": "3F606095C93B0AAF27AF4A28D9DDFE75064D3918F9387C6E09C3F4261153FB4B",
+        "sha256_after": "3F606095C93B0AAF27AF4A28D9DDFE75064D3918F9387C6E09C3F4261153FB4B",
+        "unchanged": true
+      },
+      {
+        "path": "codex_r4_last_message.md",
+        "sha256_before": "009A910B7260F26C1EC7AF97654F3206B3ADF1E06B2F208D3D1717485CE86C2D",
+        "sha256_after": "009A910B7260F26C1EC7AF97654F3206B3ADF1E06B2F208D3D1717485CE86C2D",
+        "unchanged": true
+      },
+      {
+        "path": "contact_sheet.png",
+        "sha256_before": "CCD09C36E0D24C0AE0B7F8C07460E75DD8A1E3027996B5D225D3D53AC96F89D2",
+        "sha256_after": "CCD09C36E0D24C0AE0B7F8C07460E75DD8A1E3027996B5D225D3D53AC96F89D2",
+        "unchanged": true
+      },
+      {
+        "path": "contact_sheet_r2.png",
+        "sha256_before": "DE795E980349D6EDA44FBE7BC30B54995FE249AD8AE53E3F2A2B9BFDF30C52BA",
+        "sha256_after": "DE795E980349D6EDA44FBE7BC30B54995FE249AD8AE53E3F2A2B9BFDF30C52BA",
+        "unchanged": true
+      },
+      {
+        "path": "contact_sheet_r3.png",
+        "sha256_before": "451C5CC17582E825EB0F9C82977E95493EED84F57215B248FE0E9B6D96998F64",
+        "sha256_after": "451C5CC17582E825EB0F9C82977E95493EED84F57215B248FE0E9B6D96998F64",
+        "unchanged": true
+      },
+      {
+        "path": "contact_sheet_r4.png",
+        "sha256_before": "DBB46B35FECB49E0E780CCB890CE51B2856563ABC1EAD82F6B12AB2510B673AF",
+        "sha256_after": "DBB46B35FECB49E0E780CCB890CE51B2856563ABC1EAD82F6B12AB2510B673AF",
+        "unchanged": true
+      },
+      {
+        "path": "FEEDBACK_01.md",
+        "sha256_before": "5601098CB64676DE5B0B232BFE448B3713C6EEA255B4D405090EC6820C0999B7",
+        "sha256_after": "5601098CB64676DE5B0B232BFE448B3713C6EEA255B4D405090EC6820C0999B7",
+        "unchanged": true
+      },
+      {
+        "path": "FEEDBACK_02.md",
+        "sha256_before": "93BD648B9ACDB89C3C1665F804CDA030532D4E18511B02BB66B8A4355CF79756",
+        "sha256_after": "93BD648B9ACDB89C3C1665F804CDA030532D4E18511B02BB66B8A4355CF79756",
+        "unchanged": true
+      },
+      {
+        "path": "FEEDBACK_03.md",
+        "sha256_before": "3D70FC2CD517A5743A0EBF7223D37BD25707B51E5A016D5FBC6CE6A50DC8C8DC",
+        "sha256_after": "3D70FC2CD517A5743A0EBF7223D37BD25707B51E5A016D5FBC6CE6A50DC8C8DC",
+        "unchanged": true
+      },
+      {
+        "path": "FEEDBACK_04.md",
+        "sha256_before": "0A0272AEFAC4658D676BA9BC5890C6BFA6A73FA3DE9FCE5D7FF8C090EAB6F683",
+        "sha256_after": "0A0272AEFAC4658D676BA9BC5890C6BFA6A73FA3DE9FCE5D7FF8C090EAB6F683",
+        "unchanged": true
+      },
+      {
+        "path": "FEEDBACK_05.md",
+        "sha256_before": "11AC97CF56B189DD4D0EB167C8E732C60899352333C639CD4FC8C7DC45DCB3CA",
+        "sha256_after": "11AC97CF56B189DD4D0EB167C8E732C60899352333C639CD4FC8C7DC45DCB3CA",
+        "unchanged": true
+      },
+      {
+        "path": "prompts_r3.json",
+        "sha256_before": "24A769CDDCD94A45EC49F67548C8E9A939CEC9F099AC1075A6C094E7B0E06633",
+        "sha256_after": "24A769CDDCD94A45EC49F67548C8E9A939CEC9F099AC1075A6C094E7B0E06633",
+        "unchanged": true
+      },
+      {
+        "path": "prompts_r4.json",
+        "sha256_before": "1E7FE511FDF5A47E4A7C6BD960D4658B8DCC57759031F038FA6280609004FC7D",
+        "sha256_after": "1E7FE511FDF5A47E4A7C6BD960D4658B8DCC57759031F038FA6280609004FC7D",
+        "unchanged": true
+      },
+      {
+        "path": "README.md",
+        "sha256_before": "6A6C88D9E4CC3BFCB76A07C52F3D2DA9B01DA8E1FB0EFBE0E1F40285A920BF70",
+        "sha256_after": "6A6C88D9E4CC3BFCB76A07C52F3D2DA9B01DA8E1FB0EFBE0E1F40285A920BF70",
+        "unchanged": true
+      },
+      {
+        "path": "README_r2.md",
+        "sha256_before": "C04D505429E1324E8A4C957B974CBE7A69944B98F5D35CEA504A475AF0675EB0",
+        "sha256_after": "C04D505429E1324E8A4C957B974CBE7A69944B98F5D35CEA504A475AF0675EB0",
+        "unchanged": true
+      },
+      {
+        "path": "README_r3.md",
+        "sha256_before": "7F2E20A7C466E0BCC564234B8D69ECDACB3406EE0A43F5819BCCBD26B77F318B",
+        "sha256_after": "7F2E20A7C466E0BCC564234B8D69ECDACB3406EE0A43F5819BCCBD26B77F318B",
+        "unchanged": true
+      },
+      {
+        "path": "README_r4.md",
+        "sha256_before": "1248400B62D1D9C717BBD7C0D99B4F6C82F2DCB71A33A0368A232A644E0F93F4",
+        "sha256_after": "1248400B62D1D9C717BBD7C0D99B4F6C82F2DCB71A33A0368A232A644E0F93F4",
+        "unchanged": true
+      },
+      {
+        "path": "reference_board_r4.png",
+        "sha256_before": "15869169440E9D05378F29A5763E20483EB2A95C0875C5A63A22E419493AFBD5",
+        "sha256_after": "15869169440E9D05378F29A5763E20483EB2A95C0875C5A63A22E419493AFBD5",
+        "unchanged": true
+      },
+      {
+        "path": "REQUEST.md",
+        "sha256_before": "4AA0F0E8D5171561A75DA5A8E92A93553923D4FE8A0B15003B8981079F291FF9",
+        "sha256_after": "4AA0F0E8D5171561A75DA5A8E92A93553923D4FE8A0B15003B8981079F291FF9",
+        "unchanged": true
+      },
+      {
+        "path": "source_review_r4.png",
+        "sha256_before": "0B450C652A1C93CC2AE23FC98D6C2F7184A90471CA5F149821315291E76070A3",
+        "sha256_after": "0B450C652A1C93CC2AE23FC98D6C2F7184A90471CA5F149821315291E76070A3",
+        "unchanged": true
+      },
+      {
+        "path": "thumbnail_check_r3.png",
+        "sha256_before": "C16D0F5D994AF0E7A29B0D894C3872208579D55EC8DD7A3E7B6FB5A153B3CC06",
+        "sha256_after": "C16D0F5D994AF0E7A29B0D894C3872208579D55EC8DD7A3E7B6FB5A153B3CC06",
+        "unchanged": true
+      },
+      {
+        "path": "thumbnail_check_r4.png",
+        "sha256_before": "8CD56F38DFF3D1F738A28A8CBB34DBB4DD905F686E85EAC979B464CB2185D1BB",
+        "sha256_after": "8CD56F38DFF3D1F738A28A8CBB34DBB4DD905F686E85EAC979B464CB2185D1BB",
+        "unchanged": true
+      },
+      {
+        "path": "validation_r4.json",
+        "sha256_before": "0898AC0301FE730526A14C7378996E2C28A5393BD0C2B796511DC27756C8C3C4",
+        "sha256_after": "0898AC0301FE730526A14C7378996E2C28A5393BD0C2B796511DC27756C8C3C4",
+        "unchanged": true
+      },
+      {
+        "path": "01_Facade\\sheet.png",
+        "sha256_before": "3BC9233E148A34B689B66D9756C4AFD23A19682AE1EA895B24A0A7A935A285BB",
+        "sha256_after": "3BC9233E148A34B689B66D9756C4AFD23A19682AE1EA895B24A0A7A935A285BB",
+        "unchanged": true
+      },
+      {
+        "path": "01_Facade\\sheet_r2.png",
+        "sha256_before": "A10AD65B171D8FA4F6CBA1D49AF32DAFD7D18F51925F6CD110F29305E23ED5ED",
+        "sha256_after": "A10AD65B171D8FA4F6CBA1D49AF32DAFD7D18F51925F6CD110F29305E23ED5ED",
+        "unchanged": true
+      },
+      {
+        "path": "01_Facade\\sheet_r3.png",
+        "sha256_before": "B89CA5F98A6A4CB7CC3401FD11941F1D9992522EE13DD40B2FA3219F271A61BD",
+        "sha256_after": "B89CA5F98A6A4CB7CC3401FD11941F1D9992522EE13DD40B2FA3219F271A61BD",
+        "unchanged": true
+      },
+      {
+        "path": "01_Facade\\sheet_r4.png",
+        "sha256_before": "AF287CE11B84335A4B2B1EC934C3463790A5E32C5BE296885E982A6D6C3A48DC",
+        "sha256_after": "AF287CE11B84335A4B2B1EC934C3463790A5E32C5BE296885E982A6D6C3A48DC",
+        "unchanged": true
+      },
+      {
+        "path": "01_Facade\\try_01_r4.png",
+        "sha256_before": "786CB1562841E6824CE702AAB0430115D723721FD7EE059E25568421AC9CD54D",
+        "sha256_after": "786CB1562841E6824CE702AAB0430115D723721FD7EE059E25568421AC9CD54D",
+        "unchanged": true
+      },
+      {
+        "path": "02_Walls_Door\\sheet.png",
+        "sha256_before": "9FCFD75454DB73CBDF02C99C9B6E32103476185275071ADD593F4298E9F8097D",
+        "sha256_after": "9FCFD75454DB73CBDF02C99C9B6E32103476185275071ADD593F4298E9F8097D",
+        "unchanged": true
+      },
+      {
+        "path": "02_Walls_Door\\sheet_r2.png",
+        "sha256_before": "4CC7DC7C14DD2CE3AC886A618F6CAD80D5ED05E568AE477E305C28A9E1C36A71",
+        "sha256_after": "4CC7DC7C14DD2CE3AC886A618F6CAD80D5ED05E568AE477E305C28A9E1C36A71",
+        "unchanged": true
+      },
+      {
+        "path": "02_Walls_Door\\sheet_r3.png",
+        "sha256_before": "878D8A482518ECBEAAAC4341A87522B90F69CCF6E27F5AB8C936B223A6FD731E",
+        "sha256_after": "878D8A482518ECBEAAAC4341A87522B90F69CCF6E27F5AB8C936B223A6FD731E",
+        "unchanged": true
+      },
+      {
+        "path": "02_Walls_Door\\sheet_r4.png",
+        "sha256_before": "4075CBEFFD02C58821C78CF4F26039E721C474717228DC247C145710D76FD609",
+        "sha256_after": "4075CBEFFD02C58821C78CF4F26039E721C474717228DC247C145710D76FD609",
+        "unchanged": true
+      },
+      {
+        "path": "02_Walls_Door\\try_01_r4.png",
+        "sha256_before": "236342ADA16D7B7E3F86B87F18DB552F40F9F97EED8823A8367DFBA4A44F02AB",
+        "sha256_after": "236342ADA16D7B7E3F86B87F18DB552F40F9F97EED8823A8367DFBA4A44F02AB",
+        "unchanged": true
+      },
+      {
+        "path": "02_Walls_Door\\try_02_r4.png",
+        "sha256_before": "B8177B1BA41250FD21B3B6B87CB83A6050756A6817A26EF63608CEF5D179CAEA",
+        "sha256_after": "B8177B1BA41250FD21B3B6B87CB83A6050756A6817A26EF63608CEF5D179CAEA",
+        "unchanged": true
+      },
+      {
+        "path": "03_Stair\\sheet.png",
+        "sha256_before": "5A2211C8898DF4F250999038FEECA51D9C272080EB15BE10021C38ABE1BAFD02",
+        "sha256_after": "5A2211C8898DF4F250999038FEECA51D9C272080EB15BE10021C38ABE1BAFD02",
+        "unchanged": true
+      },
+      {
+        "path": "03_Stair\\sheet_r2.png",
+        "sha256_before": "C28C83E2AF880BC006BA413FAD723737939A8D33834A0D0C57BAB0E479B146BC",
+        "sha256_after": "C28C83E2AF880BC006BA413FAD723737939A8D33834A0D0C57BAB0E479B146BC",
+        "unchanged": true
+      },
+      {
+        "path": "03_Stair\\sheet_r3.png",
+        "sha256_before": "4B9776C8799449C781CECE06504E910D93C2023CB56522A4D2F59D64E06344FE",
+        "sha256_after": "4B9776C8799449C781CECE06504E910D93C2023CB56522A4D2F59D64E06344FE",
+        "unchanged": true
+      },
+      {
+        "path": "03_Stair\\sheet_r4.png",
+        "sha256_before": "F72966A620ABD20EF2BE9F832AF5A073079BCBC06507BEE019B02D827A9631B8",
+        "sha256_after": "F72966A620ABD20EF2BE9F832AF5A073079BCBC06507BEE019B02D827A9631B8",
+        "unchanged": true
+      },
+      {
+        "path": "04_Ceiling_Floor\\sheet.png",
+        "sha256_before": "2840BF8D52728859DD0EB6C2601F324F393F658702645A04821FA9A5110CEB96",
+        "sha256_after": "2840BF8D52728859DD0EB6C2601F324F393F658702645A04821FA9A5110CEB96",
+        "unchanged": true
+      },
+      {
+        "path": "04_Ceiling_Floor\\sheet_r2.png",
+        "sha256_before": "508C88C97E1C86C057374632C438648BE0BCCBF8B2852FBAF2303E46327A0DE6",
+        "sha256_after": "508C88C97E1C86C057374632C438648BE0BCCBF8B2852FBAF2303E46327A0DE6",
+        "unchanged": true
+      },
+      {
+        "path": "04_Ceiling_Floor\\sheet_r3.png",
+        "sha256_before": "C13BDC028D734E2A3B415B4E45AAABF93E789690FD8A621FA807FCEBDD151516",
+        "sha256_after": "C13BDC028D734E2A3B415B4E45AAABF93E789690FD8A621FA807FCEBDD151516",
+        "unchanged": true
+      },
+      {
+        "path": "04_Ceiling_Floor\\sheet_r4.png",
+        "sha256_before": "4F4F197B50F89B2E7FCD5548B923870A0E5B3E98706BAC7743598C9C22541A10",
+        "sha256_after": "4F4F197B50F89B2E7FCD5548B923870A0E5B3E98706BAC7743598C9C22541A10",
+        "unchanged": true
+      },
+      {
+        "path": "04_Ceiling_Floor\\try_01_r4.png",
+        "sha256_before": "48E963D789C038F8325A4D369F782C36D82CA1B512517ABAE12DC4669B829E6C",
+        "sha256_after": "48E963D789C038F8325A4D369F782C36D82CA1B512517ABAE12DC4669B829E6C",
+        "unchanged": true
+      },
+      {
+        "path": "05_Partition\\sheet.png",
+        "sha256_before": "FB131C9E23A7B25676886D18144199E8F3FE5750955D7450D3D72945DE9A6587",
+        "sha256_after": "FB131C9E23A7B25676886D18144199E8F3FE5750955D7450D3D72945DE9A6587",
+        "unchanged": true
+      },
+      {
+        "path": "05_Partition\\sheet_r2.png",
+        "sha256_before": "6B7DF12BB226662EB93AF7CB17BD9FA7739F7BDBAA0F8CC1DBCC008DF62E4814",
+        "sha256_after": "6B7DF12BB226662EB93AF7CB17BD9FA7739F7BDBAA0F8CC1DBCC008DF62E4814",
+        "unchanged": true
+      },
+      {
+        "path": "05_Partition\\sheet_r3.png",
+        "sha256_before": "81A906F4CE8DEE1560D6C68736FAD9157F994DE7CEA2ACC22FE615C39A4B980D",
+        "sha256_after": "81A906F4CE8DEE1560D6C68736FAD9157F994DE7CEA2ACC22FE615C39A4B980D",
+        "unchanged": true
+      },
+      {
+        "path": "05_Partition\\sheet_r4.png",
+        "sha256_before": "DEA858BF060C517F03B1ACBB9FAB47E6CCDA622D64A58AA73D126FE5A47096F2",
+        "sha256_after": "DEA858BF060C517F03B1ACBB9FAB47E6CCDA622D64A58AA73D126FE5A47096F2",
+        "unchanged": true
+      },
+      {
+        "path": "05_Partition\\try_01_r4.png",
+        "sha256_before": "E8D66C1169D1CD0A1F3DC84C5B786D3E3EC06B05BE9422A041685D264D07FCFC",
+        "sha256_after": "E8D66C1169D1CD0A1F3DC84C5B786D3E3EC06B05BE9422A041685D264D07FCFC",
+        "unchanged": true
+      }
+    ]
+  },
+  "images": [
+    {
+      "Path": "contact_sheet_r5.png",
+      "Width": 3200,
+      "Height": 2960,
+      "Bytes": 11321156
+    },
+    {
+      "Path": "01_Corridors\\layout_r5.png",
+      "Width": 1100,
+      "Height": 460,
+      "Bytes": 31301
+    },
+    {
+      "Path": "01_Corridors\\sheet_r5.png",
+      "Width": 2560,
+      "Height": 2480,
+      "Bytes": 5087961
+    },
+    {
+      "Path": "01_Corridors\\views_r5.png",
+      "Width": 1536,
+      "Height": 1024,
+      "Bytes": 1665538
+    },
+    {
+      "Path": "02_Junctions_Doors\\layout_r5.png",
+      "Width": 1100,
+      "Height": 460,
+      "Bytes": 31620
+    },
+    {
+      "Path": "02_Junctions_Doors\\sheet_r5.png",
+      "Width": 2560,
+      "Height": 2480,
+      "Bytes": 5951551
+    },
+    {
+      "Path": "02_Junctions_Doors\\views_r5.png",
+      "Width": 1536,
+      "Height": 1024,
+      "Bytes": 1793310
+    },
+    {
+      "Path": "03_Rooms_Cover\\layout_r5.png",
+      "Width": 1100,
+      "Height": 460,
+      "Bytes": 31294
+    },
+    {
+      "Path": "03_Rooms_Cover\\sheet_r5.png",
+      "Width": 2560,
+      "Height": 2480,
+      "Bytes": 5321198
+    },
+    {
+      "Path": "03_Rooms_Cover\\views_r5.png",
+      "Width": 1536,
+      "Height": 1024,
+      "Bytes": 1698483
+    },
+    {
+      "Path": "04_Atrium_Vertical\\layout_r5.png",
+      "Width": 1100,
+      "Height": 460,
+      "Bytes": 36711
+    },
+    {
+      "Path": "04_Atrium_Vertical\\sheet_r5.png",
+      "Width": 2560,
+      "Height": 2480,
+      "Bytes": 5830040
+    },
+    {
+      "Path": "04_Atrium_Vertical\\try_01_r5.png",
+      "Width": 1536,
+      "Height": 1024,
+      "Bytes": 1816193
+    },
+    {
+      "Path": "04_Atrium_Vertical\\views_r5.png",
+      "Width": 1536,
+      "Height": 1024,
+      "Bytes": 1725891
+    },
+    {
+      "Path": "05_Glass_Walls\\layout_r5.png",
+      "Width": 1100,
+      "Height": 460,
+      "Bytes": 30758
+    },
+    {
+      "Path": "05_Glass_Walls\\sheet_r5.png",
+      "Width": 2560,
+      "Height": 2480,
+      "Bytes": 5504342
+    },
+    {
+      "Path": "05_Glass_Walls\\views_r5.png",
+      "Width": 1536,
+      "Height": 1024,
+      "Bytes": 1733755
+    }
+  ],
+  "commands": [
+    {
+      "command": "& 'ArtSource/Kit/concepts/Kit_Detail/compose_r5.ps1'",
+      "result": "Composed 5 family sheets, 5 top-down sketches, and contact_sheet_r5.png."
+    },
+    {
+      "command": "$base = (Resolve-Path -LiteralPath 'ArtSource/Kit/concepts/Kit_Detail').Path; Add-Type -AssemblyName System.Drawing; $preserved = @(Get-ChildItem -LiteralPath $base -File -Recurse | Where-Object { $_.Extension -ne '.log' -and $_.Name -notlike '*r5*' } | ForEach-Object { [PSCustomObject]@{ Path = $_.FullName.Substring($base.Length+1); SHA256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash } }); $images = @(Get-ChildItem -LiteralPath $base -File -Recurse | Where-Object { $_.Name -like '*r5.png' } | ForEach-Object { $img = [System.Drawing.Image]::FromFile($_.FullName); try { [PSCustomObject]@{ Path = $_.FullName.Substring($base.Length+1); Width = $img.Width; Height = $img.Height; Bytes = $_.Length } } finally { $img.Dispose() } }); [PSCustomObject]@{ Preserved = $preserved; Images = $images } | ConvertTo-Json -Depth 5 -Compress",
+      "result": "Read PNG dimensions and SHA-256 hashes successfully."
+    }
+  ],
+  "scope": "All task-authored files inside ArtSource/Kit/concepts/Kit_Detail. Built-in tool staging remains at its automatic generated_images location; selected images copied into deliverable folders. No state-changing git commands.",
+  "validation_limits": "Generated concept artwork only; camera heights and dimensions requested, not measured. No automated tests, Unity compile, Play Mode, multiplayer or performance validation."
+}

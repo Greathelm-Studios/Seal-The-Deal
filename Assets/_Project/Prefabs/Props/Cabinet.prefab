@@ -102,9 +102,8 @@ GameObject:
   - component: {fileID: 5761232543616907281}
   - component: {fileID: 3650837359200959138}
   - component: {fileID: 6408008661249199825}
-  - component: {fileID: 4764993127369435660}
+  - component: {fileID: 906096390654952592}
   - component: {fileID: 7844331676866950485}
-  - component: {fileID: 3165784098313268966}
   m_Layer: 7
   m_Name: Cabinet
   m_TagString: Untagged
@@ -233,7 +232,7 @@ MonoBehaviour:
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
   _initializedTimestamp: 0
---- !u!114 &4764993127369435660
+--- !u!114 &906096390654952592
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -242,43 +241,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 4461046538860380788}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a2836e36774ca1c4bbbee976e17b649c, type: 3}
+  m_Script: {fileID: 11500000, guid: 0d237e0cf9c664544966fd5bb7f4d63f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.Transforming.NetworkTransform
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Net.NetBody
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 6408008661249199825}
   _networkObjectCache: {fileID: 0}
-  _componentConfiguration: 0
-  _synchronizeParent: 0
-  _packing:
-    Position: 1
-    Rotation: 1
-    Scale: 0
-  _useScaledTime: 1
-  _interpolation: 2
-  _extrapolation: 2
-  _enableTeleport: 0
-  _teleportThreshold: 1
-  _clientAuthoritative: 0
-  _sendToOwner: 1
-  _interval: 2
-  _synchronizePosition: 1
-  _positionSensitivity: 0.001
-  _positionSnapping:
-    X: 0
-    Y: 0
-    Z: 0
-  _synchronizeRotation: 1
-  _rotationSnapping:
-    X: 0
-    Y: 0
-    Z: 0
-  _synchronizeScale: 0
-  _scaleSensitivity: 0.001
-  _scaleSnapping:
-    X: 0
-    Y: 0
-    Z: 0
+  _profile: {fileID: 11400000, guid: 2251a1d50bc577440b060b39d90a64be, type: 2}
 --- !u!114 &7844331676866950485
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -295,36 +264,3 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 6408008661249199825}
   _networkObjectCache: {fileID: 0}
   _throwResistance: 0.4
---- !u!114 &3165784098313268966
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4461046538860380788}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0f5f7d8ebd1104f7ca032ae759721d2e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Items.Pickup
-  _componentIndexCache: 255
-  _addedNetworkObject: {fileID: 6408008661249199825}
-  _networkObjectCache: {fileID: 0}
-  _definition: {fileID: 11400000, guid: ecedd59f77d774b1eb3dccbbd54fb7c0, type: 2}
-  _rules: {fileID: 11400000, guid: 1de3a4bfb8c0041aeb851f7023c0c0b6, type: 2}
-  _visual: {fileID: 908840674255667228}
-  _onTaken:
-    m_PersistentCalls:
-      m_Calls: []
-  _onDropped:
-    m_PersistentCalls:
-      m_Calls: []
-  _onThrown:
-    m_PersistentCalls:
-      m_Calls: []
-  _onImpact:
-    m_PersistentCalls:
-      m_Calls: []
-  _onReturned:
-    m_PersistentCalls:
-      m_Calls: []

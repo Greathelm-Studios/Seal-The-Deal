@@ -15,6 +15,9 @@
 //              keeps its collider but no renderer; visual-only pieces need no collider.
 //  Modified  : Claude Fable 5.2, 2026-11-12 — the glass material uses the Glass Sheen shader
 //              instead of transparent URP Lit.
+//  Modified  : Claude Opus 5.5, 2026-11-12 — the floor is a pale polished surface, not carpet.
+//  Modified  : Claude Opus 5.5, 2026-11-12 — labyrinth pieces (round 5), glossy white, cobalt and silver,
+//              Glass_Frosted, flat ceiling (no tile texture), and box colliders only for real boxes.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 // -----------------------------------------------------------------------------
 using System.Collections.Generic;
@@ -84,6 +87,10 @@ namespace CloseTheDeal.Editor.Art
             "Column_CornerR", "Partition_Glass_4m", "Partition_Glass_2m", "Stair_Flight", "Stair_Column", "Stair_CagePanel",
             "Wall_Solid_4m_Cobalt", "Wall_Solid_2m_Cobalt", "Wall_Solid_4m_PortalHead", "Wall_Door_4m_PortalHead",
             "Stair_Steps", "Stair_LockedDoor", "Ceiling_LightStrip",
+            // Labyrinth, round 5 (ArtSource/Kit/concepts/Kit_Detail/DECISION_r5.md)
+            "Wall_Return_2x2", "Wall_Return_2x2_Cobalt", "Wall_Niche_4m", "Counter_Capsule_2m", "Cover_Block_2m",
+            "Partition_Frost_4m", "Partition_Frost_2m", "Stair_Straight_2m", "Ramp_2x4", "Guard_Glass_4m",
+            "Guard_Glass_2m", "Slab_4x4_LightLine",
         };
 
         /// <summary>Pieces that are seen but never touched, so they have no collider (kit README).</summary>
@@ -93,7 +100,11 @@ namespace CloseTheDeal.Editor.Art
         static readonly HashSet<string> ColliderOnly = new HashSet<string> { "Stair_Flight" };
 
         /// <summary>Materials that take a tile texture from <see cref="TextureSource"/> (file name = material name).</summary>
-        static readonly HashSet<string> Textured = new HashSet<string> { "Floor_Carpet", "Ceiling_Tile" };
+        // WHY not Floor_Carpet: Alex, 2026-11-12, "no carpet, i want a shiny floor". The floor is now a
+        // plain polished surface whose interest comes from what it reflects, not from a texture.
+        // WHY not Ceiling_Tile either: the approved labyrinth (round 5) has flat white ceilings with light lines,
+        // not a tile grid. The texture stays in ArtSource/Kit/textures if a room set wants it back.
+        static readonly HashSet<string> Textured = new HashSet<string>();
 
         /// <summary>Pieces with no collider mesh whose render mesh is the collider, not convex (kit README).</summary>
         static readonly HashSet<string> RenderMeshColliders = new HashSet<string> { "Slab_Stairwell", "Stair_Flight" };
@@ -101,18 +112,29 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>Kit materials: colour (art bible hex, as in kit_pieces.py), metallic, smoothness (1 − Blender roughness).</summary>
         static readonly (string name, string hex, float metallic, float smoothness, bool glass)[] Materials =
         {
-            ("Floor_Carpet", "646E86", 0f, 0.1f, false),
+            // The name stays Floor_Carpet because the exported models are mapped to it by name;
+            // it is a polished resin floor now (Alex, 2026-11-12). Reflections come from the scene's
+            // reflection probes (Close the Deal > Art > Bake Floor Reflections); without them it mirrors the sky.
+            // WHY mid-pale, not white: a white floor reflecting a white room shows no reflection at
+            // all. A slightly darker, near-mirror floor lets the reflections carry it.
+            ("Floor_Carpet", "B8C2CE", 0f, 0.97f, false),
             ("Ceiling_Tile", "F3F4F4", 0f, 0.1f, false),
-            ("Wall_PaperWhite", "F3F4F4", 0f, 0.3f, false),
-            ("Frame_Aluminium", "C9CED3", 0.8f, 0.65f, false),
+            // Round 5 gloss levels (README_r5 "Material proposals"): gloss white lacquer, gloss cobalt, inset silver.
+            ("Wall_PaperWhite", "F3F4F4", 0f, 0.9f, false),
+            ("Frame_Aluminium", "C9CED3", 0.8f, 0.72f, false),
             ("Glass_Clear", "B3D9F2", 0f, 0.95f, true),
             ("Door_Leaf", "C9CED3", 0f, 0.4f, false),
             ("Stair_Aluminium", "C9CED3", 0.6f, 0.65f, false),
             ("Trim_Navy", "111B38", 0f, 0.5f, false),
-            ("Accent_Cobalt", "244FB9", 0f, 0.5f, false),
+            ("Accent_Cobalt", "244FB9", 0f, 0.94f, false),
             ("Light_Strip", "FFFFFF", 0f, 0.5f, false),
             ("Door_LockedRed", "C0281E", 0f, 0.55f, false),
+            ("Glass_Frosted", "E6ECF2", 0f, 0.3f, false),
         };
+
+        /// <summary>Glass_Frosted opacity. WHY 0.8: reads as "can't see through" next to the 5 % clear glass,
+        /// yet still lets light and colour through so the strips don't look like painted wall.</summary>
+        const float FrostAlpha = 0.8f;
 
         [MenuItem("Close the Deal/Art/Import Kit and Build Test Scene")]
         public static void RunFromMenu()
@@ -197,11 +219,22 @@ namespace CloseTheDeal.Editor.Art
                         MakeTransparent(mat);
                     }
                 }
+                if (m.name == "Glass_Frosted")
+                {
+                    c.a = FrostAlpha;
+                    MakeTransparent(mat);
+                }
                 if (Textured.Contains(m.name))
                 {
                     // WHY white: the texture already holds the final colour; a tint would darken it twice.
                     mat.SetTexture("_BaseMap", ImportTexture(m.name));
                     c = Color.white;
+                }
+                else if (!m.glass)
+                {
+                    // WHY: a material that has dropped its texture (the ceiling tiles, 2026-11-12) must lose it
+                    // here too, or the old map keeps showing under the new colour.
+                    mat.SetTexture("_BaseMap", null);
                 }
                 if (m.name == "Light_Strip")
                 {
@@ -334,9 +367,23 @@ namespace CloseTheDeal.Editor.Art
 
         // ------------------------------------------------------------------ prefabs
 
+        /// <summary>True when every vertex sits on a corner of the mesh's bounds: a real axis-aligned box.</summary>
+        /// <remarks>WHY: 12 triangles alone isn't proof. The sloped stair guards are 12-triangle hulls too, and
+        /// a BoxCollider fitted to their bounds would stand a 5 m wall beside the stair.</remarks>
+        static bool IsAxisAlignedBox(Mesh mesh)
+        {
+            const float Epsilon = 0.0005f;   // half a millimetre: the kit's size tolerance
+            Bounds b = mesh.bounds;
+            foreach (Vector3 v in mesh.vertices)
+                for (int axis = 0; axis < 3; axis++)
+                    if (Mathf.Abs(v[axis] - b.min[axis]) > Epsilon && Mathf.Abs(v[axis] - b.max[axis]) > Epsilon)
+                        return false;
+            return true;
+        }
+
         /// <summary>Prefab per piece: <c>*_Collider</c> meshes become colliders with no renderer.</summary>
         /// <remarks>
-        /// A 12-triangle collider mesh becomes a BoxCollider fitted to it (cheaper and exact for the kit's
+        /// A collider mesh that is an axis-aligned box becomes a BoxCollider fitted to it (cheaper and exact for the kit's
         /// boxes); anything else a convex MeshCollider, as unity-import.md says. The alternative, convex
         /// MeshColliders everywhere, works too but costs more per contact for no gain on boxes.
         /// </remarks>
@@ -355,7 +402,7 @@ namespace CloseTheDeal.Editor.Art
                 Mesh mesh = mf.sharedMesh;
                 if (child.name.EndsWith("_Collider"))
                 {
-                    if (mesh.GetIndexCount(0) == BoxIndexCount && mesh.subMeshCount == 1)
+                    if (mesh.GetIndexCount(0) == BoxIndexCount && mesh.subMeshCount == 1 && IsAxisAlignedBox(mesh))
                     {
                         var box = child.AddComponent<BoxCollider>();
                         box.center = mesh.bounds.center;
