@@ -46,6 +46,7 @@ GameObject:
   - component: {fileID: 4680666766096500643}
   - component: {fileID: 5842299367726580714}
   - component: {fileID: 7581206824313403346}
+  - component: {fileID: 8769218541613902430}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -219,6 +220,29 @@ MonoBehaviour:
     m_Bits: 128
   _cameraTarget: {fileID: 4165610245162811838}
   _leanPivot: {fileID: 1549759532965773935}
+--- !u!114 &8769218541613902430
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4715390566021658440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5333bdc1368b436084ccf8179d26180, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Items.ItemCarrier
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 4680666766096500643}
+  _networkObjectCache: {fileID: 0}
+  _profile: {fileID: 11400000, guid: 1de3a4bfb8c0041aeb851f7023c0c0b6, type: 2}
+  _sharedActions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  _onTook:
+    m_PersistentCalls:
+      m_Calls: []
+  _onLetGo:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &7111191965594976901
 GameObject:
   m_ObjectHideFlags: 0
