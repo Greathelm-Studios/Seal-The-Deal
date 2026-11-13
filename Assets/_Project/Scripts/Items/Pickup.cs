@@ -106,6 +106,7 @@ namespace CloseTheDeal.Items
         bool[] _ownRendererEnabled;
         Transform _handsCopy;
         static CarryProfile _defaultRules;
+        bool _quiet;
 
         /// <summary>Every machine. A player took the item.</summary>
         public event Action<Pickup, ItemCarrier> Taken;
@@ -121,6 +122,9 @@ namespace CloseTheDeal.Items
 
         /// <summary>This prefab's own carry rules, else the players' (CarryProfile.Shared), else the built-in defaults.</summary>
         public CarryProfile Rules => _rules != null ? _rules : CarryProfile.Shared != null ? CarryProfile.Shared : DefaultRules();
+
+        /// <summary>The sounds this item makes: its definition's own set, else the carry rules' shared one. May be null.</summary>
+        public ItemSoundSet Sounds => Definition.Sounds != null ? Definition.Sounds : Rules.Sounds;
 
         /// <summary>True when nobody wrote a definition for this prop and its name, hold and throw are worked out from its size and mass.</summary>
         public bool IsDerived => _definition == null;
@@ -183,7 +187,10 @@ namespace CloseTheDeal.Items
         public override void OnStartClient()
         {
             base.OnStartClient();
+            // Joining: whoever already holds it took it earlier, so no grab sound now.
+            _quiet = true;
             ApplyState();
+            _quiet = false;
         }
 
         public override void OnStopNetwork()
@@ -433,6 +440,7 @@ namespace CloseTheDeal.Items
         [ObserversRpc(RunLocally = true)]
         void ObserversReleased(ReleaseKind kind)
         {
+            ItemAudio.PlayAt(Sounds, kind == ReleaseKind.Thrown ? Sounds?.Throw : Sounds?.Drop, transform.position);
             Released?.Invoke(this, kind);
             if (kind == ReleaseKind.Thrown)
                 _onThrown.Invoke();
@@ -443,6 +451,7 @@ namespace CloseTheDeal.Items
         [ObserversRpc(RunLocally = true)]
         void ObserversImpact(float speed)
         {
+            PlayImpact(speed);
             Impact?.Invoke(this, speed);
             _onImpact.Invoke(speed);
         }
@@ -452,6 +461,18 @@ namespace CloseTheDeal.Items
         {
             Returned?.Invoke(this);
             _onReturned.Invoke();
+        }
+
+        /// <summary>Heavy things thud, light things clatter; harder hits are louder.</summary>
+        void PlayImpact(float speed)
+        {
+            ItemSoundSet sounds = Sounds;
+            if (sounds == null)
+                return;
+
+            AudioClip clip = Definition.WeightKg >= sounds.HeavyFromKg ? sounds.ImpactHeavy : sounds.ImpactLight;
+            float loudness = Mathf.InverseLerp(Rules.MinImpactSpeed * 0.5f, sounds.FullVolumeImpactSpeed, speed);
+            ItemAudio.PlayAt(sounds, clip, transform.position, Mathf.Max(0.2f, loudness));
         }
 
         /// <summary>
@@ -492,6 +513,8 @@ namespace CloseTheDeal.Items
             {
                 _blend = 0f;
                 next.NotifyHeld(this);
+                if (!_quiet)
+                    ItemAudio.PlayAt(Sounds, Sounds?.PickUp, transform.position);
                 Taken?.Invoke(this, next);
                 _onTaken.Invoke();
             }

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60942715289994fa8928d5ba8227e891, type: 3}
+  m_Name: ItemSounds
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Items.ItemSoundSet
+  Output: {fileID: 0}
+  PickUp: {fileID: 0}
+  Drop: {fileID: 0}
+  Throw: {fileID: 0}
+  ImpactLight: {fileID: 0}
+  ImpactHeavy: {fileID: 0}
+  HeavyFromKg: 6
+  FullVolumeImpactSpeed: 14
+  Arm: {fileID: 0}
+  Beep: {fileID: 0}
+  Explosion: {fileID: 0}
+  VentLoop: {fileID: 0}
+  VentEnd: {fileID: 0}
+  WetFloorDown: {fileID: 0}
+  Slip: {fileID: 0}
+  Volume: 0.9

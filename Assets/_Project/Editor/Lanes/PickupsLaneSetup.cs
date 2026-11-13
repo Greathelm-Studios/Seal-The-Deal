@@ -92,6 +92,7 @@ namespace CloseTheDeal.Editor.Lanes
             GreyboxPropSetup.PropSet greybox = GreyboxPropSetup.Ensure(false);
 
             var assets = new Assets { Carry = Profile<CarryProfile>("DefaultCarry", null) };
+            ItemSoundsSetup.Link(assets.Carry);
 
             // The greybox furniture becomes something hands can take.
             assets.Chair = MakeFurnitureCarryable("Chair", assets.Carry, Item("Chair", "Chair", ItemKind.Furniture, 8f, d =>
@@ -1098,6 +1099,80 @@ namespace CloseTheDeal.Editor.Lanes
         }
 
         /// <summary>
+        /// The one item sound set (Profiles/Items/ItemSounds.asset), linked from the carry
+        /// profile. Fills only what is empty: the game mixer's SFX bus once the UI sound lane's
+        /// mixer is in the project, and each clip from Audio/Items/Item_&lt;Slot&gt;.wav once the
+        /// sound generator has written it, and links the set from the carry profile if its
+        /// Sounds slot is empty (the one change this tool makes to an existing asset: an empty
+        /// slot it owns). A slot someone has set is never changed.
+        /// </summary>
+        static class ItemSoundsSetup
+        {
+            const string SetPath = ProfileFolder + "/ItemSounds.asset";
+            const string MixerPath = "Assets/_Project/Audio/UI/GameMixer.mixer";
+            const string ClipFolder = "Assets/_Project/Audio/Items";
+            const string SfxGroup = "SFX";
+
+            static readonly string[] Slots =
+            {
+                "PickUp", "Drop", "Throw", "ImpactLight", "ImpactHeavy",
+                "Arm", "Beep", "Explosion", "VentLoop", "VentEnd", "WetFloorDown", "Slip"
+            };
+
+            public static void Link(CarryProfile carry)
+            {
+                ItemSoundSet set = AssetDatabase.LoadAssetAtPath<ItemSoundSet>(SetPath);
+                if (set == null)
+                {
+                    set = ScriptableObject.CreateInstance<ItemSoundSet>();
+                    AssetDatabase.CreateAsset(set, SetPath);
+                    Debug.Log("[Pickups] Created " + SetPath);
+                }
+
+                var so = new SerializedObject(set);
+                FillBus(so);
+                foreach (string slot in Slots)
+                    FillClip(so, slot);
+                so.ApplyModifiedPropertiesWithoutUndo();
+
+                if (carry != null && carry.Sounds == null)
+                {
+                    var carrySo = new SerializedObject(carry);
+                    GreyboxSceneSetup.SetReference(carrySo, "Sounds", set);
+                    carrySo.ApplyModifiedPropertiesWithoutUndo();
+                }
+            }
+
+            static void FillBus(SerializedObject so)
+            {
+                SerializedProperty output = so.FindProperty("Output");
+                if (output.objectReferenceValue != null)
+                    return;
+
+                var mixer = AssetDatabase.LoadAssetAtPath<UnityEngine.Audio.AudioMixer>(MixerPath);
+                UnityEngine.Audio.AudioMixerGroup[] groups = mixer != null ? mixer.FindMatchingGroups(SfxGroup) : null;
+                if (groups == null || groups.Length == 0)
+                {
+                    Debug.Log($"[Pickups] Item sounds have no mixer bus yet: no {SfxGroup} group at {MixerPath}. Re-run after the UI sound lane is merged.");
+                    return;
+                }
+
+                output.objectReferenceValue = groups[0];
+            }
+
+            static void FillClip(SerializedObject so, string slot)
+            {
+                SerializedProperty clip = so.FindProperty(slot);
+                if (clip.objectReferenceValue != null)
+                    return;
+
+                var found = AssetDatabase.LoadAssetAtPath<AudioClip>($"{ClipFolder}/Item_{slot}.wav");
+                if (found != null)
+                    clip.objectReferenceValue = found;
+            }
+        }
+
+        /// <summary>
         /// Any loose object in the game can be picked up and thrown (Alex, 2026-11-13). A prop
         /// needs only the components below; its name, hold and throw are worked out at runtime
         /// from its size and mass (LooseItemDefinition), and a hand-made item definition on its
@@ -1730,6 +1805,13 @@ namespace CloseTheDeal.Editor.Lanes
             me.LocalUse();
             yield return 0.3f;
             Check("right mouse pulls the pin and it vents", extinguisher.IsVenting);
+            AudioSource ventLoop = can.GetComponentInChildren<AudioSource>(true);
+            bool audioRuns = ventLoop != null && ventLoop.isPlaying;
+            if (audioRuns)
+                Check("the vent loop goes through the item sound set's mixer bus", ventLoop.outputAudioMixerGroup == can.Sounds?.Output,
+                    $"bus: {(ventLoop.outputAudioMixerGroup != null ? ventLoop.outputAudioMixerGroup.name : "none (no game mixer in this checkout yet)")}");
+            else
+                Note("NOT CHECKED  the vent loop playing: this run has no audio output, so no source reports playing.");
             Stand(me, new Vector3(3f, FloorY, -2f), -90f);
             yield return 1.5f;
             FirstPersonStill("08_extinguisher_smoke");
@@ -1744,6 +1826,10 @@ namespace CloseTheDeal.Editor.Lanes
             Check("it lays a smoke cloud", smokeParticles > 40, $"{smokeParticles} smoke puffs alive");
             yield return new Until(() => !extinguisher.IsVenting, 8f, "the extinguisher to run empty");
             Check("it runs empty and stops", extinguisher.IsEmpty);
+            // The host's own client hears the change a tick after the server value: wait for it.
+            yield return 0.3f;
+            if (audioRuns)
+                Check("the vent loop stops when it runs empty", !ventLoop.isPlaying);
 
             // 6. Wet floor sign.
             Pickup sign = Find("Wet Floor Sign");

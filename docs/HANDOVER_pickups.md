@@ -89,6 +89,14 @@ Open `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`, press Play, then **Host 
 - Running the setup menu also re-applies the office look, which rewrites `Assets/_Project/Art/Look/OfficeLook_Volume.asset` and its `.meta`. Those files were left uncommitted in this worktree; they are not lane changes.
 - A carried panel is an immovable wall on the host and pushes other players aside. Fun or exploit needs a playtest.
 
+## Sound (2026-11-13)
+
+- **The items have no real sounds yet.** Twelve item sounds are listed with their events and timings in [ITEMS.md](systems/ITEMS.md) "Item sounds"; the UI sound lane makes them (agreed on AgentHub #414/#415) as `Audio/Items/Item_<Slot>.wav`, and **Set Up Pickups** fills `Profiles/Items/ItemSounds.asset` from them and sets its bus to the game mixer's SFX group once that lane is merged. Until then: pick-up, drop, throw, impact, arm, vent end, wet floor and slip are **silent**, and the beep, explosion and vent loop are **code-made stand-in tones** (`ItemTones`), to be removed when the clips land.
+- Item sounds go through `ItemAudio` (a pooled 3D source per sound, routed to the set's bus); the explosion no longer uses `AudioSource.PlayClipAtPoint`, which bypassed any mixer.
+- The vent loop stops when the extinguisher runs empty (checked by script), comes back, is despawned, or this machine leaves. It keeps playing after a drop, death or the carrier leaving, because the extinguisher keeps venting on the floor until empty: that is the design ("cannot be stopped").
+- The Grenade Case, extinguisher and wet floor sign events (Armed, PinPulled, PutDown and the rest) used to fire twice on the host (server and client callbacks); they now fire once, so their sounds are not doubled.
+- Nobody has heard any of it: batchmode runs only report sources playing.
+
 ## The one thing that still makes pickups feel like a demo
 
 Carried items float in front of the camera with no hands or arms, and the beep, hiss and boom are generated tones, so picking something up has no physical weight on screen.

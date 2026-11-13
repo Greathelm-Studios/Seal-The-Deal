@@ -164,6 +164,10 @@ namespace CloseTheDeal.Items
 
         void OnDownChanged(bool previous, bool next, bool asServer)
         {
+            // On the host this runs twice, as server then as client: answer once.
+            if (!ShowsChange(asServer))
+                return;
+
             if (_puddle != null)
                 _puddle.SetActive(next);
 
@@ -172,6 +176,7 @@ namespace CloseTheDeal.Items
 
             if (next)
             {
+                ItemAudio.PlayAt(Item.Sounds, Item.Sounds?.WetFloorDown, transform.position);
                 PutDown?.Invoke(this);
                 _onPutDown.Invoke();
             }
@@ -185,6 +190,7 @@ namespace CloseTheDeal.Items
         [ObserversRpc(RunLocally = true)]
         void ObserversSlipped(Vector3 point)
         {
+            ItemAudio.PlayAt(Item.Sounds, Item.Sounds?.Slip, point);
             Slipped?.Invoke(this, point);
             _onSlip.Invoke();
         }

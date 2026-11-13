@@ -71,6 +71,10 @@ namespace CloseTheDeal.Items
         [Tooltip("How long a thing that fell out of the building stays gone before it is back where it started, in seconds.")]
         [Min(0f)] public float FallReturnSeconds = 2f;
 
+        [Header("Sound")]
+        [Tooltip("Every item's sounds and the mixer bus they play through, unless an item definition names its own set.")]
+        public ItemSoundSet Sounds;
+
         [Header("Any loose prop (no item definition of its own)")]
         [Tooltip("How fast the lightest loose props (1 kg or less) leave the hands when thrown, in metres per second. Heavier ones are slower, down to the speed below at the weight limit.")]
         [Min(0f)] public float LooseThrowSpeedLight = 15f;

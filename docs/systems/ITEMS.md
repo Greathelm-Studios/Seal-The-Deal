@@ -117,6 +117,31 @@ What a HUD reads for items. All of it is events: nothing here needs checking eve
 
 `ItemPromptLabel` is this lane's stand-in two lines of text for the test scene; the revamped HUD replaces it and reads exactly the rows above.
 
+## Item sounds
+
+Every sound an item makes in the world, as an event with its timing. All play at the item's position (3D) on every machine, from events each machine already receives; none is sent as sound. They play through `ItemSoundSet.Output`, the game mixer's **SFX** bus, so the settings' sound-effects volume applies. The set is `Profiles/Items/ItemSounds.asset`, linked from `DefaultCarry.asset`; an item definition may name its own set.
+
+**Clips are made by the UI sound lane's generator** (`ArtSource/Audio/ui/make_ui_sounds.py`, the one place sounds are made) as `Assets/_Project/Audio/Items/Item_<Slot>.wav`. **Set Up Pickups** fills any empty slot from that file and the bus from `Assets/_Project/Audio/UI/GameMixer.mixer` once they exist; it never changes a slot someone set.
+
+| Slot | Event | When and how long | Notes |
+|---|---|---|---|
+| `PickUp` | `Pickup.Taken` | Once, when the item reaches a player's hands | Short grab, about 0.15 s. Same for every item |
+| `Drop` | `Pickup.Released` (Dropped, Placed, Knocked) | Once, at let-go | Not played when an item is used up (a gun into the slots, a case gone off) |
+| `Throw` | `Pickup.Released` (Thrown) | Once, at let-go | Whoosh, about 0.2 s |
+| `ImpactLight` / `ImpactHeavy` | `Pickup.Impact(speed)` | Each hard landing of a thrown item, at most once per contact | Heavy at 6 kg and up (`HeavyFromKg`). Volume rises with impact speed from 2 m/s to full at 14 m/s (`FullVolumeImpactSpeed`), never below 20% |
+| `Arm` | `GrenadeCase.Armed` | Once, on right mouse | A click just before the first beep |
+| `Beep` | `GrenadeCase.Beeped` | Fuse 3.5 s. First beep at arming; the gap shrinks evenly with the fuse burnt, from 0.6 s to 0.08 s; about 13 beeps in all | Must be under 0.06 s. Played on the case's own source, so it follows a thrown case |
+| `Explosion` | `GrenadeCase.Exploded(point)` | Once, at the blast point | Long tail is fine (about 1 s) |
+| `VentLoop` | `FireExtinguisher.PinPulled` to `RanEmpty` | Loops for exactly the vent time, 6 s, on the extinguisher's own source | Must loop without a click. Keeps playing after a drop: the gas still drives it round the floor until it is empty, by design |
+| `VentEnd` | `FireExtinguisher.RanEmpty` | Once, when the loop stops | Last gasp, about 0.4 s |
+| `WetFloorDown` | `WetFloorSign.PutDown` | Once, when the sign is set down | Plastic clack and a splash |
+| `Slip` | `WetFloorSign.Slipped(point)` | Once per slip, at the runner | Squeak, about 0.3 s |
+| (HUD) hands full | `ItemCarrier.Denied(HandsFull)` | Owner only | The UI's `UiSoundEvent.HandsFull`, on the UI bus, not this set |
+
+**When the vent loop stops:** when it runs empty (6 s after the pin); when it is used up or comes back; and on every machine when the extinguisher is despawned (the towers rebuilt for a new match) or that machine leaves the game (`OnStopNetwork`). Dropping it, or its carrier dying or leaving, does not stop it: it keeps venting on the floor until empty. If a match ends without despawning the props, a venting extinguisher finishes its 6 s.
+
+**Stand-ins still in the build:** until real clips exist, an empty `Beep`, `Explosion` or `VentLoop` falls back to tones made in code (`ItemTones`). They are a known issue, not a sound design, and go when the clips land. Every other slot plays nothing while empty.
+
 ## Guns
 
 `ItemCarrier.ServerItemTaken` fires on the host whenever a player takes any item, with the carrier and the pickup. In `Lane_Integration.unity`, `GunPickups` (Integration) listens: a gun goes into the weapon slots and the pickup is used up (guns never return). The rules (refill, free slot, swap) are in [INTEGRATION.md](INTEGRATION.md). Without that glue a gun is carried and thrown like any object.
@@ -130,7 +155,7 @@ Every moment has a C# event and a UnityEvent on the prefab, firing on every mach
 - Shared hands (static, set by the integration glue): `ItemCarrier.HandsTakenElsewhere` (true refuses an item as hands full, on the owner's prompt and key and on the host) and `InteractClaimedElsewhere` (owner: something else answers F this frame).
 - `GrenadeCase`: Armed, Beeped, Exploded (point). `FireExtinguisher`: PinPulled, RanEmpty. `WetFloorSign`: PutDown, Cleared, Slipped (point).
 
-The beep, hiss and explosion thump are stand-in sounds made in code (`ItemTones`); assigning real clips on the prefabs replaces them. `ItemPromptLabel` is the lane's own two lines of on-screen text and is only in the lane's test scene.
+Sounds: see "Item sounds" above. The beep, hiss and explosion fall back to stand-in tones made in code (`ItemTones`) until real clips exist. `ItemPromptLabel` is the lane's own two lines of on-screen text and is only in the lane's test scene.
 
 ## Scripts
 
