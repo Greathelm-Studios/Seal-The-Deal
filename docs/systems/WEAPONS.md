@@ -108,7 +108,8 @@ The catalog names guns on the network by their place in the list. **Add new guns
 
 ## For other systems
 
-- **Pickups** call `WeaponHolder.Equip(definition)` on the host (first empty slot, or over the gun in hand when both are full; `Equip(definition, slot)` to choose) and `Unequip()` / `Unequip(slot)`. The gun must be in the catalog. A picked-up gun arrives with a full magazine.
+- **Pickups** call `WeaponHolder.Equip(definition)` on the host (first empty slot, or over the gun in hand when both are full; `Equip(definition, slot)` to choose) and `Unequip()` / `Unequip(slot)`. The gun must be in the catalog. A picked-up gun arrives with a full magazine. `GunPickups` in Integration does this in `Lane_Integration.unity` ([INTEGRATION.md](INTEGRATION.md)).
+- **Holding fire:** `WeaponHolder.FireHeld` (static, every machine): return true and the owner's trigger stays up and the host refuses the shot. The integration glue holds fire for a player carrying an item and for anyone in the lobby reception.
 - **A scene's starting guns**: a `StartingLoadout` object in the scene. Without one, players start empty-handed.
 - **Anything that can be hurt** implements `CloseTheDeal.Core.IDamageable` and is found on the collider a bullet stops on, or its parents. Players and dummies use `Health`, which bullets test separately.
 - **Explosions**: `Knockback.Explode(..., attackerClientId)` now also deals `BlastProfile.Damage` (0 by default, so the old test blast is unchanged) and breaks glass in its radius.

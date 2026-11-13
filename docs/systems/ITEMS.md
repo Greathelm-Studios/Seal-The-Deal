@@ -1,6 +1,6 @@
 # ITEMS
 
-**Status:** Current · **Last updated:** 2026-11-12 · **Verified against:** the pickups lane commit
+**Status:** Current · **Last updated:** 2026-11-13 · **Verified against:** the pickups lane commit
 
 ## What happens in the game
 
@@ -13,7 +13,7 @@ A player has **one hands slot**. While it is full: **left mouse** throws, **G** 
 - **Grenade Case:** right mouse arms it. It beeps faster and faster for 3.5 seconds, then explodes wherever it is, throwing players and furniture and hurting anything in the blast. Hold it too long and it goes off in your hands.
 - **Fire Extinguisher:** right mouse pulls the pin. It pours a wall of smoke for 6 seconds and cannot be stopped. Carried, it lays smoke where you walk. Let go, the gas drives it spinning round the floor into whoever is in the way.
 - **Wet Floor Sign:** right mouse puts it down ahead of you and the floor around it is wet. Anyone who runs through, from either firm, goes flying; walking is safe. Picking the sign up, or knocking it away, clears the trap.
-- **Pistol and AR-15:** real pickups with their own definitions. Until the shooting lane's weapon holder is merged they are carried and thrown like any object; see "Guns" below.
+- **Pistol and AR-15:** real pickups with their own definitions. In `Lane_Integration.unity` taking one puts it straight into the weapon slots; in a scene without the integration glue they are carried and thrown like any object. See "Guns" below.
 
 Anything knocked out of your hands (a blast, a heavy hit, leaving the game) stays in the level where it fell. Anything that falls out of the building is put back where it started two seconds later. A used-up item (an exploded case, an empty extinguisher) comes back fresh at its starting place after the time on its definition.
 
@@ -61,18 +61,7 @@ An item's weight is authored twice, on its definition and as its prefab body's m
 
 ## Guns
 
-`ItemCarrier.ServerItemTaken` fires on the host whenever a player takes any item, with the carrier and the pickup. The weapon holder (shooting lane) grants guns from it:
-
-```csharp
-ItemCarrier.ServerItemTaken += (carrier, pickup) =>
-{
-    if (pickup.Definition.Kind != ItemKind.Gun) return;
-    weaponHolderOf(carrier).Grant(pickup.Definition);
-    pickup.ServerUseUp(); // out of the hands, out of play
-};
-```
-
-Until that line exists, a pistol or AR-15 is carried and thrown like any other object.
+`ItemCarrier.ServerItemTaken` fires on the host whenever a player takes any item, with the carrier and the pickup. In `Lane_Integration.unity`, `GunPickups` (Integration) listens: a gun goes into the weapon slots and the pickup is used up (guns never return). The rules (refill, free slot, swap) are in [INTEGRATION.md](INTEGRATION.md). Without that glue a gun is carried and thrown like any object.
 
 ## Hooks for sound, effects and UI
 
@@ -80,6 +69,7 @@ Every moment has a C# event and a UnityEvent on the prefab, firing on every mach
 
 - `Pickup`: Taken, Released (dropped / thrown / placed / knocked), Impact (speed), Returned.
 - `ItemCarrier`: HeldChanged, PromptChanged (owner), Denied (owner), `ServerItemTaken` (host, static).
+- Shared hands (static, set by the integration glue): `ItemCarrier.HandsTakenElsewhere` (true refuses an item as hands full, on the owner's prompt and key and on the host) and `InteractClaimedElsewhere` (owner: something else answers F this frame).
 - `GrenadeCase`: Armed, Beeped, Exploded (point). `FireExtinguisher`: PinPulled, RanEmpty. `WetFloorSign`: PutDown, Cleared, Slipped (point).
 
 The beep, hiss and explosion thump are stand-in sounds made in code (`ItemTones`); assigning real clips on the prefabs replaces them. `ItemPromptLabel` is the lane's own two lines of on-screen text and is only in the lane's test scene.
@@ -102,7 +92,7 @@ Setup: **Close the Deal > Lanes > Set Up Pickups** ([PickupsLaneSetup.cs](../../
 ## Known limitations
 
 - **Carry slowdown is a labelled workaround.** `PlayerMotor` has no public way to take a different movement profile and this lane could not edit it, so `MotorSpeedOverride` swaps a slowed runtime copy in through the motor's private `_profile` field. The real fix is one public method on `PlayerMotor`; then the reflection goes. If the field is renamed, carrying stops slowing players and an error says so once.
-- **Death is not hooked up.** There is no player health in this branch. `ItemCarrier.ServerForceDrop()` is the call for it; being knocked about and leaving the game already use it.
+- **Death drops what is carried** only because a dead player is knocked for the whole wait and the knock drops it (`Drop When Knocked` on the carry profile). Untick that and death keeps the item in the hands.
 - **Other players' carried items do not tilt** with where that player looks up or down: the host does not know a remote player's pitch. They see it level at chest height.
 - **A carried panel is a moving wall on the host.** It pushes loose props and other players out of its way and cannot be pushed back. Whether that is fun or an exploit needs a playtest.
 - **Smoke only blocks sight.** It is drawn per machine, so the exact puffs differ between players; the cloud's place and timing are the same.
