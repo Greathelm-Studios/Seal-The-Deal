@@ -103,10 +103,29 @@ SFX bus at 0 while UI plays: peak=0.318 OK UI unaffected
 rapid hover: 37484 requests in 1 s, started=17 dropped=37467, output peak=0.343 OK no clipping
 ```
 
+## Item sounds (world, SFX bus)
+
+The same generator writes the pickups lane's 12 world sounds to `Assets/_Project/Audio/Items/Item_<Slot>.wav` (3D, routed to `Master/SFX` by that lane's setup; slots and timing in ITEMS.md "Item sounds"). **Unheard, like the rest.**
+
+| Slot | Length | Peak | What it is |
+|---|---|---|---|
+| `PickUp` | 150 ms | -4.4 dBFS | grab: soft noise and a knock |
+| `Drop` | 200 ms | -4.4 dBFS | dull knock and a small bounce |
+| `Throw` | 200 ms | -4.4 dBFS | whoosh, band falling |
+| `ImpactLight` | 120 ms | -1.9 dBFS | thin clack, full strength (game scales by speed) |
+| `ImpactHeavy` | 350 ms | -1.9 dBFS | low thud, 140 to 55 Hz, full strength |
+| `Arm` | 100 ms | -4.4 dBFS | two-part click |
+| `Beep` | 50 ms | -4.4 dBFS | 2.1 kHz |
+| `Explosion` | 1100 ms | -0.9 dBFS | crack, boom falling 120 to 32 Hz, rumble tail |
+| `VentLoop` | 2000 ms | -6.0 dBFS | gas hiss, seamless (crossfaded seam; set loop on the AudioSource) |
+| `VentEnd` | 400 ms | -4.4 dBFS | hiss falling away |
+| `WetFloorDown` | 320 ms | -4.4 dBFS | plastic clack and splash |
+| `Slip` | 300 ms | -4.4 dBFS | squeak 700 to 1900 Hz and a scuff |
+
 ## Regenerating
 
 ```bash
-python3 ArtSource/Audio/ui/make_ui_sounds.py            # writes the 31 WAVs and prints peak and RMS
+python3 ArtSource/Audio/ui/make_ui_sounds.py            # writes the 31 UI WAVs and the 12 item WAVs, prints peak and RMS
 python3 ArtSource/Audio/ui/make_ui_sounds.py --table    # also prints this table as markdown
 ```
 

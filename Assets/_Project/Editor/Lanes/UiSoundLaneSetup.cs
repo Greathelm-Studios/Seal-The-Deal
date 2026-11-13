@@ -19,6 +19,7 @@ namespace CloseTheDeal.Editor.Lanes
     public static class UiSoundLaneSetup
     {
         public const string ClipFolder = "Assets/_Project/Audio/UI";
+        public const string ItemClipFolder = "Assets/_Project/Audio/Items";   // world sounds for the pickups lane, same generator
         public const string MixerPath = ClipFolder + "/GameMixer.mixer";
         public const string SetPath = "Assets/_Project/Resources/UI/UiSoundSet.asset";
 
@@ -28,6 +29,7 @@ namespace CloseTheDeal.Editor.Lanes
         [MenuItem("Close the Deal/UI/Set Up Sound")]
         public static void Run()
         {
+            AssetDatabase.Refresh();
             ApplyImportSettings();
             AudioMixer mixer = EnsureMixer();
             EnsureSet(mixer);
@@ -39,13 +41,13 @@ namespace CloseTheDeal.Editor.Lanes
         // ----------------------------------------------------------------------------------- import settings
         static void ApplyImportSettings()
         {
-            foreach (string guid in AssetDatabase.FindAssets("t:AudioClip", new[] { ClipFolder }))
+            foreach (string guid in AssetDatabase.FindAssets("t:AudioClip", new[] { ClipFolder, ItemClipFolder }))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 var imp = AssetImporter.GetAtPath(path) as AudioImporter;
                 if (imp == null) continue;
                 var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
-                bool sting = clip != null && clip.length > 0.45f;
+                bool sting = clip != null && clip.length > 0.45f && !path.Contains("Loop");   // a loop stays PCM so its seam is exact
                 imp.forceToMono = true;
                 imp.loadInBackground = false;
                 imp.ambisonic = false;

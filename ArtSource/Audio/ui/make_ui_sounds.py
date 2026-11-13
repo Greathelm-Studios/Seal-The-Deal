@@ -313,6 +313,119 @@ EVENTS = {
 }
 PEAK = {"ui": 0.45, "sting": 0.55, "combat": 0.70}
 
+# ------------------------------------------------------------------------------------------ item sounds
+# World sounds for the pickups lane (3D, SFX bus): Assets/_Project/Audio/Items/Item_<Slot>.wav. Full strength:
+# the game scales impact volume with speed.
+def i_pickup(b):   # cloth-and-plastic grab: short low-mid noise + a soft knock
+    air(b, 0, 0.09, 0.6, 500, 3000, decay=0.02, seed=21)
+    note(b, 0.01, 180.0, 0.10, 0.6, 0.03, "sine", glide=(240.0, 170.0))
+
+
+def i_drop(b):     # let go: a duller knock, then a small second bounce
+    air(b, 0, 0.07, 0.6, 300, 2000, decay=0.018, seed=22)
+    note(b, 0, 130.0, 0.12, 0.8, 0.035, "sine", glide=(190.0, 120.0))
+    air(b, 0.11, 0.05, 0.25, 300, 1800, decay=0.012, seed=23)
+
+
+def i_throw(b):    # whoosh: noise swell, band falling as the item leaves
+    swell(b, 0, 0.2, 1.0, 900, 5000, 300, 1800, seed=24)
+
+
+def i_impact_light(b):  # thin clack
+    air(b, 0, 0.05, 0.9, 900, 6000, decay=0.010, seed=25, attack=0.0005)
+    note(b, 0, 420.0, 0.09, 0.5, 0.02, "tri", glide=(560.0, 400.0), attack=0.0005)
+
+
+def i_impact_heavy(b):  # thud with weight: low sine drop + broad noise
+    air(b, 0, 0.12, 0.8, 120, 2500, decay=0.03, seed=26, attack=0.0005)
+    note(b, 0, 70.0, 0.32, 1.0, 0.09, "sine", glide=(140.0, 55.0), attack=0.0005)
+    air(b, 0.06, 0.2, 0.2, 200, 1200, decay=0.07, seed=27)
+
+
+def i_arm(b):      # two-part mechanical click
+    air(b, 0, 0.02, 0.8, 2000, 9000, decay=0.004, seed=28, attack=0.0003)
+    air(b, 0.045, 0.03, 1.0, 1200, 7000, decay=0.006, seed=29, attack=0.0003)
+    note(b, 0.045, 1320.0, 0.05, 0.3, 0.012, "tri", attack=0.0005)
+
+
+def i_beep(b):     # 50 ms, 2 kHz, square-ish (two odd partials)
+    note(b, 0, 2093.0, 0.05, 1.0, 0.06, "tri", attack=0.001)
+
+
+def i_explosion(b):  # crack, low boom falling in pitch, long filtered rumble tail
+    air(b, 0, 0.06, 1.0, 800, 9000, decay=0.012, seed=30, attack=0.0003)
+    note(b, 0, 50.0, 0.9, 1.2, 0.22, "sine", glide=(120.0, 32.0), attack=0.001)
+    air(b, 0, 1.05, 0.9, 60, 900, sweep=(80, 2500, 40, 300), decay=0.28, seed=31, attack=0.002)
+    air(b, 0.05, 0.6, 0.35, 1500, 6000, sweep=(1500, 7000, 600, 2000), decay=0.12, seed=32)
+
+
+def i_vent_end(b):   # last gasp: hiss whose band and level fall away
+    air(b, 0, 0.4, 1.0, 1500, 8000, sweep=(2500, 9000, 600, 2500), decay=0.12, seed=34)
+
+
+def i_wet_floor(b):  # plastic clack, then a small splash
+    air(b, 0, 0.03, 0.9, 1200, 5000, decay=0.006, seed=35, attack=0.0003)
+    note(b, 0, 600.0, 0.06, 0.5, 0.015, "tri", attack=0.0005)
+    air(b, 0.05, 0.25, 0.55, 1500, 8000, sweep=(800, 4000, 2500, 9000), decay=0.07, seed=36, attack=0.01)
+
+
+def i_slip(b):       # squeak: a tone sliding up fast with a little wobble, then a scuff
+    note(b, 0, 1200.0, 0.2, 0.9, 0.09, "tri", glide=(700.0, 1900.0), attack=0.01)
+    air(b, 0.16, 0.14, 0.4, 600, 3500, decay=0.04, seed=37)
+
+
+def vent_loop(seconds=2.0):
+    """Seamless gas hiss: band-limited noise with slow level wobble; the last 0.25 s is crossfaded into the first
+    0.25 s so the loop point has no click or level step."""
+    n, x = int(seconds * SR), int(0.25 * SR)
+    raw = [0.0] * (n + x)
+    rng = Rng(33)
+    a = b = 0.0
+    ca, cb = 1 - math.exp(-2 * math.pi * 7000 / SR), 1 - math.exp(-2 * math.pi * 1800 / SR)
+    for i in range(n + x):
+        v = rng.noise()
+        a += ca * (v - a)
+        b += cb * (v - b)
+        raw[i] = (a - b) * (0.85 + 0.15 * math.sin(2 * math.pi * 3 * i / n))   # 3 whole wobbles per loop
+    out = raw[:n]
+    for i in range(x):
+        k = i / x
+        out[i] = raw[i] * math.sqrt(k) + raw[n + i] * math.sqrt(1 - k)   # equal-power: tail leads back into the head
+    return out
+
+
+ITEMS = {  # slot: (length s, peak, description, builder)
+    "PickUp": (0.15, 0.6, "grab: soft noise + knock", i_pickup),
+    "Drop": (0.20, 0.6, "dull knock + small bounce", i_drop),
+    "Throw": (0.20, 0.6, "whoosh, band falling", i_throw),
+    "ImpactLight": (0.12, 0.8, "thin clack, full strength", i_impact_light),
+    "ImpactHeavy": (0.35, 0.8, "low thud 140 to 55 Hz, full strength", i_impact_heavy),
+    "Arm": (0.10, 0.6, "two-part click", i_arm),
+    "Beep": (0.05, 0.6, "2.1 kHz, 50 ms", i_beep),
+    "Explosion": (1.10, 0.9, "crack + boom 120 to 32 Hz + rumble tail", i_explosion),
+    "VentEnd": (0.40, 0.6, "hiss falling away", i_vent_end),
+    "WetFloorDown": (0.32, 0.6, "plastic clack + splash", i_wet_floor),
+    "Slip": (0.30, 0.6, "squeak 700 to 1900 Hz + scuff", i_slip),
+}
+ITEM_OUT = os.path.normpath(os.path.join(OUT, "..", "Items"))
+
+
+def render_items():
+    os.makedirs(ITEM_OUT, exist_ok=True)
+    out = {}
+    for name, (length, peak, _, fn) in ITEMS.items():
+        buf = [0.0] * int(length * SR)
+        fn(buf)
+        dc_and_fade(buf)
+        g = peak / (max(abs(x) for x in buf) or 1.0)
+        out[name] = [x * g for x in buf]
+    loop = vent_loop()
+    g = 0.5 / max(abs(x) for x in loop)
+    out["VentLoop"] = [x * g for x in loop]     # no fades: it must loop
+    return out
+
+
+
 
 def dc_and_fade(buf):
     m = sum(buf) / max(1, len(buf))
@@ -363,6 +476,18 @@ def main():
             rows.append(f"| `{name}` | {len(s) / SR * 1000:.0f} ms | {20 * math.log10(pk):.1f} dBFS | {20 * math.log10(rms):.1f} dBFS | {spec['cls']} | {spec['rel']} |")
         print("\n".join(rows))
     print(f"\n{len(EVENTS)} files in {os.path.relpath(OUT)}")
+    print(f"\n{'item slot':18s} {'len ms':>7s} {'peak dBFS':>10s} {'rms dBFS':>9s}")
+    items = render_items()
+    for name, smp in items.items():
+        write_wav(os.path.join(ITEM_OUT, f"Item_{name}.wav"), smp)
+        pk = max(abs(x) for x in smp)
+        rms = math.sqrt(sum(x * x for x in smp) / len(smp))
+        print(f"{name:18s} {len(smp) / SR * 1000:7.0f} {20 * math.log10(pk):10.1f} {20 * math.log10(rms):9.1f}")
+    lp = items["VentLoop"]
+    step, typical = abs(lp[0] - lp[-1]), sum(abs(lp[i + 1] - lp[i]) for i in range(len(lp) - 1)) / (len(lp) - 1)
+    print(f"VentLoop seam: step {step:.4f} vs typical sample step {typical:.4f}" + ("" if step < typical * 4 else "  << CHECK"))
+    bad |= step >= typical * 4
+    print(f"{len(items)} files in {os.path.relpath(ITEM_OUT)}")
     return 1 if bad else 0
 
 
