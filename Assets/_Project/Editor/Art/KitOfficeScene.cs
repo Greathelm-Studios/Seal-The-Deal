@@ -8,12 +8,14 @@
 //  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-12 — Alex: "when I press play on KitOffice
 //              I can't move". The menu build now adds the player rig, and Make Open Scene
 //              Playable adds it to an existing scene.
+//  Modified  : Claude Opus 5.5 (Claude Code), 2026-11-13 — Alex: turn KitOffice into the labyrinth.
+//              The tower floor (façade floor plate, spiral stair, locked door, spine, massing) is replaced
+//              by a two-level office labyrinth from the round-5 pieces (ArtSource/Kit/README.md).
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : Lays out whole office floors from the kit prefabs, as ArtSource/Kit/interior_scene.py
-//              does in Blender, so the approved White Trays + Cobalt Portal kit can be walked and lit in
-//              Unity. Its own file because KitImport proves the pieces snap (a small test layout) while
-//              this composes a full floor to judge as a space; it is a review scene, not a floor
-//              template: GreyboxTowerSetup stays the authority on the game's layout.
+//  Summary   : Lays out an office labyrinth from the kit prefabs, so the approved round-5 kit can be walked
+//              and lit in Unity as a space. Its own file because KitImport proves the pieces snap (a small
+//              test layout) while this composes a whole level section to judge; it is a review scene, not
+//              the game's level: whoever lays out the real maze decides that.
 // -----------------------------------------------------------------------------
 using System.Collections.Generic;
 using System.IO;
@@ -29,7 +31,7 @@ using UnityEngine.SceneManagement;
 namespace CloseTheDeal.Editor.Art
 {
     /// <summary>
-    /// Builds <c>KitOffice.unity</c>: three stacked office floors, from the kit prefabs.
+    /// Builds <c>KitOffice.unity</c>: a two-level office labyrinth from the kit prefabs.
     /// Menu: <c>Close the Deal &gt; Art &gt; Build Kit Office Scene</c>.
     /// </summary>
     /// <remarks>
@@ -46,51 +48,36 @@ namespace CloseTheDeal.Editor.Art
         const string NavyPath = "Assets/_Project/Art/Kit/Materials/Trim_Navy.mat";
         const string VolumeProfilePath = "Assets/_Project/Art/Look/OfficeLook_Volume.asset";
 
-        // ---- Layout, Unity floor-local metres: the same numbers as ArtSource/Kit/interior_scene.py ----
-        /// <summary>Façade bays: 28 m / 4 m (TOWER.md footprint width).</summary>
-        const int Bays = 7;
-        const float Bay = 4f, Infill = 2f;
-        /// <summary>Front infill row depth, metres (kit README proposal 1).</summary>
-        const float Strip = 2f;
-        /// <summary>4 m rows behind the strip: 2 + 3 × 4 = 14 m main floor (TOWER.md).</summary>
-        const int Rows = 3;
-        const float Spine = 4f;
-        const float SpineZ = -(Strip + Rows * Bay);   // -14, the spine's front wall line
-        const float Depth = Strip + Rows * Bay + Spine;   // 18
-        const float FloorHeight = 4.5f, ClearHeight = 4.3f;
-        /// <summary>Slab_Stairwell pivot; its 12 × 8 m module spans x 8–20, z -6 to -14.</summary>
-        static readonly Vector3 Stairwell = new Vector3(8f, 0f, -6f);
-        /// <summary>Stair centre: stairwell pivot + (6, 0, -4) (kit README).</summary>
-        static readonly Vector3 StairCentre = new Vector3(14f, 0f, -10f);
-        /// <summary>Spine dividers: WC 0–8, STORE 8–20, UTIL 20–28 (kit README proposal 3).</summary>
-        const float WcEnd = 8f, UtilStart = 20f;
-        /// <summary>
-        /// Width of the street, façade to rival façade, metres (TOWER.md). The rival tower itself is
-        /// no longer built in this scene (Alex, 2026-11-12: "remove the other building"); this is
-        /// now only where the across-the-street review camera stands.
-        /// </summary>
-        const float Gap = 12f;
-        /// <summary>Floors stacked here, so the view from across the street shows the floors above and below as well.</summary>
-        const int Floors = 3;
-        /// <summary>Cage: 12 panel slots every 30°, first at 15°, open from 300° where the flight arrives (kit README).</summary>
-        const float CageFirst = 15f, CageStep = 30f, CageOpenFrom = 300f;
-        /// <summary>Locked door: GreyboxTowerSetup.LockedDoorAngle, its radius (midway column to tread edge) and drop.</summary>
-        const float DoorAngle = 30f, DoorRadius = 1.7f, DoorDrop = 0.02f;
-        /// <summary>Strip light centres in a 4 m bay along x and z: each 1.5 m strip spans three whole 0.5 m tiles.</summary>
-        static readonly float[] LightOffsets = { 1.25f, 2.75f };
-        /// <summary>No strip lights within this radius of the stair centre, metres (the slab hole is 2.65).</summary>
-        const float StairClear = 3f;
-        /// <summary>White massing above and below the built floors, metres: enough to fill a view, not a city.</summary>
+        // ---- Labyrinth layout, Unity metres. Zones and sizes: ArtSource/Kit/concepts/Kit_Detail/README_r5.md ----
+        /// <summary>Floor plate: 8 × 6 cells of 4 m, so 32 × 24 m, x east from 0, z south from 0.</summary>
+        const int Cols = 8, Rows = 6;
+        const float Cell = 4f;
+        const float Width = Cols * Cell, Depth = Rows * Cell;
+        const float FloorHeight = 4.5f;
+        /// <summary>Storeys built: the ground floor and the upper floor round the atrium; a roof slab caps them.</summary>
+        const int Levels = 2;
+        /// <summary>Atrium (zone H), double height: cells from x 12 to 20, z −4 to −16. No middle slab over it.</summary>
+        const float AtriumX0 = 12f, AtriumX1 = 20f, AtriumZ0 = -4f, AtriumZ1 = -16f;
+        /// <summary>Straight stair pivot, its foot's front-left corner: it rises 7.2 m south and lands on the upper
+        /// floor at the atrium's south edge (z −16), 0.2 m clear of the void's west guard.</summary>
+        static readonly Vector3 StairPivot = new Vector3(AtriumX0 + 0.2f, 0f, AtriumZ1 + 7.2f);
+        /// <summary>Kit door: the leaf's hinge in a door wall, local metres (kit README).</summary>
+        const float LeafX = 1.41f, LeafZ = -0.1f;
+        /// <summary>White block under the floor plate, metres: the window corridor looks down at it, not into nothing.</summary>
         const float MassingHeight = 30f;
         /// <summary>Stand-in size: the 1.8 m player and a shoulder-width capsule.</summary>
         const float FigureHeight = 1.8f, FigureRadius = 0.25f;
-        /// <summary>Where stand-ins stand on each floor (x, z).</summary>
-        static readonly Vector2[] OurSpots = { new Vector2(6f, -3f), new Vector2(13f, -5.5f), new Vector2(4f, -8f), new Vector2(24f, -4f) };
+        /// <summary>Where stand-ins stand (x, y, z): one per zone on the ground, two upstairs.</summary>
+        static readonly Vector3[] Spots =
+        {
+            new Vector3(10f, 0f, -6f), new Vector3(17f, 0f, -10f), new Vector3(28f, 0f, -13f), new Vector3(4f, 0f, -22f),
+            new Vector3(15f, 0f, -22f), new Vector3(6f, FloorHeight, -20f), new Vector3(26f, FloorHeight, -8f),
+        };
         /// <summary>
-        /// Where players start in Play, world metres: the ground floor's open area between the façade
-        /// and the stair, clear of the stand-ins and meeting rooms, 0.1 m above the carpet as in Greybox.
+        /// Where players start in Play, world metres: the two ends of the window corridor, 0.1 m above the floor
+        /// as in Greybox, so the first fight is a run along the glass toward the atrium.
         /// </summary>
-        static readonly Vector3 SpawnA = new Vector3(10f, 0.1f, -4f), SpawnB = new Vector3(18f, 0.1f, -4f);
+        static readonly Vector3 SpawnA = new Vector3(4f, 0.1f, -2f), SpawnB = new Vector3(28f, 0.1f, -2f);
 
         // ---- Review captures
         const float Eye = 1.6f;
@@ -101,6 +88,15 @@ namespace CloseTheDeal.Editor.Art
         static void BuildFromMenu()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            BuildAndSave();
+        }
+
+        /// <summary>
+        /// Opens a new scene in place of whatever is open (without asking), builds the labyrinth, adds the player
+        /// rig and the office look, and saves it as KitOffice.unity. The menu asks to save open work first.
+        /// </summary>
+        public static void BuildAndSave()
+        {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             Build(scene);
             GreyboxSceneSetup.EnsurePlayRig(SpawnA, SpawnB);
@@ -111,7 +107,7 @@ namespace CloseTheDeal.Editor.Art
 
         /// <summary>
         /// Adds the player rig (network manager, spawns, menu, follow camera) to the open scene so Play
-        /// puts a player on the ground floor. Adds only what is missing and does not save.
+        /// puts a player in the window corridor. Adds only what is missing and does not save.
         /// </summary>
         /// <remarks>
         /// Exists so a KitOffice.unity built before the rig was part of the build, or one with unsaved
@@ -170,182 +166,163 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>Places every piece into <paramref name="scene"/> (which must be the active scene). Returns the count.</summary>
         static int Build(Scene scene)
         {
-            var root = new GameObject("Kit Office").transform;
+            var root = new GameObject("Kit Office (labyrinth)").transform;
             int count = 0;
-            GameObject P(Transform parent, string piece, float x, float y, float z, float yaw = 0f)
+            Transform G(string name, float y = 0f)
+            {
+                var g = new GameObject(name).transform;
+                g.SetParent(root, false);
+                g.localPosition = new Vector3(0f, y, 0f);
+                return g;
+            }
+            GameObject P(Transform parent, string piece, float x, float z, float yaw = 0f)
             {
                 count++;
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{PrefabFolder}/{piece}.prefab");
                 if (prefab == null) throw new FileNotFoundException($"No kit prefab {piece}; run Import Kit first.");
                 var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-                go.transform.SetLocalPositionAndRotation(new Vector3(x, y, z), Quaternion.Euler(0f, yaw, 0f));
+                go.transform.SetLocalPositionAndRotation(new Vector3(x, 0f, z), Quaternion.Euler(0f, yaw, 0f));
                 return go;
             }
-
-            for (int f = 0; f < Floors; f++)
+            // A maze island: four rounded returns round a 4 × 4 m block with its NW corner at (x, z).
+            // cobaltCorner picks the cobalt one: 0 NW, 1 NE, 2 SE, 3 SW, -1 none.
+            void Island(Transform t, float x, float z, int cobaltCorner)
             {
-                var floor = new GameObject($"Floor {f}").transform;
-                floor.SetParent(root, false);
-                floor.localPosition = new Vector3(0f, f * FloorHeight, 0f);
-                BuildFloor(floor, P);
-                Figures(floor);
+                var corners = new[] { (x, z, 0f), (x + Cell, z, 90f), (x + Cell, z - Cell, 180f), (x, z - Cell, -90f) };
+                for (int k = 0; k < corners.Length; k++)
+                    P(t, k == cobaltCorner ? "Wall_Return_2x2_Cobalt" : "Wall_Return_2x2", corners[k].Item1, corners[k].Item2, corners[k].Item3);
             }
-            // The top of the stack: the slab over the highest floor is its ceiling.
-            var roof = new GameObject("Roof slab").transform;
-            roof.SetParent(root, false);
-            roof.localPosition = new Vector3(0f, Floors * FloorHeight, 0f);
-            Slabs(roof, P);
+
+            // Slabs: the ground floor, the upper floor (open over the atrium), and the roof.
+            for (int level = 0; level <= Levels; level++)
+            {
+                var slabs = G(level == 0 ? "Floor slabs" : level == Levels ? "Roof slabs" : $"Level {level} slabs", level * FloorHeight);
+                for (int i = 0; i < Cols; i++)
+                    for (int j = 0; j < Rows; j++)
+                    {
+                        float x = i * Cell, z = -j * Cell;
+                        if (level == 0) P(slabs, "Slab_4x4", x, z);
+                        else if (level == Levels || !InAtrium(x, z)) P(slabs, "Slab_4x4_LightLine", x, z);
+                    }
+            }
+
+            // Perimeter on both storeys: the glass façade on the north, solid walls elsewhere, thickness inside.
+            for (int level = 0; level < Levels; level++)
+            {
+                var shell = G($"Level {level} shell", level * FloorHeight);
+                for (int i = 0; i < Cols; i++)
+                {
+                    P(shell, "Window_4m", i * Cell, 0f);
+                    if (i > 0) P(shell, "Column_Facade", i * Cell, 0f);
+                    P(shell, "Wall_Solid_4m", (i + 1) * Cell, -Depth, 180f);
+                }
+                P(shell, "Column_CornerL", 0f, 0f);
+                P(shell, "Column_CornerR", Width, 0f);
+                for (int j = 0; j < Rows; j++)
+                {
+                    float z = -j * Cell;
+                    if (level == 0 && j == 2) P(shell, "Wall_Niche_4m", 0.2f, z, 90f);   // zone L's landmark, facing in
+                    else P(shell, "Wall_Solid_4m", 0f, z - Cell, -90f);
+                    P(shell, "Wall_Solid_4m", Width, z, 90f);
+                }
+            }
+
+            // Zone L (legal): a corridor loop round an island with a cobalt corner; cobalt and frost toward the atrium.
+            var zoneL = G("Zone L - corridor loop");
+            Island(zoneL, 4f, -8f, 0);
+            P(zoneL, "Wall_Solid_4m_Cobalt", AtriumX0, -4f, 90f);   // cobalt face toward the atrium,
+            P(zoneL, "Partition_Frost_4m", AtriumX0, -12f, 90f);     // a 4 m open mouth between them
+            P(zoneL, "Wall_Solid_4m", 0f, -16f);                      // L / C boundary: solid, the room's door, open
+            P(zoneL, "Wall_Door_4m", 4f, -16f);
+            P(zoneL, "Door_Leaf", 4f + LeafX, -16f + LeafZ);
+
+            // Zone C (claims): an 8 × 8 m meeting room behind frosted glass, one capsule counter.
+            var zoneC = G("Zone C - meeting room");
+            P(zoneC, "Partition_Frost_4m", 8f, -16f, 90f);
+            P(zoneC, "Partition_Frost_4m", 8f, -20f, 90f);
+            P(zoneC, "Counter_Capsule_2m", 4f, -20.5f);
+
+            // Zone A (archive): transparency cuts, 2 m cells of solid, clear, open and frosted.
+            var zoneA = G("Zone A - glass cuts");
+            P(zoneA, "Wall_Solid_2m", 12f, -20f);
+            P(zoneA, "Partition_Glass_2m", 14f, -20f);
+            P(zoneA, "Partition_Frost_2m", 18f, -20f);
+            P(zoneA, "Cover_Block_2m", 16.5f, -22.5f);
+
+            // Zone H (hearings): the atrium's straight stair to the upper floor, glass guards round the void.
+            var zoneH = G("Zone H - atrium");
+            P(zoneH, "Stair_Straight_2m", StairPivot.x, StairPivot.z);
+            var guards = G("Zone H - void guards", FloorHeight);
+            for (float z = AtriumZ0; z > AtriumZ1; z -= Cell)
+            {
+                P(guards, "Guard_Glass_4m", AtriumX0, z, 90f);           // west edge: glass on the deck side
+                P(guards, "Guard_Glass_4m", AtriumX1, z - Cell, -90f);   // east edge
+            }
+            for (float x = AtriumX0; x < AtriumX1; x += Cell)
+                P(guards, "Guard_Glass_4m", x + Cell, AtriumZ0, 180f);  // north edge
+            P(guards, "Guard_Glass_2m", StairPivot.x + 2f, AtriumZ1);       // south edge, beside the stair's landing
+            P(guards, "Guard_Glass_4m", AtriumX1 - Cell, AtriumZ1);
+
+            // Zone R (review): a split X, two offset islands and block cover; cobalt and a door toward H and A.
+            var zoneR = G("Zone R - split junction");
+            Island(zoneR, 22f, -8f, -1);
+            Island(zoneR, 26f, -14f, 2);
+            P(zoneR, "Cover_Block_2m", 24.5f, -15f, 90f);
+            P(zoneR, "Cover_Block_2m", 29f, -21f);
+            P(zoneR, "Partition_Glass_4m", AtriumX1, -4f, 90f);
+            P(zoneR, "Wall_Solid_4m_Cobalt", AtriumX1, -12f, 90f);        // yaw 90 turns the cobalt face toward R (+X)
+            P(zoneR, "Wall_Door_4m", AtriumX1, -16f, 90f);
+            P(zoneR, "Door_Leaf", AtriumX1 + LeafZ, -16f - LeafX, 90f);
+            P(zoneR, "Wall_Solid_4m", AtriumX1, -20f, 90f);
+
+            // Upper floor: open, with cover over the rooms below.
+            var upper = G("Upper floor cover", FloorHeight);
+            P(upper, "Cover_Block_2m", 6f, -10f);
+            P(upper, "Counter_Capsule_2m", 26f, -18f, 90f);
+            P(upper, "Cover_Block_2m", 16f, -20f, 90f);
+
+            Figures(root);
             Massing(root);
             AddCamera();
             return count;
         }
 
-        delegate GameObject Placer(Transform parent, string piece, float x, float y, float z, float yaw = 0f);
+        /// <summary>True for a 4 m cell (NW corner at x, z) inside the atrium void.</summary>
+        static bool InAtrium(float x, float z) => x >= AtriumX0 && x < AtriumX1 && z <= AtriumZ0 && z - Cell >= AtriumZ1;
 
-        static void Slabs(Transform t, Placer P)
-        {
-            for (int i = 0; i < Bays; i++)
-            {
-                float x = i * Bay;
-                P(t, "Slab_4x2", x, 0f, 0f);
-                for (int r = 0; r < Rows; r++)
-                {
-                    float z = -Strip - r * Bay;
-                    if (x >= Stairwell.x && x < Stairwell.x + 12f && z <= Stairwell.z) continue;   // inside the stairwell module
-                    P(t, "Slab_4x4", x, 0f, z);
-                }
-                P(t, "Slab_4x4", x, 0f, SpineZ);
-            }
-            P(t, "Slab_Stairwell", Stairwell.x, 0f, Stairwell.z);
-        }
-
-        static void BuildFloor(Transform floor, Placer P)
-        {
-            Transform G(string name) { var g = new GameObject(name).transform; g.SetParent(floor, false); return g; }
-
-            Slabs(G("Slabs"), P);
-
-            var facade = G("Facade");
-            for (int i = 0; i < Bays; i++)
-            {
-                P(facade, "Window_4m", i * Bay, 0f, 0f);
-                if (i > 0) P(facade, "Column_Facade", i * Bay, 0f, 0f);
-            }
-            P(facade, "Column_CornerL", 0f, 0f, 0f);
-            P(facade, "Column_CornerR", Bays * Bay, 0f, 0f);
-
-            // Side walls: left runs toward +Z from its pivot (yaw -90), right toward -Z (yaw 90); thickness inside both.
-            var walls = G("Walls");
-            float w = Bays * Bay;
-            P(walls, "Wall_Solid_2m", 0f, 0f, -Strip, -90f);
-            P(walls, "Wall_Solid_2m", w, 0f, 0f, 90f);
-            for (int k = 0; k <= Rows; k++)
-            {
-                float z = -Strip - k * Bay;
-                P(walls, "Wall_Solid_4m", 0f, 0f, z - Bay, -90f);
-                P(walls, "Wall_Solid_4m", w, 0f, z, 90f);
-            }
-            for (int i = 0; i < Bays; i++) P(walls, "Wall_Solid_4m", (i + 1) * Bay, 0f, -Depth, 180f);   // back wall
-
-            // Spine front: WC, STORE, UTIL doors; the STORE front behind the stair is the Cobalt Portal.
-            var spine = G("Spine");
-            var doors = new HashSet<float> { 0f, 12f, 20f };
-            var portal = new Dictionary<float, string> { { 8f, "Wall_Solid_4m_Cobalt" }, { 12f, "Wall_Door_4m_PortalHead" }, { 16f, "Wall_Solid_4m_Cobalt" } };
-            const float leafX = 1.41f, leafZ = -0.1f;   // kit README: the leaf's hinge in a door wall
-            for (int i = 0; i < Bays; i++)
-            {
-                float x = i * Bay;
-                if (!portal.TryGetValue(x, out string piece)) piece = doors.Contains(x) ? "Wall_Door_4m" : "Wall_Solid_4m";
-                P(spine, piece, x, 0f, SpineZ);
-                if (doors.Contains(x)) P(spine, "Door_Leaf", x + leafX, 0f, SpineZ + leafZ);
-            }
-            P(spine, "Wall_Solid_4m", WcEnd, 0f, -Depth, -90f);
-            P(spine, "Wall_Solid_4m", UtilStart, 0f, SpineZ, 90f);
-
-            // Stair: ramp (collider only), visual treads, column, cage open where the flight arrives, locked door.
-            var stair = G("Stair");
-            Vector3 c = StairCentre;
-            P(stair, "Stair_Flight", c.x, 0f, c.z);
-            P(stair, "Stair_Steps", c.x, 0f, c.z);
-            P(stair, "Stair_Column", c.x, 0f, c.z);
-            for (float a = CageFirst; a < CageOpenFrom; a += CageStep) P(stair, "Stair_CagePanel", c.x, 0f, c.z, a);
-            float r = DoorAngle * Mathf.Deg2Rad;
-            P(stair, "Stair_LockedDoor", c.x + Mathf.Sin(r) * DoorRadius, FloorHeight * DoorAngle / 360f - DoorDrop,
-              c.z + Mathf.Cos(r) * DoorRadius, DoorAngle - 90f);
-
-            // Meeting rooms, 4 × 4 m at z -6 to -10, half open on the stair side.
-            var rooms = G("Meeting rooms");
-            foreach (var (x0, openRight) in new[] { (2f, true), (22f, false) })
-            {
-                float x1 = x0 + Bay;
-                P(rooms, "Partition_Glass_4m", x0, 0f, -6f);
-                P(rooms, "Partition_Glass_4m", x1, 0f, -10f, 180f);
-                if (openRight)
-                {
-                    P(rooms, "Partition_Glass_4m", x0, 0f, -10f, -90f);
-                    P(rooms, "Partition_Glass_2m", x1, 0f, -8f, 90f);
-                }
-                else
-                {
-                    P(rooms, "Partition_Glass_4m", x1, 0f, -6f, 90f);
-                    P(rooms, "Partition_Glass_2m", x0, 0f, -10f, -90f);
-                }
-            }
-
-            // Strip lights on this floor's ceiling (the soffit of the slab above), four per 4 × 4 m bay.
-            var lights = G("Ceiling lights");
-            for (int i = 0; i < Bays; i++)
-                for (int row = 0; row < Rows; row++)
-                    foreach (float ox in LightOffsets)
-                        foreach (float oz in LightOffsets)
-                        {
-                            float x = i * Bay + ox, z = -Strip - row * Bay - oz;
-                            if (new Vector2(x - c.x, z - c.z).magnitude > StairClear)
-                                P(lights, "Ceiling_LightStrip", x, ClearHeight, z);
-                        }
-        }
-
-        /// <summary>Dark-suited capsules at player height on each floor: the read the art bible asks for.</summary>
-        static void Figures(Transform floor)
+        /// <summary>Dark-suited capsules at player height, one per zone: the read the art bible asks for.</summary>
+        static void Figures(Transform root)
         {
             var navy = AssetDatabase.LoadAssetAtPath<Material>(NavyPath);
             var group = new GameObject("Stand-ins").transform;
-            group.SetParent(floor, false);
-            foreach (Vector2 s in OurSpots) Figure(group, navy, s);
+            group.SetParent(root, false);
+            foreach (Vector3 s in Spots) Figure(group, navy, s);
         }
 
-        static void Figure(Transform parent, Material navy, Vector2 at)
+        static void Figure(Transform parent, Material navy, Vector3 at)
         {
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             go.name = "Stand-in 1.8 m";
             Object.DestroyImmediate(go.GetComponent<Collider>());
             go.transform.SetParent(parent, false);
             // WHY these numbers: Unity's capsule is 2 m tall and 1 m wide; scale it to 1.8 m and stand it on the floor.
-            go.transform.localPosition = new Vector3(at.x, FigureHeight * 0.5f, at.y);
+            go.transform.localPosition = new Vector3(at.x, at.y + FigureHeight * 0.5f, at.z);
             go.transform.localScale = new Vector3(FigureRadius * 2f, FigureHeight * 0.5f, FigureRadius * 2f);
             go.GetComponent<Renderer>().sharedMaterial = navy;
         }
 
-        /// <summary>White blocks above and below the tower, so the views read as one tall building.</summary>
+        /// <summary>A white block under the floor plate, so looking down past the window sill finds the building.</summary>
         static void Massing(Transform root)
         {
             var white = AssetDatabase.LoadAssetAtPath<Material>(PaperWhitePath);
-            var group = new GameObject("Massing").transform;
-            group.SetParent(root, false);
-            float w = Bays * Bay, top = Floors * FloorHeight;
-            const float slab = 0.2f, gapUnderSlab = 0.01f;   // WHY: keep the blocks off the real slabs' faces (no z-fighting)
-            void Block(string name, float y0, float y1, float z0, float z1)
-            {
-                GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                go.name = name;
-                Object.DestroyImmediate(go.GetComponent<Collider>());
-                go.transform.SetParent(group, false);
-                go.transform.localPosition = new Vector3(w * 0.5f, (y0 + y1) * 0.5f, (z0 + z1) * 0.5f);
-                go.transform.localScale = new Vector3(w, y1 - y0, z1 - z0);
-                go.GetComponent<Renderer>().sharedMaterial = white;
-            }
-            Block("Our tower below", -MassingHeight, -slab - gapUnderSlab, -Depth, 0f);
-            Block("Our tower above", top + gapUnderSlab, top + MassingHeight, -Depth, 0f);
+            const float slab = 0.2f, gapUnderSlab = 0.01f;   // WHY: keep the block off the slabs' faces (no z-fighting)
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.name = "Building below";
+            Object.DestroyImmediate(go.GetComponent<Collider>());
+            go.transform.SetParent(root, false);
+            go.transform.localPosition = new Vector3(Width * 0.5f, -slab - gapUnderSlab - MassingHeight * 0.5f, -Depth * 0.5f);
+            go.transform.localScale = new Vector3(Width, MassingHeight, Depth);
+            go.GetComponent<Renderer>().sharedMaterial = white;
         }
 
         static void AddCamera()
@@ -423,18 +400,18 @@ namespace CloseTheDeal.Editor.Art
 
         // ------------------------------------------------------------------ captures
 
-        /// <summary>The concept shots: entry to stair, stair close, main floor to windows, the view from across the street, a cutaway.</summary>
+        /// <summary>Review shots: one per zone at eye height, plus the upper floor over the atrium.</summary>
         static (string name, Vector3 eye, Vector3 target)[] Views()
         {
-            float mid = FloorHeight;   // the middle floor, so floors above and below show from across the street
             return new[]
             {
-                ("A_entry_to_stair", new Vector3(1.5f, mid + Eye, -12.5f), new Vector3(14f, mid + 1.4f, -6f)),
-                ("G_stair_close", new Vector3(9f, mid + Eye, -3.5f), new Vector3(14f, mid + 2f, -10f)),
-                ("B_stair_to_windows", new Vector3(14f, mid + Eye, -5f), new Vector3(14f, mid + 1.6f, 6f)),
-                // The view a rival player would have. The name is kept so earlier captures still line up.
-                ("H_rival_view", new Vector3(14f, mid + Eye, Gap + 1.5f), new Vector3(14f, mid + 1.8f, -8f)),
-                ("E_spine_to_facade", new Vector3(14f, mid + Eye, -13.5f), new Vector3(8f, mid + 1.6f, 0f)),
+                ("L1_window_corridor", new Vector3(2f, Eye, -2f), new Vector3(30f, Eye, -3f)),
+                ("L2_loop_cobalt_corner", new Vector3(10f, Eye, -14.5f), new Vector3(4f, Eye, -7f)),
+                ("L3_atrium_stair", new Vector3(18.5f, Eye, -14f), new Vector3(13f, 3.5f, -8f)),
+                ("L4_room_through_frost", new Vector3(10.5f, Eye, -18f), new Vector3(4f, 1.2f, -21f)),
+                ("L5_split_junction", new Vector3(31f, Eye, -5f), new Vector3(23f, 1.4f, -16f)),
+                ("L6_glass_cuts", new Vector3(13f, Eye, -17.5f), new Vector3(19f, 1.4f, -23f)),
+                ("L7_upper_over_atrium", new Vector3(6f, FloorHeight + Eye, -14f), new Vector3(18f, 3f, -8f)),
             };
         }
 

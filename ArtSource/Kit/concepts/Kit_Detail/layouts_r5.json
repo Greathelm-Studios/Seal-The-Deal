@@ -1,0 +1,934 @@
+﻿{
+    "status":  "Target concepts",
+    "brief":  "FEEDBACK_05.md",
+    "units":  "plan coordinates in metres; proposed dimensions, not measured gameplay",
+    "build_mix":  "A / B / A / B / B",
+    "families":  [
+                     {
+                         "folder":  "01_Corridors",
+                         "title":  "01 / CORRIDORS",
+                         "a":  "Capsule loop",
+                         "b":  "Offset planes",
+                         "captionA":  "Glossy capsule cuts turn the route around a clear bypass.",
+                         "captionB":  "Staggered planes break the view before the next encounter.",
+                         "pick":  "A",
+                         "notes":  [
+                                       "L / LEGAL: capsule niche or large flush L.",
+                                       "4 m main routes; 2 m bypass; 4-8 m exposed views.",
+                                       "1.1 m counter; 4.3 m solid returns stop sightlines.",
+                                       "A and B share the loop; B staggers the returns."
+                                   ],
+                         "plan":  {
+                                      "w":  16,
+                                      "h":  12,
+                                      "blocks":  [
+                                                     [
+                                                         4,
+                                                         4,
+                                                         4,
+                                                         4
+                                                     ],
+                                                     [
+                                                         10,
+                                                         4,
+                                                         2,
+                                                         4
+                                                     ]
+                                                 ],
+                                      "walls":  [
+                                                    [
+                                                        0,
+                                                        0,
+                                                        16,
+                                                        0
+                                                    ],
+                                                    [
+                                                        0,
+                                                        12,
+                                                        16,
+                                                        12
+                                                    ],
+                                                    [
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        5
+                                                    ],
+                                                    [
+                                                        0,
+                                                        7,
+                                                        0,
+                                                        12
+                                                    ],
+                                                    [
+                                                        16,
+                                                        0,
+                                                        16,
+                                                        5
+                                                    ],
+                                                    [
+                                                        16,
+                                                        7,
+                                                        16,
+                                                        12
+                                                    ]
+                                                ],
+                                      "glass":  [
+                                                    [
+                                                        10,
+                                                        4,
+                                                        12,
+                                                        4
+                                                    ],
+                                                    [
+                                                        10,
+                                                        8,
+                                                        12,
+                                                        8
+                                                    ]
+                                                ],
+                                      "covers":  [
+                                                     [
+                                                         1,
+                                                         7,
+                                                         2,
+                                                         1
+                                                     ],
+                                                     [
+                                                         13,
+                                                         3,
+                                                         2,
+                                                         1
+                                                     ]
+                                                 ],
+                                      "route":  [
+                                                    [
+                                                        2,
+                                                        6
+                                                    ],
+                                                    [
+                                                        2,
+                                                        2
+                                                    ],
+                                                    [
+                                                        14,
+                                                        2
+                                                    ],
+                                                    [
+                                                        14,
+                                                        10
+                                                    ],
+                                                    [
+                                                        2,
+                                                        10
+                                                    ],
+                                                    [
+                                                        2,
+                                                        6
+                                                    ]
+                                                ],
+                                      "branch":  [
+                                                     [
+                                                         9,
+                                                         2
+                                                     ],
+                                                     [
+                                                         9,
+                                                         10
+                                                     ]
+                                                 ],
+                                      "sights":  [
+                                                     [
+                                                         2,
+                                                         2,
+                                                         10,
+                                                         2,
+                                                         "8 m"
+                                                     ],
+                                                     [
+                                                         9,
+                                                         4,
+                                                         9,
+                                                         8,
+                                                         "4 m"
+                                                     ]
+                                                 ],
+                                      "labels":  [
+                                                     [
+                                                         4.2,
+                                                         5.4,
+                                                         "SOLID"
+                                                     ],
+                                                     [
+                                                         8.1,
+                                                         8.2,
+                                                         "2 m bypass"
+                                                     ]
+                                                 ]
+                                  }
+                     },
+                     {
+                         "folder":  "02_Junctions_Doors",
+                         "title":  "02 / JUNCTIONS + DOORS",
+                         "a":  "Sky-lens T",
+                         "b":  "Split X",
+                         "captionA":  "A high sky lens and unlike corner treatments identify each branch.",
+                         "captionB":  "Offset exits turn a crossfire junction into short, readable peeks.",
+                         "pick":  "B",
+                         "notes":  [
+                                       "R / REVIEW: sky lens in A; cropped flush R in B.",
+                                       "4 m approach; 2 m offset exits; 4-8 m views.",
+                                       "Doors remain 1.2 x 2.4 m; cover is 1.1 m.",
+                                       "Dashed T cap = A; B opens it and offsets exits."
+                                   ],
+                         "plan":  {
+                                      "w":  16,
+                                      "h":  16,
+                                      "blocks":  [
+                                                     [
+                                                         2,
+                                                         2,
+                                                         4,
+                                                         4
+                                                     ],
+                                                     [
+                                                         10,
+                                                         2,
+                                                         4,
+                                                         4
+                                                     ],
+                                                     [
+                                                         2,
+                                                         10,
+                                                         4,
+                                                         4
+                                                     ],
+                                                     [
+                                                         10,
+                                                         10,
+                                                         4,
+                                                         4
+                                                     ]
+                                                 ],
+                                      "walls":  [
+                                                    [
+                                                        0,
+                                                        0,
+                                                        16,
+                                                        0
+                                                    ],
+                                                    [
+                                                        0,
+                                                        16,
+                                                        16,
+                                                        16
+                                                    ],
+                                                    [
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        6
+                                                    ],
+                                                    [
+                                                        0,
+                                                        10,
+                                                        0,
+                                                        16
+                                                    ],
+                                                    [
+                                                        16,
+                                                        0,
+                                                        16,
+                                                        6
+                                                    ],
+                                                    [
+                                                        16,
+                                                        10,
+                                                        16,
+                                                        16
+                                                    ],
+                                                    [
+                                                        10,
+                                                        6,
+                                                        12,
+                                                        6
+                                                    ],
+                                                    [
+                                                        4,
+                                                        10,
+                                                        6,
+                                                        10
+                                                    ]
+                                                ],
+                                      "glass":  [
+                                                    [
+                                                        10,
+                                                        6,
+                                                        10,
+                                                        10
+                                                    ],
+                                                    [
+                                                        6,
+                                                        10,
+                                                        10,
+                                                        10
+                                                    ]
+                                                ],
+                                      "covers":  [
+                                                     [
+                                                         3,
+                                                         7,
+                                                         2,
+                                                         1
+                                                     ],
+                                                     [
+                                                         11,
+                                                         8,
+                                                         2,
+                                                         1
+                                                     ]
+                                                 ],
+                                      "route":  [
+                                                    [
+                                                        1,
+                                                        8
+                                                    ],
+                                                    [
+                                                        8,
+                                                        8
+                                                    ],
+                                                    [
+                                                        8,
+                                                        15
+                                                    ],
+                                                    [
+                                                        15,
+                                                        15
+                                                    ],
+                                                    [
+                                                        15,
+                                                        8
+                                                    ],
+                                                    [
+                                                        8,
+                                                        8
+                                                    ],
+                                                    [
+                                                        8,
+                                                        1
+                                                    ]
+                                                ],
+                                      "branch":  [
+                                                     [
+                                                         6,
+                                                         4
+                                                     ],
+                                                     [
+                                                         10,
+                                                         4
+                                                     ]
+                                                 ],
+                                      "sights":  [
+                                                     [
+                                                         4,
+                                                         8,
+                                                         12,
+                                                         8,
+                                                         "8 m"
+                                                     ],
+                                                     [
+                                                         8,
+                                                         4,
+                                                         8,
+                                                         8,
+                                                         "4 m"
+                                                     ]
+                                                 ],
+                                      "labels":  [
+                                                     [
+                                                         6.3,
+                                                         2.8,
+                                                         "T cap A"
+                                                     ],
+                                                     [
+                                                         10.3,
+                                                         10.6,
+                                                         "2 m offset"
+                                                     ]
+                                                 ]
+                                  }
+                     },
+                     {
+                         "folder":  "03_Rooms_Cover",
+                         "title":  "03 / ROOMS + COVER",
+                         "a":  "Capsule meeting room",
+                         "b":  "Negative-space office",
+                         "captionA":  "A solid capsule counter anchors a compact room with two exits.",
+                         "captionB":  "One low monolith and one full-height return make the office abstract.",
+                         "pick":  "A",
+                         "notes":  [
+                                       "C / CLAIMS: high frosted capsule or flush C field.",
+                                       "8 x 8 m room; 2 m outer loop; 4-8 m views.",
+                                       "Cover: A 2 x 1 x 1.1 m; B 4 x 1 x 1.1 m.",
+                                       "One plan, alternate counter lengths; 1.2 m doors."
+                                   ],
+                         "plan":  {
+                                      "w":  12,
+                                      "h":  12,
+                                      "blocks":  [
+                                                     [
+                                                         8,
+                                                         4,
+                                                         0.2,
+                                                         2
+                                                     ]
+                                                 ],
+                                      "walls":  [
+                                                    [
+                                                        0,
+                                                        0,
+                                                        12,
+                                                        0
+                                                    ],
+                                                    [
+                                                        0,
+                                                        12,
+                                                        12,
+                                                        12
+                                                    ],
+                                                    [
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        5
+                                                    ],
+                                                    [
+                                                        0,
+                                                        7,
+                                                        0,
+                                                        12
+                                                    ],
+                                                    [
+                                                        12,
+                                                        0,
+                                                        12,
+                                                        5
+                                                    ],
+                                                    [
+                                                        12,
+                                                        7,
+                                                        12,
+                                                        12
+                                                    ],
+                                                    [
+                                                        2,
+                                                        2,
+                                                        5.4,
+                                                        2
+                                                    ],
+                                                    [
+                                                        6.6,
+                                                        2,
+                                                        10,
+                                                        2
+                                                    ],
+                                                    [
+                                                        2,
+                                                        2,
+                                                        2,
+                                                        10
+                                                    ],
+                                                    [
+                                                        10,
+                                                        2,
+                                                        10,
+                                                        5.4
+                                                    ],
+                                                    [
+                                                        10,
+                                                        6.6,
+                                                        10,
+                                                        10
+                                                    ]
+                                                ],
+                                      "glass":  [
+                                                    [
+                                                        2,
+                                                        10,
+                                                        10,
+                                                        10
+                                                    ]
+                                                ],
+                                      "covers":  [
+                                                     [
+                                                         5,
+                                                         5,
+                                                         2,
+                                                         1
+                                                     ]
+                                                 ],
+                                      "route":  [
+                                                    [
+                                                        1,
+                                                        6
+                                                    ],
+                                                    [
+                                                        1,
+                                                        1
+                                                    ],
+                                                    [
+                                                        6,
+                                                        1
+                                                    ],
+                                                    [
+                                                        6,
+                                                        3
+                                                    ],
+                                                    [
+                                                        7,
+                                                        7
+                                                    ],
+                                                    [
+                                                        11,
+                                                        6
+                                                    ],
+                                                    [
+                                                        11,
+                                                        11
+                                                    ],
+                                                    [
+                                                        1,
+                                                        11
+                                                    ],
+                                                    [
+                                                        1,
+                                                        6
+                                                    ]
+                                                ],
+                                      "branch":  [
+                                                     [
+                                                         5,
+                                                         6.5
+                                                     ],
+                                                     [
+                                                         9,
+                                                         6.5
+                                                     ]
+                                                 ],
+                                      "sights":  [
+                                                     [
+                                                         3,
+                                                         8,
+                                                         9,
+                                                         8,
+                                                         "6 m"
+                                                     ]
+                                                 ],
+                                      "labels":  [
+                                                     [
+                                                         2.2,
+                                                         2.4,
+                                                         "8 x 8 m"
+                                                     ],
+                                                     [
+                                                         3,
+                                                         6.4,
+                                                         "B counter extent"
+                                                     ],
+                                                     [
+                                                         7,
+                                                         0.3,
+                                                         "1.2 m door"
+                                                     ]
+                                                 ]
+                                  }
+                     },
+                     {
+                         "folder":  "04_Atrium_Vertical",
+                         "title":  "04 / ATRIUM + VERTICAL",
+                         "a":  "Capsule spiral",
+                         "b":  "Folded forum",
+                         "captionA":  "The retained spiral and clear balconies form a legible arrival hub.",
+                         "captionB":  "A broad stair, short ramp and drop reconnect the fight at two levels.",
+                         "pick":  "B",
+                         "notes":  [
+                                       "H / HEARINGS: capsule core or high open-square graphic.",
+                                       "16 x 16 m hub; 4.5 m upper deck; 8-12 m views.",
+                                       "B: 2 m stair; 2 x 4 m ramp to a 1 m shelf.",
+                                       "Circle = A spiral option; right bay = B stair option."
+                                   ],
+                         "plan":  {
+                                      "w":  16,
+                                      "h":  16,
+                                      "blocks":  [
+                                                     [
+                                                         4,
+                                                         4,
+                                                         0.4,
+                                                         2
+                                                     ],
+                                                     [
+                                                         11.6,
+                                                         10,
+                                                         0.4,
+                                                         2
+                                                     ]
+                                                 ],
+                                      "walls":  [
+                                                    [
+                                                        0,
+                                                        0,
+                                                        16,
+                                                        0
+                                                    ],
+                                                    [
+                                                        0,
+                                                        16,
+                                                        16,
+                                                        16
+                                                    ],
+                                                    [
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        6
+                                                    ],
+                                                    [
+                                                        0,
+                                                        10,
+                                                        0,
+                                                        16
+                                                    ],
+                                                    [
+                                                        16,
+                                                        0,
+                                                        16,
+                                                        6
+                                                    ],
+                                                    [
+                                                        16,
+                                                        10,
+                                                        16,
+                                                        16
+                                                    ]
+                                                ],
+                                      "glass":  [
+                                                    [
+                                                        4,
+                                                        4,
+                                                        12,
+                                                        4
+                                                    ],
+                                                    [
+                                                        4,
+                                                        12,
+                                                        12,
+                                                        12
+                                                    ],
+                                                    [
+                                                        12,
+                                                        4,
+                                                        12,
+                                                        12
+                                                    ]
+                                                ],
+                                      "covers":  [
+                                                     [
+                                                         6,
+                                                         13,
+                                                         2,
+                                                         1
+                                                     ],
+                                                     [
+                                                         1,
+                                                         12,
+                                                         2,
+                                                         1
+                                                     ]
+                                                 ],
+                                      "route":  [
+                                                    [
+                                                        1,
+                                                        8
+                                                    ],
+                                                    [
+                                                        2,
+                                                        2
+                                                    ],
+                                                    [
+                                                        14,
+                                                        2
+                                                    ],
+                                                    [
+                                                        14,
+                                                        14
+                                                    ],
+                                                    [
+                                                        2,
+                                                        14
+                                                    ],
+                                                    [
+                                                        1,
+                                                        8
+                                                    ]
+                                                ],
+                                      "branch":  [
+                                                     [
+                                                         4,
+                                                         4
+                                                     ],
+                                                     [
+                                                         12,
+                                                         4
+                                                     ],
+                                                     [
+                                                         12,
+                                                         12
+                                                     ],
+                                                     [
+                                                         4,
+                                                         12
+                                                     ],
+                                                     [
+                                                         4,
+                                                         4
+                                                     ]
+                                                 ],
+                                      "sights":  [
+                                                     [
+                                                         2,
+                                                         3,
+                                                         14,
+                                                         3,
+                                                         "12 m"
+                                                     ],
+                                                     [
+                                                         4,
+                                                         13,
+                                                         12,
+                                                         13,
+                                                         "8 m"
+                                                     ]
+                                                 ],
+                                      "labels":  [
+                                                     [
+                                                         5,
+                                                         0.5,
+                                                         "upper loop dashed"
+                                                     ],
+                                                     [
+                                                         12.2,
+                                                         5.2,
+                                                         "B UP"
+                                                     ],
+                                                     [
+                                                         0.4,
+                                                         6.2,
+                                                         "RAMP"
+                                                     ]
+                                                 ],
+                                      "spiral":  [
+                                                     8,
+                                                     8,
+                                                     2.75
+                                                 ],
+                                      "stair":  [
+                                                    12,
+                                                    4,
+                                                    2,
+                                                    8
+                                                ],
+                                      "ramp":  [
+                                                   1,
+                                                   6,
+                                                   2,
+                                                   4
+                                               ]
+                                  }
+                     },
+                     {
+                         "folder":  "05_Glass_Walls",
+                         "title":  "05 / GLASS WALLS",
+                         "a":  "Skyglass suite",
+                         "b":  "Transparency cuts",
+                         "captionA":  "High frosted lintels name the room above almost-clear combat glass.",
+                         "captionB":  "Solid, visible-but-closed and cleared-open bays give three route reads.",
+                         "pick":  "B",
+                         "notes":  [
+                                       "A / ARCHIVE: high lintel or large flush terminal A.",
+                                       "2 m bypass; 4-8 m views; solid returns interrupt.",
+                                       "Frost only above 2.1 m or below 0.45 m.",
+                                       "Open gap = cleared break state; shooting rules stay with its owner."
+                                   ],
+                         "plan":  {
+                                      "w":  12,
+                                      "h":  12,
+                                      "blocks":  [
+                                                     [
+                                                         8,
+                                                         4,
+                                                         2,
+                                                         2
+                                                     ],
+                                                     [
+                                                         8,
+                                                         8,
+                                                         2,
+                                                         2
+                                                     ]
+                                                 ],
+                                      "walls":  [
+                                                    [
+                                                        0,
+                                                        0,
+                                                        12,
+                                                        0
+                                                    ],
+                                                    [
+                                                        0,
+                                                        12,
+                                                        12,
+                                                        12
+                                                    ],
+                                                    [
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        5
+                                                    ],
+                                                    [
+                                                        0,
+                                                        7,
+                                                        0,
+                                                        12
+                                                    ],
+                                                    [
+                                                        12,
+                                                        0,
+                                                        12,
+                                                        5
+                                                    ],
+                                                    [
+                                                        12,
+                                                        7,
+                                                        12,
+                                                        12
+                                                    ],
+                                                    [
+                                                        0,
+                                                        6,
+                                                        4,
+                                                        6
+                                                    ]
+                                                ],
+                                      "glass":  [
+                                                    [
+                                                        4,
+                                                        2,
+                                                        4,
+                                                        6
+                                                    ],
+                                                    [
+                                                        4,
+                                                        8,
+                                                        4,
+                                                        10
+                                                    ],
+                                                    [
+                                                        6,
+                                                        2,
+                                                        6,
+                                                        10
+                                                    ],
+                                                    [
+                                                        8,
+                                                        2,
+                                                        10,
+                                                        2
+                                                    ]
+                                                ],
+                                      "covers":  [
+                                                     [
+                                                         1,
+                                                         8,
+                                                         2,
+                                                         1
+                                                     ]
+                                                 ],
+                                      "route":  [
+                                                    [
+                                                        1,
+                                                        7
+                                                    ],
+                                                    [
+                                                        5,
+                                                        7
+                                                    ],
+                                                    [
+                                                        5,
+                                                        1
+                                                    ],
+                                                    [
+                                                        11,
+                                                        1
+                                                    ],
+                                                    [
+                                                        11,
+                                                        11
+                                                    ],
+                                                    [
+                                                        1,
+                                                        11
+                                                    ],
+                                                    [
+                                                        1,
+                                                        7
+                                                    ]
+                                                ],
+                                      "branch":  [
+                                                     [
+                                                         4,
+                                                         6
+                                                     ],
+                                                     [
+                                                         4,
+                                                         8
+                                                     ]
+                                                 ],
+                                      "sights":  [
+                                                     [
+                                                         1,
+                                                         4,
+                                                         7,
+                                                         4,
+                                                         "6 m / 2 panes"
+                                                     ],
+                                                     [
+                                                         7,
+                                                         10,
+                                                         11,
+                                                         10,
+                                                         "4 m"
+                                                     ]
+                                                 ],
+                                      "labels":  [
+                                                     [
+                                                         4.1,
+                                                         6.6,
+                                                         "GAP"
+                                                     ],
+                                                     [
+                                                         4.1,
+                                                         9.2,
+                                                         "2 m"
+                                                     ],
+                                                     [
+                                                         8.1,
+                                                         4.3,
+                                                         "SOLID"
+                                                     ]
+                                                 ]
+                                  }
+                     }
+                 ]
+}

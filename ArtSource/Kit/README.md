@@ -7,6 +7,8 @@ All pieces come from one script, [kit_pieces.py](kit_pieces.py), so they share o
 They are modelled to the office direction Alex approved on 2026-11-12, **White Trays + Cobalt Portal** ([decision](concepts/Office/DECISION.md), [concepts](concepts/Office/contact_sheet.png)).
 `Assets/_Project/Editor/Art/KitImport.cs` brings them into Unity; the pieces added on 2026-11-12 have not been through it yet.
 
+**The game is moving from twin towers to one office labyrinth** (Alex, 2026-11-12). The kit's detail direction for it is round 5 ([decision](concepts/Kit_Detail/DECISION_r5.md), [concepts](concepts/Kit_Detail/contact_sheet_r5.png), [sizes](concepts/Kit_Detail/README_r5.md)), and the pieces in [Labyrinth pieces](#labyrinth-pieces-round-5) below build it. The tower pieces stay: nothing here removes them, and the game docs (GDD, TOWER.md) still describe the towers until the owner changes them.
+
 ## Build
 
 ```bash
@@ -78,13 +80,35 @@ UVs are box-mapped at 1 m per UV unit on every piece, so tiling materials line u
 - **Textures:** [textures/make_textures.py](textures/make_textures.py) draws `Ceiling_Tile.png` (0.5 m grid) and `Floor_Carpet.png` (quarter-turned 0.5 m carpet tiles). Each covers 1 m, one UV unit, so they tile across pieces on the grid.
 - **New material slots:** `Accent_Cobalt` #244FB9, `Light_Strip` (white, emissive), `Door_LockedRed` #C0281E (the one warm gameplay accent), alongside `Trim_Navy` #111B38.
 
+## Labyrinth pieces (round 5)
+
+Alex's picks: corridors A (capsule loop), junctions B (split X), rooms A (capsule meeting room), atrium B (folded forum), glass B (transparency cuts); no floor light trails. Finishes are glossy: white lacquer, cobalt, inset silver, a polished pale floor (still named `Floor_Carpet` for the import mapping) and a flat white ceiling with no tile texture.
+
+| Piece | Size (m) | Role | Collider | Materials |
+|---|---|---|---|---|
+| `Wall_Return_2x2`, `Wall_Return_2x2_Cobalt` | 2 × 2 cell, 0.2 thick × 4.3; outer radius 1.0 | Structural. The rounded outside corner of a maze island: snap ends at (2, 0) running +X and (0, −2) running −Z, like a +X wall and a side wall. Turn 90° per corner. `_Cobalt` paints the curved face | Box per straight leg, three hulls on the curve | Wall_PaperWhite, Trim_Navy (+ Accent_Cobalt) |
+| `Wall_Niche_4m` | 4 × 0.2 × 4.3 | Structural; a 0.6 × 3.4 m cobalt capsule niche, 0.06 deep, centred on the grid-line face. The corridor landmark | Box | Wall_PaperWhite, Trim_Navy, Accent_Cobalt |
+| `Counter_Capsule_2m` | 2 × 1 × 1.1, round ends | Fixed crouch cover (1.1 m). Pivot bottom centre | Hull | Wall_PaperWhite |
+| `Cover_Block_2m` | 2 × 0.6 × 1.1, bevelled | Fixed crouch cover. Pivot bottom centre | Box | Wall_PaperWhite |
+| `Partition_Frost_4m`, `Partition_Frost_2m` | as `Partition_Glass_*` | Fixed. Frosted below 0.35 m and above 2.1 m, clear between, so a standing figure still reads through two panes | Box over the whole wall, as `Partition_Glass_*` | Trim_Navy, Glass_Clear, Glass_Frosted |
+| `Stair_Straight_2m` | 2 × 7.2 × 4.5 (5.6 with guards) | Structural. 24 risers of 0.1875 m, 0.3 m goings, rising toward −Z from a front-left pivot at floor level; a folded white plate with silver treads and frameless glass guards each side | Hull along the nosings (32°); a hull per guard | Wall_PaperWhite, Frame_Aluminium, Glass_Clear |
+| `Ramp_2x4` | 2 × 4 × 1.0 | Structural. 1:4, rising toward −Z, polished top | Hull | Wall_PaperWhite, Floor_Carpet |
+| `Guard_Glass_4m`, `Guard_Glass_2m` | run × 0.06 × 1.1 | Fixed. Frameless glass in a 0.12 m silver shoe, for mezzanine and void edges; sits just inside the slab edge | Box on shoe and glass | Frame_Aluminium, Glass_Clear |
+| `Slab_4x4_LightLine` | 4 × 4 × 0.2 | Structural. A slab with a 0.2 m lit slot, 0.08 deep, along X under its middle; the slot runs through both ends, so slabs in a row make one line along a route | Box | Floor_Carpet, Ceiling_Tile, Wall_PaperWhite, Light_Strip |
+
+New material slot: `Glass_Frosted` #E6ECF2 (80 % opaque in Unity).
+
+**Kept, not changed, and flagged in README_r5:** the partition's whole-wall collider (breakable glass and walk-through openings belong to the shooting lane), the stair cage and its silver handrail, the full-height red locked door, the spiral as a way up, the 0.6 m window sill. Zone letters (L, R, C, H, A) and sky prints are a decal pass, not modelled.
+[labyrinth_scene.py](labyrinth_scene.py) snaps the new pieces into a 16 × 16 m maze section and renders it to `review/labyrinth/`.
+In Unity (2026-11-13) the 12 pieces were imported on their own, without rebuilding KitTest: all at rotation 0 and scale 1, sizes matching to 1 mm, materials remapped; the stair's sloped guards and the curved return get mesh colliders, the rest boxes. The same section laid out from the prefabs in a temporary scene is captured in `review/unity_labyrinth/`. Not yet walked in Play Mode.
+
 ## Checks run
 
 - Every piece passes `mdl.mjs check` with no errors (2026-11-12, 26 pieces). The warnings are long thin faces: on thin boxes (rails, panes, slab edges), and where the shadow-gap cuts slice the flat-shaded walls. They are flat faces, so they shade correctly; they would only matter for automatic LODs, which the kit doesn't use. The locked door's lock plates touch its faces without a boolean union (a "faces cut through each other" warning).
 - `mdl.mjs verify` passes on every FBX: sizes, triangles and materials read back as built.
 - `assembly_test.py` passes all 9 checks: façade, side wall, corner, floor and ceiling continuous with no gaps; walls meeting the soffit; door head closed; the flight rising one floor per turn and arriving flush with the next floor.
 - [interior_scene.py](interior_scene.py) dresses the whole floor in the approved pieces and renders it to `review/interior/`, including the concepts' stair close-up and rival views.
-- In Unity, `Close the Deal > Art > Build Kit Office Scene` ([KitOfficeScene.cs](../../Assets/_Project/Editor/Art/KitOfficeScene.cs)) lays the same floor out three high from the kit prefabs, with the rival façade and the office look, in `Assets/_Project/Scenes/KitOffice.unity`. Its captures are in `review/unity_office/`. The build also adds the player rig (network manager, two spawn points on the ground floor, menu, follow camera), so pressing Play and then **Host game** puts a player in it; `Close the Deal > Art > Make Open Scene Playable` adds the same rig to a scene that was built without it, without rebuilding or saving. Play Mode was started once with the rig (2026-11-12): the menu shows and hosting spawns a player. Walking the whole floor has not been checked.
+- In Unity, `Close the Deal > Art > Build Kit Office Scene` ([KitOfficeScene.cs](../../Assets/_Project/Editor/Art/KitOfficeScene.cs)) builds `Assets/_Project/Scenes/KitOffice.unity` as the **office labyrinth** (2026-11-13; the tower floor it used to build is in git history, and the last tower version with unsaved work is kept as `KitOffice_PreLabyrinth.unity`). It is 32 × 24 m on two storeys: a window corridor along the glass façade (north), zone L's corridor loop round a rounded-corner island with the cobalt niche (west), zone H's double-height atrium with the straight stair and glass-guarded upper floor (middle), zone C's meeting room behind frosted glass (south-west), zone A's glass cuts (south), and zone R's split junction of two offset islands and block cover (east). It adds the player rig and the office look; players spawn at the two ends of the window corridor. Captures are in `review/unity_office/` (L1–L7). Checked 2026-11-13: the stair's walking surface rises 0.25 → 4.50 m and meets the upper floor flush; the void guards, island walls and 1.1 m cover stop rays; in Play Mode a hosted player spawned standing on the floor, though in the atrium rather than at a corridor spawn (not yet explained). Walking the routes, the stair and the upper floor has not been tried.
 - **Not yet checked in Unity** for the 2026-11-12 pieces: `KitImport.cs` lists them, their materials and textures, but it hasn't been run (it rebuilds `KitTest.unity`, which was open with unsaved work). Import scale, colliders, the emissive strip and the textures under the game's lighting are unverified.
 
 ## What the floor template would change to match the grid

@@ -16,6 +16,10 @@
 #              reveals, navy partition rails, white stair column, visual open treads and handrail, curved cage
 #              panels (hull collider), the red locked stair door, a ceiling strip light, darker carpet; new
 #              slots Accent_Cobalt, Light_Strip, Door_LockedRed. Envelopes, pivots and snap faces unchanged.
+#  Modified  : Claude Opus 5.5, 2026-11-12 — labyrinth pieces for the approved round-5 picks
+#              (concepts/Kit_Detail/DECISION_r5.md): rounded corner return, cobalt capsule niche wall,
+#              capsule and block cover counters, frosted partitions, straight stair, ramp, glass guard,
+#              light-line ceiling slab; new slot Glass_Frosted. Existing pieces unchanged.
 #  Reviewed  : NOT YET REVIEWED BY A HUMAN
 # -----------------------------------------------------------------------------
 """Office snap kit for Close the Deal.
@@ -109,6 +113,34 @@ P = params(
     LIGHT_W=0.2,           # strip light width, metres
     LIGHT_DROP=0.04,       # hangs this far below the soffit, metres (brief: at most 50 mm)
     LIGHT_LIP=0.02,        # white housing lip round the diffuser, metres
+    # ---- Labyrinth, round 5 (concepts/Kit_Detail/README_r5.md; sizes there are mm)
+    RETURN_R=1.0,          # outer radius of the rounded corner return, metres. WHY: the largest radius a 2 x 2 m
+                           # cell holds while leaving a 1 m straight land at each snap end
+    ARC_SEGMENTS=12,       # facets on the return's quarter turn: 7.5 degrees each, reads as one curve
+    ARC_COLLIDERS=3,       # convex pieces the curve's collider is split into. WHY: one hull over the whole quarter
+                           # would fill 0.23 m of the room's inside corner; three leave under 0.03 m
+    NICHE_W=0.6, NICHE_H=3.4, NICHE_R=0.3,   # capsule niche in the niche wall, metres (README_r5 corridors A)
+    NICHE_BOTTOM=0.45,     # niche starts this high, metres: clear of the skirting, under the 2.1 m frost line
+    NICHE_D=0.06,          # niche depth into the 0.2 m wall, leaving 0.14 m, metres (README_r5)
+    COVER_H=1.1,           # crouch-cover height, metres (README_r5: 1.0-1.2 m target, 1.1 chosen)
+    COUNTER_L=2.0, COUNTER_W=1.0,   # capsule counter plan, metres; its ends are half-circles of radius W/2
+    COUNTER_TOP_BEVEL=0.03,         # rounded top edge, metres: catches the gloss highlight
+    COUNTER_SEGMENTS=16,            # facets on each counter end
+    BLOCK_L=2.0, BLOCK_W=0.6,       # block cover plan, metres (junctions B / glass B "low block")
+    BLOCK_BEVEL=0.04,               # block edge bevel, metres
+    FROST_LOW=0.35,        # low frosted strip top, metres (README_r5: 0-350 mm)
+    FROST_HIGH=2.1,        # high frosted strip bottom, metres (README_r5: 2,100-2,500 mm)
+    STAIR_W=2.0,           # straight stair clear width, metres (README_r5 atrium B)
+    STAIR_RISERS=24,       # risers per storey: 4.5 m / 24 = 0.1875 m each (README_r5)
+    STAIR_GOING=0.3,       # tread depth, metres: 24 x 0.3 = 7.2 m run, inside an 8 m bay (README_r5)
+    GUARD_H=1.1,           # frameless glass guard height above its walking line, metres. WHY: waist height,
+                           # so its only line sits below a standing figure's chest; no rail tube (README_r5)
+    GUARD_T=0.02,          # guard glass thickness, metres
+    GUARD_SHOE_H=0.12,     # silver shoe the guard glass stands in, metres (kept under the 350 mm low band)
+    GUARD_SHOE_T=0.06,     # shoe thickness, metres
+    RAMP_L=4.0, RAMP_RISE=1.0,      # ramp run and rise, metres: 1:4 slope (README_r5 atrium B)
+    COVE_W=0.2,            # light line slot width in the soffit, metres
+    COVE_D=0.08,           # its depth into the slab, leaving 0.12 m, metres (README_r5)
 )
 
 CLEAR_H = P.FLOOR_H - P.SLAB      # floor to soffit, metres
@@ -142,16 +174,18 @@ def hexc(h):
 
 # WHY 646E86: the approved concepts' carpet is a darker grey-blue than the old #8A94A3 placeholder; this is
 # their painted value (#5E6A96 to #6D79A3, lit by a blue sky) pulled back toward grey so it reads as albedo.
-M_FLOOR = material('Floor_Carpet', hexc('646E86'), roughness=0.9)
+M_FLOOR = material('Floor_Carpet', hexc('B8C2CE'), roughness=0.03)
+# WHY B8C2CE, near-mirror: round 5 drops carpet for a polished pale resin floor (Alex, 2026-11-12). The name stays
+# Floor_Carpet because Unity maps the exported material by name; KitImport.cs holds the same values.
 M_CEIL = material('Ceiling_Tile', hexc('F3F4F4'), roughness=0.9)
-M_WALL = material('Wall_PaperWhite', hexc('F3F4F4'), roughness=0.7)
-M_FRAME = material('Frame_Aluminium', hexc('C9CED3'), metallic=0.8, roughness=0.35)
+M_WALL = material('Wall_PaperWhite', hexc('F3F4F4'), roughness=0.1)   # gloss white lacquer (README_r5)
+M_FRAME = material('Frame_Aluminium', hexc('C9CED3'), metallic=0.8, roughness=0.28)   # inset silver (README_r5)
 M_GLASS = material('Glass_Clear', (0.70, 0.85, 0.95), roughness=0.05)
 M_DOOR = material('Door_Leaf', hexc('C9CED3'), roughness=0.6)
 M_STAIR = material('Stair_Aluminium', hexc('C9CED3'), metallic=0.6, roughness=0.35)
 M_TRIM = material('Trim_Navy', hexc('111B38'), roughness=0.5)   # Deep Navy; bible §11 "black trim" anchors
 M_RAIL = M_TRIM if P.RAIL_FINISH == 'navy' else M_FRAME
-M_COBALT = material('Accent_Cobalt', hexc('244FB9'), roughness=0.5)   # Corporate Cobalt, bible §03: large blocks only
+M_COBALT = material('Accent_Cobalt', hexc('244FB9'), roughness=0.06)   # gloss cobalt (README_r5)   # Corporate Cobalt, bible §03: large blocks only
 M_LIGHT = material('Light_Strip', hexc('FFFFFF'), roughness=0.5)      # emissive diffuser; Unity sets the emission
 M_RED = material('Door_LockedRed', hexc('C0281E'), roughness=0.45)
 # WHY red outside the palette: the locked stair door is the one warm gameplay accent (bible §03 allows rationed
@@ -168,6 +202,9 @@ def emissive(mat, strength=4.0):
 
 
 emissive(M_LIGHT)
+# Round 5: frosted glass for the high and low strips. A pale, mostly opaque white so it reads as "you can't see
+# through here" next to the near-clear Glass_Clear; KitImport sets its transparency in Unity.
+M_FROST = material('Glass_Frosted', hexc('E6ECF2'), roughness=0.6)
 
 
 def recessed(bm, cutter):
@@ -516,6 +553,260 @@ def ceiling_light():
     expect(ob, size=(L, W, dz))
 
 
+# ---------------------------------------------------------------- labyrinth (round 5)
+
+def prism_xz(outline, y0, y1):
+    """A closed vertical prism: `outline` is a list of Unity (x, z) points, extruded from height y0 to y1."""
+    rings = [[(-x, -z, y) for x, z in outline] for y in (y0, y1)]
+    bm = bmesh.new()
+    lo = [bm.verts.new(p) for p in rings[0]]
+    hi = [bm.verts.new(p) for p in rings[1]]
+    n = len(lo)
+    for k in range(n):
+        bm.faces.new((lo[k], lo[(k + 1) % n], hi[(k + 1) % n], hi[k]))
+    bm.faces.new(lo)
+    bm.faces.new(list(reversed(hi)))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return bm
+
+
+def prism_zy(profile, x0, x1):
+    """A closed prism running along Unity X from x0 to x1: `profile` is a list of Unity (z, y) points."""
+    bm = bmesh.new()
+    a = [bm.verts.new((-x0, -z, y)) for z, y in profile]
+    b = [bm.verts.new((-x1, -z, y)) for z, y in profile]
+    n = len(a)
+    for k in range(n):
+        bm.faces.new((a[k], a[(k + 1) % n], b[(k + 1) % n], b[k]))
+    bm.faces.new(a)
+    bm.faces.new(list(reversed(b)))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return bm
+
+
+def stadium(length, width, segments, cx=0.0, cy=0.0):
+    """Outline of a capsule (two half-circles joined by straights) in a 2D plane, long axis along the first axis."""
+    r = width * 0.5
+    half = length * 0.5 - r
+    pts = []
+    for end, a0 in ((half, -90.0), (-half, 90.0)):
+        for i in range(segments + 1):
+            a = math.radians(a0 + 180.0 * i / segments)
+            pts.append((cx + end + r * math.cos(a), cy + r * math.sin(a)))
+    return pts
+
+
+def wall_profile():
+    """The wall's cross-section with its shadow gaps, as (d, y) points and one material slot per edge.
+
+    d runs across the thickness from the grid-line face (0) to the back face (-WALL); y is height. Edge i joins
+    point i to point i + 1. Slots: 0 the wall, 1 the navy shadow gaps. Matches what wall_cuts() carves into the
+    straight walls, so a rounded return lines up with its neighbours.
+    """
+    W, sh, sd, th, td, H = P.WALL, P.SKIRT_H, P.SKIRT_D, P.TOP_H, P.TOP_D, CLEAR_H
+    pts = [(0, sh), (0, H - th), (-td, H - th), (-td, H), (-W + td, H), (-W + td, H - th), (-W, H - th),
+           (-W, sh), (-W + sd, sh), (-W + sd, 0), (-sd, 0), (-sd, sh)]
+    mats = [0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1]
+    return pts, mats
+
+
+def sweep_wall(path, front_slot=0):
+    """A wall swept along `path`: a list of (x, z, nx, nz), a point on the grid-line face and the unit normal
+    pointing into the wall's thickness. Capped at both ends, which are the snap faces."""
+    pts, mats = wall_profile()
+    mats = [front_slot if (m == 0 and i == 0) else m for i, m in enumerate(mats)]
+    bm = bmesh.new()
+    rings = []
+    for x, z, nx, nz in path:
+        ring = []
+        for d, y in pts:
+            ux, uz = x - d * nx, z - d * nz   # d is negative into the wall, so -d * n steps inward
+            ring.append(bm.verts.new((-ux, -uz, y)))
+        rings.append(ring)
+    n = len(pts)
+    for a, b in zip(rings, rings[1:]):
+        for k in range(n):
+            f = bm.faces.new((a[k], a[(k + 1) % n], b[(k + 1) % n], b[k]))
+            f.material_index = mats[k]
+    bm.faces.new(rings[0])
+    bm.faces.new(list(reversed(rings[-1])))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return bm
+
+
+def wall_return(finish=''):
+    """A 2 x 2 m wall corner with a rounded outside, for the corners of maze islands. Box/hull colliders per part.
+
+    The grid-line face runs from the +X snap end at (2, 0) to (R, 0), turns a quarter circle of radius R round
+    (R, -R) and runs to the -Z snap end at (0, -2). Thickness goes inward, so a straight wall running +X from (2, 0)
+    and a side wall running -Z from (0, -2) (pivot at its far end, turned -90) both meet it flush. The convex
+    curve faces the corridor; the room behind gets the 0.8 m inner radius.
+    '_Cobalt' paints the curved face cobalt, for the junction's coloured return (README_r5 corridors A).
+    """
+    R, L = P.RETURN_R, P.INFILL
+    slot = 2 if finish == '_Cobalt' else 0
+    mats = [M_WALL, M_TRIM] + ([M_COBALT] if slot else [])
+    n_arc = P.ARC_SEGMENTS
+
+    def arc_pt(t):   # t from 0 (pointing +Z, at (R, 0)) to 1 (pointing -X, at (0, -R))
+        a = t * math.pi * 0.5
+        return R - R * math.sin(a), -R + R * math.cos(a), math.sin(a), -math.cos(a)
+
+    parts = []
+    leg_a = sweep_wall([(L, 0, 0, -1), (R, 0, 0, -1)], slot)
+    parts.append(('LegX', leg_a))
+    per = n_arc // P.ARC_COLLIDERS
+    for c in range(P.ARC_COLLIDERS):
+        seg = [arc_pt((c * per + i) / n_arc) for i in range(per + 1)]
+        parts.append((f'Arc{c + 1}', sweep_wall(seg, slot)))
+    leg_b = sweep_wall([(0, -R, 1, 0), (0, -L, 1, 0)], slot)
+    parts.append(('LegZ', leg_b))
+    obs = []
+    for name, bm in parts:
+        ob = part(f'Kit_Wall_Return_2x2{finish}_{name}', bm, mats, smooth=None)
+        collider(ob, 'box' if name.startswith('Leg') else 'hull')
+        obs.append(ob)
+    expect(obs[0], size=(L - R, P.WALL, CLEAR_H))
+    expect(obs[-1], size=(P.WALL, L - R, CLEAR_H))
+    group(f'Kit_Wall_Return_2x2{finish}', *obs)
+
+
+def wall_niche():
+    """4 m wall with a tall cobalt capsule niche centred on its grid-line face (README_r5 corridors A). Box collider.
+
+    The niche is 0.06 deep, so the wall keeps 0.14 m behind it and the collider is the plain wall's.
+    """
+    w, eps = P.BAY, 0.01
+    # The niche outline is (height, x); the cutter is that outline pushed through the face, NICHE_D deep.
+    outline = stadium(P.NICHE_H, P.NICHE_W, P.COUNTER_SEGMENTS, cx=P.NICHE_BOTTOM + P.NICHE_H * 0.5, cy=w * 0.5)
+    cut = bmesh.new()
+    front = [cut.verts.new((-x, -eps, y)) for y, x in outline]
+    back = [cut.verts.new((-x, P.NICHE_D, y)) for y, x in outline]
+    n = len(front)
+    for k in range(n):
+        cut.faces.new((front[k], front[(k + 1) % n], back[(k + 1) % n], back[k]))
+    cut.faces.new(front)
+    cut.faces.new(list(reversed(back)))
+    bmesh.ops.recalc_face_normals(cut, faces=cut.faces)
+    body = recessed(u(0, w, 0, CLEAR_H, -P.WALL, 0), wall_cuts(0, w))
+    bm = boolean(body, paint(cut, 2))
+    ob = part('Kit_Wall_Niche_4m', bm, [M_WALL, M_TRIM, M_COBALT], smooth=None)
+    expect(ob, size=(w, P.WALL, CLEAR_H))
+    collider(ob, 'box')
+
+
+def counter_capsule():
+    """Solid 1.1 m capsule counter, 2 x 1 m, for crouch cover (README_r5 rooms A). Pivot bottom centre. Hull collider."""
+    bm = prism_xz(stadium(P.COUNTER_L, P.COUNTER_W, P.COUNTER_SEGMENTS), 0, P.COVER_H)
+    bevel(bm, P.COUNTER_TOP_BEVEL, segments=3, angle=45)
+    ob = part('Kit_Counter_Capsule_2m', bm, M_WALL, smooth=30)
+    expect(ob, size=(P.COUNTER_L, P.COUNTER_W, P.COVER_H), tol=0.002)
+    collider(ob, 'hull')
+
+
+def cover_block():
+    """Plain 1.1 m block cover, 2 x 0.6 m, bevelled (README_r5 junctions B, glass B). Pivot bottom centre. Box collider."""
+    bm = u(-P.BLOCK_L * 0.5, P.BLOCK_L * 0.5, 0, P.COVER_H, -P.BLOCK_W * 0.5, P.BLOCK_W * 0.5)
+    bevel(bm, P.BLOCK_BEVEL, segments=3, angle=45)
+    ob = part('Kit_Cover_Block_2m', bm, M_WALL, smooth=30)
+    expect(ob, size=(P.BLOCK_L, P.BLOCK_W, P.COVER_H), tol=0.002)
+    collider(ob, 'box')
+
+
+def partition_frost(width):
+    """Glass partition with frosted strips: low (rail to 0.35 m) and high (2.1 m to the top rail), clear between.
+
+    WHY these heights: the clear band 0.35-2.1 m keeps a standing figure readable through two panes (README_r5
+    glass B); the frost says "boundary" without hiding anyone. Same rails, pivot and collider as Partition_Glass.
+    """
+    zc = -P.PART_T * 0.5
+    g0, g1 = zc - P.GLASS_T * 0.5, zc + P.GLASS_T * 0.5
+    rails = join(u(0, width, 0, P.PART_RAIL, -P.PART_T, 0),
+                 u(0, width, P.PART_H - P.PART_RAIL, P.PART_H, -P.PART_T, 0))
+    frame = part(f'Kit_Partition_Frost_{width:g}m_Frame', rails, M_RAIL, smooth=None)
+    clear = part(f'Kit_Partition_Frost_{width:g}m_Glass', u(0, width, P.FROST_LOW, P.FROST_HIGH, g0, g1),
+                 M_GLASS, smooth=None)
+    frost = part(f'Kit_Partition_Frost_{width:g}m_Frost',
+                 join(u(0, width, P.PART_RAIL, P.FROST_LOW, g0, g1),
+                      u(0, width, P.FROST_HIGH, P.PART_H - P.PART_RAIL, g0, g1)), M_FROST, smooth=None)
+    collider(frame, 'box')   # as Partition_Glass: one box over the whole wall; breakable glass is the shooting lane's
+    expect(frame, size=(width, P.PART_T, P.PART_H))
+    group(f'Kit_Partition_Frost_{width:g}m', frame, clear, frost)
+
+
+def stair_straight():
+    """2 m-wide straight stair rising one storey toward -Z, with frameless glass guards (README_r5 atrium B).
+
+    Pivot: the front-left corner of the bottom step, at floor level. 24 risers x 0.1875 m, 0.3 m goings, 7.2 m run;
+    the top tread lands at 4.5 m, flush with the deck above. Hull collider: its top runs along the nosings, so the
+    capsule climbs a smooth slope (32 degrees) and a foot sits at most one riser above the back of a tread.
+    """
+    r, g, n, w = P.FLOOR_H / P.STAIR_RISERS, P.STAIR_GOING, P.STAIR_RISERS, P.STAIR_W
+    run = n * g
+    under = 0.35   # depth of the white mass under the nosing line, metres
+    prof = [(0.0, 0.0)]
+    for k in range(n):
+        prof += [(-k * g, (k + 1) * r), (-(k + 1) * g, (k + 1) * r)]
+    prof += [(-run, P.FLOOR_H - under), (-run + (P.FLOOR_H - under) * g / r, 0.0)]   # underside parallel to the pitch
+    prof = list(reversed(prof))
+    bm = prism_zy(prof, 0, w)
+    bm.normal_update()
+    for f in bm.faces:
+        f.material_index = 1 if f.normal.z > 0.5 else 0   # tread tops silver, everything else gloss white
+    body = part('Kit_Stair_Straight_2m', bm, [M_WALL, M_FRAME], smooth=None)
+    expect(body, size=(w, run, P.FLOOR_H))
+    collider(body, 'hull')
+    guards = []
+    for side, x0 in (('L', 0.0), ('R', w - P.GUARD_T)):
+        q = [(0.0, r), (-run, P.FLOOR_H), (-run, P.FLOOR_H + P.GUARD_H), (0.0, r + P.GUARD_H)]
+        gb = prism_zy(list(reversed(q)), x0, x0 + P.GUARD_T)
+        ob = part(f'Kit_Stair_Straight_2m_Guard{side}', gb, M_GLASS, smooth=None)
+        collider(ob, 'hull')
+        guards.append(ob)
+    group('Kit_Stair_Straight_2m_Group', body, *guards)
+
+
+def ramp():
+    """2 m wide ramp rising 1 m over 4 m toward -Z (1:4), polished top (README_r5 atrium B). Hull collider."""
+    bm = prism_zy([(0.0, 0.0), (-P.RAMP_L, 0.0), (-P.RAMP_L, P.RAMP_RISE)], 0, P.STAIR_W)
+    bm.normal_update()
+    for f in bm.faces:
+        f.material_index = 1 if f.normal.z > 0.5 else 0
+    ob = part('Kit_Ramp_2x4', bm, [M_WALL, M_FLOOR], smooth=None)
+    expect(ob, size=(P.STAIR_W, P.RAMP_L, P.RAMP_RISE))
+    collider(ob, 'hull')
+
+
+def guard_glass(width):
+    """Frameless glass guard for a mezzanine edge: glass standing in a low silver shoe on the slab edge.
+
+    Runs +X from the pivot on the slab edge; sits just inside it (toward -Z). Box colliders on the shoe and the
+    glass, so together they stop a player from the floor to the guard's top.
+    """
+    st, sh = P.GUARD_SHOE_T, P.GUARD_SHOE_H
+    shoe = part(f'Kit_Guard_Glass_{width:g}m_Shoe', u(0, width, 0, sh, -st, 0), M_FRAME, smooth=None)
+    zc = -st * 0.5
+    glass = part(f'Kit_Guard_Glass_{width:g}m_Glass',
+                 u(0, width, sh, P.GUARD_H, zc - P.GUARD_T * 0.5, zc + P.GUARD_T * 0.5), M_GLASS, smooth=None)
+    for ob in (shoe, glass):
+        collider(ob, 'box')
+    expect(glass, size=(width, P.GUARD_T, P.GUARD_H - sh))
+    group(f'Kit_Guard_Glass_{width:g}m', shoe, glass)
+
+
+def slab_light_line():
+    """4 x 4 m slab with a lit slot along X down the middle of its soffit: a ceiling light line that carries on
+    across the next slab and points along a route (README_r5). Box collider, as the plain slab."""
+    w = d = P.BAY
+    eps = 0.01
+    body = by_normal(u(0, w, -P.SLAB, 0, -d, 0), 0, 1, 2)
+    slot = paint(u(-eps, w + eps, -P.SLAB - eps, -P.SLAB + P.COVE_D, -d * 0.5 - P.COVE_W * 0.5,
+                   -d * 0.5 + P.COVE_W * 0.5), 3)
+    ob = part('Kit_Slab_4x4_LightLine', boolean(body, slot), [M_FLOOR, M_CEIL, M_WALL, M_LIGHT], smooth=None)
+    expect(ob, size=(w, d, P.SLAB))
+    collider(ob, 'box')
+
+
 PIECES = {
     'Slab_4x4': lambda: slab(P.BAY, P.BAY),
     'Slab_2x4': lambda: slab(P.INFILL, P.BAY),
@@ -543,6 +834,19 @@ PIECES = {
     'Stair_Steps': stair_steps,
     'Stair_LockedDoor': stair_locked_door,
     'Ceiling_LightStrip': ceiling_light,
+    # Labyrinth, round 5
+    'Wall_Return_2x2': wall_return,
+    'Wall_Return_2x2_Cobalt': lambda: wall_return('_Cobalt'),
+    'Wall_Niche_4m': wall_niche,
+    'Counter_Capsule_2m': counter_capsule,
+    'Cover_Block_2m': cover_block,
+    'Partition_Frost_4m': lambda: partition_frost(P.BAY),
+    'Partition_Frost_2m': lambda: partition_frost(P.INFILL),
+    'Stair_Straight_2m': stair_straight,
+    'Ramp_2x4': ramp,
+    'Guard_Glass_4m': lambda: guard_glass(P.BAY),
+    'Guard_Glass_2m': lambda: guard_glass(P.INFILL),
+    'Slab_4x4_LightLine': slab_light_line,
 }
 
 if P.PIECE not in PIECES:
