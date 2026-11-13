@@ -9,7 +9,7 @@ They walk about with the normal movement and see each other.
 The **ready board** (top right) lists both firms, who is in each, who is ready and who is in the fitting room, and one line saying what the start is waiting for.
 Looking at something usable shows a **prompt** above the bottom of the screen:
 
-- **Firm sign-in stands** (cobalt and cyan signs either side of the desk): F signs you in with that firm.
+- **Firm sign-in stands** (a sign in each firm's own colour either side of the desk): F signs you in with that firm.
 - **The reception desk**: F readies you up, or takes it back. When everyone is ready and the rule below is met, the host's prompt becomes **Hold F · Start the run**, with a fill bar; a tap still takes the host's ready back.
 - **The tailor's mirror** in the glass corner: F opens the fitting room ([CUSTOMISATION.md](CUSTOMISATION.md)).
 
@@ -29,7 +29,7 @@ Steam host, join and invite are unchanged: the game menu (`GameMenu`, `SteamLobb
 | **Fitting room takes the ready back** | So the host can never start with someone still choosing an outfit | Code |
 | **Hold to start** | 1 s hold at the desk, host only | `LobbyRules` Start Hold Seconds |
 | **Leaving** | A player who leaves is removed from the board; nobody is moved to rebalance; the board then says the firms are uneven if they are | Code |
-| **Firm names** | "Cobalt" and "Cyan" (the colours proposed in the UI style research, T1). The real names are undecided | `LobbyRules` |
+| **Firm names and colours** | Read from the two `FirmDefinition` assets in `Profiles/Match` (today "Ashcombe & Pryce" and "Halloran Voss", the game mode's proposals; the names are the owner's decision). Lobby Rules > Firms points at them, matching each to its building by its own Tower setting (0 = Building A = firm 0). Nothing in the lobby holds a name or colour of its own | `Profiles/Match/Firm_*.asset` |
 
 ## Who owns what
 
@@ -64,5 +64,5 @@ A client never decides anything: a request the rules refuse changes nothing.
 - **Only one lobby room exists.** The GDD gives each firm its own reception; the owner asked for one shared lobby, which is what this builds.
 - Interact is **F** (pad: north button), matching the shared asset; E stays lean-right.
 - Font is LiberationSans, TextMeshPro's default; the style research's Archivo / IBM Plex Mono aren't in the project.
-- The secretary is the same STDMC model as the players, recoloured; she has no glasses, no seated pose and no animation until a rigged character arrives.
+- The secretary is the same rigged STDMC model as the players, recoloured, with no animator: she holds a T-pose, has no glasses and no seated pose.
 - The lobby stays joinable after a run starts (as NETCODE.md already notes).

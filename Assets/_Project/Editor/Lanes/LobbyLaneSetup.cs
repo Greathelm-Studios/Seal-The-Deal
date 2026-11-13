@@ -4,6 +4,7 @@ using CloseTheDeal.Customisation;
 using CloseTheDeal.Editor.Art;
 using CloseTheDeal.Editor.Greybox;
 using CloseTheDeal.Lobby;
+using CloseTheDeal.MatchMode;
 using CloseTheDeal.Tower;
 using FishNet.Object;
 using TMPro;
@@ -78,7 +79,7 @@ namespace CloseTheDeal.Editor.Lanes
         {
             EnsureFolders();
             OutfitCatalog catalog = EnsureCatalog();
-            LobbyRules rules = EnsureAsset<LobbyRules>(RulesPath, null);
+            LobbyRules rules = EnsureRules();
             SecretaryLines lines = EnsureAsset<SecretaryLines>(LinesPath, FillLines);
             GameObject character = EnsureCharacterPrefab(catalog);
             PatchPlayerPrefab(character);
@@ -102,6 +103,33 @@ namespace CloseTheDeal.Editor.Lanes
         {
             if (!AssetDatabase.IsValidFolder(parent + "/" + name))
                 AssetDatabase.CreateFolder(parent, name);
+        }
+
+        /// <summary>
+        /// The lobby rules asset, with the two match firm definitions filled in when its firm list
+        /// is empty (a designer's own list is never touched). The firms' names and colours live in
+        /// those definitions, Profiles/Match, and nowhere else.
+        /// </summary>
+        internal static LobbyRules EnsureRules()
+        {
+            var rules = EnsureAsset<LobbyRules>(RulesPath, null);
+            var so = new SerializedObject(rules);
+            SerializedProperty firms = so.FindProperty("_firms");
+            if (firms.arraySize > 0)
+                return rules;
+
+            string[] guids = AssetDatabase.FindAssets("t:FirmDefinition", new[] { "Assets/_Project/Profiles/Match" });
+            if (guids.Length == 0)
+            {
+                Debug.LogWarning("[Lobby] No firm definitions under Profiles/Match yet, so the board reads 'Firm A' and 'Firm B'. Add them to Lobby Rules > Firms.");
+                return rules;
+            }
+
+            firms.arraySize = guids.Length;
+            for (int i = 0; i < guids.Length; i++)
+                firms.GetArrayElementAtIndex(i).objectReferenceValue = AssetDatabase.LoadAssetAtPath<FirmDefinition>(AssetDatabase.GUIDToAssetPath(guids[i]));
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return rules;
         }
 
         /// <summary>Creates the asset only if nothing is there yet; an existing one is the designer's.</summary>
@@ -290,12 +318,13 @@ namespace CloseTheDeal.Editor.Lanes
             var model = (GameObject)PrefabUtility.InstantiatePrefab(stdmc, fit.transform);
             FitToHeight(model.transform);
 
-            Renderer body = model.GetComponentInChildren<Renderer>();
-            body.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            Renderer[] bodies = model.GetComponentsInChildren<Renderer>(true);
+            foreach (Renderer body in bodies)
+                body.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
             var view = root.AddComponent<OutfitView>();
             var so = new SerializedObject(view);
             so.FindProperty("_catalog").objectReferenceValue = catalog;
-            so.FindProperty("_body").objectReferenceValue = body;
+            SetRenderers(so.FindProperty("_bodies"), bodies);
             so.FindProperty("_motionPivot").objectReferenceValue = fit.transform;
             so.ApplyModifiedPropertiesWithoutUndo();
 
@@ -305,13 +334,30 @@ namespace CloseTheDeal.Editor.Lanes
             return prefab;
         }
 
+        /// <summary>The bounds of every renderer under the model, so a model split into parts is measured whole.</summary>
+        static Bounds CombinedBounds(Transform model)
+        {
+            Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+                bounds.Encapsulate(renderers[i].bounds);
+            return bounds;
+        }
+
+        static void SetRenderers(SerializedProperty list, Renderer[] renderers)
+        {
+            list.arraySize = renderers.Length;
+            for (int i = 0; i < renderers.Length; i++)
+                list.GetArrayElementAtIndex(i).objectReferenceValue = renderers[i];
+        }
+
         /// <summary>Scales the model to CharacterHeight and stands it on y = 0, centred, using its rendered bounds.</summary>
         static void FitToHeight(Transform model)
         {
-            Bounds b = model.GetComponentInChildren<Renderer>().bounds;
+            Bounds b = CombinedBounds(model);
             float scale = CharacterHeight / Mathf.Max(0.01f, b.size.y);
             model.localScale *= scale;
-            b = model.GetComponentInChildren<Renderer>().bounds;
+            b = CombinedBounds(model);
             Vector3 parent = model.parent.position;
             model.localPosition += new Vector3(parent.x - b.center.x, parent.y - b.min.y, parent.z - b.center.z);
         }
@@ -330,7 +376,7 @@ namespace CloseTheDeal.Editor.Lanes
             try
             {
                 Transform lean = root.transform.Find("Graphics/Lean");
-                OutfitView view = FindModelBody(lean, out Renderer modelBody) ? AttachToModel(lean, modelBody) : AddOutfitCharacter(lean, character);
+                OutfitView view = FindModelBody(lean, out Transform model) ? AttachToModel(lean, model) : AddOutfitCharacter(lean, character);
 
                 var player = root.GetComponent<PlayerOutfit>() ?? root.AddComponent<PlayerOutfit>();
                 var so = new SerializedObject(player);
@@ -353,30 +399,41 @@ namespace CloseTheDeal.Editor.Lanes
         /// build puts there): then the outfit is attached to it instead of adding a second figure.
         /// The greybox capsule has one material, a model has several.
         /// </summary>
-        static bool FindModelBody(Transform lean, out Renderer best)
+        static bool FindModelBody(Transform lean, out Transform model)
         {
-            best = null;
-            Transform body = lean != null ? lean.Find("Body") : null;
-            if (body == null)
+            model = null;
+            if (lean == null)
                 return false;
 
-            foreach (Renderer renderer in body.GetComponentsInChildren<Renderer>(true))
+            foreach (Transform child in lean)
             {
-                if (renderer.sharedMaterials.Length >= 4 && (best == null || renderer.sharedMaterials.Length > best.sharedMaterials.Length))
-                    best = renderer;
+                if (child.name == "Outfit")
+                    continue; // The greybox figure from an earlier run of this tool, not a model.
+
+                int materials = 0;
+                foreach (Renderer renderer in child.GetComponentsInChildren<Renderer>(true))
+                    materials += renderer.sharedMaterials.Length;
+                if (materials >= 4)
+                {
+                    model = child;
+                    return true;
+                }
             }
 
-            return best != null;
+            return false;
         }
 
-        /// <summary>An existing model gets the outfit on its own object. Nothing is added to the hierarchy and nothing is hidden.</summary>
-        static OutfitView AttachToModel(Transform lean, Renderer modelBody)
+        /// <summary>An existing model gets the outfit on its own object. Nothing is added to the hierarchy and nothing is hidden; a figure this tool added earlier is removed.</summary>
+        static OutfitView AttachToModel(Transform lean, Transform model)
         {
-            Transform body = lean.Find("Body");
-            var view = body.GetComponent<OutfitView>() ?? body.gameObject.AddComponent<OutfitView>();
+            Transform old = lean.Find("Outfit");
+            if (old != null)
+                Object.DestroyImmediate(old.gameObject);
+
+            var view = model.GetComponent<OutfitView>() ?? model.gameObject.AddComponent<OutfitView>();
             var so = new SerializedObject(view);
             so.FindProperty("_catalog").objectReferenceValue = AssetDatabase.LoadAssetAtPath<OutfitCatalog>(CatalogPath);
-            so.FindProperty("_body").objectReferenceValue = modelBody;
+            SetRenderers(so.FindProperty("_bodies"), model.GetComponentsInChildren<Renderer>(true));
             so.ApplyModifiedPropertiesWithoutUndo();
             return view;
         }
@@ -714,19 +771,42 @@ namespace CloseTheDeal.Editor.Lanes
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        /// <summary>The sign's material in the firm's own colour, rewritten each run so a changed firm colour follows.</summary>
+        static Material FirmSignMaterial(int firm, Color colour)
+        {
+            string path = $"{MaterialFolder}/Lobby_Firm{firm}.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                material.SetFloat("_Smoothness", 0.2f);
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            material.SetColor("_BaseColor", colour);
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
         internal static void Stand(Transform root, LobbyRules rules, int firm, Vector3 at)
         {
             Transform stand = Group(root, "Sign-in " + rules.FirmName(firm));
             stand.localPosition = at;
-            Material firmMaterial = firm == 0 ? _cobalt : _cyan;
+            Color firmColour = rules.FirmColour(firm);
+            Material firmMaterial = FirmSignMaterial(firm, firmColour);
             Box(stand, "Post", Vector3.zero, new Vector3(0.12f, 1.0f, 0.12f), _navy);
             Box(stand, "Desk top", new Vector3(0f, 1.0f, 0f), new Vector3(0.7f, 0.04f, 0.5f), _navy);
             Box(stand, "Base", Vector3.zero, new Vector3(0.6f, 0.03f, 0.5f), _navy);
             Transform sheet = Box(stand, "Sheet", new Vector3(0f, 1.04f, 0f), new Vector3(0.3f, 0.005f, 0.4f), _paper, false).transform;
             Box(stand, "Sign", new Vector3(0f, 1.3f, -0.6f), new Vector3(1.4f, 1.9f, 0.05f), firmMaterial);
-            Color ink = firm == 0 ? Paper : Navy;
-            Label(stand, rules.FirmName(firm), new Vector3(0f, 2.6f, -0.57f), 0.32f, ink, TextAlignmentOptions.Center, new Vector2(1.3f, 0.5f));
-            Label(stand, "Sign in here", new Vector3(0f, 2.25f, -0.57f), 0.13f, ink, TextAlignmentOptions.Center, new Vector2(1.3f, 0.3f));
+            Color ink = firmColour.grayscale < 0.5f ? Paper : Navy; // Light type on a dark sign, dark type on a light one.
+            // A long firm name wraps and shrinks to stay on the sign rather than running off its edge.
+            TextMeshPro title = Label(stand, rules.FirmName(firm), new Vector3(0f, 2.7f, -0.57f), 0.32f, ink, TextAlignmentOptions.Center, new Vector2(1.3f, 0.6f));
+            title.textWrappingMode = TextWrappingModes.Normal;
+            title.enableAutoSizing = true;
+            title.fontSizeMin = 1.5f;
+            title.fontSizeMax = 3.2f;
+            Label(stand, "Sign in here", new Vector3(0f, 2.05f, -0.57f), 0.13f, ink, TextAlignmentOptions.Center, new Vector2(1.3f, 0.3f));
 
             var signIn = stand.gameObject.AddComponent<FirmSignIn>();
             var so = new SerializedObject(signIn);
@@ -754,7 +834,8 @@ namespace CloseTheDeal.Editor.Lanes
             so.FindProperty("_focusOffset").vector3Value = new Vector3(0f, 1.3f, 0.05f);
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            Cylinder(corner, "Plinth", new Vector3(2.2f, 0f, -11.5f), 1.2f, 0.06f, _paper);
+            // A floor disc only: with a collider it was a step in front of the mirror that players climbed or got stuck on.
+            Object.DestroyImmediate(Cylinder(corner, "Plinth", new Vector3(2.2f, 0f, -11.5f), 1.2f, 0.06f, _paper).GetComponent<Collider>());
             Box(corner, "Rail", new Vector3(2.4f, 1.75f, -14.8f), new Vector3(2.6f, 0.03f, 0.03f), _silver, false);
             Box(corner, "Rail post L", new Vector3(1.15f, 0f, -14.8f), new Vector3(0.04f, 1.78f, 0.04f), _silver);
             Box(corner, "Rail post R", new Vector3(3.65f, 0f, -14.8f), new Vector3(0.04f, 1.78f, 0.04f), _silver);

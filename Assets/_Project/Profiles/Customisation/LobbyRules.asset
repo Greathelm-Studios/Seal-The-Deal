@@ -12,10 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 04942e42d9a4449b69ca72352e90c344, type: 3}
   m_Name: LobbyRules
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Lobby.LobbyRules
-  _firmAName: Cobalt
-  _firmBName: Cyan
-  _firmAColour: {r: 0.141, g: 0.31, b: 0.725, a: 1}
-  _firmBColour: {r: 0.125, g: 0.831, b: 0.902, a: 1}
+  _firms:
+  - {fileID: 11400000, guid: 6bf9e28037f9042c1b1e6e1c70e00926, type: 2}
+  - {fileID: 11400000, guid: 3d2e1f3700e07459fb1ff05a2b7d138e, type: 2}
   _maxImbalance: 1
   _requireBothFirms: 1
   _startHoldSeconds: 1

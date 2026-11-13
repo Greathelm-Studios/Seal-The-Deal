@@ -18,7 +18,7 @@ Both firms spawn into one shared ground-floor reception, ready up at the desk, p
 
 ## Known issues
 
-- **Static mesh.** STDMC has no rig: T-pose, slides when moving. Waits on Alex's rig; the outfit attaches to `Graphics/Lean/Body` when it is there (path written, not run).
+- **Alex's rigged STDMC is now in the branch (merged from `buffer`).** The outfit attaches to the player's own `Graphics/Lean/Body` model (split into several meshes; materials are matched by name across all of them) and no second figure is added. Seen in the fitting room: the suit and shirt recolour on the rigged, animated model. The secretary figure is the same model without an animator, so she holds a T-pose.
 - **Only three outfit categories** (Suit, Shirt, Belt). Hair and shoes share one material and jacket and trousers share one, so those categories can't ship.
 - **No mouse clicks on the fitting form**: the cursor stays captured because a free cursor opens `GameMenu`.
 - **`TeamSpawner` ignores firms** (team = client id % 2). The match flow must place players from `RunStartRequested`.
@@ -45,6 +45,7 @@ All runs were headless Editor Play runs of `Lane_Lobby.unity` in local test mode
 | 5d | A firm empty at start | **Seen** | `NeedBothFirms` with one player; board says "Each firm needs at least one person" |
 | 5e | Steam offline / local test mode | **Seen** | Every run was local test mode. The Steam path is untouched (`SteamLobby`, `GameMenu` unchanged) and not run |
 | 6 | Lizard | 2,117 NLOC, avg CC 3.3, **nothing above CC 10** (two functions at 10) | `lizard -l csharp Scripts/Lobby Scripts/Customisation`; four CC 11+ functions refactored |
+| 8 | Real-key walk in `Lane_Integration.unity` after the shooting lane made kit glass solid | **All 8 reception spawns reach the tailor's corner and the mirror** by W and mouse-turn only (no teleport after placement), the mirror prompt shows and the fitting room opens (opened by a direct call). Spawns 1, 5, 6, 8 stopped 0.6 m short of my target point (inside the 2.6 m use range). Walking at the glass front stops at it: **the reception has no door to the plaza and needs none** (the match start moves players), so no doorway was added | Headless run, keyboard events injected into the Input System, one run |
 | 7 | Run start | **Seen** | `RunStartRequested` listed both players with firms 0 and 1; both machines counted one run started |
 
 ## Lane-local inputs (for the movement lane to consolidate)
@@ -90,7 +91,7 @@ Fitting-room keys only matter while the player's own input is disabled.
 - Start rule: everyone ready, nobody in the fitting room, at least one per firm, firms within one player.
 - Newcomers join the smaller firm; switching firm or entering the fitting room takes your ready back.
 - Hold the desk key 1 s to start (host).
-- Firm names are Cobalt and Cyan (proposals, one data asset: `LobbyRules`).
+- Firm names and colours are not held by the lobby: `LobbyRules` points at the game mode's two `FirmDefinition` assets (`Profiles/Match`), index 0 = Building A. Today they read "Ashcombe & Pryce" and "Halloran Voss" (the game mode's proposals; the owner decides).
 - Secretary lines are proposals (`SecretaryLines`).
 - Unlocks: runs started on this PC (Silver suit 1, cobalt 3, white 5; navy shirt 2; cobalt belt 1). Locks are client-honoured only.
 - One shared lobby (owner's words) instead of one reception per firm (GDD).
@@ -98,4 +99,4 @@ Fitting-room keys only matter while the player's own input is disabled.
 
 ## The one thing that still makes it feel like a demo
 
-The people: a T-posed static model with default LiberationSans and no voice, standing in an empty white room. A rigged, animated secretary and players with real voices would change it more than any extra feature.
+The people: the secretary holds a T-pose behind the desk, nobody has a voice, and the type is the default LiberationSans in an empty white room. An animated secretary and real voices would change it more than any extra feature.
