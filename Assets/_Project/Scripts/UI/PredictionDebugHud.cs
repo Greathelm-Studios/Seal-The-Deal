@@ -1,3 +1,4 @@
+using CloseTheDeal.Net;
 using CloseTheDeal.Player;
 using TMPro;
 using UnityEngine;
@@ -20,6 +21,12 @@ namespace CloseTheDeal.UI
             public int CorrectionCm;
             public int Corrections;
             public int PingMs;
+            public bool SwitchboardActive;
+            public bool SwitchboardIsHost;
+            public int PropBytesPerSecond;
+            public int PropBodiesPerSecond;
+            public int MovingBodies;
+            public int SmoothingDelayMs;
 
             public bool SameAs(in Sample other)
             {
@@ -28,7 +35,13 @@ namespace CloseTheDeal.UI
                     && SpeedTenths == other.SpeedTenths
                     && CorrectionCm == other.CorrectionCm
                     && Corrections == other.Corrections
-                    && PingMs == other.PingMs;
+                    && PingMs == other.PingMs
+                    && SwitchboardActive == other.SwitchboardActive
+                    && SwitchboardIsHost == other.SwitchboardIsHost
+                    && PropBytesPerSecond == other.PropBytesPerSecond
+                    && PropBodiesPerSecond == other.PropBodiesPerSecond
+                    && MovingBodies == other.MovingBodies
+                    && SmoothingDelayMs == other.SmoothingDelayMs;
             }
         }
 
@@ -56,27 +69,46 @@ namespace CloseTheDeal.UI
 
         static Sample Read(PlayerMotor motor)
         {
-            if (motor == null)
-                return default;
-
-            return new Sample
+            Sample sample = default;
+            sample.SwitchboardActive = SwitchboardStats.Active;
+            if (sample.SwitchboardActive)
             {
-                Present = true,
-                State = motor.State,
-                SpeedTenths = Mathf.RoundToInt(motor.PlanarSpeed * 10f),
-                CorrectionCm = Mathf.RoundToInt(motor.LastCorrectionMetres * 100f),
-                Corrections = motor.CorrectionCount,
-                PingMs = (int)motor.TimeManager.RoundTripTime
-            };
+                sample.SwitchboardIsHost = SwitchboardStats.IsHost;
+                sample.PropBytesPerSecond = SwitchboardStats.BytesPerSecond;
+                sample.PropBodiesPerSecond = SwitchboardStats.BodiesPerSecond;
+                if (sample.SwitchboardIsHost)
+                    sample.MovingBodies = SwitchboardStats.MovingBodies;
+                else
+                    sample.SmoothingDelayMs = SwitchboardStats.DelayMs;
+            }
+
+            if (motor != null)
+            {
+                sample.Present = true;
+                sample.State = motor.State;
+                sample.SpeedTenths = Mathf.RoundToInt(motor.PlanarSpeed * 10f);
+                sample.CorrectionCm = Mathf.RoundToInt(motor.LastCorrectionMetres * 100f);
+                sample.Corrections = motor.CorrectionCount;
+                sample.PingMs = (int)motor.TimeManager.RoundTripTime;
+            }
+
+            return sample;
         }
 
         static string Render(in Sample s)
         {
-            if (!s.Present)
-                return string.Empty;
+            string player = s.Present
+                ? $"{s.State}  ·  {s.SpeedTenths / 10f:0.0} m/s  ·  ping {s.PingMs} ms\n"
+                    + $"Host corrections {s.Corrections}  ·  last {s.CorrectionCm / 100f:0.00} m"
+                : string.Empty;
 
-            return $"{s.State}  ·  {s.SpeedTenths / 10f:0.0} m/s  ·  ping {s.PingMs} ms\n"
-                 + $"Host corrections {s.Corrections}  ·  last {s.CorrectionCm / 100f:0.00} m";
+            if (!s.SwitchboardActive)
+                return player;
+
+            string props = s.SwitchboardIsHost
+                ? $"Props out {s.PropBytesPerSecond / 1000f:0.0} kB/s  ·  {s.PropBodiesPerSecond} updates/s  ·  {s.MovingBodies} moving"
+                : $"Props in {s.PropBytesPerSecond / 1000f:0.0} kB/s  ·  {s.PropBodiesPerSecond} updates/s  ·  smoothing {s.SmoothingDelayMs} ms";
+            return s.Present ? player + "\n" + props : props;
         }
     }
 }

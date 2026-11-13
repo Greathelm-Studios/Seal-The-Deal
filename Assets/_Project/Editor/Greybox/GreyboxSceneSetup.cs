@@ -494,7 +494,7 @@ namespace CloseTheDeal.Editor.Greybox
 
         // ---- Asset and serialized-field helpers ----------------------------------------------
 
-        static T EnsureAsset<T>(string folder, string path) where T : ScriptableObject
+        internal static T EnsureAsset<T>(string folder, string path) where T : ScriptableObject
         {
             var existing = AssetDatabase.LoadAssetAtPath<T>(path);
             if (existing != null)
