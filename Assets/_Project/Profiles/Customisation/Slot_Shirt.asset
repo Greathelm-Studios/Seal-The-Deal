@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a3d359f916ff499394d916b9df15bae, type: 3}
+  m_Name: Slot_Shirt
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Customisation.OutfitSlot
+  _displayName: Shirt
+  _materialNames:
+  - STDMC_lambert5_Toon
+  _options:
+  - {fileID: 11400000, guid: e137a30dd473d414c886e15202b10163, type: 2}
+  - {fileID: 11400000, guid: 6ce47fe4a94e54a388a3466cc0a56086, type: 2}
+  - {fileID: 11400000, guid: e01096525a8bf48339732f898ceec97f, type: 2}
+  - {fileID: 11400000, guid: 4109f1d79a78f4bdfb530866e831fa85, type: 2}
+  _defaultOption: 0

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 04942e42d9a4449b69ca72352e90c344, type: 3}
+  m_Name: LobbyRules
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Lobby.LobbyRules
+  _firmAName: Cobalt
+  _firmBName: Cyan
+  _firmAColour: {r: 0.141, g: 0.31, b: 0.725, a: 1}
+  _firmBColour: {r: 0.125, g: 0.831, b: 0.902, a: 1}
+  _maxImbalance: 1
+  _requireBothFirms: 1
+  _startHoldSeconds: 1
+  _interactRange: 2.6
+  _interactAim: 0.8

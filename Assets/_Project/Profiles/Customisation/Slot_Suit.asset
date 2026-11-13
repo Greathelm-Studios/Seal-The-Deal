@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a3d359f916ff499394d916b9df15bae, type: 3}
+  m_Name: Slot_Suit
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Customisation.OutfitSlot
+  _displayName: Suit
+  _materialNames:
+  - STDMC_lambert4_Toon
+  _options:
+  - {fileID: 11400000, guid: 8968e7485231c4c04baecc056e53d286, type: 2}
+  - {fileID: 11400000, guid: af267d1bce00b47bd8b94cd907582947, type: 2}
+  - {fileID: 11400000, guid: eedf507f6c7c94600b139bbcdccc2c59, type: 2}
+  - {fileID: 11400000, guid: 69fc8c3a363fb45d5884892c85e3dd9e, type: 2}
+  - {fileID: 11400000, guid: f967c18c7b57c45249ed214063a25df4, type: 2}
+  - {fileID: 11400000, guid: 30b4f183f90a54888bc9df37ee11b3aa, type: 2}
+  _defaultOption: 0

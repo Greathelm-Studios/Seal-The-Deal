@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a3d359f916ff499394d916b9df15bae, type: 3}
+  m_Name: Slot_Belt
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Customisation.OutfitSlot
+  _displayName: Belt
+  _materialNames:
+  - STDMC_lambert6_Toon
+  _options:
+  - {fileID: 11400000, guid: 776e031bc1d9c47d19aefa338f86a86a, type: 2}
+  - {fileID: 11400000, guid: 51fc17ac3eb2941a2bf3e17802bdedbd, type: 2}
+  - {fileID: 11400000, guid: 73f2df1356e2d40048d3ab56e9430de1, type: 2}
+  - {fileID: 11400000, guid: eac9d6ad14c0449038544223b69c14f9, type: 2}
+  _defaultOption: 0
