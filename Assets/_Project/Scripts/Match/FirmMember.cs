@@ -274,6 +274,15 @@ namespace CloseTheDeal.MatchMode
                 MatchDirector.Instance.ServerDrop(this, DropCause.Manual);
         }
 
+        /// <summary>The owner's own body hit something: a shut floor gate answers at once, before the host's refusal line arrives.</summary>
+        void OnCollisionEnter(Collision collision)
+        {
+            if (!IsOwner || MatchDirector.Instance == null || MatchDirector.Instance.Gates == null)
+                return;
+
+            MatchDirector.Instance.Gates.Touch(collision.collider);
+        }
+
         // ---- Host: moving and telling the player ---------------------------------------------
 
         /// <summary>

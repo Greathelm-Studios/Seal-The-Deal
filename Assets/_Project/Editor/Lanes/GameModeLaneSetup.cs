@@ -453,6 +453,10 @@ namespace CloseTheDeal.Editor.Lanes
             FillIfEmpty(gates, "_gateMaterial", EnsureGateMaterial());
             FillIfEmpty(match, "_gates", gates);
 
+            // The match's sounds, from the shared UI sound set.
+            if (match.GetComponent<MatchSounds>() == null)
+                match.gameObject.AddComponent<MatchSounds>();
+
             GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
             if (menu == null)
             {
