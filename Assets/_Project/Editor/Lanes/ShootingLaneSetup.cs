@@ -1080,9 +1080,24 @@ namespace CloseTheDeal.Editor.Lanes
             _failures = 0;
             Application.runInBackground = true;
             Routines.Clear();
+            UsePort();
             Routines.Push(_role == "client" ? ClientRoutine() : _role == "panes" ? PaneCountRoutine() : HostRoutine(SessionState.GetBool(WithClientKey, false)));
             EditorApplication.update += Step;
             Log($"=== Shooting self-check, role {_role}, Unity {Application.unityVersion} ===");
+        }
+
+        /// <summary>With -lanePort, local test mode uses that port, so a run never meets someone else's game on this PC.</summary>
+        static void UsePort()
+        {
+            if (!ushort.TryParse(Arg("-lanePort"), out ushort port))
+                return;
+
+            var tugboat = Object.FindAnyObjectByType<FishNet.Transporting.Tugboat.Tugboat>();
+            if (tugboat == null)
+                return;
+
+            tugboat.SetPort(port);
+            Log($"Local test port {port}.");
         }
 
         static void Step()
@@ -1145,6 +1160,10 @@ namespace CloseTheDeal.Editor.Lanes
             Log($"Lobby local mode: {lobby.LocalMode}");
             lobby.Host();
             yield return Until(() => PlayerMotor.Local != null, 30f, "own player spawned");
+            // A copy that failed to host may have joined someone else's game on this PC instead.
+            Check("this copy is the host", PlayerMotor.Local.IsServerStarted, $"server started {PlayerMotor.Local.IsServerStarted}");
+            if (!PlayerMotor.Local.IsServerStarted)
+                throw new InvalidOperationException("Not the host; every later check would test someone else's game.");
             yield return Seconds(1f);
 
             var s = new Subject { Me = PlayerMotor.Local, Glass = GlassRegistry.Instance };

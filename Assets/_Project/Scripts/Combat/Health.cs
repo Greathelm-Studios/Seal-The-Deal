@@ -132,6 +132,7 @@ namespace CloseTheDeal.Combat
         bool _hasRespawnOverride;
         Vector3 _respawnOverride;
         float _flashLeft;
+        float _respawnAt;
         float _tip;
         Quaternion _tipRest;
         DecayingImpulse _flinch;
@@ -140,6 +141,12 @@ namespace CloseTheDeal.Combat
         static readonly AnimationCurve FlinchCurve = DecayingImpulse.DefaultCurve(0.1f);
 
         public float Current => _health.Value;
+
+        /// <summary>How long a death lasts before the respawn, in seconds.</summary>
+        public float RespawnSeconds => _respawnSeconds;
+
+        /// <summary>Seconds until this body comes back, counted on this machine from the moment it heard the death; 0 when alive, and 0 for a death that happened before this machine joined.</summary>
+        public float SecondsUntilRespawn => IsDead ? Mathf.Max(0f, _respawnAt - Time.time) : 0f;
         public float Max => _maxHealth;
         public bool IsDead => _dead.Value;
 
@@ -379,6 +386,7 @@ namespace CloseTheDeal.Combat
 
         void RaiseDied(DamageInfo info)
         {
+            _respawnAt = Time.time + _respawnSeconds;
             Died?.Invoke(this, info);
             AnyDied?.Invoke(this, info);
         }

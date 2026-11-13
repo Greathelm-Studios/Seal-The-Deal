@@ -18,6 +18,17 @@ namespace CloseTheDeal.Combat
         Reloading = 2
     }
 
+    /// <summary>What a shot stopped on, for impact effects and sounds. Glass never stops a shot; a pane it crossed raises GlassPane.AnyBroken instead.</summary>
+    public enum ShotSurface : byte
+    {
+        /// <summary>It ran out of range.</summary>
+        Nothing = 0,
+        /// <summary>The building, furniture, a door: anything solid that isn't a body.</summary>
+        World = 1,
+        /// <summary>A player or a target dummy.</summary>
+        Body = 2
+    }
+
     /// <summary>One shot, for tracers, muzzle flashes and sound. Predicted is true on the shooter's own game, where it is drawn before the host has answered.</summary>
     public readonly struct ShotInfo
     {
@@ -25,16 +36,19 @@ namespace CloseTheDeal.Combat
         public readonly Vector3 Origin;
         public readonly Vector3 End;
         public readonly bool HitSomething;
+        /// <summary>What it stopped on. On the shooter's own game this is its own prediction; everywhere else, the host's answer.</summary>
+        public readonly ShotSurface Surface;
         public readonly bool Predicted;
         /// <summary>Which shot of the burst this is, from 0. Only known on the shooter's own game; the view kick reads the recoil pattern with it.</summary>
         public readonly int ShotInBurst;
 
-        public ShotInfo(WeaponDefinition weapon, Vector3 origin, Vector3 end, bool hitSomething, bool predicted, int shotInBurst)
+        public ShotInfo(WeaponDefinition weapon, Vector3 origin, Vector3 end, ShotSurface surface, bool predicted, int shotInBurst)
         {
             Weapon = weapon;
             Origin = origin;
             End = end;
-            HitSomething = hitSomething;
+            Surface = surface;
+            HitSomething = surface != ShotSurface.Nothing;
             Predicted = predicted;
             ShotInBurst = shotInBurst;
         }
@@ -161,6 +175,7 @@ namespace CloseTheDeal.Combat
         int _localActive;
         WeaponState _state;
         float _stateEndsAt;
+        float _stateDuration;
         float _nextShotAt;
         float _switchTrustedUntil;
         float _bloom;
@@ -185,6 +200,20 @@ namespace CloseTheDeal.Combat
         public WeaponDefinition ActiveWeapon => _weapons[ActiveSlot];
 
         public WeaponDefinition WeaponInSlot(int slot) => slot >= 0 && slot < SlotCount ? _weapons[slot] : null;
+
+        /// <summary>
+        /// Owner only: how far through the current reload or draw the gun is, 0 to 1, and 0 when
+        /// it is ready. A reload reads 1 at the end of its time until the host's full magazine arrives.
+        /// </summary>
+        public float StateProgress
+        {
+            get
+            {
+                if (_state == WeaponState.Ready || _stateDuration <= 0f)
+                    return 0f;
+                return Mathf.Clamp01(1f - (_stateEndsAt - Time.time) / _stateDuration);
+            }
+        }
 
         /// <summary>What the gun in the owner's hand is doing. Only meaningful on the owner's game.</summary>
         public WeaponState State => _state;
@@ -395,6 +424,7 @@ namespace CloseTheDeal.Combat
 
             _state = WeaponState.Reloading;
             _stateEndsAt = Time.time + weapon.ReloadSeconds;
+            _stateDuration = weapon.ReloadSeconds;
             ReloadStarted?.Invoke(weapon.ReloadSeconds);
             ServerReload((byte)_localActive);
             return true;
@@ -532,7 +562,7 @@ namespace CloseTheDeal.Combat
 
             // Drawn straight away; the host's own trace is the one that counts.
             ShotResult seen = ShotResolver.Trace(origin, direction, weapon.Range, _solidMask, _health, false, 0, weapon.HeadFromHeight);
-            Fired?.Invoke(new ShotInfo(weapon, origin, seen.End, seen.Stopped, true, _shotInBurst));
+            Fired?.Invoke(new ShotInfo(weapon, origin, seen.End, SurfaceOf(seen), true, _shotInBurst));
             RefreshOwnerAmmo();
 
             // The host's own shot is judged on the spot, against the world exactly as the host sees it now;
@@ -592,6 +622,7 @@ namespace CloseTheDeal.Combat
         {
             _state = weapon != null && weapon.EquipSeconds > 0f ? WeaponState.Equipping : WeaponState.Ready;
             _stateEndsAt = weapon != null ? Time.time + weapon.EquipSeconds : 0f;
+            _stateDuration = weapon != null ? weapon.EquipSeconds : 0f;
             _bloom = 0f;
             _hasShot = false;
             _shotInBurst = 0;
@@ -723,7 +754,7 @@ namespace CloseTheDeal.Combat
 
             ShotResolver.BreakCrossedPanes(shot, direction, OwnerId);
             HostApplyHit(weapon, shot, direction);
-            RpcShot(shot.End, shot.Stopped);
+            RpcShot(shot.End, (byte)SurfaceOf(shot));
         }
 
         /// <summary>The tick to test targets at: the one the shooter says it was looking at, never in the future and never further back than the lag allowance.</summary>
@@ -823,9 +854,9 @@ namespace CloseTheDeal.Combat
         // ---- Host: messages out --------------------------------------------------------------
 
         [ObserversRpc(ExcludeOwner = true)]
-        void RpcShot(Vector3 end, bool hitSomething, Channel channel = Channel.Unreliable)
+        void RpcShot(Vector3 end, byte surface, Channel channel = Channel.Unreliable)
         {
-            Fired?.Invoke(new ShotInfo(ActiveWeapon, HostEye(), end, hitSomething, false, 0));
+            Fired?.Invoke(new ShotInfo(ActiveWeapon, HostEye(), end, (ShotSurface)surface, false, 0));
         }
 
         [ObserversRpc(ExcludeOwner = true)]
@@ -928,6 +959,13 @@ namespace CloseTheDeal.Combat
         // ---- Helpers -------------------------------------------------------------------------
 
         SyncVar<byte> SlotVar(int slot) => slot == 0 ? _slot0 : _slot1;
+
+        static ShotSurface SurfaceOf(in ShotResult shot)
+        {
+            if (shot.Body != null)
+                return ShotSurface.Body;
+            return shot.Stopped ? ShotSurface.World : ShotSurface.Nothing;
+        }
 
         static byte ReloadsDone(ulong ownerState) => (byte)(ownerState >> 32);
 
