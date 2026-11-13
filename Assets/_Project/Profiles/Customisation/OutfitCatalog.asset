@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16a236521ec28437aa7a6a27aa4541c2, type: 3}
+  m_Name: OutfitCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Customisation.OutfitCatalog
+  _slots:
+  - {fileID: 11400000, guid: 5cd0a517cb78e4fc6a09f8cd079ba8e8, type: 2}
+  - {fileID: 11400000, guid: aa4bbe7392ec44f9cbabaf0ca49dbe06, type: 2}
+  - {fileID: 11400000, guid: 97966fc67575045aea55e4ac6195e193, type: 2}
