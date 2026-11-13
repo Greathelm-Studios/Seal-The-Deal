@@ -109,6 +109,7 @@ Everything below is on `MatchDirector.Instance` (namespace `CloseTheDeal.MatchMo
 | `FirmMember.OnNotice` | `MatchNotice` | Local player only: `RoofNeedsBriefcase`, `FellOut`, `BriefcaseKnockedLoose`, `FirstGateRefusal` (first shut gate of the match: explain the rule), `GateRefused` (later ones: a short line). |
 | `FirmMember.OnPromptChanged` | `MatchPrompt` | Local player only: `PickUpBriefcase` / `DropBriefcase` / `None`, only on change. |
 | `FirmMember.OnLocalChanged`, `OnRosterChanged`, `OnFellOut` | | The local player or the roster changed; someone fell out (for sound). |
+| `MatchGates.OnGateTouched` (static) | `int floor` | Local player only, the moment their body hits a shut gate, before the host's refusal arrives; the gate itself pulses brighter for 0.3 s. |
 
 Sounds (lane 5/9's frozen `UiSoundEvent` list): `OnCountdownChanged` → `CountdownTick`, Running → `CountdownGo`, `OnFloorOpened` → `FloorOpened`, `OnBriefcasePickedUp` / `OnBriefcaseStolen` → `BriefcaseTaken`, `OnBriefcaseDropped` → `BriefcaseDropped`, `GateRefused` / `FirstGateRefusal` / `RoofNeedsBriefcase` → `Error`, `OnCapWarning` and checkpoint lines → `Notification`, `OnMatchEnded` → `MatchWon` or `MatchLost` by the local firm.
 
@@ -141,6 +142,7 @@ Under [Assets/_Project/Scripts/Match/](../../Assets/_Project/Scripts/Match/), na
 - `MatchReferee.cs`: host-only, once per tick after physics: falls (in every phase), knocks, where the briefcase is, checkpoints, the roof and the clock.
 - `MatchRules.cs`: the clock rule as a pure function.
 - `MatchArena.cs`: floor, building and neutral-ground maths from the built towers; no trigger volumes.
+- `MatchSounds.cs`: on the Match object; plays the sound table above through `UiSoundPlayer` on each player's own machine (refusals at most one per 0.6 s).
 - `MatchGates.cs`: on the Match object; builds a gate at each stair exit above the ground floor in both towers, opens them up to the open floor and lets the carrier's body through (`Physics.IgnoreCollision`).
 - `MatchCrossings.cs`: on the Match object; builds the plaza and a skybridge on each checkpoint floor locally after every tower build.
 - `FirmMember.cs`: on `Player.prefab`; firm, slot, the two keys, host teleport, notices.

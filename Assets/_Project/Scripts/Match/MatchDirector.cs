@@ -146,6 +146,9 @@ namespace CloseTheDeal.MatchMode
             }
         }
 
+        /// <summary>The floor gates, or null in a scene without them.</summary>
+        internal MatchGates Gates => _gates;
+
         /// <summary>True when this scene has floor gates; without them every floor is open and nobody is refused.</summary>
         internal bool HasGates => _gates != null;
 
