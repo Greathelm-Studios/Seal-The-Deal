@@ -48,7 +48,9 @@ namespace CloseTheDeal.MatchMode
     {
         RoofNeedsBriefcase = 0,
         FellOut = 1,
-        BriefcaseKnockedLoose = 2
+        BriefcaseKnockedLoose = 2,
+        /// <summary>A player without the briefcase reached the gate to a floor nobody has carried it onto yet.</summary>
+        GateRefused = 3
     }
 
     /// <summary>What the interact or drop key would do right now, for the local player's prompt.</summary>

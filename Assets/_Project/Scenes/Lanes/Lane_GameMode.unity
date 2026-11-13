@@ -757,6 +757,7 @@ GameObject:
   - component: {fileID: 201529475}
   - component: {fileID: 201529474}
   - component: {fileID: 201529473}
+  - component: {fileID: 201529477}
   m_Layer: 0
   m_Name: Match
   m_TagString: Untagged
@@ -793,6 +794,7 @@ MonoBehaviour:
   _networkObjectCache: {fileID: 0}
   _profile: {fileID: 11400000, guid: 55479a7f09fdf4a18819776d17f5c000, type: 2}
   _crossings: {fileID: 201529473}
+  _gates: {fileID: 201529477}
 --- !u!114 &201529475
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -865,6 +867,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &201529477
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 201529472}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b143e2265e5af46d983453ff1648a192, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.MatchMode.MatchGates
+  _gateMaterial: {fileID: 2100000, guid: 88c3037379f3e4edf8d8982594ac5ec7, type: 2}
 --- !u!1 &216693067
 GameObject:
   m_ObjectHideFlags: 0
@@ -5526,7 +5541,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Managing.NetworkManager
   _logging: {fileID: 0}
-  _spawnablePrefabs: {fileID: 0}
+  _spawnablePrefabs: {fileID: 11400000, guid: 435496ed4140bb54db702ef6270f49fa, type: 2}
   _refreshDefaultPrefabs: 0
   _runInBackground: 1
   _dontDestroyOnLoad: 1

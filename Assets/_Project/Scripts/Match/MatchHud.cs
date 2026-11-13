@@ -56,6 +56,7 @@ namespace CloseTheDeal.MatchMode
             _match.OnCheckpointSaved += OnCheckpointSaved;
             _match.OnBriefcasePickedUp += OnPickedUp;
             _match.OnBriefcaseReturning += OnReturning;
+            _match.OnOpenFloorChanged += OnOpenFloorChanged;
             _match.OnArenaChanged += RefreshRows;
             FirmMember.OnLocalChanged += RefreshRows;
             FirmMember.OnNotice += OnNotice;
@@ -78,6 +79,7 @@ namespace CloseTheDeal.MatchMode
             _match.OnCheckpointSaved -= OnCheckpointSaved;
             _match.OnBriefcasePickedUp -= OnPickedUp;
             _match.OnBriefcaseReturning -= OnReturning;
+            _match.OnOpenFloorChanged -= OnOpenFloorChanged;
             _match.OnArenaChanged -= RefreshRows;
             FirmMember.OnLocalChanged -= RefreshRows;
             FirmMember.OnNotice -= OnNotice;
@@ -193,7 +195,8 @@ namespace CloseTheDeal.MatchMode
             _briefcaseSwatch.color = _match.ColourFor(holder);
             string place = _match.PlaceLabel(status.Place, status.Floor);
             string where = status.State == BriefcaseState.Returning ? "Coming back to " + place : place;
-            _briefcaseText.text = $"<size=70%>BRIEFCASE</size>  <b>{Holder(status)}</b>\n<size=85%>{where}</size>";
+            string open = _match.Arena.FloorLabel(_match.OpenFloor);
+            _briefcaseText.text = $"<size=70%>BRIEFCASE</size>  <b>{Holder(status)}</b>\n<size=85%>{where}  ·  open up to {open}</size>";
         }
 
         string Holder(BriefcaseStatus status)
@@ -244,6 +247,9 @@ namespace CloseTheDeal.MatchMode
                 case MatchNotice.BriefcaseKnockedLoose:
                     Say("You dropped the briefcase.");
                     break;
+                case MatchNotice.GateRefused:
+                    Say($"{_match.Arena.FloorLabel(_match.OpenFloor + 1)} is shut. Whoever carries the briefcase up there opens it for everyone.");
+                    break;
             }
         }
 
@@ -265,6 +271,12 @@ namespace CloseTheDeal.MatchMode
                 Say($"{label} reached. Your firm comes back here after a fall.");
             else
                 Say($"The rival firm reached {label}.");
+        }
+
+        void OnOpenFloorChanged(int floor)
+        {
+            RefreshBriefcaseRow();
+            Say($"{_match.Arena.FloorLabel(floor)} is open, in both towers.");
         }
 
         void OnReturning()

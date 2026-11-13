@@ -71,6 +71,9 @@ namespace CloseTheDeal.MatchMode
         /// <summary>Host only: ticks this player has been outside the buildings in a row.</summary>
         internal int OutsideTicks;
 
+        /// <summary>Host only: was at a closed floor gate last tick, so the refusal is said once per approach.</summary>
+        internal bool WasAtGate;
+
         /// <summary>Host only: was on a roof last tick, so the "needs the briefcase" line is said once per visit.</summary>
         internal bool WasOnRoof;
 
@@ -81,6 +84,9 @@ namespace CloseTheDeal.MatchMode
         public int Slot => _slot.Value;
 
         public PlayerMotor Motor => _motor;
+
+        /// <summary>The body's collider: what the floor gates let through when this player carries the briefcase.</summary>
+        public Collider Body => _capsule;
         public Vector3 Position => _rigidbody.position;
         public Vector3 Velocity => _rigidbody.linearVelocity;
         public Vector3 Chest => _rigidbody.position + Vector3.up * (_capsule.height * 0.5f);
@@ -130,6 +136,9 @@ namespace CloseTheDeal.MatchMode
             Members.Add(this);
             _firm.OnChange += OnFirmChanged;
             OnRosterChanged?.Invoke();
+            // The briefcase status can name this player as carrier before their body exists here.
+            if (MatchDirector.Instance != null)
+                MatchDirector.Instance.ApplyGates();
         }
 
         public override void OnStopNetwork()

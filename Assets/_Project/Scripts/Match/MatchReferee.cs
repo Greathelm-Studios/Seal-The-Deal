@@ -13,6 +13,11 @@ namespace CloseTheDeal.MatchMode
     {
         readonly MatchDirector _match;
 
+        /// <summary>How far from the gate a player is told about it, in metres: beyond the panels, below the floor (the top of the flight), and above it.</summary>
+        const float GateReach = 0.8f;
+        const float GateBelow = 1.5f;
+        const float GateAbove = 1.2f;
+
         uint _countdownTicks;
         uint _matchTicks;
         int _fallTicks;
@@ -75,7 +80,8 @@ namespace CloseTheDeal.MatchMode
                 bool onSurface = Arena.OnFloorSurface(position, floor);
                 StepCheckpoint(member, place, floor, onSurface, position);
 
-                bool carrying = _match.IsCarrying(member) && StepCarrier(member, position, place, floor);
+                bool carrying = _match.IsCarrying(member) && StepCarrier(member, position, place, floor, onSurface);
+                StepGate(member, position, place, carrying);
                 bool onRoof = place < MatchArena.Neutral && floor == Arena.RoofFloor && onSurface;
                 StepRoof(member, onRoof, carrying);
             }
@@ -103,16 +109,16 @@ namespace CloseTheDeal.MatchMode
             return true;
         }
 
-        /// <summary>Standing on a higher checkpoint floor of your own tower moves your firm's respawn point there.</summary>
+        /// <summary>Standing on a higher checkpoint floor of your own tower moves your firm's respawn point there. Never above the open floor, so nobody respawns where they could not have walked.</summary>
         void StepCheckpoint(FirmMember member, byte place, int floor, bool onSurface, Vector3 position)
         {
             int firm = member.Firm;
-            if (place == firm && onSurface && member.Grounded && Arena.IsCheckpoint(floor) && floor > _match.CheckpointFloor(firm))
+            if (place == firm && onSurface && member.Grounded && Arena.IsCheckpoint(floor) && floor > _match.CheckpointFloor(firm) && floor <= _match.OpenFloor)
                 _match.ServerSaveCheckpoint(firm, floor, position);
         }
 
-        /// <summary>Returns false when the carrier lost the briefcase this tick.</summary>
-        bool StepCarrier(FirmMember member, Vector3 position, byte place, int floor)
+        /// <summary>Returns false when the carrier lost the briefcase this tick. A carrier standing on a floor above the open floor opens it for everyone.</summary>
+        bool StepCarrier(FirmMember member, Vector3 position, byte place, int floor, bool onSurface)
         {
             if (member.Knocked)
             {
@@ -121,9 +127,38 @@ namespace CloseTheDeal.MatchMode
             }
 
             Briefcase.Current.LastCarrierPosition = position;
-            if (place != MatchArena.Outside)
-                _match.ServerTrackBriefcase(place, floor);
+            if (place == MatchArena.Outside)
+                return true;
+
+            if (onSurface && floor > _match.OpenFloor)
+                _match.ServerOpenFloor(floor);
+            _match.ServerTrackBriefcase(place, floor);
             return true;
+        }
+
+        /// <summary>
+        /// Someone without the briefcase at the top of the stairs to a closed floor is told why
+        /// they can't go on, once per approach. The gate itself is a wall on every machine; this
+        /// only gives it words.
+        /// </summary>
+        void StepGate(FirmMember member, Vector3 position, byte place, bool carrying)
+        {
+            bool atGate = _match.HasGates && !carrying && place < MatchArena.Neutral && NearClosedGate(position, place);
+            if (atGate && !member.WasAtGate)
+                member.Notify(MatchNotice.GateRefused);
+            member.WasAtGate = atGate;
+        }
+
+        /// <summary>Within reach of the stairwell, close under or on the first closed floor.</summary>
+        bool NearClosedGate(Vector3 position, int building)
+        {
+            int closed = _match.OpenFloor + 1;
+            if (closed >= Arena.FloorCount)
+                return false;
+
+            Vector3 local = Arena.ToFloorSpace(position, building, closed) - _match.StairCentre;
+            float reach = MatchGates.Radius + GateReach;
+            return local.y > -GateBelow && local.y < GateAbove && local.x * local.x + local.z * local.z < reach * reach;
         }
 
         /// <summary>On a roof with the briefcase claims the win; without it, you are told why nothing happened, once per visit.</summary>

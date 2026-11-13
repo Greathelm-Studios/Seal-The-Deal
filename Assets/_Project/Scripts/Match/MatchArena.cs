@@ -148,6 +148,12 @@ namespace CloseTheDeal.MatchMode
             return root.TransformPoint(localOnFloor + Vector3.up * (floor * _profile.FloorHeight));
         }
 
+        /// <summary>A world point in a building's own space, measured from the given floor's surface.</summary>
+        public Vector3 ToFloorSpace(Vector3 world, int tower, int floor)
+        {
+            return Local(world, tower) - Vector3.up * (floor * _profile.FloorHeight);
+        }
+
         /// <summary>The way a player faces when looking out at the rival tower from this building.</summary>
         public Quaternion Facing(int tower)
         {
