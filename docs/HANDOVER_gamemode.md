@@ -77,7 +77,7 @@ The open floor (host-owned, only rises during a match)
 5. **A case that leaves the buildings comes back** after 2 s + 3 s to the skybridge of the highest checkpoint floor it has been on, or to the plaza. Assumption.
 6. **A firm's respawn point moves when any of its players stands on a checkpoint floor of their own tower.** The briefcase no longer saves anything per firm. Assumption.
 7. **At 15:00:** the firm holding the case wins; if it lies loose, the firm that carried it last; if nobody ever picked it up, no winner. Proposal.
-8. **Firm names, proposed:** Ashcombe & Pryce (Building A), Halloran Voss (Building B).
+8. **Firm names: one source of truth, proposed.** The lobby (`LobbyRules.asset`: Cobalt, Cyan) and the match (`Profiles/Match/Firm_*.asset`: Ashcombe & Pryce, Halloran Voss) name the same two firms by index. Proposal: the two `FirmDefinition` assets in `Profiles/Match/` become the only place a firm's name and colour live, and `LobbyRules` points at them instead of holding its own strings. Which names go in is your call; this lane does not pick them.
 9. **Timings:** countdown 5 s, stray 2 s plus return 3 s, fall 1.2 s.
 10. **Rematch builds new towers from a new seed.**
 11. **Teams balance by head count** when nobody chooses them; a lobby can set them with `HostStartRun`.
@@ -107,6 +107,10 @@ GDD mismatches (the GDD is the authority on design; your 2026-11-12 words win fo
 - **The setup tool assigns FishNet scene ids through a FishNet internal**, `NetworkObject.CreateSceneId`, by reflection. A FishNet update could break it; the tool then logs what to do by hand.
 - Setup on an edited `Player.prefab` logs "Left Player.prefab alone: it has been edited". That is the guard's check, not a failure.
 - **The one thing that still makes it feel like a demo:** the win is a silent text card. No roof moment, no secretary line, no sound, and nothing carries into the next match.
+
+## Since the buffer merge
+
+This branch now contains `buffer` (merge "Merge the integration scene and the four lane joins into buffer"). The integration session changed this lane's code: a `HandsFull` veto in `MatchDirector` (the briefcase and a carried item share the hands), Inspector-set button labels in `MatchMenuPanel`, `FirmMember` reading the shared `PlayerInputReader.Captured` gate, internal helpers in `GameModeLaneSetup`; the lobby desk now calls `HostStartRun`, and 8 s after a result everyone returns to reception (`docs/systems/INTEGRATION.md`). Compile check after the merge: 0 errors. Not re-run in Play Mode on this branch.
 
 ## Merge steps
 
