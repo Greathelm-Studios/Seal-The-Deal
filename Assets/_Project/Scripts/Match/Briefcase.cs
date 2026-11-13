@@ -27,6 +27,13 @@ namespace CloseTheDeal.MatchMode
         static readonly Quaternion FirstPersonTilt = Quaternion.Euler(0f, 75f, 8f);
 
         static readonly int BaseColour = Shader.PropertyToID("_BaseColor");
+        static readonly int Fade = Shader.PropertyToID("_Fade");
+
+        /// <summary>The beacon's column is this wide, metres.</summary>
+        const float BeaconWidth = 0.6f;
+
+        /// <summary>Over the last this-fraction of the beacon range it fades out rather than popping.</summary>
+        const float BeaconFadeBand = 0.25f;
 
         /// <summary>The match's briefcase on this machine, or null before it has spawned.</summary>
         public static Briefcase Current { get; private set; }
@@ -36,6 +43,10 @@ namespace CloseTheDeal.MatchMode
         NetworkTransform _networkTransform;
         MaterialPropertyBlock _block;
         Vector3 _centreLocal;
+
+        Renderer _beacon;
+        MaterialPropertyBlock _beaconBlock;
+        float _shownFade = -1f;
 
         BriefcaseState _state;
         byte _tintFirm = MatchDirector.NoFirm;
@@ -106,6 +117,7 @@ namespace CloseTheDeal.MatchMode
         {
             Current = this;
             MatchDirector match = MatchDirector.Instance;
+            EnsureBeacon(match);
             if (match != null && match.IsLive)
                 Apply(match.CaseStatus);
         }
@@ -121,6 +133,7 @@ namespace CloseTheDeal.MatchMode
             _visual.gameObject.SetActive(status.State != BriefcaseState.Returning);
             _tintFirm = status.State == BriefcaseState.Carried ? status.CarrierFirm : MatchDirector.NoFirm;
             RefreshTint();
+            RefreshBeaconColour();
 
             if (status.State == BriefcaseState.Carried)
             {
@@ -146,12 +159,16 @@ namespace CloseTheDeal.MatchMode
             _visual.GetPositionAndRotation(out _blendFromPosition, out _blendFromRotation);
         }
 
-        /// <summary>While carried, the visual eases into the carrier's hand and then stays in it.</summary>
+        /// <summary>While carried, the visual eases into the carrier's hand and then stays in it. The beacon follows the visual.</summary>
         void LateUpdate()
         {
-            if (_state != BriefcaseState.Carried)
-                return;
+            if (_state == BriefcaseState.Carried)
+                FollowCarrier();
+            UpdateBeacon();
+        }
 
+        void FollowCarrier()
+        {
             if (_carrier == null)
             {
                 // The carrier's own spawn can reach a client a moment after the pick-up does.
@@ -172,6 +189,82 @@ namespace CloseTheDeal.MatchMode
             }
 
             _visual.SetPositionAndRotation(position, rotation);
+        }
+
+        // ---- Beacon (every machine, local only) ------------------------------------------------
+
+        /// <summary>A column of light over the case, drawn through floors and walls, so a stranger can find the objective. Built once, from the match profile's material.</summary>
+        void EnsureBeacon(MatchDirector match)
+        {
+            if (_beacon != null || match == null || match.Profile == null || match.Profile.BeaconMaterial == null)
+                return;
+
+            GameObject column = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            column.name = "Beacon";
+            Destroy(column.GetComponent<Collider>());
+            column.transform.SetParent(transform, false);
+            _beacon = column.GetComponent<Renderer>();
+            _beacon.sharedMaterial = match.Profile.BeaconMaterial;
+            _beacon.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            _beacon.receiveShadows = false;
+            _beaconBlock = new MaterialPropertyBlock();
+            RefreshBeaconColour();
+        }
+
+        void RefreshBeaconColour()
+        {
+            MatchDirector match = MatchDirector.Instance;
+            if (_beacon == null || match == null)
+                return;
+
+            Color colour = _tintFirm == MatchDirector.NoFirm ? match.Profile.BeaconLooseColour : match.ColourFor(_tintFirm);
+            _beaconBlock.Clear();
+            _beacon.GetPropertyBlock(_beaconBlock);
+            _beaconBlock.SetColor(BaseColour, colour);
+            _beaconBlock.SetFloat(Fade, Mathf.Max(0f, _shownFade));
+            _beacon.SetPropertyBlock(_beaconBlock);
+        }
+
+        /// <summary>Stands on the visible case, turns to face the camera about the vertical, and fades out toward the profile's range. Hidden from the carrier and while away.</summary>
+        void UpdateBeacon()
+        {
+            MatchDirector match = MatchDirector.Instance;
+            Camera view = Camera.main;
+            if (_beacon == null || match == null || view == null)
+                return;
+
+            Vector3 foot = _visual.position;
+            float fade = BeaconFade(match, view.transform.position, foot);
+            _beacon.enabled = fade > 0f;
+            if (!_beacon.enabled)
+                return;
+
+            float height = match.Profile.BeaconHeight;
+            Vector3 toView = view.transform.position - foot;
+            toView.y = 0f;
+            Quaternion facing = toView.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(-toView) : Quaternion.identity;
+            _beacon.transform.SetPositionAndRotation(foot + Vector3.up * (height * 0.5f), facing);
+            _beacon.transform.localScale = new Vector3(BeaconWidth, height, 1f);
+
+            if (Mathf.Abs(fade - _shownFade) < 0.02f)
+                return;
+
+            _shownFade = fade;
+            _beaconBlock.Clear();
+            _beacon.GetPropertyBlock(_beaconBlock);
+            _beaconBlock.SetFloat(Fade, fade);
+            _beacon.SetPropertyBlock(_beaconBlock);
+        }
+
+        /// <summary>1 near, fading to 0 toward the profile's range; 0 while away or for the carrier themself.</summary>
+        float BeaconFade(MatchDirector match, Vector3 viewer, Vector3 foot)
+        {
+            bool mine = _state == BriefcaseState.Carried && _carrier != null && _carrier == FirmMember.Local;
+            if (!match.IsLive || _state == BriefcaseState.Returning || mine)
+                return 0f;
+
+            float range = match.Profile.BeaconRange;
+            return Mathf.Clamp01((range - Vector3.Distance(viewer, foot)) / (range * BeaconFadeBand));
         }
 
         /// <summary>The carrier sees it low in their own view; everyone else sees it hanging at the carrier's side.</summary>

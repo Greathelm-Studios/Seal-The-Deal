@@ -56,7 +56,9 @@ namespace CloseTheDeal.MatchMode
             _match.OnCheckpointSaved += OnCheckpointSaved;
             _match.OnBriefcasePickedUp += OnPickedUp;
             _match.OnBriefcaseReturning += OnReturning;
-            _match.OnOpenFloorChanged += OnOpenFloorChanged;
+            _match.OnFloorOpened += OnFloorOpened;
+            _match.OnBriefcaseStolen += OnStolen;
+            _match.OnCapWarning += OnCapWarning;
             _match.OnArenaChanged += RefreshRows;
             FirmMember.OnLocalChanged += RefreshRows;
             FirmMember.OnNotice += OnNotice;
@@ -79,7 +81,9 @@ namespace CloseTheDeal.MatchMode
             _match.OnCheckpointSaved -= OnCheckpointSaved;
             _match.OnBriefcasePickedUp -= OnPickedUp;
             _match.OnBriefcaseReturning -= OnReturning;
-            _match.OnOpenFloorChanged -= OnOpenFloorChanged;
+            _match.OnFloorOpened -= OnFloorOpened;
+            _match.OnBriefcaseStolen -= OnStolen;
+            _match.OnCapWarning -= OnCapWarning;
             _match.OnArenaChanged -= RefreshRows;
             FirmMember.OnLocalChanged -= RefreshRows;
             FirmMember.OnNotice -= OnNotice;
@@ -247,6 +251,9 @@ namespace CloseTheDeal.MatchMode
                 case MatchNotice.BriefcaseKnockedLoose:
                     Say("You dropped the briefcase.");
                     break;
+                case MatchNotice.FirstGateRefusal:
+                    Say($"{_match.Arena.FloorLabel(_match.OpenFloor + 1)} is shut. Nobody climbs higher than the briefcase has been. Whoever carries it up there opens the floor for everyone, in both towers.");
+                    break;
                 case MatchNotice.GateRefused:
                     Say($"{_match.Arena.FloorLabel(_match.OpenFloor + 1)} is shut. Whoever carries the briefcase up there opens it for everyone.");
                     break;
@@ -273,10 +280,25 @@ namespace CloseTheDeal.MatchMode
                 Say($"The rival firm reached {label}.");
         }
 
-        void OnOpenFloorChanged(int floor)
+        void OnFloorOpened(int floor, int byFirm)
         {
             RefreshBriefcaseRow();
-            Say($"{_match.Arena.FloorLabel(floor)} is open, in both towers.");
+            FirmMember local = FirmMember.Local;
+            string who = local == null || byFirm == MatchDirector.NoFirm ? _match.FirmName(byFirm) : byFirm == local.Firm ? "Your firm" : "The rival firm";
+            Say($"{who} opened {_match.Arena.FloorLabel(floor)}, in both towers.");
+        }
+
+        void OnStolen(int byFirm, int fromFirm)
+        {
+            FirmMember local = FirmMember.Local;
+            if (local == null)
+                return;
+            Say(byFirm == local.Firm ? "Your firm took the briefcase from the rival." : "The rival firm took the briefcase from you.");
+        }
+
+        void OnCapWarning(int secondsLeft)
+        {
+            Say($"The quarter closes in {MatchHud.FormatClock(secondsLeft)}. If nobody reaches a roof, the firm holding the briefcase wins.");
         }
 
         void OnReturning()
