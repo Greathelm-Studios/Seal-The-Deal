@@ -91,11 +91,15 @@ Open `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`, press Play, then **Host 
 
 ## Sound (2026-11-13)
 
-- **The items have no real sounds yet.** Twelve item sounds are listed with their events and timings in [ITEMS.md](systems/ITEMS.md) "Item sounds"; the UI sound lane makes them (agreed on AgentHub #414/#415) as `Audio/Items/Item_<Slot>.wav`, and **Set Up Pickups** fills `Profiles/Items/ItemSounds.asset` from them and sets its bus to the game mixer's SFX group once that lane is merged. Until then: pick-up, drop, throw, impact, arm, vent end, wet floor and slip are **silent**, and the beep, explosion and vent loop are **code-made stand-in tones** (`ItemTones`), to be removed when the clips land.
-- Item sounds go through `ItemAudio` (a pooled 3D source per sound, routed to the set's bus); the explosion no longer uses `AudioSource.PlayClipAtPoint`, which bypassed any mixer.
-- The vent loop stops when the extinguisher runs empty (checked by script), comes back, is despawned, or this machine leaves. It keeps playing after a drop, death or the carrier leaving, because the extinguisher keeps venting on the floor until empty: that is the design ("cannot be stopped").
-- The Grenade Case, extinguisher and wet floor sign events (Armed, PinPulled, PutDown and the rest) used to fire twice on the host (server and client callbacks); they now fire once, so their sounds are not doubled.
-- Nobody has heard any of it: batchmode runs only report sources playing.
+- **Real clips, no stand-ins.** The twelve item sounds in [ITEMS.md](systems/ITEMS.md) "Item sounds" are the UI sound lane's (`Audio/Items/Item_<Slot>.wav`, merged through `buffer`). **Set Up Pickups** fills `Profiles/Items/ItemSounds.asset` from them and routes it to the game mixer's SFX bus. The code-made `ItemTones` are deleted.
+- **Nobody has heard them**: synthesised and measured by the sound lane; batchmode runs only report sources playing and their bus.
+- Item sounds go through `ItemAudio` (pooled 3D sources on the set's bus); the explosion no longer bypasses the mixer.
+- The Grenade Case, extinguisher and wet floor sign events used to fire twice on the host; they now fire once, so their sounds are not doubled. A joining player hears no grab for items already carried.
+
+### Assumptions made while Adam was away (overnight 2026-11-13)
+
+- **The extinguisher keeps hissing after it is dropped**, or its carrier dies or leaves: it is still venting and driving itself round the floor until empty (6 s), and the design says it "cannot be stopped". The loop stops when it runs empty, comes back, is despawned (new match) or this machine leaves. Say if you want it silenced on drop.
+- **Carried items trail the view a little** (up to 10°, more for heavier things) and **ease into the hands** over 0.12–0.24 s when taken, so taking and turning have weight. Tuning is on `DefaultCarry.asset` under "Feel in the hands"; set the sway follow speeds very high to turn it off.
 
 ## The one thing that still makes pickups feel like a demo
 

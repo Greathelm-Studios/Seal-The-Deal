@@ -71,6 +71,22 @@ namespace CloseTheDeal.Items
         [Tooltip("How long a thing that fell out of the building stays gone before it is back where it started, in seconds.")]
         [Min(0f)] public float FallReturnSeconds = 2f;
 
+        [Header("Feel in the hands (drawn only, never synced)")]
+        [Tooltip("How long a light thing takes to fly from where it lay into the hands, in seconds. Eases out. Under 0.3 s keeps the take feeling instant.")]
+        [Range(0f, 0.3f)] public float TakeSecondsLight = 0.12f;
+
+        [Tooltip("How long a thing at the weight limit takes to come into the hands, in seconds.")]
+        [Range(0f, 0.3f)] public float TakeSecondsHeavy = 0.24f;
+
+        [Tooltip("How quickly a light carried thing catches up when the view turns, per second. Higher is stiffer; 28 barely trails.")]
+        [Min(1f)] public float SwayFollowLight = 28f;
+
+        [Tooltip("How quickly a thing at the weight limit catches up when the view turns, per second. Lower swings further behind, so heavy things feel heavy.")]
+        [Min(1f)] public float SwayFollowHeavy = 9f;
+
+        [Tooltip("The furthest a carried thing may trail behind a fast turn, in degrees, so it never leaves the view.")]
+        [Range(0f, 30f)] public float MaxSwayDegrees = 10f;
+
         [Header("Sound")]
         [Tooltip("Every item's sounds and the mixer bus they play through, unless an item definition names its own set.")]
         public ItemSoundSet Sounds;

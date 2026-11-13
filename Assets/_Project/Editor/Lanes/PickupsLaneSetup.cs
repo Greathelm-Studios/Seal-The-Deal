@@ -1624,6 +1624,7 @@ namespace CloseTheDeal.Editor.Lanes
         {
             SteamLobby lobby = UnityEngine.Object.FindAnyObjectByType<SteamLobby>();
             yield return new Until(() => lobby.Ready, 20f, "the lobby to be ready");
+            UseOwnPort();
             if (host)
             {
                 lobby.Host();
@@ -1646,8 +1647,24 @@ namespace CloseTheDeal.Editor.Lanes
             }
 
             yield return new Until(() => Me != null, 30f, "this machine's player to spawn");
+            if (host)
+                Check("this machine is the host (it did not join someone else's game on the same port)", InstanceFinder.IsServerStarted);
             Cursor.lockState = CursorLockMode.Locked;
             yield return 1.5f;
+        }
+
+        /// <summary>
+        /// Other copies of the game on this Mac (an open editor pressing Host, other lanes' runs)
+        /// use the default local port; this lane's runs keep to their own, 17783 unless
+        /// -pickupsPort says otherwise, so a host here never joins someone else's game.
+        /// </summary>
+        static void UseOwnPort()
+        {
+            ushort port = ushort.TryParse(Arg("-pickupsPort"), out ushort chosen) ? chosen : (ushort)17783;
+            var tugboat = UnityEngine.Object.FindAnyObjectByType<FishNet.Transporting.Tugboat.Tugboat>();
+            if (tugboat != null)
+                tugboat.SetPort(port);
+            Note($"local port {port}");
         }
 
         // ---- Solo: every feature and edge case on one machine (host with its own player) -----

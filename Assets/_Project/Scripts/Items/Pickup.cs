@@ -108,6 +108,14 @@ namespace CloseTheDeal.Items
         static CarryProfile _defaultRules;
         bool _quiet;
 
+        // Drawn only: the ease from where it lay into the hands, and the owner's view lag.
+        float _takeLeft;
+        float _takeSeconds;
+        Vector3 _takeFromPosition;
+        Quaternion _takeFromRotation;
+        Quaternion _swayFrame;
+        bool _swaying;
+
         /// <summary>Every machine. A player took the item.</summary>
         public event Action<Pickup, ItemCarrier> Taken;
         /// <summary>Every machine. The item left a player's hands, and how.</summary>
@@ -513,6 +521,7 @@ namespace CloseTheDeal.Items
             {
                 _blend = 0f;
                 next.NotifyHeld(this);
+                StartTake(next);
                 if (!_quiet)
                     ItemAudio.PlayAt(Sounds, Sounds?.PickUp, transform.position);
                 Taken?.Invoke(this, next);
@@ -637,6 +646,69 @@ namespace CloseTheDeal.Items
             return _defaultRules;
         }
 
+        /// <summary>Starts the ease from where the item lay into the hands. Not for a joiner seeing an item already held.</summary>
+        void StartTake(ItemCarrier carrier)
+        {
+            _swaying = false;
+            _takeLeft = 0f;
+            if (_quiet)
+                return;
+
+            CarryProfile rules = Rules;
+            _takeSeconds = Mathf.Lerp(rules.TakeSecondsLight, rules.TakeSecondsHeavy, carrier.Load);
+            _takeLeft = _takeSeconds;
+            _takeFromPosition = transform.TransformPoint(_visualRestPosition);
+            _takeFromRotation = transform.rotation * _visualRestRotation;
+        }
+
+        /// <summary>
+        /// Where the item is drawn in the hands this frame. For the carrier's own view, it trails
+        /// a fast turn by up to a few degrees, further for heavier things; just after a take it
+        /// eases in from where it lay.
+        /// </summary>
+        void ShowInHands(Transform shown)
+        {
+            _carrier.GetHoldPose(Definition, true, out Vector3 position, out Quaternion rotation);
+            Vector3 targetPosition = position + rotation * _visualRestPosition;
+            Quaternion targetRotation = rotation * _visualRestRotation;
+
+            PlayerCamera cam = _carrier.IsOwner ? PlayerCamera.Instance : null;
+            if (cam != null)
+                Sway(cam.transform, ref targetPosition, ref targetRotation);
+
+            if (_takeLeft > 0f)
+            {
+                _takeLeft = Mathf.Max(0f, _takeLeft - Time.deltaTime);
+                float t = 1f - _takeLeft / _takeSeconds;
+                float eased = 1f - (1f - t) * (1f - t) * (1f - t);
+                targetPosition = Vector3.LerpUnclamped(_takeFromPosition, targetPosition, eased);
+                targetRotation = Quaternion.SlerpUnclamped(_takeFromRotation, targetRotation, eased);
+            }
+
+            shown.SetPositionAndRotation(targetPosition, targetRotation);
+        }
+
+        /// <summary>Swings the held pose round the eye so it lags the view's turn, heavier things more.</summary>
+        void Sway(Transform view, ref Vector3 position, ref Quaternion rotation)
+        {
+            CarryProfile rules = Rules;
+            Quaternion frame = view.rotation;
+            if (!_swaying)
+            {
+                _swayFrame = frame;
+                _swaying = true;
+            }
+
+            float follow = Mathf.Lerp(rules.SwayFollowLight, rules.SwayFollowHeavy, _carrier.Load);
+            _swayFrame = Quaternion.Slerp(_swayFrame, frame, 1f - Mathf.Exp(-follow * Time.deltaTime));
+            _swayFrame = Quaternion.RotateTowards(frame, _swayFrame, rules.MaxSwayDegrees);
+
+            Quaternion lag = _swayFrame * Quaternion.Inverse(frame);
+            Vector3 eye = view.position;
+            position = eye + lag * (position - eye);
+            rotation = lag * rotation;
+        }
+
         /// <summary>
         /// Visual only, and only running while there is something to show: the item in a
         /// player's hands, the short ease from the hands back onto the solid part after
@@ -648,10 +720,7 @@ namespace CloseTheDeal.Items
             if (_carrier != null)
             {
                 if (shown != null)
-                {
-                    _carrier.GetHoldPose(Definition, true, out Vector3 position, out Quaternion rotation);
-                    shown.SetPositionAndRotation(position + rotation * _visualRestPosition, rotation * _visualRestRotation);
-                }
+                    ShowInHands(shown);
                 return;
             }
 
