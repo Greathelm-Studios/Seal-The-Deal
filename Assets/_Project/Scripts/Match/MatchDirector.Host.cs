@@ -126,6 +126,9 @@ namespace CloseTheDeal.MatchMode
                 SetCheckpoint(firm, 0);
             }
 
+            _openFloor.Value = 0;
+            ApplyGates();
+
             Vector3 spawn = SpawnPosition();
             Briefcase briefcase = EnsureBriefcase(spawn);
             if (briefcase != null)
@@ -300,12 +303,22 @@ namespace CloseTheDeal.MatchMode
             ServerPutDown(spot, _arena.Facing(0), Vector3.zero);
         }
 
-        /// <summary>Host only. Keeps where-it-is up to date, writing only when something changed. The return floor only ever rises.</summary>
+        /// <summary>Host only. The carrier stood on a floor above the open floor: it opens, in both towers, for the rest of the match.</summary>
+        internal void ServerOpenFloor(int floor)
+        {
+            if (floor <= _openFloor.Value)
+                return;
+
+            _openFloor.Value = (byte)floor;
+            ApplyGates();
+        }
+
+        /// <summary>Host only. Keeps where-it-is up to date, writing only when something changed. The return floor only ever rises, and never above the open floor.</summary>
         internal void ServerTrackBriefcase(byte place, int floor)
         {
             BriefcaseStatus status = _briefcase.Value;
             byte returnFloor = status.ReturnFloor;
-            if (_arena.IsCheckpoint(floor) && floor > returnFloor)
+            if (_arena.IsCheckpoint(floor) && floor > returnFloor && floor <= _openFloor.Value)
                 returnFloor = (byte)floor;
 
             if (status.Place == place && status.Floor == floor && status.ReturnFloor == returnFloor)

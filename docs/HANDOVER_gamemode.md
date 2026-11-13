@@ -4,7 +4,7 @@
 
 ## Goal
 
-Two rival law firms race for one shared briefcase; the firm whose player carries it onto either roof wins. At 15:00 the firm holding it (or that carried it last) wins. The system is in [systems/MATCH.md](systems/MATCH.md).
+Two rival law firms race for one shared briefcase; the firm whose player carries it onto either roof wins. Nobody climbs above the highest floor the briefcase has been carried onto. At 15:00 the firm holding it (or that carried it last) wins. The system is in [systems/MATCH.md](systems/MATCH.md).
 
 ```
 Match (host-owned, synced on change)
@@ -17,16 +17,20 @@ The one briefcase (never despawned)
 
  Dropped ──F, anyone in reach──▶ Carried ──G / knocked / fell out / left game──▶ Dropped
     └── outside buildings, plaza and bridges 2 s ──▶ Returning ──3 s──▶ Dropped on the highest checkpoint's skybridge (or the plaza)
+
+The open floor (host-owned, only rises during a match)
+
+ 0 (ground) ──carrier stands on floor N+1──▶ N+1 ──▶ … ──▶ roof
+ Gates above the open floor are shut in both towers; the carrier walks through them; everyone else is told why.
 ```
 
 ## Where it stands
 
-**Ready for review**, not approved. Three commits on this branch:
+**Ready for review**, not approved. Four commits on this branch:
 
 - "Add the briefcase game mode: two firms, a match clock and a roof win" and "Correct the game mode handover's verification notes and doc dates": the first per-firm version, now superseded.
 - "Rework the game mode around one shared briefcase, a plaza and skybridges": the current rules.
-
-Not built yet: the floor gate (nobody climbs above the highest floor the briefcase has been carried onto). It is the next slice.
+- "Add the floor gate: the briefcase carrier opens each floor for everyone": the gate.
 
 ## What was checked
 
@@ -52,7 +56,9 @@ Not built yet: the floor gate (nobody climbs above the highest floor the briefca
   - **Host left:** the client's match closed and its HUD hid.
 - **Complexity:** `lizard -l csharp Assets/_Project/Scripts/Match`: highest CC 10 (`MatchDirector.RaiseBriefcaseEvent`), nothing at 11+.
 - **Bandwidth, 8 players:** match state is a few bytes per event, nothing per frame. The worst steady cost is the loose case moving at 30/s to 7 clients, about **4 KB/s** from the host, and zero once it settles.
+- **Floor gate, solo and host + clients:** a player without the case is refused with the "shut" line and stopped on physics at a shut gate (host and the client's own body both 2.45 m from the stairwell, gate at 2.75 m; last client correction 0.03 m). The carrier is exempt on both machines. Each carrier arrival opens the floor in both towers on every machine. A carrier knocked off the bridge leaves the floor open and respawns at or below it. A rematch shuts every gate again. A late joiner got open floor 4 with the right gates shut.
 - **Not seen:**
+  - The carrier walking through a shut gate on key presses (the exemption was checked directly, and arrival was teleported).
   - Climbing the real stairs and mantling onto a bridge by key press: the climb was teleported, and the crossing was driven by knockback shoves.
   - Steal by a real client key press (the client's grab was its own F request; the host knock was scripted).
   - Steal while the carrier is on a bridge.
@@ -61,6 +67,8 @@ Not built yet: the floor gate (nobody climbs above the highest floor the briefca
   - A run in a build.
 
 ## Rules for Adam to confirm (most important first)
+
+0. **The floor gate, as read from your words** "players can only up to different floors if anyone with the brief case is on said floor everyone can move up": the open floor is the highest floor the briefcase has been carried onto; nobody in either tower can go above it; a carrier standing on a new floor opens it for both towers for the rest of the match; dropping it never closes a floor. Only the carrier can pass a shut gate; anyone else is told why. Interpretation.
 
 1. **Interact is F, not E.** You said E, but E is lean-right in the shared controls and the shared Interact is already F. It is one constant in `FirmMember` to switch.
 2. **One shared briefcase; anyone can take it; carrying it onto either roof wins for the carrier's firm.** Your words; the "either roof" part is the orchestrator's default.
@@ -85,6 +93,10 @@ GDD mismatches (the GDD is the authority on design; your 2026-11-12 words win fo
 - The game's name is now "Seal the Deal"; the greybox menu still says "CLOSE THE DEAL" (`GreyboxUiSetup.cs`, not this lane's).
 
 ## Risks and known issues
+
+- **Gates and the GDD's breakable locked doors overlap:** both hold a team on a floor. Both are in; which to keep is a design question.
+- **A gate stops shots** (ordinary colliders); the GDD says glass never stops projectiles.
+- **If the stair-cage glass becomes breakable** (shooting lane), players could leave the stairs above the open floor through a broken pane.
 
 - **Key clash with the pickups lane:** both use G (and d-pad down) to drop, so one press would drop an item and the briefcase together. Their Interact is E. Settle it in the shared actions asset at merge.
 - **Player.prefab:** Alex's animation work rebuilds it with the STDMC model under `Graphics/Lean/Body`. Set Up GameMode adds `CarryAnchor` under `Graphics/Lean` and `FirmMember` on the root, so it survives that hierarchy, but re-run it after any Player.prefab rebuild.
@@ -119,7 +131,8 @@ Open `Scenes/Lanes/Lane_GameMode.unity`, press Play, then:
 4. Go to the window and climb onto the skybridge; cross into the rival tower.
 5. Press **G** to drop the case, go up to a roof without it: "The roof only counts with the briefcase."
 6. Fetch it and carry it onto either roof: "Ashcombe & Pryce sealed the deal." and **Rematch**.
+7. Gate: in a new match, climb the stairs without the case. At the top a frosted panel stops you and the bottom line says "Floor 1 is shut. Whoever carries the briefcase up there opens it for everyone." Carry the case up: the panel vanishes in both towers and the briefcase row says "open up to Floor 1".
 
 ## Next steps
 
-Build the floor gate (slice B), then Adam plays the lane scene and confirms the rules above, then a two-PC Steam session.
+Adam plays the lane scene and confirms the rules above (the gate reading first), then a two-PC Steam session.

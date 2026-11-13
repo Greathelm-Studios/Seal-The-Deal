@@ -1,6 +1,6 @@
 # MATCH
 
-**Status:** Current · **Last updated:** 2026-11-12 · **Verified against:** the shared-briefcase commit on the game mode lane
+**Status:** Current · **Last updated:** 2026-11-12 · **Verified against:** the floor gate commit on the game mode lane
 
 ## What happens in the game
 
@@ -14,11 +14,13 @@ Press **F** near it to pick it up: anyone can. Everyone sees it hanging at your 
 
 The carrier drops it if they are knocked down, fall out of the building, or leave the game. A loose briefcase can be taken by anyone, so the rival can steal it.
 
+**The briefcase leads the climb.** Nobody, in either tower, can go above the highest floor the briefcase has been carried onto (the **open floor**; it starts at the ground floor). Where the stairs arrive on each floor above it, a frosted panel closes the open side of the stair cage (on the roof, a ring round the stairwell). The carrier walks through it; the moment they stand on the new floor it opens for everyone in both towers, for the rest of the match. Dropping the briefcase never closes a floor again. Anyone else who reaches a shut gate is told: "Floor 3 is shut. Whoever carries the briefcase up there opens it for everyone." The HUD's briefcase row shows how high the building is open.
+
 On every checkpoint floor a **skybridge** crosses the gap between the towers, flush with the window sills, with a rail each side. It is the way across to steal the briefcase.
 
 A briefcase that leaves the buildings (over a rail, out of a window) is gone for 3 s, then reappears on the skybridge of the highest checkpoint floor it has been on, or on the plaza if none.
 
-Standing on a checkpoint floor in your own tower moves your firm's respawn point there. Walk out of a window and you are put back at your firm's last checkpoint after a short fall. Reach a roof without the briefcase and you are told why nothing happened.
+Standing on a checkpoint floor in your own tower (at or below the open floor) moves your firm's respawn point there, so nobody ever respawns above the open floor. Walk out of a window and you are put back at your firm's last checkpoint after a short fall. Reach a roof without the briefcase and you are told why nothing happened.
 
 At **15:00** the quarter closes: the firm holding the briefcase wins; if it lies loose, the firm that carried it last; if nobody ever picked it up, no winner.
 
@@ -33,6 +35,9 @@ The result opens the menu: who sealed the deal and how. The host gets **Rematch*
 | Clock and countdown | Worked out on every machine from the phase's start tick | Nothing | Never sent |
 | The briefcase: state, carrier and their firm, last carrier's firm, building or neutral, floor, return floor, drop spot | **Host** | `BriefcaseStatus` SyncVar, ~23 bytes | On change only: pick-up, drop, floor or place change, return |
 | Each firm's checkpoint floor | **Host** | One byte SyncVar per firm | On change only |
+| The open floor | **Host** raises it when the carrier stands on a higher floor; it never falls during a match | One byte SyncVar | On change only |
+| Floor gates | Built locally on every machine; open or shut and who walks through them follow the open floor and the briefcase carrier, both synced, so a client's prediction meets the same walls as the host's | Nothing of their own | — |
+| "Gate refused" line | **Host** | TargetRpc to that player, 1 byte | Once per approach |
 | Loose briefcase position | **Host** simulates; clients hold it kinematic | NetworkTransform, every other tick (30/s) | Only while it moves |
 | Carried briefcase | Nobody: each machine hangs it on the carrier's body locally | Nothing | — |
 | Plaza and skybridges | Built locally on every machine from the towers | Nothing | — |
@@ -82,6 +87,7 @@ Under [Assets/_Project/Scripts/Match/](../../Assets/_Project/Scripts/Match/), na
 - `MatchReferee.cs`: host-only, once per tick after physics: falls (in every phase), knocks, where the briefcase is, checkpoints, the roof and the clock.
 - `MatchRules.cs`: the clock rule as a pure function.
 - `MatchArena.cs`: floor, building and neutral-ground maths from the built towers; no trigger volumes.
+- `MatchGates.cs`: on the Match object; builds a gate at each stair exit above the ground floor in both towers, opens them up to the open floor and lets the carrier's body through (`Physics.IgnoreCollision`).
 - `MatchCrossings.cs`: on the Match object; builds the plaza and a skybridge on each checkpoint floor locally after every tower build.
 - `FirmMember.cs`: on `Player.prefab`; firm, slot, the two keys, host teleport, notices.
 - `Briefcase.cs`: on `Prefabs/Match/Briefcase.prefab`; shows the state, eases into the hand, tints by holder.
@@ -95,6 +101,11 @@ Outside the folder: `Tower/TeamSpawner.cs` (balanced teams, a spawn hook and ove
 **Close the Deal > Lanes > Set Up GameMode** ([GameModeLaneSetup.cs](../../Assets/_Project/Editor/Lanes/GameModeLaneSetup.cs)) makes the firm and match assets, the briefcase prefab, adds `FirmMember` and a `CarryAnchor` to `Player.prefab`, and builds `Scenes/Lanes/Lane_GameMode.unity` with short towers (`Profiles/Match/LaneTower.asset`: reception, two floors, a checkpoint, the boardroom, the roof). **Add GameMode To Open Scene** adds the match (with its plaza and skybridges), HUD and menu section to any scene that already has the tower and game UI. Both only add what is missing and fill an empty slot; they never retune. **Rebuild GameMode Briefcase** rewrites the briefcase prefab while nobody has edited it.
 
 ## Known limitations
+
+- **The gates and the GDD's breakable locked doors now do the same job** (hold a team on a floor). Both are in: a door still has to be broken, and the floor above still needs the briefcase. Which to keep is a design question.
+- **A gate stops shots.** The panels are ordinary colliders that the aim ray and blasts hit; the GDD says glass never stops a projectile.
+- **The stair cage is part of the gate.** If the cage glass is made breakable, players could leave the stairs through a broken pane above the open floor.
+- **Carrying the briefcase opens a floor just before the top step** (within 5 cm of the floor surface), so the gate opens as the carrier arrives rather than once they are through it.
 
 - **Greybox.** A plain case with a dark handle, seam and clasps, kept stripe-free so it never reads as the pickups lane's Grenade Case; no sound or effects yet, though every event above is there to hang them on.
 - **Crossing is a design decision.** The skybridges are the minimum that makes stealing possible; the GDD's zipline gun is not built. The tower geometry itself is unchanged.

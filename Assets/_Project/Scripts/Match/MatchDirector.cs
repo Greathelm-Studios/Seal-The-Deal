@@ -53,6 +53,9 @@ namespace CloseTheDeal.MatchMode
         /// <summary>It reappeared on a skybridge or the plaza.</summary>
         public event Action OnBriefcaseReturned;
 
+        /// <summary>The highest floor anyone may climb to rose: the new open floor. Both towers open together.</summary>
+        public event Action<int> OnOpenFloorChanged;
+
         /// <summary>Firm, checkpoint floor: where that firm's players now come back after a fall.</summary>
         public event Action<int, int> OnCheckpointSaved;
 
@@ -69,12 +72,16 @@ namespace CloseTheDeal.MatchMode
         [Tooltip("The plaza and skybridges between the towers. Without them the briefcase spawns on Building A's reception desk and nobody can cross.")]
         [SerializeField] MatchCrossings _crossings;
 
+        [Tooltip("The floor gates: nobody climbs above the highest floor the briefcase has been carried onto. Without them every floor is open.")]
+        [SerializeField] MatchGates _gates;
+
         // ---- Synced state --------------------------------------------------------------------
 
         readonly SyncVar<MatchSnapshot> _snapshot = new();
         readonly SyncVar<BriefcaseStatus> _briefcase = new();
         readonly SyncVar<byte> _checkpointA = new();
         readonly SyncVar<byte> _checkpointB = new();
+        readonly SyncVar<byte> _openFloor = new();
 
         readonly MatchArena _arena = new();
         TowerBuilder _tower;
@@ -94,6 +101,15 @@ namespace CloseTheDeal.MatchMode
         public MatchPhase Phase => _snapshot.Value.Phase;
         public MatchSnapshot Snapshot => _snapshot.Value;
         public BriefcaseStatus CaseStatus => _briefcase.Value;
+
+        /// <summary>The highest floor anyone may stand on: the highest the briefcase has been carried onto this match. 0 = the ground floor.</summary>
+        public int OpenFloor => _openFloor.Value;
+
+        /// <summary>True when this scene has floor gates; without them every floor is open and nobody is refused.</summary>
+        internal bool HasGates => _gates != null;
+
+        /// <summary>Where the stairwell is in each floor's own space; zero without gates.</summary>
+        internal Vector3 StairCentre => _gates != null ? _gates.StairCentre : Vector3.zero;
 
         /// <summary>The firm's last checkpoint floor; 0 = its reception.</summary>
         public int CheckpointFloor(int firm) => firm == 0 ? _checkpointA.Value : _checkpointB.Value;
@@ -220,6 +236,7 @@ namespace CloseTheDeal.MatchMode
             _briefcase.OnChange += OnBriefcaseStatusChanged;
             _checkpointA.OnChange += OnCheckpointAChanged;
             _checkpointB.OnChange += OnCheckpointBChanged;
+            _openFloor.OnChange += OnOpenFloorSynced;
             TimeManager.OnPostTick += OnPostTick;
 
             if (_tower == null)
@@ -256,6 +273,7 @@ namespace CloseTheDeal.MatchMode
             _briefcase.OnChange -= OnBriefcaseStatusChanged;
             _checkpointA.OnChange -= OnCheckpointAChanged;
             _checkpointB.OnChange -= OnCheckpointBChanged;
+            _openFloor.OnChange -= OnOpenFloorSynced;
             TimeManager.OnPostTick -= OnPostTick;
             if (_tower != null)
             {
@@ -265,6 +283,8 @@ namespace CloseTheDeal.MatchMode
 
             if (_crossings != null)
                 _crossings.Clear();
+            if (_gates != null)
+                _gates.Clear();
             _arena.Clear();
             OnClosed?.Invoke();
         }
@@ -283,6 +303,9 @@ namespace CloseTheDeal.MatchMode
             _arena.Refresh(_tower);
             if (_crossings != null)
                 _crossings.Build(_arena, _profile);
+            if (_gates != null)
+                _gates.Build(_arena, _tower);
+            ApplyGates();
             OnArenaChanged?.Invoke();
         }
 
@@ -290,6 +313,8 @@ namespace CloseTheDeal.MatchMode
         {
             if (_crossings != null)
                 _crossings.Clear();
+            if (_gates != null)
+                _gates.Clear();
             _arena.Clear();
         }
 
@@ -318,6 +343,8 @@ namespace CloseTheDeal.MatchMode
 
             if (Briefcase.Current != null)
                 Briefcase.Current.Apply(next);
+            if (previous.CarrierId != next.CarrierId || previous.State != next.State)
+                ApplyGates();
 
             OnBriefcaseChanged?.Invoke(previous, next);
             if (previous.State != next.State || previous.CarrierId != next.CarrierId)
@@ -342,6 +369,32 @@ namespace CloseTheDeal.MatchMode
                         OnBriefcaseReturned?.Invoke();
                     break;
             }
+        }
+
+        void OnOpenFloorSynced(byte previous, byte next, bool asServer)
+        {
+            if (asServer != IsServerStarted)
+                return;
+
+            ApplyGates();
+            if (next > previous)
+                OnOpenFloorChanged?.Invoke(next);
+        }
+
+        /// <summary>
+        /// Puts the gates in step with the synced state: open up to the open floor, and the
+        /// carrier walks through the rest. Every machine does this from the same state, so a
+        /// client's prediction meets the same walls as the host. Also called when a player
+        /// spawns, since the carrier's body may arrive after the status naming them.
+        /// </summary>
+        internal void ApplyGates()
+        {
+            if (_gates == null || !_arena.Ready)
+                return;
+
+            _gates.SetOpenFloor(_openFloor.Value);
+            FirmMember carrier = Carrier();
+            _gates.SetCarrier(carrier != null ? carrier.Body : null);
         }
 
         void OnCheckpointAChanged(byte previous, byte next, bool asServer) => HandleCheckpoint(0, previous, next, asServer);

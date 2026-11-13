@@ -35,6 +35,7 @@ namespace CloseTheDeal.Editor.Lanes
         const string BriefcasePath = PrefabFolder + "/Briefcase.prefab";
         const string LeatherPath = PrefabFolder + "/BriefcaseLeather.mat";
         const string ShellPath = PrefabFolder + "/BriefcaseShell.mat";
+        const string GatePath = PrefabFolder + "/FloorGate.mat";
         const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player.prefab";
 
         const string MatchObjectName = "Match";
@@ -267,6 +268,29 @@ namespace CloseTheDeal.Editor.Lanes
             return renderer;
         }
 
+        /// <summary>A frosted see-through panel, so a closed floor can be seen but not reached. Kept clear of red, yellow and the firm colours.</summary>
+        static Material EnsureGateMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(GatePath);
+            if (material != null)
+                return material;
+
+            material = new Material(Shader.Find("Universal Render Pipeline/Lit")) { name = "FloorGate" };
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 0f);
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+            material.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.SetFloat("_ZWrite", 0f);
+            material.SetOverrideTag("RenderType", "Transparent");
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            material.SetColor("_BaseColor", new Color(0.86f, 0.9f, 0.95f, 0.45f));
+            AssetDatabase.CreateAsset(material, GatePath);
+            return material;
+        }
+
         static Material EnsureMaterial(string path, Color colour)
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -394,6 +418,13 @@ namespace CloseTheDeal.Editor.Lanes
             if (crossings == null)
                 crossings = match.gameObject.AddComponent<MatchCrossings>();
             FillIfEmpty(match, "_crossings", crossings);
+
+            // The floor gates, built at runtime at each stair exit; only their look is an asset.
+            MatchGates gates = match.GetComponent<MatchGates>();
+            if (gates == null)
+                gates = match.gameObject.AddComponent<MatchGates>();
+            FillIfEmpty(gates, "_gateMaterial", EnsureGateMaterial());
+            FillIfEmpty(match, "_gates", gates);
 
             GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
             if (menu == null)
