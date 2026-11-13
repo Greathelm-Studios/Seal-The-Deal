@@ -80,7 +80,7 @@ One asset, [DefaultGlass.asset](../../Assets/_Project/Profiles/Glass/DefaultGlas
 
 ## Known limitations
 
-- **The greybox window bays have no glass in them**, so in the tower only stair cages and glass-room walls can break. Window panes need adding to the floor templates (the tower tool, not this system).
+- **Greybox window panes** come from the floor-template tool (TOWER.md): one per bay, except the doorway bay of the lobby and checkpoint floors.
 - **Kit glass gets its collider at run time.** The kit's window and partition glass collides only at its frame, so the registry gives each such pane a thin box fitted to what is drawn (`Solidify Glass Without Collider` on the glass profile, on by default): intact glass now stops people and things, as well as breaking. Nothing in the kit or the floor templates is edited. The box is right for panes turned in quarter turns; a pane at another angle gets one a little too big. The lasting fix belongs in the kit import (a glass collider per glass child), which would make this setting unnecessary.
 - **A whole pane goes at once.** No cracks, no partial holes; a 4 m partition is one pane.
 - **Shards are flat squares that fall through the floor** and make no sound.
