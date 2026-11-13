@@ -66,6 +66,20 @@ namespace CloseTheDeal.Items
         /// </summary>
         public static event Action<ItemCarrier, Pickup> ServerItemTaken;
 
+        /// <summary>
+        /// Every machine. Lets another system share these hands (the match briefcase): return true
+        /// when this item cannot be taken because the hands already hold that other thing. The
+        /// owner then shows no pick-up prompt and answers F with "hands full"; the host refuses
+        /// the take the same way. Null means the hands hold items only.
+        /// </summary>
+        public static Func<ItemCarrier, Pickup, bool> HandsTakenElsewhere;
+
+        /// <summary>
+        /// Owner only. Lets another system answer the interact key first (a lobby desk, or the
+        /// briefcase in reach): return true and no item is prompted or asked for this frame.
+        /// </summary>
+        public static Func<ItemCarrier, bool> InteractClaimedElsewhere;
+
         /// <summary>Owner only. What the crosshair is on changed. The item is null when the kind is None.</summary>
         public event Action<PromptKind, ItemDefinition> PromptChanged;
         /// <summary>Every machine. What this player carries changed; null means empty hands.</summary>
@@ -164,7 +178,8 @@ namespace CloseTheDeal.Items
         /// </summary>
         void CreateInput()
         {
-            _interact = Button("Interact", "<Keyboard>/f", "<Gamepad>/buttonWest");
+            // Pad north, like the shared actions asset, the briefcase and the lobby (west is Reload there).
+            _interact = Button("Interact", "<Keyboard>/f", "<Gamepad>/buttonNorth");
             _throw = Button("Throw", "<Mouse>/leftButton", "<Gamepad>/rightTrigger");
             _drop = Button("Drop", "<Keyboard>/g", "<Gamepad>/dpad/down");
             _use = Button("Use Item", "<Mouse>/rightButton", "<Gamepad>/leftTrigger");
@@ -207,21 +222,34 @@ namespace CloseTheDeal.Items
         void Update()
         {
             // The mouse is free exactly while the game menu is open: nothing is picked up or thrown then.
-            if (Cursor.lockState != CursorLockMode.Locked)
+            if (!PlayerInputReader.Captured)
             {
                 SetPrompt(PromptKind.None, null);
                 return;
             }
 
             if (_held == null)
-            {
-                Pickup target = FindLookTarget();
-                UpdatePrompt(target);
-                if (_interact.WasPressedThisFrame() && target != null)
-                    LocalTake(target);
-                return;
-            }
+                UpdateEmptyHands();
+            else
+                UpdateFullHands();
+        }
 
+        void UpdateEmptyHands()
+        {
+            Pickup target = InteractClaimed() ? null : FindLookTarget();
+            bool handsTaken = target != null && HandsTakenElsewhere != null && HandsTakenElsewhere(this, target);
+            UpdatePrompt(handsTaken ? null : target);
+            if (!_interact.WasPressedThisFrame() || target == null)
+                return;
+
+            if (handsTaken)
+                Denied?.Invoke(DenyReason.HandsFull);
+            else
+                LocalTake(target);
+        }
+
+        void UpdateFullHands()
+        {
             SetPrompt(PromptKind.None, null);
             if (_throw.WasPressedThisFrame())
                 LocalThrow(LocalAim());
@@ -229,9 +257,11 @@ namespace CloseTheDeal.Items
                 LocalDrop();
             else if (_use.WasPressedThisFrame())
                 LocalUse();
-            else if (_interact.WasPressedThisFrame())
+            else if (_interact.WasPressedThisFrame() && !InteractClaimed())
                 Denied?.Invoke(DenyReason.HandsFull);
         }
+
+        bool InteractClaimed() => InteractClaimedElsewhere != null && InteractClaimedElsewhere(this);
 
         Pickup FindLookTarget()
         {
@@ -340,7 +370,7 @@ namespace CloseTheDeal.Items
         {
             if (pickup == null || !pickup.IsSpawned || pickup.State != PickupState.InWorld)
                 return DenyReason.Gone;
-            if (_held != null)
+            if (HandsFullFor(pickup))
                 return DenyReason.HandsFull;
             if (_motor.State == MoveState.Knocked)
                 return DenyReason.KnockedAbout;
@@ -358,6 +388,12 @@ namespace CloseTheDeal.Items
                 return DenyReason.TooFar;
 
             return null;
+        }
+
+        /// <summary>An item already in the hands, or the hands shared with something else that holds them.</summary>
+        bool HandsFullFor(Pickup pickup)
+        {
+            return _held != null || (HandsTakenElsewhere != null && HandsTakenElsewhere(this, pickup));
         }
 
         [ServerRpc]

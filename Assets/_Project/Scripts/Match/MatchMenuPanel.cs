@@ -23,6 +23,16 @@ namespace CloseTheDeal.MatchMode
         [SerializeField] TMP_Text _actionLabel;
         [SerializeField] TMP_Text _waitingText;
 
+        [Header("Words")]
+        [Tooltip("The host's button before the first match. In a scene where the lobby desk starts the match, say that this skips the desk.")]
+        [SerializeField] string _startLabel = "Start the match";
+        [Tooltip("The host's button after a result.")]
+        [SerializeField] string _rematchLabel = "Rematch";
+        [Tooltip("What everyone else reads while waiting for the first match.")]
+        [SerializeField] string _waitingForStart = "The host starts the match.";
+        [Tooltip("What everyone else reads after a result.")]
+        [SerializeField] string _waitingForRematch = "The host can start a rematch.";
+
         void OnEnable()
         {
             _match.OnStarted += Refresh;
@@ -94,9 +104,9 @@ namespace CloseTheDeal.MatchMode
             _detail.text = Detail(phase);
             _actionButton.gameObject.SetActive(action && host);
             _actionButton.interactable = _match.CanHostStart || _match.CanHostRematch;
-            _actionLabel.text = phase == MatchPhase.Ended ? "Rematch" : "Start the match";
+            _actionLabel.text = phase == MatchPhase.Ended ? _rematchLabel : _startLabel;
             _waitingText.gameObject.SetActive(action && !host);
-            _waitingText.text = phase == MatchPhase.Ended ? "The host can start a rematch." : "The host starts the match.";
+            _waitingText.text = phase == MatchPhase.Ended ? _waitingForRematch : _waitingForStart;
         }
 
         string Headline(MatchPhase phase)

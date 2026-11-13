@@ -53,6 +53,13 @@ namespace CloseTheDeal.Combat
     {
         public const int SlotCount = 2;
 
+        /// <summary>
+        /// Every machine. Lets another system hold this player's fire (hands full of a carried
+        /// item, or standing in the lobby): return true and the owner's trigger stays up and the
+        /// host refuses the shot. Reload and switching still work. Null means never held.
+        /// </summary>
+        public static Func<WeaponHolder, bool> FireHeld;
+
         // ---- Inspector -----------------------------------------------------------------------
 
         [Tooltip("The list of every gun in the game. Players' games name guns to each other by their place in it.")]
@@ -433,13 +440,15 @@ namespace CloseTheDeal.Combat
         /// <summary>Everything reads as idle while the mouse is free, which is exactly while the game menu is open (same rule as PlayerInputReader).</summary>
         void ReadButtons()
         {
-            if (Cursor.lockState != CursorLockMode.Locked)
+            if (!PlayerInputReader.Captured)
             {
                 ReleaseTrigger();
                 return;
             }
 
-            if (_input.FirePressed)
+            if (FireHeld != null && FireHeld(this))
+                ReleaseTrigger();
+            else if (_input.FirePressed)
                 PullTrigger();
             if (_input.FireReleased)
                 ReleaseTrigger();
@@ -675,7 +684,7 @@ namespace CloseTheDeal.Combat
 
         bool HostMayFire(int slot, WeaponDefinition weapon, uint tick)
         {
-            if (weapon == null || slot != _active.Value || _health.IsDead)
+            if (weapon == null || slot != _active.Value || _health.IsDead || (FireHeld != null && FireHeld(this)))
                 return false;
             if (tick + TimingSlackTicks < _hostReadyTick)
                 return false;

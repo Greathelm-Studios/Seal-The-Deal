@@ -211,6 +211,8 @@ namespace CloseTheDeal.MatchMode
         {
             if (!IsServerStarted || Phase != MatchPhase.Running || member.Knocked || !CanGrab(member))
                 return;
+            if (HandsFull != null && HandsFull(member))
+                return;
 
             Briefcase.Current.ServerPark();
             BriefcaseStatus status = _briefcase.Value;

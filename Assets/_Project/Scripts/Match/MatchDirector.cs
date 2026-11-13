@@ -21,6 +21,13 @@ namespace CloseTheDeal.MatchMode
 
         public static MatchDirector Instance { get; private set; }
 
+        /// <summary>
+        /// Every machine. Lets another system share the carrier's hands (a carried item): return
+        /// true while this player's hands are full of something else. The briefcase prompt is then
+        /// not offered and the host refuses the pick-up; whoever holds the hands says why.
+        /// </summary>
+        public static Func<FirmMember, bool> HandsFull;
+
         // ---- Events (raised on every machine, only on change) --------------------------------
 
         /// <summary>The match is on this machine: hosting or connected. Read the state now.</summary>
@@ -183,6 +190,8 @@ namespace CloseTheDeal.MatchMode
                 return MatchPrompt.None;
             if (IsCarrying(member))
                 return MatchPrompt.DropBriefcase;
+            if (HandsFull != null && HandsFull(member))
+                return MatchPrompt.None;
             return CanGrab(member) ? MatchPrompt.PickUpBriefcase : MatchPrompt.None;
         }
 
