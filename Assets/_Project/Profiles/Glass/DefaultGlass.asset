@@ -20,5 +20,5 @@ MonoBehaviour:
   ThroughControlLossSeconds: 0.2
   ShardEffect: {fileID: 2395902847721487764, guid: e7cfce2ab35a4474badf03dfd095c37d, type: 3}
   ShardsPerSquareMetre: 14
-  MaxShards: 80
+  MaxShards: 50
   ShardSpeed: 3.5

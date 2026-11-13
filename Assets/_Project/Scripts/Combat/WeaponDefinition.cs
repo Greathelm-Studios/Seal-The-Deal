@@ -68,6 +68,61 @@ namespace CloseTheDeal.Combat
         [Tooltip("How fast the view settles back once the burst stops, in degrees per second. It does not settle between the shots of a burst, so the pattern is the same at any frame rate.")]
         [Min(1f)] public float KickRecovery = 12f;
 
+        [Header("Feel: the view's snap on each shot")]
+        [Tooltip("How far each shot snaps the view up, in degrees, on top of the recoil pattern. Unlike the pattern this comes all the way back on its own, so it is the punch of the shot rather than the climb. 0 = no snap.")]
+        [Range(0f, 10f)] public float SnapUp = 1.5f;
+
+        [Tooltip("The most each shot snaps the view sideways, in degrees, a random amount either way. Keep it about a quarter of the snap up.")]
+        [Range(0f, 5f)] public float SnapSide = 0.35f;
+
+        [Tooltip("How long the snap takes to come back, in seconds. Set it a little shorter than the time between shots and every tap lands on a still view.")]
+        [Range(0.03f, 1f)] public float SnapRecoverySeconds = 0.14f;
+
+        [Tooltip("The shape of the snap coming back, left (the shot) to right (settled). Start at 1 and end at 0; dipping just below 0 near the end swings the view a touch past rest, which reads as weight.")]
+        public AnimationCurve SnapCurve = DecayingImpulse.DefaultCurve(0.04f);
+
+        [Tooltip("How hard each shot shakes the view, in degrees. A quick rattle that never moves the aim; keep it about a tenth of the snap. Shots don't stack it: the stronger shake wins.")]
+        [Range(0f, 3f)] public float ShakeDegrees = 0.2f;
+
+        [Tooltip("How long the shake lasts, in seconds.")]
+        [Range(0.02f, 1f)] public float ShakeSeconds = 0.15f;
+
+        [Tooltip("How far each shot widens the view for an instant, in degrees of field of view. 2 to 3 reads as a punch; 0 = none.")]
+        [Range(0f, 8f)] public float FovPunch = 1.2f;
+
+        [Header("Feel: the gun in the hand on each shot")]
+        [Tooltip("How far the gun jumps back toward the shooter on each shot, in metres.")]
+        [Range(0f, 0.2f)] public float ViewPushBack = 0.05f;
+
+        [Tooltip("How far the muzzle flips up on each shot, in degrees. The gun should move far more than the view: four or five times the snap.")]
+        [Range(0f, 45f)] public float ViewFlip = 7f;
+
+        [Tooltip("How far the gun rolls on each shot, in degrees, always the same way.")]
+        [Range(0f, 20f)] public float ViewRoll = 2.5f;
+
+        [Tooltip("How far the gun twists sideways on each shot, in degrees, following the side the view snapped to.")]
+        [Range(0f, 20f)] public float ViewTwist = 2f;
+
+        [Tooltip("How long the gun takes to settle after a shot, in seconds. A little slower than the view's snap, so the gun trails it.")]
+        [Range(0.03f, 1f)] public float ViewRecoverySeconds = 0.2f;
+
+        [Tooltip("The shape of the gun settling, as for the snap. A bigger dip below 0 gives a springier gun.")]
+        public AnimationCurve ViewCurve = DecayingImpulse.DefaultCurve(0.12f);
+
+        [Header("Feel: muzzle and impact")]
+        [Tooltip("How long the muzzle flash and its light stay lit, in seconds. Two or three frames (0.03 to 0.05) reads as a flash; longer reads as a flame.")]
+        [Range(0.01f, 0.2f)] public float FlashSeconds = 0.04f;
+
+        [Tooltip("The burst played where a shot hits something. Each player's game plays its own; nothing is sent over the network. Leave empty for none.")]
+        public ParticleSystem ImpactEffect;
+
+        [Header("Damage by where it hits")]
+        [Tooltip("Damage on a head hit, as a multiple of the body damage. 1 = the head counts the same as the body. The head is the top of the body from the height below up.")]
+        [Range(1f, 4f)] public float HeadMultiplier = 1f;
+
+        [Tooltip("Height on the body above which a hit counts as a head hit, in metres from the feet. A 1.8 m player's head starts at about 1.5.")]
+        [Range(0.5f, 2.5f)] public float HeadFromHeight = 1.5f;
+
         [Header("Magazine")]
         [Tooltip("Shots in a full magazine.")]
         [Range(1, 250)] public int MagazineSize = 12;
@@ -92,6 +147,7 @@ namespace CloseTheDeal.Combat
         [Range(0f, 1.5f)] public float ShoveLift = 0.35f;
 
         [Header("Looks")]
+
         [Tooltip("The gun model shown in the hand. It needs a child called Muzzle where the shot leaves, and may have a child called Flash that is lit for an instant on each shot.")]
         public GameObject ViewPrefab;
 

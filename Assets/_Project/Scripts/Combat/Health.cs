@@ -67,6 +67,15 @@ namespace CloseTheDeal.Combat
         [Tooltip("How long the body takes to fall over or stand back up, in seconds.")]
         [Range(0.05f, 1f)] [SerializeField] float _tipSeconds = 0.25f;
 
+        [Tooltip("How far the body rocks away from a hit, in degrees per point of damage. Uses the same part as falling over; 0 = no flinch.")]
+        [Range(0f, 2f)] [SerializeField] float _flinchPerDamage = 0.35f;
+
+        [Tooltip("The most one hit can rock the body, in degrees.")]
+        [Range(0f, 45f)] [SerializeField] float _maxFlinch = 20f;
+
+        [Tooltip("How long the body takes to stand straight again after a flinch, in seconds.")]
+        [Range(0.05f, 1f)] [SerializeField] float _flinchSeconds = 0.3f;
+
         // ---- Events --------------------------------------------------------------------------
 
         /// <summary>This body took a hit. Raised on the host and on every client.</summary>
@@ -115,6 +124,8 @@ namespace CloseTheDeal.Combat
         PlayerMotor _motor;
         Renderer[] _renderers;
         MaterialPropertyBlock _block;
+        Color[] _savedColours;
+        bool _flashShown;
 
         uint _respawnTick;
         Vector3 _safePosition;
@@ -123,6 +134,10 @@ namespace CloseTheDeal.Combat
         float _flashLeft;
         float _tip;
         Quaternion _tipRest;
+        DecayingImpulse _flinch;
+        Vector3 _flinchAxis = Vector3.right;
+        float _flinchAngle;
+        static readonly AnimationCurve FlinchCurve = DecayingImpulse.DefaultCurve(0.1f);
 
         public float Current => _health.Value;
         public float Max => _maxHealth;
@@ -139,6 +154,7 @@ namespace CloseTheDeal.Combat
             _rigidbody = GetComponent<Rigidbody>();
             _motor = GetComponent<PlayerMotor>();
             _renderers = GetComponentsInChildren<Renderer>(true);
+            _savedColours = new Color[_renderers.Length];
             _block = new MaterialPropertyBlock();
             if (_tipPivot != null)
                 _tipRest = _tipPivot.localRotation;
@@ -228,6 +244,13 @@ namespace CloseTheDeal.Combat
             return true;
         }
 
+        /// <summary>Host only. Back to full health, if alive. For healing pickups, checkpoints and tests.</summary>
+        public void Restore()
+        {
+            if (IsServerStarted && !_dead.Value)
+                _health.Value = _maxHealth;
+        }
+
         /// <summary>Host only. Where this body comes back next time it dies, instead of the last safe ground. One use.</summary>
         public void OverrideNextRespawn(Vector3 position)
         {
@@ -310,6 +333,7 @@ namespace CloseTheDeal.Combat
         public Vector3 PositionAt(uint tick)
         {
             int slot = (int)(tick % HistoryLength);
+            // A tick not remembered (the future, or too long ago) reads as now.
             return _historyTicks[slot] == tick ? _history[slot] : transform.position;
         }
 
@@ -348,6 +372,7 @@ namespace CloseTheDeal.Combat
         void RaiseDamaged(DamageInfo info)
         {
             _flashLeft = _flashSeconds;
+            Flinch(info);
             Damaged?.Invoke(this, info);
             AnyDamaged?.Invoke(this, info);
         }
@@ -376,8 +401,12 @@ namespace CloseTheDeal.Combat
         void Update()
         {
             float tipTarget = IsDead ? 1f : 0f;
-            if (_flashLeft <= 0f && _tip == tipTarget)
+            if (_flashLeft <= 0f && _tip == tipTarget && !_flinch.IsActive && _flinchAngle == 0f)
                 return;
+
+            _flinchAngle = _flinch.Step(Time.deltaTime, FlinchCurve);
+            if (_flinch.IsActive || _flinchAngle == 0f)
+                ApplyTip();
 
             if (_flashLeft > 0f)
             {
@@ -392,25 +421,56 @@ namespace CloseTheDeal.Combat
             }
         }
 
+        /// <summary>Rocks the body away from the hit around the axis across the shot. Local looks only.</summary>
+        void Flinch(DamageInfo info)
+        {
+            if (_tipPivot == null || _flinchPerDamage <= 0f || info.Fatal)
+                return;
+
+            Vector3 away = Vector3.ProjectOnPlane(info.Direction, Vector3.up);
+            if (away.sqrMagnitude < 0.0001f)
+                return;
+
+            Transform parent = _tipPivot.parent != null ? _tipPivot.parent : transform;
+            _flinchAxis = parent.InverseTransformDirection(Vector3.Cross(Vector3.up, away.normalized));
+            _flinch.Add(Mathf.Min(_maxFlinch, info.Amount * _flinchPerDamage), _flinchSeconds, FlinchCurve);
+        }
+
+        /// <summary>
+        /// Tints every body renderer, keeping whatever else other code has put in its property
+        /// block (the character's eyes use one); ending the flash puts the material's own colour back.
+        /// </summary>
         void ApplyFlash(bool on)
         {
-            if (on)
-            {
-                _block.Clear();
-                _block.SetColor(BaseColourId, _flashColour);
-            }
+            if (on == _flashShown)
+                return;
 
-            foreach (Renderer r in _renderers)
+            _flashShown = on;
+            for (int i = 0; i < _renderers.Length; i++)
             {
-                if (r != null)
-                    r.SetPropertyBlock(on ? _block : null);
+                Renderer r = _renderers[i];
+                if (r == null)
+                    continue;
+
+                _block.Clear();
+                r.GetPropertyBlock(_block);
+                if (on)
+                {
+                    // Remember the colour in force now (another script's, or the material's) to put back after.
+                    Material material = r.sharedMaterial;
+                    _savedColours[i] = _block.HasColor(BaseColourId) ? _block.GetColor(BaseColourId)
+                        : material != null && material.HasColor(BaseColourId) ? material.GetColor(BaseColourId) : Color.white;
+                }
+
+                _block.SetColor(BaseColourId, on ? _flashColour : _savedColours[i]);
+                r.SetPropertyBlock(_block);
             }
         }
 
         void ApplyTip()
         {
             if (_tipPivot != null)
-                _tipPivot.localRotation = _tipRest * Quaternion.Euler(-90f * _tip, 0f, 0f);
+                _tipPivot.localRotation = Quaternion.AngleAxis(_flinchAngle, _flinchAxis) * _tipRest * Quaternion.Euler(-90f * _tip, 0f, 0f);
         }
     }
 }

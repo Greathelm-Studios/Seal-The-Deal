@@ -19,6 +19,44 @@ A dead player falls flat, can't steer, shoot, reload or switch, and comes back *
 Bullets always pass through glass and break it on the way ([GLASS.md](GLASS.md)). Bullets also wear down locked doors once `DoorDamage` is on the door prefab.
 While the menu is open (the mouse is free) the fire, reload and slot buttons do nothing.
 
+## Feel reference: NorseFPS
+
+Adam points at NorseFPS (his other project, `Greathelm-Studios`) as the bar for gun feel. It was read, not copied: whether its code may be reused here is Adam's call, so only the approach is ported. It is a single-machine game; here every feel element runs on the shooter's own machine and the host still decides the hit.
+
+What makes it feel good, biggest first:
+
+1. **A big kick that comes back, and a small climb that stays.** Each shot snaps the camera up by several degrees, but only about a tenth of it stays as aim drift. The kick settles just before the next shot is allowed, so tapping at the gun's rate always lands on a still view.
+2. **Authored recovery curves with overshoot.** Every kick holds its peak for a moment, drops fast, swings slightly past rest and settles. These are curves, not springs, and the peak is held for one drawn frame, so it looks the same at any frame rate.
+3. **The gun out-moves the camera.** On each shot the model in the hand flips several times further than the view, pushes back several centimetres, rolls and twists, and settles more slowly than the camera.
+4. **Same-frame firing plus a trigger buffer** of about a third of the shot interval, so no click is lost.
+5. **Strong hit confirmation:** ticks that spread as they fade, a bigger variant for a precision hit and a bigger, longer red one for a kill, matched sounds at real pitch, and a rising damage number.
+6. **A kill hit-stop** of under a tenth of a second, with the target flashing and tipping away from the shot.
+7. **Muzzle light:** a point light for a few hundredths of a second, which lights the walls, plus a short, size-varied flash and a tracer from the visible muzzle to the true end point, misses included.
+8. **Spread that rewards tapping, and an honest crosshair** whose gap is the real cone.
+9. **Aim assist**, mainly for a stick.
+10. **A clean firing pose:** firing cancels the sprint lowering and landing dip and damps bob, plus a short rotational camera shake (about a tenth of the kick) and an outward field-of-view punch of a few degrees that ends with the kick.
+
+Point by point against these guns:
+
+| NorseFPS element | Here before the feel pass | After the feel pass |
+|---|---|---|
+| Same-frame fire, trigger buffer | Yes (0.15 s buffer) | Same |
+| Kick that returns + climb that stays | Pattern climb held through a burst, returned after; no per-shot snap | Per-shot snap on an authored curve, on top of the learnable pattern |
+| Authored recovery curves with overshoot | Linear return | Curve per gun, overshoot by default |
+| Gun out-moves the camera | 6 cm push back, linear | Push back, muzzle flip, roll and twist on their own curve |
+| Camera shake and FOV punch | None | Rotational shake and outward FOV punch per shot |
+| Muzzle light | None; flash was an oversized disc | Point light per shot; smaller, size- and spin-varied flash |
+| Tracer | Width taper only | Width taper plus fade |
+| Impacts | None | Local sparks at the hit point |
+| Target reaction | Red flash | Red flash plus a tip away from the shot |
+| Sway and bob, firing pose | None | Gun trails the look, bobs with speed, steadies while firing |
+| Honest crosshair | Spread not exposed | `WeaponHolder.CurrentSpreadDegrees` for the HUD to draw |
+| Hit zones, precision feedback | None | Head zone on the body test; `HitConfirmed` says precision; head damage multiplier on each gun, **1 (off) until Adam decides** |
+| Hit marker, damage number, hit sounds | Events only | Events only (the HUD and sound belong to the UI stream) |
+| Kill hit-stop | None | **Not built:** slowing time would slow a shared networked world. A local view-only version is a later option. |
+| Aim assist | None | **Not built:** a mouse game for now; Adam's call for pads |
+| Shell casings | None | Not built yet |
+
 ## Who owns what (AGENTS.md §3)
 
 | Thing | Owner | Synced | Rate |
@@ -43,9 +81,23 @@ While the menu is open (the mouse is free) the fire, reload and slot buttons do 
 
 **Lag allowance (favour the shooter):** each shot carries the host tick the shooter's screen was showing when they aimed: on the host its own latest tick; on a client the newest host tick it has heard, less the two ticks FishNet holds remote bodies back to smooth them. The host keeps half a second of every body's position and tests the shot against where each target stood on that tick, never further back than `Lag Allowance Seconds` on the player's `WeaponHolder` (0.25 s). The host's own shots are judged on the spot, not sent round through the network. The shooter's eye is taken from their own game as long as it is within `Origin Tolerance` (2.5 m) of where the host has them. Bodies are tested as capsules by maths, not by their colliders, so nothing is moved to rewind them.
 
-**What a player on a 100 ms connection sees:** other bodies are drawn about 85 ms behind where the host has them (half the round trip plus two ticks), which is 0.8 m for a target sprinting at 9 m/s and 2 m at 24 m/s. They aim at the body on their screen and the host tests the shot there; the host still decides. The cost falls on the target: they can be hit up to that long after reaching cover, never more than the 0.25 s cap. **Measured so far: the client's hits on runners are not landing reliably yet** (see the handover).
+The host tests each target at the tick the shooter saw and **one tick either side**, and counts a hit at any of them: a client's picture sits between ticks and was measured one to two ticks from the tick it reports. That widens every target by one tick of its own movement on the host's side (0.15 m at a sprint, 0.4 m at 24 m/s); it is the deliberate favour to the shooter.
+
+**What a player on a 100 ms connection sees:** other bodies are drawn about 85 ms behind where the host has them (half the round trip plus two ticks), which is 0.8 m for a target sprinting at 9 m/s and 2 m at 24 m/s. They aim at the body on their screen and the host tests the shot there; the host still decides. The cost falls on the target: they can be hit up to that long after reaching cover, never more than the 0.25 s cap. Results from the lane self-check are in the handover.
 
 **Bandwidth, 8 players all holding the AR-15 trigger:** 10 shots a second each. Up to the host: 8 × 10 × ~33 B ≈ 2.6 KB/s in total. Down from the host: each client gets 7 other players' tracers (7 × 10 × ~20 B ≈ 1.4 KB/s) plus its own ammo updates and hit confirmations (10 × ~12 B + up to 10 × ~25 B ≈ 0.4 KB/s), about **1.8 KB/s per client, 13 KB/s leaving the host**. Hits add one ~45 B message per hit to each client. Nothing here is sent per frame; a player not shooting sends nothing. These are payload sizes plus an estimate of FishNet's per-message header, not measured on the wire.
+
+## How a shot feels (the shooter's own game)
+
+Each gun's `WeaponDefinition` carries its feel; `WeaponView` on the player carries what every gun shares (sway, bob, the steady firing pose, reload dip, the dead view).
+
+- **Snap:** every shot snaps the view up (and a little sideways, random side) and the snap comes back on its own curve, before the next shot on the pistol. It sits on top of the recoil pattern, which is the climb that stays through a burst.
+- **Shake and FOV punch:** a short rotational rattle (the strongest one wins, so bursts don't build it up) and an instant widening of the view that ends with the snap.
+- **The gun in the hand** jumps back, flips its muzzle up four or five times further than the view, rolls and twists, and settles a little slower than the view on its own curve.
+- **Flash:** a short, size- and spin-varied flash with a warm point light.
+- **Tracer** from the visible muzzle to the true end point, thinning and fading; **impact sparks** where it stops on anything; a dummy **rocks away** from each hit.
+- **Sway and bob:** the gun trails a turn and catches up, bobs with speed on the ground, and holds still for a quarter of a second after each shot.
+- **Crosshair:** `WeaponHolder.CurrentSpreadDegrees` is the stray the next shot will really have, for a crosshair whose gap tells the truth.
 
 ## Designer-authored vs runtime-derived (AGENTS.md §4)
 
@@ -71,7 +123,7 @@ The catalog names guns on the network by their place in the list. **Add new guns
 | `WeaponHolder.ReloadFinished` / `ReloadCancelled` | Shooter | Reload end, HUD |
 | `WeaponHolder.AmmoChanged(inMagazine, size)` | Shooter | Ammo counter |
 | `WeaponHolder.WeaponChanged(definition, slot)` | Every machine | Weapon name, draw sound |
-| `WeaponHolder.HitConfirmed(point, damage, killed)` | Shooter | Hit marker |
+| `WeaponHolder.HitConfirmed(point, damage, killed, precision)` | Shooter | Hit marker (precision = a head hit) |
 | `WeaponHolder.KillConfirmed(point)` | Shooter | Kill sound and marker |
 | `Health.Damaged` / `Died` / `Respawned` (and static `Any…`) | Host and every client | Hurt sound, ragdoll, kill feed, the secretary |
 | `Health.HealthChanged(current, max)` | Every machine | Health bar |
@@ -95,7 +147,7 @@ Under [Assets/_Project/Scripts/Combat/](../../Assets/_Project/Scripts/Combat/):
 - `WeaponHolder.cs`: on the player. Slots, magazines, fire, reload, switch; the owner's prediction and the host's checks.
 - `ShotResolver.cs`: where a shot goes. Passes through glass, tests bodies as capsules (rewound on the host), packs the aim, works out the spread.
 - `Health.cs`: on the player and on dummies. Damage, death, respawn, position history for the lag allowance.
-- `WeaponView.cs`, `TracerPool.cs`: local visuals only.
+- `WeaponView.cs`, `TracerPool.cs`, `LocalEffects.cs`, `DecayingImpulse.cs`: local visuals only. `DecayingImpulse` is the kick-and-come-back shape every recoil, gun kick and flinch uses.
 - `StartingLoadout.cs`: a scene's starting guns.
 - `MovingTarget.cs`: runs a practice dummy back and forth at a set speed.
 - `DoorDamage.cs`: lets bullets wear down a `BreakableDoor`.
@@ -120,3 +172,5 @@ Set-up is one editor file, [ShootingLaneSetup.cs](../../Assets/_Project/Editor/L
 - **The pattern's shot count lives on the shooter's game only.** Other players' guns show no kick.
 - **Tuned on paper and against dummies, not in a playtest.** Every number above is a starting point on the gun assets.
 - Bullets don't push furniture.
+- **Fair hits on fast players are measured on dummies, not on sprinting players.** The one-tick favour was measured on the transform-synced dummies; players arrive through prediction and may sit at a different delay (see the handover).
+- **No sound at all.** Every event a gunshot, hit, kill or glass sound needs exists; nothing plays yet. This is what most makes the shooting read as a demo.

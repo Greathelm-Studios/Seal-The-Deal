@@ -133,6 +133,7 @@ namespace CloseTheDeal.Editor.Lanes
             GameObject pistolView = EnsureGunView(WeaponPrefabFolder + "/Pistol_View.prefab", false, metal, flash);
             GameObject rifleView = EnsureGunView(WeaponPrefabFolder + "/AR15_View.prefab", true, metal, flash);
             ParticleSystem shards = EnsureShardPrefab(shardMaterial);
+            ParticleSystem impact = EnsureImpactPrefab(flash);
 
             assets.Pistol = EnsureWeapon(PistolPath, w =>
             {
@@ -165,6 +166,7 @@ namespace CloseTheDeal.Editor.Lanes
                 w.ViewOffset = new Vector3(0.2f, -0.17f, 0.42f);
                 w.TracerPrefab = tracer;
                 w.TracerSeconds = 0.08f;
+                PistolFeel(w);
             });
 
             assets.Rifle = EnsureWeapon(RiflePath, w =>
@@ -198,12 +200,62 @@ namespace CloseTheDeal.Editor.Lanes
                 w.ViewOffset = new Vector3(0.18f, -0.2f, 0.32f);
                 w.TracerPrefab = tracer;
                 w.TracerSeconds = 0.07f;
+                RifleFeel(w);
             });
+
+            FillIfEmpty(assets.Pistol, impact);
+            FillIfEmpty(assets.Rifle, impact);
 
             assets.Catalog = EnsureCatalog(assets.Pistol, assets.Rifle);
             assets.Glass = EnsureGlassProfile(shards, assets.PaneMaterial);
             assets.NoBlast = EnsureNoBlast();
+            // Saved now: opening the test scene next unloads assets nothing references, unsaved changes with them.
+            AssetDatabase.SaveAssets();
             return assets;
+        }
+
+        /// <summary>The pistol's starting feel: a big snap that is back before the next shot is allowed, a gun that flips hard and settles a little slower.</summary>
+        static void PistolFeel(WeaponDefinition w)
+        {
+            w.SnapUp = 2.2f;
+            w.SnapSide = 0.5f;
+            w.SnapRecoverySeconds = 0.13f;
+            w.ShakeDegrees = 0.25f;
+            w.ShakeSeconds = 0.15f;
+            w.FovPunch = 1.5f;
+            w.ViewPushBack = 0.06f;
+            w.ViewFlip = 10f;
+            w.ViewRoll = 3f;
+            w.ViewTwist = 2.5f;
+            w.ViewRecoverySeconds = 0.19f;
+            w.FlashSeconds = 0.04f;
+        }
+
+        /// <summary>The AR-15's starting feel: a small snap per shot inside the shot interval, so the pattern stays readable under it.</summary>
+        static void RifleFeel(WeaponDefinition w)
+        {
+            w.SnapUp = 0.6f;
+            w.SnapSide = 0.25f;
+            w.SnapRecoverySeconds = 0.09f;
+            w.ShakeDegrees = 0.12f;
+            w.ShakeSeconds = 0.12f;
+            w.FovPunch = 0.6f;
+            w.ViewPushBack = 0.025f;
+            w.ViewFlip = 3f;
+            w.ViewRoll = 1.2f;
+            w.ViewTwist = 1.5f;
+            w.ViewRecoverySeconds = 0.12f;
+            w.FlashSeconds = 0.03f;
+        }
+
+        /// <summary>Gives a gun the impact effect when it has none; a designer's choice is never replaced (AGENTS.md §4).</summary>
+        static void FillIfEmpty(WeaponDefinition weapon, ParticleSystem impact)
+        {
+            if (weapon == null || weapon.ImpactEffect != null || impact == null)
+                return;
+
+            weapon.ImpactEffect = impact;
+            EditorUtility.SetDirty(weapon);
         }
 
         /// <summary>The AR-15's starting pattern: eight shots climbing almost straight, then a sweep left and a sweep right that a long burst keeps repeating.</summary>
@@ -407,6 +459,16 @@ namespace CloseTheDeal.Editor.Lanes
             flash.transform.localScale = new Vector3(flashSize, flashSize, flashSize * 2.6f);
             SetLooks(flash, flashMaterial);
 
+            // The light is what sells a muzzle flash: it lights the hands, the gun and the walls for an instant.
+            var lightObject = new GameObject("Light");
+            lightObject.transform.SetParent(flash.transform, false);
+            var light = lightObject.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.range = rifle ? 6f : 5f;
+            light.intensity = rifle ? 2.5f : 3f;
+            light.color = new Color(1f, 0.78f, 0.45f, 1f);
+            light.shadows = LightShadows.None;
+
             return SavePrefab(root, path);
         }
 
@@ -446,7 +508,7 @@ namespace CloseTheDeal.Editor.Lanes
             main.duration = 1f;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.startLifetime = new ParticleSystem.MinMaxCurve(0.9f, 1.8f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.1f, 0.3f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.04f, 0.15f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(1f, 3.5f);
             main.startRotation3D = true;
             main.startRotationX = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
@@ -474,6 +536,51 @@ namespace CloseTheDeal.Editor.Lanes
             renderer.renderMode = ParticleSystemRenderMode.Mesh;
             renderer.mesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
             renderer.alignment = ParticleSystemRenderSpace.World;
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+
+            return SavePrefab(go, path).GetComponent<ParticleSystem>();
+        }
+
+        /// <summary>Bullet impact: a quick spray of hot sparks off the surface that fall and fade. Played locally on every machine.</summary>
+        static ParticleSystem EnsureImpactPrefab(Material material)
+        {
+            string path = WeaponPrefabFolder + "/ImpactSparks.prefab";
+            if (!GeneratedAssetGuard.MayOverwrite(path))
+                return AssetDatabase.LoadAssetAtPath<ParticleSystem>(path);
+
+            var go = new GameObject("ImpactSparks");
+            var system = go.AddComponent<ParticleSystem>();
+
+            ParticleSystem.MainModule main = system.main;
+            main.playOnAwake = false;
+            main.loop = false;
+            main.duration = 0.4f;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.18f, 0.35f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.015f, 0.035f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(3f, 9f);
+            main.gravityModifier = 1.5f;
+            main.maxParticles = 40;
+
+            ParticleSystem.EmissionModule emission = system.emission;
+            emission.rateOverTime = 0f;
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 12) });
+
+            ParticleSystem.ShapeModule shape = system.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 45f;
+            shape.radius = 0.01f;
+
+            ParticleSystem.SizeOverLifetimeModule size = system.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0f));
+
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Stretch;
+            renderer.lengthScale = 4f;
+            renderer.velocityScale = 0.02f;
             renderer.sharedMaterial = material;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
 
@@ -527,12 +634,9 @@ namespace CloseTheDeal.Editor.Lanes
                 WeaponView view = GetOrAdd<WeaponView>(root);
 
                 Transform lean = FindDeep(root.transform, "Lean");
-                Transform fallPivot = EnsureFallPivot(root.transform, lean);
-                Transform hand = EnsureHandPoint(lean);
-
-                var serializedHealth = new SerializedObject(health);
-                GreyboxSceneSetup.SetReference(serializedHealth, "_tipPivot", fallPivot);
-                serializedHealth.ApplyModifiedPropertiesWithoutUndo();
+                // No fall pivot on players: the character rig and its ragdoll own the body's pose
+                // (they listen to Health.Died, which carries the throw); dummies fall over by themselves.
+                Transform hand = EnsureHandPoint(root.transform, lean);
 
                 var serializedHolder = new SerializedObject(holder);
                 GreyboxSceneSetup.SetReference(serializedHolder, "_catalog", assets.Catalog);
@@ -567,30 +671,25 @@ namespace CloseTheDeal.Editor.Lanes
         }
 
         /// <summary>A pivot at the feet between the smoothed visual and the lean pivot, so the whole body can fall flat without touching the motor's own lean.</summary>
-        static Transform EnsureFallPivot(Transform root, Transform lean)
+        /// <summary>
+        /// Where other players see this player's gun: an empty "Hand" point under the lean
+        /// pivot, so it leans with the body. Not the rig's hand bone yet: its axes are not
+        /// known, and a gun parented to it would point the wrong way until someone checks.
+        /// Adds at most one empty object and never moves, renames or rebuilds anything.
+        /// </summary>
+        static Transform EnsureHandPoint(Transform root, Transform lean)
         {
-            Transform existing = FindDeep(root, "Fall");
-            if (existing != null || lean == null)
+            foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
             {
-                if (lean == null)
-                    Debug.LogWarning("[Shooting Lane] Player.prefab has no 'Lean' object; a dead body will not fall over.");
-                return existing;
+                if (t.name == "Hand")
+                    return t;
             }
 
-            var fall = new GameObject("Fall") { layer = PlayerLayer };
-            fall.transform.SetParent(lean.parent, false);
-            lean.SetParent(fall.transform, false);
-            return fall.transform;
-        }
-
-        static Transform EnsureHandPoint(Transform lean)
-        {
             if (lean == null)
+            {
+                Debug.LogWarning("[Shooting Lane] Player.prefab has no 'Lean' object; other players won't see this player's gun.");
                 return null;
-
-            Transform existing = lean.Find("Hand");
-            if (existing != null)
-                return existing;
+            }
 
             var hand = new GameObject("Hand") { layer = PlayerLayer };
             hand.transform.SetParent(lean, false);
@@ -1245,9 +1344,10 @@ namespace CloseTheDeal.Editor.Lanes
                 {
                     // Long enough for the previous shot's kick to hold and settle, so every shot starts from a still view.
                     yield return Seconds(0.45f);
-                    // Aim at the body as this copy draws it, as a player tracking it would.
-                    SetAim(Chest(runner));
-                    yield return Frames(1);
+                    // Aim at the body as this copy drew it last frame and fire in the same step,
+                    // the way a player's click answers the picture on screen.
+                    SetAimNow(Chest(runner));
+                    LogDrawn(holder, runner);
                     holder.PullTrigger();
                     yield return Frames(1);
                     if (i == 4)
@@ -1261,6 +1361,61 @@ namespace CloseTheDeal.Editor.Lanes
                 Check($"landing pistol shots on {name} at {speed:0} m/s", hits >= needed,
                     $"{hits} of {_fired - firedBefore} confirmed by the host; this copy's round trip {ping} ms, so the host has the runner about {speed * (ping / 1000f + 2f / 60f):0.0} m ahead of where it is drawn here");
             }
+        }
+
+        /// <summary>
+        /// Client only: ten pistol shots at the host's own player while the host throws it from
+        /// side to side at about sprint speed. Players reach a client through prediction, not
+        /// the transform sync the dummies use, so they can be drawn at a different delay.
+        /// </summary>
+        static IEnumerator MovingPlayerCheck(WeaponHolder holder, PlayerMotor me)
+        {
+            PlayerMotor host = OtherPlayer(me);
+            Health target = host.GetComponent<Health>();
+            if (holder.ActiveSlot != 0)
+                holder.Switch(0);
+            yield return Seconds(0.5f);
+            holder.Reload();
+            yield return Seconds(holder.ActiveWeapon.ReloadSeconds + 0.5f);
+
+            Flag("shoot_host_start");
+            yield return Seconds(1.5f);
+            int hitsBefore = _hitConfirmed;
+            StartClip("clip_moving_player");
+            for (int i = 0; i < 10; i++)
+            {
+                yield return Seconds(0.45f);
+                SetAimNow(host.transform.position + Vector3.up * 1.1f);
+                LogDrawn(holder, target);
+                holder.PullTrigger();
+                yield return Frames(1);
+            }
+
+            yield return Seconds(0.6f);
+            StopClip();
+            Flag("shoot_host_done");
+            int hits = _hitConfirmed - hitsBefore;
+            Check("landing pistol shots on a player thrown side to side (9 m/s at each throw, slowing to a stop)", hits >= 8,
+                $"{hits} of 10 confirmed by the host; this copy's round trip {holder.TimeManager.RoundTripTime} ms");
+        }
+
+        /// <summary>Host only: throws its own player left and right until the client is done shooting at it, healed between shots so it never dies.</summary>
+        static IEnumerator Dodge(PlayerMotor me)
+        {
+            Health health = me.GetComponent<Health>();
+
+            Teleport(me, new Vector3(-2f, SlabTop + 0.05f, -9f));
+            float side = 1f;
+            while (!HasFlagFile("shoot_host_done"))
+            {
+                // Throw towards the middle of the room each time, so the body swings across about 5 m.
+                side = me.transform.position.x > -2f ? -1f : 1f;
+                me.ApplyKnockback(new Vector3(side * 9f, 0f, 0f), 0.4f);
+                health.Restore();
+                yield return Seconds(0.55f);
+            }
+
+            health.Restore();
         }
 
         /// <summary>The AR-15's view kick must follow the same path magazine after magazine when the aim is left alone.</summary>
@@ -1439,12 +1594,15 @@ namespace CloseTheDeal.Editor.Lanes
         /// <summary>With a second copy joined: its shot, a kill that goes out through a window, and what it sees when it joins again.</summary>
         static IEnumerator HostWithClient(PlayerMotor me, WeaponHolder holder, GlassRegistry glass)
         {
+            FishNet.InstanceFinder.TimeManager.OnPostTick += LogRunnerTicks;
             Flag("host_ready");
             PlayerMotor other = null;
             yield return Until(() => (other = OtherPlayer(me)) != null, 240f, "the client's player to spawn");
             Health otherHealth = other.GetComponent<Health>();
             Log($"Client joined as client id {other.OwnerId}.");
 
+            yield return Until(() => HasFlagFile("shoot_host_start"), 240f, "the client to start shooting at the host");
+            yield return Dodge(me);
             yield return Until(() => HasFlagFile("client_shot_done"), 120f, "the client's shot");
             yield return Seconds(0.5f);
             Log($"HOST STATE after the client's shot: panes broken {glass.BrokenCount}, dummies {DummyStates()}");
@@ -1507,31 +1665,55 @@ namespace CloseTheDeal.Editor.Lanes
             SteamLobby lobby = null;
             yield return Until(() => (lobby = Object.FindAnyObjectByType<SteamLobby>()) != null && lobby.Ready, 30f, "lobby ready");
             yield return Until(() => HasFlagFile("host_ready"), 900f, "the host to be ready");
-            if (long.TryParse(Arg("-laneLatency"), out long oneWay) && oneWay > 0)
-            {
-                // Adds delay to everything this copy sends and receives, to stand in for a real connection.
-                var simulator = FishNet.InstanceFinder.NetworkManager.TransportManager.LatencySimulator;
-                simulator.SetLatency(oneWay);
-                simulator.SetEnabled(true);
-                Log($"Latency simulator on: {oneWay} ms added each way.");
-            }
-
+            TurnOnLatency();
             lobby.JoinLocal();
             yield return Until(() => PlayerMotor.Local != null, 40f, "own player spawned");
             GlassPane.AnyBroken += CountPane;
             yield return Seconds(1.5f);
 
-            PlayerMotor me = PlayerMotor.Local;
-            WeaponHolder holder = me.GetComponent<WeaponHolder>();
-            Health health = me.GetComponent<Health>();
-            GlassRegistry glass = GlassRegistry.Instance;
-            Listen(holder);
+            var s = new Subject { Me = PlayerMotor.Local, Glass = GlassRegistry.Instance };
+            s.Holder = s.Me.GetComponent<WeaponHolder>();
+            s.Health = s.Me.GetComponent<Health>();
+            Listen(s.Holder);
+
+            yield return ClientJoinAndShotChecks(s);
+            yield return MovingTargetCheck(s.Holder, 8);
+            yield return MovingPlayerCheck(s.Holder, s.Me);
+            yield return AllocationCheck(s.Holder, new Vector3(-2f, SlabTop + 1.5f, 16f));
+            Log($"CLIENT STATE after own shot: panes broken {s.Glass.BrokenCount}, dummies {DummyStates()}");
+            Flag("client_shot_done");
+
+            int brokenAtLeave = 0;
+            string dummiesAtLeave = null;
+            yield return ClientDeathCheck(s, (broken, dummies) => { brokenAtLeave = broken; dummiesAtLeave = dummies; });
+            yield return ClientRejoinCheck(lobby, brokenAtLeave, dummiesAtLeave);
+            GlassPane.AnyBroken -= CountPane;
+            Flag("client_done");
+        }
+
+        /// <summary>Adds delay to everything this copy sends and receives, to stand in for a real connection.</summary>
+        static void TurnOnLatency()
+        {
+            if (!long.TryParse(Arg("-laneLatency"), out long oneWay) || oneWay <= 0)
+                return;
+
+            var simulator = FishNet.InstanceFinder.NetworkManager.TransportManager.LatencySimulator;
+            simulator.SetLatency(oneWay);
+            simulator.SetEnabled(true);
+            Log($"Latency simulator on: {oneWay} ms added each way.");
+        }
+
+        /// <summary>What a client sees on joining a match in progress, and its own first shot.</summary>
+        static IEnumerator ClientJoinAndShotChecks(Subject s)
+        {
+            WeaponHolder holder = s.Holder;
+            GlassRegistry glass = s.Glass;
 
             // Everything the host broke before this copy joined must already be broken here, quietly.
             int hidden = HiddenPanes();
             Check("joining after breaks: the same panes are already broken, without shards", glass.BrokenCount > 0 && hidden == glass.BrokenCount && _panesBroken == 0,
                 $"registry says {glass.BrokenCount} broken, {hidden} panes hidden here, {_panesBroken} shatter events on joining");
-            Log($"CLIENT STATE on joining: panes broken {glass.BrokenCount}, dummies {DummyStates()}, ping {me.TimeManager.RoundTripTime} ms");
+            Log($"CLIENT STATE on joining: panes broken {glass.BrokenCount}, dummies {DummyStates()}, ping {s.Me.TimeManager.RoundTripTime} ms");
             Check("client has both guns", holder.WeaponInSlot(0) != null && holder.WeaponInSlot(1) != null, $"in hand {Name(holder.ActiveWeapon)} with {holder.AmmoInMagazine} rounds");
 
             // One pistol shot at a dummy the host has not touched, through a near pane and a far pane.
@@ -1547,26 +1729,29 @@ namespace CloseTheDeal.Editor.Lanes
                 $"hit markers {_hitConfirmed} (damage {_lastHitDamage}), dummy health here {healthBefore} -> {far1.Current}");
             Check("client's shot: the panes it crossed are broken here", glass.BrokenCount > brokenBefore && HiddenPanes() == glass.BrokenCount && _panesBroken == glass.BrokenCount - brokenBefore,
                 $"broken {brokenBefore} -> {glass.BrokenCount}, hidden here {HiddenPanes()}, shatter events here {_panesBroken}");
+        }
 
-            yield return MovingTargetCheck(holder, 8);
-            yield return AllocationCheck(holder, new Vector3(-2f, SlabTop + 1.5f, 16f));
-            Log($"CLIENT STATE after own shot: panes broken {glass.BrokenCount}, dummies {DummyStates()}");
-            Flag("client_shot_done");
-
-            // The host now kills this player out through a window.
+        /// <summary>The host kills this player out through a window; this copy must hear its death and respawn and come back whole.</summary>
+        static IEnumerator ClientDeathCheck(Subject s, Action<int, string> stateAtEnd)
+        {
             Health.AnyDied += CountDeath;
             Health.AnyRespawned += CountRespawn;
             yield return Until(() => HasFlagFile("host_kill_done"), 120f, "the host's window kill");
             yield return Seconds(1f);
-            Check("client heard its own death and respawn, and is whole again", _deaths == 1 && _respawns == 1 && !health.IsDead && Mathf.Approximately(health.Current, health.Max) && holder.AmmoInMagazine == holder.ActiveWeapon.MagazineSize,
-                $"deaths {_deaths}, respawns {_respawns}, health {health.Current}, ammo {holder.AmmoInMagazine}, standing at {me.transform.position}");
-            int brokenAtLeave = glass.BrokenCount;
-            string dummiesAtLeave = DummyStates();
-            Log($"CLIENT STATE after the window kill: panes broken {brokenAtLeave}, dummies {dummiesAtLeave}");
+
+            Health health = s.Health;
+            bool whole = !health.IsDead && Mathf.Approximately(health.Current, health.Max) && s.Holder.AmmoInMagazine == s.Holder.ActiveWeapon.MagazineSize;
+            Check("client heard its own death and respawn, and is whole again", _deaths == 1 && _respawns == 1 && whole,
+                $"deaths {_deaths}, respawns {_respawns}, health {health.Current}, ammo {s.Holder.AmmoInMagazine}, standing at {s.Me.transform.position}");
+            Log($"CLIENT STATE after the window kill: panes broken {s.Glass.BrokenCount}, dummies {DummyStates()}");
+            stateAtEnd(s.Glass.BrokenCount, DummyStates());
             Health.AnyDied -= CountDeath;
             Health.AnyRespawned -= CountRespawn;
+        }
 
-            // Leave and join again: the late joiner.
+        /// <summary>Leave and join again: a late joiner must see every break and every dummy as the host has them.</summary>
+        static IEnumerator ClientRejoinCheck(SteamLobby lobby, int brokenAtLeave, string dummiesAtLeave)
+        {
             lobby.Leave();
             yield return Seconds(2f);
             Check("after leaving, this copy's panes are whole again", HiddenPanes() == 0, $"{HiddenPanes()} hidden");
@@ -1574,12 +1759,11 @@ namespace CloseTheDeal.Editor.Lanes
             lobby.JoinLocal();
             yield return Until(() => PlayerMotor.Local != null, 40f, "own player after rejoining");
             yield return Seconds(1.5f);
-            glass = GlassRegistry.Instance;
+
+            GlassRegistry glass = GlassRegistry.Instance;
             Check("late joiner sees every pane the match has broken, without shards", glass.BrokenCount == brokenAtLeave && HiddenPanes() == brokenAtLeave && _panesBroken == 0,
                 $"registry {glass.BrokenCount} (was {brokenAtLeave} when it left), hidden here {HiddenPanes()}, shatter events {_panesBroken}");
             Check("late joiner sees the dummies as the host has them", DummyStates() == dummiesAtLeave, $"{DummyStates()}");
-            GlassPane.AnyBroken -= CountPane;
-            Flag("client_done");
         }
 
         // ---- Self-check helpers --------------------------------------------------------------
@@ -1592,7 +1776,7 @@ namespace CloseTheDeal.Editor.Lanes
             holder.ReloadStarted += seconds => _reloadStarted++;
             holder.ReloadFinished += () => _reloadFinished++;
             holder.ReloadCancelled += () => _reloadCancelled++;
-            holder.HitConfirmed += (point, damage, killed) =>
+            holder.HitConfirmed += (point, damage, killed, precision) =>
             {
                 _hitConfirmed++;
                 _lastHitDamage = damage;
@@ -1642,6 +1826,36 @@ namespace CloseTheDeal.Editor.Lanes
         {
             SetAim(point);
             yield return Frames(2);
+        }
+
+        static readonly FieldInfo ViewTickField = typeof(WeaponHolder).GetField("_viewTick", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        /// <summary>Points the camera at once as well as the look, so a shot fired before the next frame goes there.</summary>
+        static void SetAimNow(Vector3 point)
+        {
+            SetAim(point);
+            Transform cam = PlayerCamera.Instance.transform;
+            cam.rotation = Quaternion.LookRotation(point - cam.position);
+        }
+
+        /// <summary>For measuring lag allowance: the tick this copy says it is showing, and where it draws the runner.</summary>
+        static void LogDrawn(WeaponHolder holder, Health runner)
+        {
+            Vector3 p = runner.transform.position;
+            File.AppendAllText(Path.Combine(_out, _role + "_drawn.txt"), $"{runner.name}#{runner.OwnerId}\t{ViewTickField.GetValue(holder)}\t{holder.TimeManager.Tick}\t{p.x:0.000}\n");
+        }
+
+        /// <summary>Host only: every tick, where each runner really is.</summary>
+        static void LogRunnerTicks()
+        {
+            var lines = new System.Text.StringBuilder();
+            foreach (Health health in Health.All)
+            {
+                if (health.GetComponent<MovingTarget>() != null || health.GetComponent<PlayerMotor>() != null)
+                    lines.Append($"{health.name}#{health.OwnerId}\t{health.TimeManager.Tick}\t{health.transform.position.x:0.000}\n");
+            }
+
+            File.AppendAllText(Path.Combine(_out, "host_ticks.txt"), lines.ToString());
         }
 
         static void SetAim(Vector3 point)
@@ -1778,10 +1992,10 @@ namespace CloseTheDeal.Editor.Lanes
 
         static void StartClip(string name, Camera camera = null)
         {
-            _clipName = name;
             _clipCamera = camera;
             _clipFrame = 0;
-            Directory.CreateDirectory(Path.Combine(_out, name));
+            _clipName = _role + "_" + name;
+            Directory.CreateDirectory(Path.Combine(_out, _clipName));
         }
 
         static void StopClip()

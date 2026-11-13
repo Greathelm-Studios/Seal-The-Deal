@@ -14,6 +14,8 @@ namespace CloseTheDeal.Combat
         public bool Stopped;
         public Health Body;
         public Collider Solid;
+        /// <summary>It stopped on a body above that body's head height.</summary>
+        public bool Precision;
         /// <summary>How many panes of glass it crossed on the way. ShotResolver.BreakCrossedPanes breaks them.</summary>
         public int PanesCrossed;
     }
@@ -29,6 +31,9 @@ namespace CloseTheDeal.Combat
     {
         public const int MaxPanesPerShot = 8;
 
+        /// <summary>Ticks either side of the shooter's seen tick at which a target still counts as hit (measured: a client's picture is one to two ticks from the tick it reports).</summary>
+        const int RewindSlackTicks = 1;
+
         /// <summary>Step past a pane's surface before looking further, in metres. Under any pane's thickness.</summary>
         const float PaneSkin = 0.01f;
         const float TwoPi = Mathf.PI * 2f;
@@ -39,10 +44,10 @@ namespace CloseTheDeal.Combat
         /// Traces one shot. solidMask is the world (never the Player layer). With rewind on,
         /// bodies are tested where they stood on rewindTick; only the host has that history.
         /// </summary>
-        public static ShotResult Trace(Vector3 origin, Vector3 direction, float range, int solidMask, Health shooter, bool rewind, uint rewindTick)
+        public static ShotResult Trace(Vector3 origin, Vector3 direction, float range, int solidMask, Health shooter, bool rewind, uint rewindTick, float headFromHeight)
         {
             var result = new ShotResult();
-            float limit = NearestBody(origin, direction, range, shooter, rewind, rewindTick, out Health body);
+            float limit = NearestBody(origin, direction, range, shooter, rewind, rewindTick, out Health body, out float bodyFeetY);
 
             float travelled = 0f;
             for (int i = 0; i <= MaxPanesPerShot && travelled < limit; i++)
@@ -68,6 +73,7 @@ namespace CloseTheDeal.Combat
             result.Stopped = body != null;
             result.Distance = limit;
             result.End = origin + direction * limit;
+            result.Precision = body != null && result.End.y - bodyFeetY >= headFromHeight;
             return result;
         }
 
@@ -126,9 +132,10 @@ namespace CloseTheDeal.Combat
         }
 
         /// <summary>Distance to the first living body on the ray, or range when there is none.</summary>
-        static float NearestBody(Vector3 origin, Vector3 direction, float range, Health shooter, bool rewind, uint rewindTick, out Health body)
+        static float NearestBody(Vector3 origin, Vector3 direction, float range, Health shooter, bool rewind, uint rewindTick, out Health body, out float bodyFeetY)
         {
             body = null;
+            bodyFeetY = 0f;
             float nearest = range;
 
             for (int i = 0; i < Health.All.Count; i++)
@@ -137,16 +144,30 @@ namespace CloseTheDeal.Combat
                 if (candidate == shooter || candidate.IsDead)
                     continue;
 
-                Vector3 feet = rewind ? candidate.PositionAt(rewindTick) : candidate.transform.position;
-                candidate.CapsuleAt(feet, out Vector3 bottom, out Vector3 top, out float radius);
-                if (RayCapsule(origin, direction, nearest, bottom, top, radius, out float distance))
+                if (!rewind)
                 {
-                    nearest = distance;
-                    body = candidate;
+                    TestBody(candidate, candidate.transform.position, origin, direction, ref nearest, ref body, ref bodyFeetY);
+                    continue;
                 }
+
+                // Favour the shooter by one tick either side of the tick they saw: the picture on
+                // their screen sits between ticks, and is never known closer than that.
+                for (int offset = -RewindSlackTicks; offset <= RewindSlackTicks; offset++)
+                    TestBody(candidate, candidate.PositionAt(rewindTick + (uint)offset), origin, direction, ref nearest, ref body, ref bodyFeetY);
             }
 
             return nearest;
+        }
+
+        static void TestBody(Health candidate, Vector3 feet, Vector3 origin, Vector3 direction, ref float nearest, ref Health body, ref float bodyFeetY)
+        {
+            candidate.CapsuleAt(feet, out Vector3 bottom, out Vector3 top, out float radius);
+            if (RayCapsule(origin, direction, nearest, bottom, top, radius, out float distance))
+            {
+                nearest = distance;
+                body = candidate;
+                bodyFeetY = feet.y;
+            }
         }
 
         /// <summary>Does the ray pass within radius of the segment, inside maxDistance? distance is roughly where it enters.</summary>
