@@ -35,7 +35,7 @@ On a client, a pane disappears when the host's word arrives, so for a few tens o
 ## What counts as glass
 
 - Anything with a **`GlassPane`** component. Put it on the object that has the pane's collider and renderer; or fill its two lists when they sit on other objects.
-- Anything drawn with a material listed under **Glass Materials** on the glass profile, with its collider on the same object. The registry gives these a `GlassPane` when the match starts. This is how the greybox tower's stair cages and glass-room walls break without the floor templates being touched.
+- Anything drawn with a material listed under **Glass Materials** on the glass profile. The registry gives these a `GlassPane` when the match starts, and a fitted box collider when they have none. This is how the greybox stair cages, glass-room walls and the kit's windows break without the floor templates being touched.
 
 Glass under a networked object (a spawned prop) is not supported: its number would differ between machines.
 A scene needs one `GlassRegistry` (**Close the Deal > Lanes > Add Shooting To Open Scene** adds it); without one nothing breaks and bullets stop at glass.
@@ -81,7 +81,7 @@ One asset, [DefaultGlass.asset](../../Assets/_Project/Profiles/Glass/DefaultGlas
 ## Known limitations
 
 - **The greybox window bays have no glass in them**, so in the tower only stair cages and glass-room walls can break. Window panes need adding to the floor templates (the tower tool, not this system).
-- **The kit's glass pieces can't break yet.** Their collider is one box on the frame, not on the glass, so neither rule above matches them. The kit import needs to give each glass child its own collider (or a `GlassPane` with its lists filled).
+- **Kit glass gets its collider at run time.** The kit's window and partition glass collides only at its frame, so the registry gives each such pane a thin box fitted to what is drawn (`Solidify Glass Without Collider` on the glass profile, on by default): intact glass now stops people and things, as well as breaking. Nothing in the kit or the floor templates is edited. The box is right for panes turned in quarter turns; a pane at another angle gets one a little too big. The lasting fix belongs in the kit import (a glass collider per glass child), which would make this setting unnecessary.
 - **A whole pane goes at once.** No cracks, no partial holes; a 4 m partition is one pane.
 - **Shards are flat squares that fall through the floor** and make no sound.
 - A body only goes through if it hits the glass itself at speed: one standing closer than about 1.3 m to a window is thrown into the 0.6 m sill first (WEAPONS.md).
