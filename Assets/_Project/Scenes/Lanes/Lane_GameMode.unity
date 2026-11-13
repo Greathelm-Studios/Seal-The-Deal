@@ -2610,8 +2610,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3740400931abdc448ddeda1967c6649, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Player.PlayerCamera
-  _sensitivity: 0.12
-  _pitchLimits: {x: -85, y: 85}
   _wallClearance: 0.2
 --- !u!81 &701084848
 AudioListener:

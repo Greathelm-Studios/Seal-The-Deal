@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &893997656334891130
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7830627154488973553}
+  m_Layer: 6
+  m_Name: Hand
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7830627154488973553
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 893997656334891130}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.3, y: 0.4, z: 0.3}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1549759532965773935}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2774191321442674224
 GameObject:
   m_ObjectHideFlags: 0
@@ -30,7 +61,40 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4194972821688750393}
+  - {fileID: 7830627154488973553}
+  - {fileID: 5816528801346051707}
   m_Father: {fileID: 4165610245162811838}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &3688806843748902504
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5816528801346051707}
+  m_Layer: 6
+  m_Name: CarryAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5816528801346051707
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3688806843748902504}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 0.42, y: -0.4, z: 0.1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1549759532965773935}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4715390566021658440
 GameObject:
@@ -46,6 +110,11 @@ GameObject:
   - component: {fileID: 4680666766096500643}
   - component: {fileID: 5842299367726580714}
   - component: {fileID: 7581206824313403346}
+  - component: {fileID: 8435823636130598287}
+  - component: {fileID: 7068462478402374581}
+  - component: {fileID: 1777076703438996407}
+  - component: {fileID: 6163017632449043247}
+  - component: {fileID: 2651652440932133130}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -190,6 +259,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Player.PlayerInputReader
   _actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   _deadZone: 0.1
+  _lookDeadZone: 0.15
 --- !u!114 &7581206824313403346
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -207,18 +277,132 @@ MonoBehaviour:
   _networkObjectCache: {fileID: 0}
   _tickCallbacks: 6
   _profile: {fileID: 11400000, guid: 9a42daef68078df4f84533e8f7508ec6, type: 2}
-  _blast: {fileID: 11400000, guid: 15ce1fd7ffc750f42a3fbc9bad10d88a, type: 2}
+  _blast: {fileID: 11400000, guid: 41dd2e2ae9dfd457095e727535776d12, type: 2}
+  _testBlast: 1
   _groundMask:
     serializedVersion: 2
     m_Bits: 4294967231
   _playerMask:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 0
   _propMask:
     serializedVersion: 2
-    m_Bits: 128
+    m_Bits: 0
   _cameraTarget: {fileID: 4165610245162811838}
   _leanPivot: {fileID: 1549759532965773935}
+  _squashBodyWhenCrouched: 1
+--- !u!114 &8435823636130598287
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4715390566021658440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 517be800e6a4d45c886bb1faddbe1a66, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Combat.Health
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 4680666766096500643}
+  _networkObjectCache: {fileID: 0}
+  _maxHealth: 100
+  _respawnSeconds: 5
+  _defaultKillShove: 6
+  _flashColour: {r: 1, g: 0.25, b: 0.2, a: 1}
+  _flashSeconds: 0.12
+  _tipPivot: {fileID: 0}
+  _tipSeconds: 0.25
+  _flinchPerDamage: 0.35
+  _maxFlinch: 20
+  _flinchSeconds: 0.3
+--- !u!114 &7068462478402374581
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4715390566021658440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f94e0ae979eb846c990e3d82a8d84a12, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Combat.WeaponHolder
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 4680666766096500643}
+  _networkObjectCache: {fileID: 0}
+  _catalog: {fileID: 11400000, guid: 692e4684648444be0ab51302c66343b3, type: 2}
+  _solidMask:
+    serializedVersion: 2
+    m_Bits: 4294967227
+  _lagAllowanceSeconds: 0.25
+  _originTolerance: 2.5
+--- !u!114 &1777076703438996407
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4715390566021658440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1645b8bd48d634bee8c2252fe79b8f53, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Combat.WeaponView
+  _thirdPersonAnchor: {fileID: 7830627154488973553}
+  _dipDistance: 0.3
+  _dipSeconds: 0.18
+  _maxKick: 14
+  _swayDistance: 0.02
+  _swayRoll: 3
+  _swaySmoothing: 0.08
+  _bobDistance: 0.015
+  _bobRate: 1.9
+  _bobFullSpeed: 9
+  _bobWhileFiring: 0.2
+  _firingPoseSeconds: 0.25
+  _deathDrop: 1
+  _deathRoll: 40
+  _deathSeconds: 0.35
+--- !u!114 &6163017632449043247
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4715390566021658440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97ea5c41c69bf4eec9edf485801d4627, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.MatchMode.FirmMember
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 4680666766096500643}
+  _networkObjectCache: {fileID: 0}
+  _carryAnchor: {fileID: 5816528801346051707}
+--- !u!114 &2651652440932133130
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4715390566021658440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5333bdc1368b436084ccf8179d26180, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Items.ItemCarrier
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 4680666766096500643}
+  _networkObjectCache: {fileID: 0}
+  _profile: {fileID: 11400000, guid: 1de3a4bfb8c0041aeb851f7023c0c0b6, type: 2}
+  _sharedActions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  _onTook:
+    m_PersistentCalls:
+      m_Calls: []
+  _onLetGo:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &7111191965594976901
 GameObject:
   m_ObjectHideFlags: 0
