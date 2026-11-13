@@ -28,9 +28,12 @@ The three office weapons proposed were fire extinguisher, wet floor sign and des
 
 ### Run results
 
-Latest runs (2026-11-13, after merging main and moving every item onto Switchboard's `NetBody`):
+Latest runs (2026-11-13, after merging `buffer` and adding "any loose prop"):
 
-- **Solo (host only): 33 passed, 0 failed.** The earlier wet-floor re-pickup failure was the script, not the game: the slip knocks the sign about 1 m, which clears the trap as designed, and the script was standing at its old spot. It now walks to where the sign is. The allocation check passed this run; it has been flaky before.
+- **Solo (host only): 43 passed, 0 failed.** New: a plant pot and a tablet with no item definition are named from their prefabs ("Plant Pot", "Tablet"), weigh their body mass, the lighter is thrown faster, the pot is drawn in the hands while its own meshes hide, a thrown pot took a dummy from 80 to 65, and both are taken by F.
+- **Allocation check: cause found and the check replaced.** The old check compared whole editor frames carrying and empty-handed (591 vs 514 B, 1123 vs 949 B, once equal); those numbers include the editor itself and nothing in the carry path allocated. It now calls the carry code directly (owner input read, item following the hands, both host ticks) 600 times and counts this thread's allocations: **0 B carrying a panel, 0 B carrying the plant pot.**
+- **Wet floor re-pickup: not a game bug.** The slip knocks the sign about 1 m, which clears the trap as designed; the old check reached for its old spot. It walks to the sign now and passes.
+- **Gun "dropped" on every machine: fixed** in `Pickup.ServerUseUp`: a used-up item (gun into the slots, case gone off) empties the hands through the holder change only, with no `Released`, on every machine (agreed with the shooting lane, AgentHub #395).
 - Not checked in batchmode: the look prompt (the mouse cannot be captured) and walking speed under load by keys (profile numbers checked instead: chair 5.48 of 6.00 m/s).
 - **Host + client, two copies on one Mac over the local connection: host 4/4, client 8/8.** Contested grab gave the chair to exactly one player; the client saw the host's case arm, beep 13 times and explode, and its own player was thrown; a client leaving while carrying left the chair in the level once; a thrown chair came to rest at the same point on both through Switchboard (-1.80, 12.25, -5.78). No `[Switchboard]` warnings in either log.
 - In this run the client won the contested grab, so "the loser is told why" was only seen from the host's side.
@@ -85,6 +88,14 @@ Open `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`, press Play, then **Host 
 - **Setup reaches FishNet's scene id call by name** (`NetworkObject.CreateSceneId` is internal). Without it networked items placed in a freshly built scene never spawn. If a FishNet update renames it, the tool logs an error and the fix is FishNet's own Reserialize NetworkObjects menu.
 - Running the setup menu also re-applies the office look, which rewrites `Assets/_Project/Art/Look/OfficeLook_Volume.asset` and its `.meta`. Those files were left uncommitted in this worktree; they are not lane changes.
 - A carried panel is an immovable wall on the host and pushes other players aside. Fun or exploit needs a playtest.
+
+## Sound (2026-11-13)
+
+- **The items have no real sounds yet.** Twelve item sounds are listed with their events and timings in [ITEMS.md](systems/ITEMS.md) "Item sounds"; the UI sound lane makes them (agreed on AgentHub #414/#415) as `Audio/Items/Item_<Slot>.wav`, and **Set Up Pickups** fills `Profiles/Items/ItemSounds.asset` from them and sets its bus to the game mixer's SFX group once that lane is merged. Until then: pick-up, drop, throw, impact, arm, vent end, wet floor and slip are **silent**, and the beep, explosion and vent loop are **code-made stand-in tones** (`ItemTones`), to be removed when the clips land.
+- Item sounds go through `ItemAudio` (a pooled 3D source per sound, routed to the set's bus); the explosion no longer uses `AudioSource.PlayClipAtPoint`, which bypassed any mixer.
+- The vent loop stops when the extinguisher runs empty (checked by script), comes back, is despawned, or this machine leaves. It keeps playing after a drop, death or the carrier leaving, because the extinguisher keeps venting on the floor until empty: that is the design ("cannot be stopped").
+- The Grenade Case, extinguisher and wet floor sign events (Armed, PinPulled, PutDown and the rest) used to fire twice on the host (server and client callbacks); they now fire once, so their sounds are not doubled.
+- Nobody has heard any of it: batchmode runs only report sources playing.
 
 ## The one thing that still makes pickups feel like a demo
 

@@ -18,6 +18,13 @@ namespace CloseTheDeal.Items
             Item = GetComponent<Pickup>();
         }
 
+        /// <summary>
+        /// A synced value's change callback runs twice on the host (as server, then as client).
+        /// True for the one call that should show it: the client's, or the server's when no
+        /// client runs here.
+        /// </summary>
+        protected bool ShowsChange(bool asServer) => !asServer || !IsClientStarted;
+
         /// <summary>Host only. The carrier pressed the use button (right mouse).</summary>
         public virtual void ServerUse(ItemCarrier user) { }
 
