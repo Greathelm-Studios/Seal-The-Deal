@@ -45,6 +45,7 @@ All runs were headless Editor Play runs of `Lane_Lobby.unity` in local test mode
 | 5d | A firm empty at start | **Seen** | `NeedBothFirms` with one player; board says "Each firm needs at least one person" |
 | 5e | Steam offline / local test mode | **Seen** | Every run was local test mode. The Steam path is untouched (`SteamLobby`, `GameMenu` unchanged) and not run |
 | 6 | Lizard | 2,117 NLOC, avg CC 3.3, **nothing above CC 10** (two functions at 10) | `lizard -l csharp Scripts/Lobby Scripts/Customisation`; four CC 11+ functions refactored |
+| 8 | Real-key walk in `Lane_Integration.unity` after the shooting lane made kit glass solid | **All 8 reception spawns reach the tailor's corner and the mirror** by W and mouse-turn only (no teleport after placement), the mirror prompt shows and the fitting room opens (opened by a direct call). Spawns 1, 5, 6, 8 stopped 0.6 m short of my target point (inside the 2.6 m use range). Walking at the glass front stops at it: **the reception has no door to the plaza and needs none** (the match start moves players), so no doorway was added | Headless run, keyboard events injected into the Input System, one run |
 | 7 | Run start | **Seen** | `RunStartRequested` listed both players with firms 0 and 1; both machines counted one run started |
 
 ## Lane-local inputs (for the movement lane to consolidate)
