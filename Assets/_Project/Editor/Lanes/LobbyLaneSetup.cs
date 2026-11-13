@@ -35,14 +35,14 @@ namespace CloseTheDeal.Editor.Lanes
         const string OptionFolder = ProfileFolder + "/Options";
         const string PrefabFolder = "Assets/_Project/Prefabs/Lobby";
         const string MaterialFolder = PrefabFolder + "/Materials";
-        const string CharacterPrefabPath = PrefabFolder + "/OutfitCharacter.prefab";
+        internal const string CharacterPrefabPath = PrefabFolder + "/OutfitCharacter.prefab";
         const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player.prefab";
         const string StdmcPath = "Assets/_Project/Art/Characters/STDMC/STDMC_Toon.prefab";
         const string KitPrefabs = "Assets/_Project/Art/Kit/Prefabs";
         const string KitMaterials = "Assets/_Project/Art/Kit/Materials";
-        const string CatalogPath = ProfileFolder + "/OutfitCatalog.asset";
-        const string RulesPath = ProfileFolder + "/LobbyRules.asset";
-        const string LinesPath = ProfileFolder + "/SecretaryLines.asset";
+        internal const string CatalogPath = ProfileFolder + "/OutfitCatalog.asset";
+        internal const string RulesPath = ProfileFolder + "/LobbyRules.asset";
+        internal const string LinesPath = ProfileFolder + "/SecretaryLines.asset";
 
         const float CharacterHeight = 1.8f;
         const float HipHeight = 0.9f;       // GreyboxSceneSetup: the Lean pivot's height
@@ -89,7 +89,7 @@ namespace CloseTheDeal.Editor.Lanes
 
         // ---- Assets --------------------------------------------------------------------------
 
-        static void EnsureFolders()
+        internal static void EnsureFolders()
         {
             EnsureFolder("Assets/_Project/Profiles", "Customisation");
             EnsureFolder(ProfileFolder, "Options");
@@ -105,7 +105,7 @@ namespace CloseTheDeal.Editor.Lanes
         }
 
         /// <summary>Creates the asset only if nothing is there yet; an existing one is the designer's.</summary>
-        static T EnsureAsset<T>(string path, System.Action<T> fill) where T : ScriptableObject
+        internal static T EnsureAsset<T>(string path, System.Action<T> fill) where T : ScriptableObject
         {
             var existing = AssetDatabase.LoadAssetAtPath<T>(path);
             if (existing != null)
@@ -126,7 +126,7 @@ namespace CloseTheDeal.Editor.Lanes
             public OptionSpec(string name, Color colour, int runs) { Name = name; Base = colour; Runs = runs; }
         }
 
-        static OutfitCatalog EnsureCatalog()
+        internal static OutfitCatalog EnsureCatalog()
         {
             var existing = AssetDatabase.LoadAssetAtPath<OutfitCatalog>(CatalogPath);
             if (existing != null)
@@ -227,7 +227,7 @@ namespace CloseTheDeal.Editor.Lanes
             }
         };
 
-        static void FillLines(SecretaryLines lines)
+        internal static void FillLines(SecretaryLines lines)
         {
             lines.EditorInit(
                 arrival: new[]
@@ -277,7 +277,7 @@ namespace CloseTheDeal.Editor.Lanes
         /// Prefabs/Lobby/OutfitCharacter: STDMC fitted to 1.8 m, feet at 0, facing +Z, under a
         /// "Fit" pivot the outfit bob moves. Rewritten only while the tool still owns it.
         /// </summary>
-        static GameObject EnsureCharacterPrefab(OutfitCatalog catalog)
+        internal static GameObject EnsureCharacterPrefab(OutfitCatalog catalog)
         {
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterPrefabPath);
             if (existing != null && !GeneratedAssetGuard.MayOverwrite(CharacterPrefabPath))
@@ -323,7 +323,7 @@ namespace CloseTheDeal.Editor.Lanes
         /// tool's "I own this" label is then kept only if the tool still owned the prefab
         /// (GeneratedAssetGuard), exactly as the pickups lane does.
         /// </summary>
-        static void PatchPlayerPrefab(GameObject character)
+        internal static void PatchPlayerPrefab(GameObject character)
         {
             bool toolOwned = GeneratedAssetGuard.MayOverwrite(PlayerPrefabPath);
             GameObject root = PrefabUtility.LoadPrefabContents(PlayerPrefabPath);
@@ -473,7 +473,7 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log($"[Lobby] FishNet scene ids assigned to {arguments[2]} object(s).");
         }
 
-        static void LoadMaterials()
+        internal static void LoadMaterials()
         {
             _paper = KitMaterial("Wall_PaperWhite");
             _navy = KitMaterial("Trim_Navy");
@@ -543,7 +543,7 @@ namespace CloseTheDeal.Editor.Lanes
             return go;
         }
 
-        static void Shell(Transform root)
+        internal static void Shell(Transform root)
         {
             Transform floor = Group(root, "Floor"), ceiling = Group(root, "Ceiling"), walls = Group(root, "Walls");
             for (int i = 0; i < BaysX; i++)
@@ -564,7 +564,7 @@ namespace CloseTheDeal.Editor.Lanes
             }
         }
 
-        static void Lighting(Transform root)
+        internal static void Lighting(Transform root)
         {
             Transform lights = Group(root, "Ceiling lights");
             float[] offsets = { 1.25f, 2.75f };
@@ -600,7 +600,7 @@ namespace CloseTheDeal.Editor.Lanes
         }
 
         /// <summary>The back wall, left to right: the big G, two lifts, the cobalt directory, plain white.</summary>
-        static void BackWall(Transform root)
+        internal static void BackWall(Transform root)
         {
             Transform back = Group(root, "Back wall");
             Kit(back, "Wall_Solid_4m", 0f, 0f, BackWallZ);
@@ -642,7 +642,7 @@ namespace CloseTheDeal.Editor.Lanes
         }
 
         /// <summary>The mundane layer (bible §10): a water cooler, a copier, waiting benches.</summary>
-        static void Dressing(Transform root)
+        internal static void Dressing(Transform root)
         {
             Transform props = Group(root, "Dressing");
 
@@ -664,7 +664,7 @@ namespace CloseTheDeal.Editor.Lanes
             Box(props, "Entrance mat", new Vector3(12f, 0.005f, -1.6f), new Vector3(4f, 0.01f, 2f), _navy, false);
         }
 
-        static ReceptionDesk Desk(Transform root, SecretaryLines lines, LobbyRules rules, GameObject character)
+        internal static ReceptionDesk Desk(Transform root, SecretaryLines lines, LobbyRules rules, GameObject character)
         {
             Transform desk = Group(root, "Reception desk");
             desk.localPosition = new Vector3(12f, 0f, -10f);
@@ -714,7 +714,7 @@ namespace CloseTheDeal.Editor.Lanes
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        static void Stand(Transform root, LobbyRules rules, int firm, Vector3 at)
+        internal static void Stand(Transform root, LobbyRules rules, int firm, Vector3 at)
         {
             Transform stand = Group(root, "Sign-in " + rules.FirmName(firm));
             stand.localPosition = at;
@@ -738,7 +738,7 @@ namespace CloseTheDeal.Editor.Lanes
         }
 
         /// <summary>The tailor's corner: two glass partitions, a full-length mirror on the side wall, a rail of suits and a plinth.</summary>
-        static void TailorCorner(Transform root, GameObject character)
+        internal static void TailorCorner(Transform root, GameObject character)
         {
             Transform corner = Group(root, "Tailor's corner");
             Kit(corner, "Partition_Glass_4m", 0.2f, 0f, -8.5f);
@@ -776,7 +776,7 @@ namespace CloseTheDeal.Editor.Lanes
         }
 
         /// <summary>Eight spawn points in two rows inside the entrance, so a full lobby doesn't spawn on top of itself.</summary>
-        static void SpreadSpawns()
+        internal static void SpreadSpawns()
         {
             var spawner = Object.FindAnyObjectByType<TeamSpawner>();
             Transform group = Group(null, "Lobby spawns");
@@ -793,7 +793,7 @@ namespace CloseTheDeal.Editor.Lanes
             EditorUtility.SetDirty(spawner);
         }
 
-        static void Systems(LobbyRules rules, SecretaryLines lines)
+        internal static void Systems(LobbyRules rules, SecretaryLines lines)
         {
             var net = new GameObject("Lobby roster");
             net.AddComponent<NetworkObject>();
@@ -814,7 +814,7 @@ namespace CloseTheDeal.Editor.Lanes
 
         const int FontBody = 18, FontLabel = 16, FontItem = 22, FontHeading = 40;
 
-        static void BuildUi(LobbyRules rules)
+        internal static void BuildUi(LobbyRules rules)
         {
             var canvasGo = new GameObject("LobbyUI", typeof(RectTransform));
             var canvas = canvasGo.AddComponent<Canvas>();
