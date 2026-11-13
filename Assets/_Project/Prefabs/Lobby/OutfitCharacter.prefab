@@ -46,7 +46,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Customisation.OutfitView
   _catalog: {fileID: 11400000, guid: 854545d5dee284086b5495c7949da976, type: 2}
-  _body: {fileID: 2431280856571902004}
+  _body: {fileID: 3353914303983368958}
   _motionPivot: {fileID: 8681212111058009404}
   _wearsFromStart: 
   _bobSeconds: 0.18
@@ -96,16 +96,28 @@ PrefabInstance:
       value: STDMC_Toon
       objectReference: {fileID: 0}
     - target: {fileID: 7359286260368982295, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 32.142864
+      objectReference: {fileID: 0}
+    - target: {fileID: 7359286260368982295, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 32.142864
+      objectReference: {fileID: 0}
+    - target: {fileID: 7359286260368982295, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 32.142864
+      objectReference: {fileID: 0}
+    - target: {fileID: 7359286260368982295, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -1.028572
       objectReference: {fileID: 0}
     - target: {fileID: 7359286260368982295, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: -50.689297
       objectReference: {fileID: 0}
     - target: {fileID: 7359286260368982295, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -2.2761648
       objectReference: {fileID: 0}
     - target: {fileID: 7359286260368982295, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
       propertyPath: m_LocalRotation.w
@@ -135,14 +147,18 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8619742333054527803, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
+      propertyPath: m_CastShadows
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
---- !u!23 &2431280856571902004 stripped
+--- !u!23 &3353914303983368958 stripped
 MeshRenderer:
-  m_CorrespondingSourceObject: {fileID: 8694660596822961137, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
+  m_CorrespondingSourceObject: {fileID: 8619742333054527803, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
   m_PrefabInstance: {fileID: 6418762728891683781}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &4554662516985156306 stripped
