@@ -23,8 +23,8 @@ Anything knocked out of your hands (a blast, a heavy hit, leaving the game) stay
 |---|---|---|---|
 | Who holds an item | **Host.** A client asks; the host checks reach, weight, empty hands and that the item is still loose, and the first valid request wins | One value per item: the holder (`Pickup`) | On change |
 | Out of play / back in play | Host | One flag per item (`Pickup`) | On change |
-| A loose item's motion | Host; it is an ordinary prop ([PROPS.md](PROPS.md)) | NetworkTransform | While moving, 30/s |
-| A carried item's solid part | Host moves it to the carrier's hands each tick | NetworkTransform | While the carrier moves, 30/s |
+| A loose item's motion | Host; it is an ordinary prop ([PROPS.md](PROPS.md)) | Switchboard `NetBody` ([SWITCHBOARD.md](SWITCHBOARD.md)) | While moving, inside Switchboard's budget |
+| A carried item's solid part | Host moves it to the carrier's hands each tick | Switchboard `NetBody`, like any moving prop | While the carrier moves |
 | A carried item's look | Each machine, locally: the visual child follows the carrier's view (own camera) or body (other players) every frame | Nothing | — |
 | Throw, drop, use | Owner asks (one message each, the throw carries the aim direction); host does it | Arrives as holder change plus motion | On press |
 | Impact damage and shove | Host only, from the host's own collision | Damage is whatever the target syncs; shove rides the player's body state | On hit |
@@ -97,7 +97,7 @@ Under [Assets/_Project/Scripts/Items/](../../Assets/_Project/Scripts/Items/):
 
 Shared with other lanes: [Core/IDamageable.cs](../../Assets/_Project/Scripts/Core/IDamageable.cs).
 
-Setup: **Close the Deal > Lanes > Set Up Pickups** ([PickupsLaneSetup.cs](../../Assets/_Project/Editor/Lanes/PickupsLaneSetup.cs)) creates any missing profile and item prefab, adds `Pickup` to the greybox furniture prefabs and `ItemCarrier` to `Player.prefab` where missing, and builds `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`. It never changes an asset or component that already exists. **Run Pickups Check** on the same menu plays that scene by script and writes a report and frames.
+Setup: **Close the Deal > Lanes > Set Up Pickups** ([PickupsLaneSetup.cs](../../Assets/_Project/Editor/Lanes/PickupsLaneSetup.cs)) creates any missing profile and item prefab (and swaps an older item prefab's NetworkTransform for a `NetBody`), adds `Pickup` to the greybox furniture prefabs and `ItemCarrier` to `Player.prefab` where missing, and builds `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`. That scene holds a real `TowerBuilder` whose profile (`Profiles/Items/LaneTowerFrame.asset`) stacks empty floors (`Prefabs/Items/LaneEmptyFloor.prefab`): Switchboard needs a built tower to stream props, and the hand-built office slice sits inside that tower's box. It never changes an asset or component that already exists. **Run Pickups Check** on the same menu plays that scene by script and writes a report and frames.
 
 ## Known limitations
 

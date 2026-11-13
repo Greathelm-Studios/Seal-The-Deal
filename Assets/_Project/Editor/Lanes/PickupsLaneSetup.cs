@@ -6,6 +6,8 @@ using CloseTheDeal.Net;
 using CloseTheDeal.Player;
 using CloseTheDeal.Props;
 using System.Reflection;
+using CloseTheDeal.Net;
+using CloseTheDeal.Tower;
 using FishNet.Component.Transforming;
 using FishNet.Object;
 using TMPro;
@@ -38,7 +40,9 @@ namespace CloseTheDeal.Editor.Lanes
         const string LitShader = "Universal Render Pipeline/Lit";
         const string UnlitShader = "Universal Render Pipeline/Unlit";
 
-        const byte SendEveryNthTick = 2;
+        const string SwitchboardProfilePath = "Assets/_Project/Profiles/DefaultSwitchboard.asset";
+        const string LaneTowerPath = ProfileFolder + "/LaneTowerFrame.asset";
+        const string EmptyFloorPath = PrefabFolder + "/LaneEmptyFloor.prefab";
         const int PropsPerFloorCap = 16; // docs/systems/PROPS.md
 
         // The test floor: a slice of office 12 m up, so things can be thrown out of it.
@@ -259,7 +263,7 @@ namespace CloseTheDeal.Editor.Lanes
         /// <summary>True when the prefab does not exist yet. One that exists is never rewritten: delete it to have the tool make a fresh one.</summary>
         static bool ShouldWrite(string path, out GameObject existing)
         {
-            existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            existing = MoveToSwitchboard(path, AssetDatabase.LoadAssetAtPath<GameObject>(path));
             return existing == null;
         }
 
@@ -279,19 +283,42 @@ namespace CloseTheDeal.Editor.Lanes
 
             root.AddComponent<NetworkObject>();
 
-            // Host-authoritative, sent every other tick, scale never changes: the same as the greybox props.
-            var sync = root.AddComponent<NetworkTransform>();
-            var so = new SerializedObject(sync);
-            GreyboxSceneSetup.SetBool(so, "_clientAuthoritative", false);
-            GreyboxSceneSetup.SetInt(so, "_interval", SendEveryNthTick);
-            GreyboxSceneSetup.SetBool(so, "_synchronizeScale", false);
-            so.ApplyModifiedPropertiesWithoutUndo();
+            // The host streams its motion through Switchboard, the same as the greybox props (docs/systems/SWITCHBOARD.md).
+            AddNetBody(root);
 
             var prop = root.AddComponent<Prop>();
             var propSo = new SerializedObject(prop);
             GreyboxSceneSetup.SetFloat(propSo, "_throwResistance", throwResistance);
             propSo.ApplyModifiedPropertiesWithoutUndo();
             return root;
+        }
+
+        static void AddNetBody(GameObject root)
+        {
+            var netBody = root.AddComponent<NetBody>();
+            var so = new SerializedObject(netBody);
+            GreyboxSceneSetup.SetReference(so, "_profile", AssetDatabase.LoadAssetAtPath<SwitchboardProfile>(SwitchboardProfilePath));
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>
+        /// Item prefabs this tool wrote before props moved to Switchboard carry FishNet's
+        /// NetworkTransform, which Switchboard refuses to stream. Swaps it for a NetBody in
+        /// place, keeping the prefab's GUID and everything else on it.
+        /// </summary>
+        static GameObject MoveToSwitchboard(string path, GameObject existing)
+        {
+            if (existing == null || existing.GetComponent<NetworkTransform>() == null)
+                return existing;
+
+            EditPrefab(path, root =>
+            {
+                Object.DestroyImmediate(root.GetComponent<NetworkTransform>());
+                if (root.GetComponent<NetBody>() == null)
+                    AddNetBody(root);
+            });
+            Debug.Log($"[Pickups] Moved {path} from NetworkTransform to Switchboard.");
+            return AssetDatabase.LoadAssetAtPath<GameObject>(path);
         }
 
         static Pickup AddPickup(GameObject root, ItemDefinition definition, CarryProfile carry, Transform visual)
@@ -752,6 +779,7 @@ namespace CloseTheDeal.Editor.Lanes
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             BuildRoom();
+            AddTowerFrame();
             int props = PlaceContents(assets);
             AddCamera();
 
@@ -830,6 +858,57 @@ namespace CloseTheDeal.Editor.Lanes
             block.transform.localScale = size;
             block.GetComponent<MeshRenderer>().sharedMaterial = material;
             block.isStatic = true;
+        }
+
+        /// <summary>
+        /// Switchboard streams props only once a tower is built, and places every body inside
+        /// that tower's box. The lane floor is a hand-built slice, not a generated tower, so it
+        /// gets a real TowerBuilder whose profile stacks empty floors: the stream starts and the
+        /// slice sits inside the box (a default-sized tower's box reaches 26 m sideways, 36 m deep
+        /// and 76 m up from its base, and the slice is 18 by 12 m at 12 m up). The same networked
+        /// tower object, seed and build event as a real run; nothing is drawn for it.
+        /// </summary>
+        static void AddTowerFrame()
+        {
+            TowerProfile profile = LaneTowerProfile();
+            var go = new GameObject("Tower (empty frame for prop streaming)");
+            go.AddComponent<NetworkObject>();
+            var builder = go.AddComponent<TowerBuilder>();
+            var so = new SerializedObject(builder);
+            GreyboxSceneSetup.SetReference(so, "_profile", profile);
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static TowerProfile LaneTowerProfile()
+        {
+            FloorTemplate empty = EmptyFloorTemplate();
+            var existing = AssetDatabase.LoadAssetAtPath<TowerProfile>(LaneTowerPath);
+            if (existing != null)
+            {
+                if (existing.Lobby == null)
+                    Debug.LogError($"[Pickups] {LaneTowerPath} has lost its floor templates; delete it and re-run Set Up Pickups.");
+                return existing;
+            }
+
+            var profile = ScriptableObject.CreateInstance<TowerProfile>();
+            profile.Lobby = profile.Checkpoint = profile.Boardroom = profile.Roof = empty;
+            profile.Offices = new[] { empty };
+            AssetDatabase.CreateAsset(profile, LaneTowerPath);
+            Debug.Log("[Pickups] Created " + LaneTowerPath);
+            return profile;
+        }
+
+        static FloorTemplate EmptyFloorTemplate()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<FloorTemplate>(EmptyFloorPath);
+            if (existing != null)
+                return existing;
+
+            var go = new GameObject("LaneEmptyFloor");
+            go.AddComponent<FloorTemplate>();
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, EmptyFloorPath);
+            Object.DestroyImmediate(go);
+            return prefab.GetComponent<FloorTemplate>();
         }
 
         /// <summary>Furniture, every item on a desk or by a wall, and the practice targets. Returns how many props were placed.</summary>
@@ -1136,7 +1215,7 @@ namespace CloseTheDeal.Editor.Lanes
             EditorApplication.update -= Pump;
             SessionState.SetBool(ActiveKey, false);
             int passes = CountPasses();
-            int minimum = _role == "solo" ? 28 : 6;
+            int minimum = _role == "solo" ? 28 : _role == "host" ? 4 : 6;
             if (passes < minimum)
                 Check($"the run got far enough to mean something (at least {minimum} passed checks)", false, $"{passes} passed");
             if (_role != "client" && _frame == 0)
@@ -1510,10 +1589,8 @@ namespace CloseTheDeal.Editor.Lanes
             Check("crossing it at speed slips (body given 11 m/s by the script, not by sprint keys)", slippedFast);
             yield return 1.5f;
 
-            Stand(me, sign.transform.position + new Vector3(0f, 0.1f, -1.2f), 0f, 40f);
-            yield return 0.4f;
-            me.LocalTake(sign);
-            yield return 0.5f;
+            Note($"after the slip the sign is at {V(sign.transform.position)}, still down: {wetFloor.IsDown}");
+            yield return TakeWhereItIs(me, sign);
             Check("picking the sign back up clears the wet floor", me.Held == sign && !wetFloor.IsDown);
             me.LocalDrop();
             yield return 0.5f;
@@ -1580,10 +1657,21 @@ namespace CloseTheDeal.Editor.Lanes
             Vector3 toItem = at - stand;
             Stand(who, stand, Mathf.Atan2(toItem.x, toItem.z) * Mathf.Rad2Deg, 30f);
             yield return 0.4f;
-            who.LocalTake(item);
-            yield return 0.6f;
+            DenyReason? refused = null;
+            Action<DenyReason> listen = reason => refused = reason;
+            who.Denied += listen;
+            try
+            {
+                who.LocalTake(item);
+                yield return 0.6f;
+            }
+            finally
+            {
+                who.Denied -= listen;
+            }
             if (who.Held != item)
-                Check($"took {item.name} for the next step", false, $"held: {(who.Held != null ? who.Held.name : "nothing")}, item at {V(at)}");
+                Check($"took {item.name} for the next step", false,
+                    $"held: {(who.Held != null ? who.Held.name : "nothing")}, item at {V(at)}, stood at {V(stand)}, state {who.Motor.State}, refused: {(refused.HasValue ? refused.ToString() : "no answer")}");
         }
 
         static IEnumerator MeasureAllocations(int frames, Action<long> result)

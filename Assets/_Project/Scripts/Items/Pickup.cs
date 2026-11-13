@@ -287,6 +287,8 @@ namespace CloseTheDeal.Items
             transform.SetPositionAndRotation(position, rotation);
             _body.position = position;
             _body.rotation = rotation;
+            // Switchboard counts a sleeping body as at rest and would not send the jump.
+            _body.WakeUp();
         }
 
         // ---- Host: every tick -----------------------------------------------------------------
