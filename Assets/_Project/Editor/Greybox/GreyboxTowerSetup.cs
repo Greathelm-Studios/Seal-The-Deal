@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CloseTheDeal.Glass;
 using CloseTheDeal.Props;
 using CloseTheDeal.Tower;
 using FishNet.Object;
@@ -26,6 +27,7 @@ namespace CloseTheDeal.Editor.Greybox
         const string GlassMaterialPath = FloorFolder + "/GreyboxGlass.mat";
         const string DoorMaterialPath = FloorFolder + "/GreyboxDoor.mat";
         const string DoorPrefabPath = "Assets/_Project/Prefabs/Props/LockedDoor.prefab";
+        const string GlassProfilePath = "Assets/_Project/Profiles/Glass/DefaultGlass.asset";
         const string TowerObjectName = "Tower";
         static readonly Vector3 TowerOrigin = new(80f, 0f, 0f);
 
@@ -37,6 +39,8 @@ namespace CloseTheDeal.Editor.Greybox
         const float PillarSpacing = 4f;
         const float DoorWidth = 1.2f;
         const float ParapetHeight = 1.2f;
+        const float PaneThickness = 0.04f;
+        const float PaneInset = 0.01f;
 
         // Spiral stairs: one full turn per floor around a solid column, in an open well near
         // the middle of the main floor. Angles run clockwise seen from above, 0° facing the
@@ -59,6 +63,7 @@ namespace CloseTheDeal.Editor.Greybox
 
         const int SpawnsPerLobby = 4;
         const int GeneratedOffices = 3;
+        // "Windows" is left out on purpose: merging freezes a mesh, and a pane must vanish when it breaks.
         static readonly string[] StillGroups = { "Shell", "Stairs", "Contents" };
 
         [MenuItem("Close the Deal/Greybox/Rebuild Floor Templates")]
@@ -68,6 +73,19 @@ namespace CloseTheDeal.Editor.Greybox
             GreyboxPropSetup.Ensure(false);
             BuildAllTemplates(profile, true);
             GreyboxSceneSetup.SetUpScene();
+        }
+
+        /// <summary>
+        /// Rebuilds the floor templates the tool still owns, and nothing else: no scene is opened
+        /// or saved. For lanes and integration branches that must not touch Greybox.unity.
+        /// Templates a person has edited are skipped and listed in the log.
+        /// </summary>
+        [MenuItem("Close the Deal/Greybox/Rebuild Floor Templates Only")]
+        public static void RebuildFloorTemplatesOnly()
+        {
+            TowerProfile profile = EnsureProfile();
+            GreyboxPropSetup.Ensure(false);
+            BuildAllTemplates(profile, true);
         }
 
         /// <summary>Called by Set Up Scene: creates only what is missing.</summary>
@@ -100,6 +118,7 @@ namespace CloseTheDeal.Editor.Greybox
         {
             public Mesh Flight;
             public Material Glass;
+            public Material WindowGlass;
             public NetworkObject Door;
         }
 
@@ -113,6 +132,7 @@ namespace CloseTheDeal.Editor.Greybox
             {
                 Flight = EnsureFlightMesh(profile, overwrite),
                 Glass = EnsureGlassMaterial(),
+                WindowGlass = WindowGlassMaterial(),
                 Door = EnsureDoorPrefab(profile, overwrite)
             };
 
@@ -157,6 +177,7 @@ namespace CloseTheDeal.Editor.Greybox
             template.Kind = kind;
 
             BuildShell(root.transform, profile, kind);
+            BuildWindowPanes(root.transform, profile, kind, kit.WindowGlass);
             BuildStairs(root.transform, profile, kind, kit);
             BuildContents(root.transform, profile, kind, variant, props);
             if (kind == FloorKind.Lobby)
@@ -258,6 +279,50 @@ namespace CloseTheDeal.Editor.Greybox
                 float clampedX = Mathf.Clamp(x, -half + PillarWidth * 0.5f, half - PillarWidth * 0.5f);
                 Box(shell, "Pillar", new Vector3(clampedX, SillHeight + pillarHeight * 0.5f, -Wall * 0.5f), new Vector3(PillarWidth, pillarHeight, Wall));
             }
+        }
+
+        /// <summary>
+        /// One breakable pane in each window bay, from the sill to the slab above, in their own
+        /// "Windows" group so the tower never merges them (a merged mesh can't vanish when it
+        /// breaks). The glass registry numbers them by building, floor and order, so every
+        /// machine breaks the same pane. The middle bay of the lobby and of each checkpoint floor
+        /// is left open as a doorway: the briefcase match's plaza and skybridges meet the towers
+        /// there (MATCH.md). The roof has a parapet, not windows.
+        /// </summary>
+        static void BuildWindowPanes(Transform floor, TowerProfile p, FloorKind kind, Material glass)
+        {
+            if (kind == FloorKind.Roof)
+                return;
+            if (glass == null)
+            {
+                Debug.LogWarning("[Tower] No window glass: " + GlassProfilePath + " lists no Glass Materials. Templates are built with open windows.");
+                return;
+            }
+
+            Transform windows = Group(floor, "Windows");
+            bool doorway = kind == FloorKind.Lobby || kind == FloorKind.Checkpoint;
+            float half = p.Width * 0.5f;
+            float height = p.FloorHeight - Slab - SillHeight;
+
+            for (float x = -half; x < half - 0.01f; x += PillarSpacing)
+            {
+                float left = Mathf.Max(x, -half + PillarWidth * 0.5f) + PillarWidth * 0.5f;
+                float right = Mathf.Min(x + PillarSpacing, half - PillarWidth * 0.5f) - PillarWidth * 0.5f;
+                if (right - left < 0.2f || (doorway && left < 0f && right > 0f))
+                    continue;
+
+                GameObject pane = Box(windows, "Window glass", new Vector3((left + right) * 0.5f, SillHeight + height * 0.5f, -Wall * 0.5f), new Vector3(right - left - PaneInset * 2f, height - PaneInset, PaneThickness));
+                pane.isStatic = false;
+                pane.GetComponent<Renderer>().sharedMaterial = glass;
+                pane.AddComponent<GlassPane>();
+            }
+        }
+
+        /// <summary>The first material the glass profile counts as glass: what the kit's windows use.</summary>
+        static Material WindowGlassMaterial()
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<GlassProfile>(GlassProfilePath);
+            return profile != null && profile.GlassMaterials != null && profile.GlassMaterials.Length > 0 ? profile.GlassMaterials[0] : null;
         }
 
         /// <summary>The wall between main floor and spine with a door per room, and the walls between rooms.</summary>
