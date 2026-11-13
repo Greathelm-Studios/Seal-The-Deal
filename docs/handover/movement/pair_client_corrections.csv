@@ -1,0 +1,5 @@
+seconds,section,metres,state,speed,sliding,crouch,ping_ms
+98.07,spiral stairs up at a sprint,0.018,Grounded,6.6,False,0.00,110
+98.09,spiral stairs up at a sprint,0.020,Grounded,7.1,False,0.00,110
+103.19,slide down the spiral stairs into a jump,0.016,Grounded,11.1,True,0.93,103
+107.10,control: a blast the client cannot predict,1.995,Knocked,3.3,False,0.00,110

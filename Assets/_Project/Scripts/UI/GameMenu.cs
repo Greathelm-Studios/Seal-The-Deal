@@ -12,7 +12,7 @@ namespace CloseTheDeal.UI
     /// whether the menu is open, whether the HUD shows, and whether the mouse is captured.
     /// Menu open = mouse free and the player stands still; menu closed = mouse captured, HUD up.
     /// The menu opens by itself whenever there is no local player (before joining, after
-    /// leaving, on disconnect); in game, Esc toggles it. Greybox, not the final lobby.
+    /// leaving, on disconnect); in game, Esc or the pad's Start button toggles it. Greybox, not the final lobby.
     /// Text is rebuilt only on lobby events, never per frame. Design: docs/systems/MENU_AND_HUD.md.
     /// </summary>
     public sealed class GameMenu : MonoBehaviour
@@ -89,7 +89,10 @@ namespace CloseTheDeal.UI
                 return;
 
             Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
+            Gamepad pad = Gamepad.current;
+            bool menuPressed = (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
+                || (pad != null && pad.startButton.wasPressedThisFrame);
+            if (menuPressed)
                 SetOpen(!_open);
             else if (!_open && Cursor.lockState != CursorLockMode.Locked)
                 SetOpen(true); // The mouse was freed elsewhere (editor Esc, alt-tab): show the menu to match.

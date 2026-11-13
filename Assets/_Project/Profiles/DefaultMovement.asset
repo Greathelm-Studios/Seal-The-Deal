@@ -14,11 +14,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Player.MovementProfile
   WalkSpeed: 6
   SprintSpeed: 9
-  GroundAcceleration: 45
-  GroundBraking: 60
+  GroundAcceleration: 70
+  GroundFriction: 6
+  StopSpeed: 3
+  MaxSpeed: 24
   KnockedBraking: 15
   TurnSpeed: 720
-  AirAcceleration: 20
+  StepDownSnap: 0.35
+  CrouchSpeed: 3
+  CrouchHeight: 1.1
+  CrouchRate: 8
+  SlideMinSpeed: 7
+  SlideBoost: 2.5
+  SlideBoostCooldown: 1.5
+  SlideFriction: 0.45
+  SlideSlopeGain: 2
+  SlideEndSpeed: 3.5
+  AirAcceleration: 30
+  AirStrafeSpeed: 1.5
+  HoldToHop: 1
   JumpHeight: 1.6
   AirGravityMultiplier: 2
   MaxFallSpeed: 30
@@ -33,4 +47,16 @@ MonoBehaviour:
   MinLedgeHeight: 0.4
   LedgeReach: 0.7
   MantleDuration: 0.35
+  MantleSpeedKeep: 0.9
   GroundProbe: 0.1
+  MouseSensitivity: 0.12
+  StickYawSpeed: 240
+  StickPitchSpeed: 150
+  StickLookCurve: 1.6
+  LookUpLimit: 89
+  LookDownLimit: 89
+  LandingDipPerSpeed: 0.012
+  LandingDipMax: 0.25
+  LandingDipRecover: 0.25
+  SpeedFovKick: 6
+  SpeedFovRate: 30

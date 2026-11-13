@@ -1,0 +1,42 @@
+   0.02  local port 17782
+   0.02  role client, local mode True, latency each way 50 ms, graphics Null
+   3.02  PASS  first spawn is idle on the floor  [state Grounded, speed 0.00]
+   3.03  client route starts; ping 0 ms
+   6.86  remote event: jumped
+   7.10  remote event: landed at 5.9 m/s
+   7.10  remote event: sprint on
+   7.11  remote event: sprint off
+   9.07  remote event: mantle started, Climb
+  20.03  MEASURE section 'standing, watching the host': 0 corrections over 1 cm, worst 0.0 cm; own view moved against the body on 0 frames; other player's body moved against its velocity on 1 frames, biggest single-frame step 5.22x its speed; ping 113 ms
+  21.95  MEASURE client sprint, slide and hop: ticks 113, airborne ticks 44, speed min 0.00 mean 8.63 max 11.41 m/s, rise per tick min -15.7 max 12.9 cm, top 1.60 m
+  21.95  MEASURE section 'sprint, slide and hop': 0 corrections over 1 cm, worst 0.0 cm; own view moved against the body on 0 frames; other player's body moved against its velocity on 0 frames, biggest single-frame step 0.00x its speed; ping 113 ms
+  37.23  MEASURE three chained hops, forward held: entered at 9.01 m/s; ticks 133, airborne ticks 133, speed min 9.01 mean 9.01 max 9.01 m/s, rise per tick min -15.7 max 12.9 cm, top 1.64 m
+  37.23  PASS  speed is kept through three chained hops  [entered at 9.01 m/s, slowest 9.01 m/s]
+  38.04  MEASURE section 'three chained hops': 0 corrections over 1 cm, worst 0.0 cm; own view moved against the body on 0 frames; other player's body moved against its velocity on 0 frames, biggest single-frame step 0.00x its speed; ping 117 ms
+  53.74  MEASURE air strafing through three hops: 9.00 m/s in, 0.12 m/s out
+  53.74  FAIL  air strafing gains speed  [9.00 to 0.12 m/s]
+  54.10  MEASURE section 'air strafing': 0 corrections over 1 cm, worst 0.0 cm; own view moved against the body on 0 frames; other player's body moved against its velocity on 0 frames, biggest single-frame step 0.00x its speed; ping 107 ms
+  56.93  PASS  a climb keeps most of the speed it was entered with  [in at 9.0 m/s, out at 8.1 m/s, 0.25 s on the desk edge]
+  57.53  MEASURE section 'sprinting climb onto the desk': 0 corrections over 1 cm, worst 0.0 cm; own view moved against the body on 0 frames; other player's body moved against its velocity on 0 frames, biggest single-frame step 0.00x its speed; ping 100 ms
+  73.25  MEASURE slide on the flat: in at 9.01 m/s, 11.00 m/s after the boost, 17.8 m in 2.66 s
+  73.25  PASS  crouching out of a sprint slides with a boost  [sliding True, 9.01 to 11.00 m/s]
+  88.22  PASS  a jump out of a slide keeps its speed  [sliding at 10.28 m/s, 10.28 m/s in the air, state Airborne]
+  89.96  MEASURE section 'slide on the flat': 0 corrections over 1 cm, worst 0.0 cm; own view moved against the body on 0 frames; other player's body moved against its velocity on 0 frames, biggest single-frame step 0.00x its speed; ping 110 ms
+  93.25  FAIL  client climbs the desk  [not within 1 s]
+  93.56  FAIL  client stands on the desk  [feet at 0.00 m]
+  93.56  client at rest at (-12.765, 0.003, -5.978)
+  94.86  MEASURE section 'climb the desk and crouch on it': 0 corrections over 1 cm, worst 0.0 cm; own view moved against the body on 0 frames; other player's body moved against its velocity on 0 frames, biggest single-frame step 0.00x its speed; ping 107 ms
+  99.19  MEASURE client, spiral stairs up at a sprint: 1.80 s; ticks 108, airborne ticks 0, speed min 1.17 mean 7.49 max 9.74 m/s, rise per tick min 0.0 max 9.2 cm, top 4.44 m
+ 101.49  PASS  client reached the upper floor  [feet at 4.50 m]
+ 101.49  client at rest at (0.982, 4.505, -1.911)
+ 101.49  MEASURE section 'spiral stairs up at a sprint': 2 corrections over 1 cm, worst 2.0 cm; own view moved against the body on 0 frames; other player's body moved against its velocity on 0 frames, biggest single-frame step 0.00x its speed; ping 110 ms
+ 106.75  MEASURE client slide down the spiral into a jump: 3.83 s, sliding at the bottom False, 3.27 m/s at the bottom, 3.27 m/s leaving the jump; ticks 230, airborne ticks 30, speed min 0.00 mean 3.35 max 11.05 m/s, rise per tick min -13.2 max 12.9 cm, top 4.37 m
+ 106.75  FAIL  client slides down the stairs and jumps out of it  [sliding False, jumps +1]
+ 106.75  MEASURE section 'slide down the spiral stairs into a jump': 1 corrections over 1 cm, worst 1.6 cm; own view moved against the body on 0 frames; other player's body moved against its velocity on 0 frames, biggest single-frame step 0.00x its speed; ping 107 ms
+ 108.91  PASS  the correction measure sees a snap when the host throws the body  [largest snap 199.5 cm]
+ 108.91  MEASURE section 'control: a blast the client cannot predict': 1 corrections over 1 cm, worst 199.5 cm; own view moved against the body on 0 frames; other player's body moved against its velocity on 0 frames, biggest single-frame step 0.00x its speed; ping 107 ms
+ 108.91  MEASURE client prediction, whole route: 3 corrections over a centimetre, worst 2.0 cm (before the control blast); view speed at most 19.65x the body's, moved against the body on 0 frames; ping 107 ms
+ 108.91  PASS  no rubber-banding on the client  [worst correction 2.0 cm, backward view frames 0]
+ 108.91  client saw the host: crouch up to 0.13, lean up to 0.20, speed up to 8.8 m/s, sprinting True, sliding False, climbing True, airborne True
+ 108.91  FAIL  the host's animation state reached the client  [slid False, crouch 0.13, lean 0.20, sprinted True, climbed True, airborne True]
+ 110.22  RESULT FAIL failures 5 captures 0

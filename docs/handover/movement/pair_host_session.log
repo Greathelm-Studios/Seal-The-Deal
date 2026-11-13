@@ -1,0 +1,134 @@
+   0.02  local port 17782
+   0.02  role host, local mode True, latency each way 25 ms, graphics Metal
+   0.15  PASS  first spawn is idle on the floor  [state Grounded, speed 0.00]
+  20.17  client joined; host showcase starts
+  30.67  host showcase over; host rests at (12.00, 0.00, -12.00)
+  30.67  MEASURE section 'host showing off, client watching': 0 corrections over 1 cm, worst 0.0 cm; own view moved against the body on 0 frames; other player's body moved against its velocity on 0 frames, biggest single-frame step 0.00x its speed; ping 83 ms
+  31.17  host sees the client at rest at (2.800, 0.000, -2.500)
+  40.36  remote event: sprint on
+  40.70  remote event: slide on
+  40.75  remote event: crouch down
+  40.75  remote event: sprint off
+  41.20  remote event: jumped
+  41.20  remote event: slide off
+  41.75  remote event: crouch up
+  41.93  remote event: landed at 9.4 m/s
+  41.93  remote event: sprint on
+  41.95  remote event: sprint off
+  42.35  remote event: sprint on
+  42.43  remote event: sprint off
+  42.95  host sees the client at rest at (-13.450, 0.003, -0.550)
+  54.61  remote event: sprint on
+  55.16  remote event: jumped
+  55.16  remote event: sprint off
+  55.90  remote event: jumped
+  55.90  remote event: landed at 9.4 m/s
+  56.63  remote event: jumped
+  56.63  remote event: landed at 9.4 m/s
+  57.36  remote event: jumped
+  57.36  remote event: landed at 9.4 m/s
+  57.75  remote event: landed at 4.9 m/s
+  58.33  remote event: sprint on
+  59.91  remote event: sprint off
+  63.93  host sees the client at rest at (-5.788, 0.000, -0.550)
+  64.16  host sees the client at rest at (-5.799, 0.000, -0.550)
+  64.41  host sees the client at rest at (-5.809, 0.000, -0.550)
+  64.68  host sees the client at rest at (-5.820, 0.000, -0.550)
+  64.96  host sees the client at rest at (-5.830, 0.000, -0.550)
+  65.26  host sees the client at rest at (-5.841, 0.000, -0.550)
+  65.58  host sees the client at rest at (-5.851, 0.000, -0.550)
+  65.91  host sees the client at rest at (-5.861, 0.000, -0.550)
+  66.26  host sees the client at rest at (-5.871, 0.000, -0.550)
+  66.65  host sees the client at rest at (-5.881, 0.000, -0.550)
+  67.06  host sees the client at rest at (-5.892, 0.000, -0.550)
+  67.51  host sees the client at rest at (-5.902, 0.000, -0.550)
+  68.01  host sees the client at rest at (-5.912, 0.000, -0.550)
+  68.58  host sees the client at rest at (-5.922, 0.000, -0.550)
+  69.21  host sees the client at rest at (-5.932, 0.000, -0.550)
+  69.95  host sees the client at rest at (-5.942, 0.000, -0.550)
+  70.68  remote event: sprint on
+  71.21  remote event: mantle started, Vault
+  71.21  remote event: sprint off
+  71.63  remote event: jumped
+  71.63  remote event: landed at 5.6 m/s
+  72.36  remote event: jumped
+  72.36  remote event: landed at 9.4 m/s
+  73.10  remote event: jumped
+  73.10  remote event: landed at 9.4 m/s
+  73.85  remote event: jumped
+  73.85  remote event: landed at 9.9 m/s
+  74.21  remote event: landed at 4.4 m/s
+  74.40  remote event: sprint on
+  75.66  remote event: sprint off
+  76.51  remote event: sprint on
+  76.76  remote event: mantle started, Climb
+  76.76  remote event: sprint off
+  77.05  remote event: sprint on
+  77.06  remote event: sprint off
+  77.31  remote event: landed at 6.7 m/s
+  77.83  remote event: sprint on
+  77.85  remote event: sprint off
+  78.05  remote event: sprint on
+  78.75  remote event: sprint off
+  79.24  host sees the client at rest at (-13.450, 0.003, -0.550)
+  90.18  remote event: sprint on
+  90.71  remote event: slide on
+  90.76  remote event: crouch down
+  90.76  remote event: sprint off
+  93.36  remote event: slide off
+  93.43  remote event: crouch up
+  94.05  host sees the client at rest at (10.068, 0.003, -1.538)
+  95.15  remote event: sprint on
+  97.41  remote event: sprint off
+  98.18  host sees the client at rest at (-13.450, 0.003, -0.550)
+ 107.50  remote event: sprint on
+ 108.03  remote event: slide on
+ 108.08  remote event: crouch down
+ 108.08  remote event: sprint off
+ 108.28  remote event: jumped
+ 108.28  remote event: slide off
+ 108.38  remote event: crouch up
+ 108.71  remote event: landed at 5.9 m/s
+ 108.71  remote event: sprint on
+ 108.75  remote event: sprint off
+ 109.56  host sees the client at rest at (0.547, 0.000, -1.145)
+ 110.25  remote event: sprint on
+ 111.63  remote event: sprint off
+ 112.30  remote event: jumped
+ 112.73  remote event: landed at 5.9 m/s
+ 113.23  host sees the client at rest at (-12.765, 0.003, -5.978)
+ 113.71  remote event: crouch down
+ 114.71  remote event: crouch up
+ 115.13  remote event: sprint on
+ 115.80  remote event: sprint off
+ 116.30  remote event: sprint on
+ 116.73  remote event: sprint off
+ 117.98  remote event: sprint on
+ 118.00  remote event: sprint off
+ 118.08  remote event: sprint on
+ 118.11  remote event: sprint off
+ 118.20  remote event: sprint on
+ 118.88  remote event: sprint off
+ 118.93  remote event: sprint on
+ 119.03  remote event: sprint off
+ 119.06  remote event: sprint on
+ 119.31  remote event: sprint off
+ 119.36  remote event: sprint on
+ 119.91  remote event: sprint off
+ 120.73  host sees the client at rest at (0.982, 4.505, -1.911)
+ 123.18  remote event: sprint on
+ 123.18  remote event: slide on
+ 123.23  remote event: crouch down
+ 123.23  remote event: sprint off
+ 123.31  remote event: slide off
+ 126.18  remote event: jumped
+ 126.28  remote event: crouch up
+ 126.68  remote event: landed at 7.9 m/s
+ 126.91  remote event: knocked
+ 127.73  remote event: landed at 7.9 m/s
+ 127.95  remote event: landed at 5.6 m/s
+ 128.58  host sees the client at rest at (2.904, 0.000, -8.623)
+ 129.20  MEASURE section 'host watching the client's route': 0 corrections over 1 cm, worst 0.0 cm; own view moved against the body on 0 frames; other player's body moved against its velocity on 0 frames, biggest single-frame step 8.52x its speed; ping 83 ms
+ 129.20  PASS  the client's body left with it  [despawned on the host]
+ 129.20  host saw the client: crouch up to 1.00, lean up to 0.00, speed up to 13.5 m/s, sprinting True, sliding True, climbing True, airborne True
+ 130.20  RESULT PASS failures 0 captures 24

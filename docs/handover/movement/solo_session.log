@@ -1,0 +1,65 @@
+   0.02  local port 17781
+   0.02  role solo, local mode True, latency each way 0 ms, graphics Metal
+   0.15  PASS  first spawn is idle on the floor  [state Grounded, speed 0.00]
+   0.67  PASS  looks straight up  [pitch -89.0 deg]
+   0.89  PASS  looks straight down  [pitch 89.0 deg]
+   1.97  MEASURE stick turn at full tilt 240 deg/s
+   1.97  PASS  pad stick turns at a usable speed  [240 deg/s (was about 7)]
+   2.98  MEASURE stick turn at half tilt 50 deg/s
+   3.29  MEASURE stick pitch at full tilt 150 deg/s, pitch -0.3 to -45.3 (profile 150)
+   4.10  MEASURE walk: 0.11 s to 95% of 6.0 m/s
+   4.90  PASS  walks at the profile speed  [6.00 m/s]
+   4.90  PASS  animation state while walking  [local move (0.00, 6.00), sprinting False]
+   5.90  PASS  sprints at the profile speed  [9.00 m/s]
+   5.90  PASS  animation state says sprinting  [fov 66.0]
+   5.90  MEASURE walk and sprint on the flat: ticks 115, airborne ticks 0, speed min 1.17 mean 7.35 max 9.00 m/s, rise per tick min 0.0 max 0.0 cm, top 0.00 m
+   6.25  MEASURE stop from sprint: 0.35 s, 1.13 m; ran 14.1 m
+   6.85  strafe: camera yaw 450.0, body yaw 90.0, velocity (0.00, 0.00, -6.00)
+   6.85  PASS  animation state while strafing right  [local move (6.00, 0.00)]
+   9.05  MEASURE jump: tap 0.66 m, hold 1.60 m (profile 1.60), 0.75 s in the air, landed at 9.4 m/s
+   9.05  PASS  a held jump reaches the profile height  [1.60 m]
+   9.05  PASS  a tap is a shorter hop  [0.66 m against 1.60 m]
+   9.05  PASS  jump and landing events fired once each  [jumps 2, landings since the hold 1]
+  14.15  MEASURE running jump from a sprint: 6.8 m held forward, 1.7 m when pulling back in the air
+  14.15  PASS  pulling back in the air shortens a jump  [1.7 m against 6.8 m]
+  15.26  PASS  crouch shrinks the body  [capsule 1.10 m from 1.80 m]
+  15.26  MEASURE crouch: eye 1.60 m standing, 0.90 m crouched
+  16.07  PASS  crouched speed, sprint ignored  [3.00 m/s]
+  16.57  PASS  stands back up  [capsule 1.80 m]
+  18.18  PASS  a standing body does not fit under 1.3 m  [stopped at x -11.85, mouth at -11.50]
+  19.44  PASS  letting go of crouch under a low roof stays crouched  [crouch 1.00]
+  20.59  PASS  stands once clear of the roof  [crouch 0.00]
+  22.44  lean: camera yaw 360.0, motor lean -1.00, view offset (-0.45, 0.00, 0.00), feet (0.00, 0.00, -4.00)
+  22.44  PASS  lean on Q and E  [view slid 0.45 m right, -0.45 m left]
+  24.09  PASS  Space at a desk climbs onto it  [kind Climb, feet at 0.75 m, 0.29 s]
+  25.63  PASS  Space at the 0.6 m sill vaults it  [kind Vault, 0.48 s from press to standing on the street, in at 9.0 m/s, 8.5 m/s on landing]
+  27.40  PASS  climbs a ledge at the profile's limit  [feet at 1.60 m, 0.41 s (profile says 0.35 s for the tallest)]
+  28.75  PASS  a running jump ends on top of the ledge  [feet at 1.65 m]
+  30.70  PASS  a 2.4 m wall is refused cleanly  [refusals +1 (TooHigh), climbs +0, jumps +1, feet at 0.00 m, state Grounded]
+  32.04  PASS  a climb keeps most of the speed it was entered with  [in at 9.0 m/s, out at 8.1 m/s, 0.24 s on the desk edge]
+  34.79  MEASURE stepped stairs, 0.18 m risers and no ramp, walking: ticks 90, airborne ticks 39, speed min 0.00 mean 3.73 max 7.57 m/s, rise per tick min -13.9 max 12.6 cm, top 0.95 m; top of the steps is 0.90 m
+  38.69  MEASURE spiral stairs up at a sprint, 4.5 m: 1.85 s; ticks 79, airborne ticks 0, speed min 6.05 mean 8.26 max 9.61 m/s, rise per tick min 0.1 max 9.4 cm, top 4.43 m
+  38.69  PASS  climbs a whole flight at a sprint  [feet at 4.50 m, state Grounded]
+  38.69  PASS  never leaves the treads or stalls on the way up  [airborne ticks 0, slowest 6.05 m/s (sprint is 9.0)]
+  41.20  MEASURE spiral stairs down at a sprint: 1.46 s; ticks 88, airborne ticks 0, speed min 1.18 mean 9.38 max 10.54 m/s, rise per tick min -15.1 max 1.9 cm, top 4.47 m
+  41.20  PASS  stays on the treads on the way down  [airborne ticks 0, feet at 0.00 m]
+  44.77  MEASURE three chained hops, forward held: entered at 9.00 m/s; ticks 133, airborne ticks 133, speed min 9.00 mean 9.00 max 9.00 m/s, rise per tick min -15.7 max 12.9 cm, top 1.63 m
+  44.77  PASS  speed is kept through three chained hops  [entered at 9.00 m/s, slowest 9.00 m/s]
+  49.08  MEASURE air strafing through three hops: 9.00 m/s in, 15.27 m/s out
+  49.08  PASS  air strafing gains speed  [9.00 to 15.27 m/s]
+  54.04  MEASURE slide on the flat: in at 9.00 m/s, 10.99 m/s after the boost, 17.8 m in 2.67 s
+  54.04  PASS  crouching out of a sprint slides with a boost  [sliding True, 9.00 to 10.99 m/s]
+  57.25  PASS  a jump out of a slide keeps its speed  [sliding at 10.27 m/s, 10.27 m/s in the air, state Airborne]
+  60.56  MEASURE slide down the 20 degree ramp: 9.29 m/s at the top, 10.39 m/s at the bottom; ticks 43, airborne ticks 0, speed min 9.11 mean 9.76 max 10.39 m/s, rise per tick min -8.6 max 0.0 cm, top 3.00 m
+  60.56  PASS  a slide builds speed downhill and stays on the ramp  [9.29 to 10.39 m/s, airborne ticks 0]
+  60.56  PASS  the jump at the bottom keeps the slide's speed  [10.39 m/s in the air, state Airborne]
+  62.99  MEASURE slide down the spiral stairs: 0.94 s to the bottom, drifted out to 4.29 m from the column (treads end at 2.60 m); ticks 48, airborne ticks 18, speed min 7.16 mean 9.00 max 10.90 m/s, rise per tick min -21.9 max -1.4 cm, top 4.12 m
+  64.66  menu opened in mid-air: state Airborne, speed 1.5 m/s, reader captured False
+  65.55  PASS  menu opened mid-jump leaves the player idle  [state Grounded, speed 0.00 m/s, lean 0.00, jumps +1 with Space still held]
+  66.21  PASS  no stuck or late input after the menu closes  [jumps +1, speed 0.00 m/s]
+  67.00  PASS  a blast mid-climb takes over at once  [state Knocked, feet were at 0.88 m]
+  68.29  PASS  thrown clear and back in control  [thrown 5.3 m, walks again True, knock events +1]
+  70.35  PASS  left click fires the test blast through Knockback  [knock events +1, thrown 2.3 m up]
+  70.71  PASS  Enter no longer fires  [knock events +0]
+  72.63  PASS  a second spawn is idle and has the camera  [state Grounded, speed 0.00 m/s, camera 1.60 m from the feet]
+  72.63  RESULT PASS failures 0 captures 20
