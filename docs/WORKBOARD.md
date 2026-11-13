@@ -14,3 +14,4 @@ Anything that threatens 7 Oct or 29 Oct, scope creep, or a change to netcode aut
 | Who (human / tool) | Task | Branch | Claimed scenes and prefabs | Since |
 |---|---|---|---|---|
 | Alex / Codex | Animated STDMC eye cards | Alex_Env | STDMC_Toon.prefab | 2026-11-12 |
+| Alex / Claude Code | First-person viewmodel (arms + pistol), slice 1 of weapons; firing and pickups wait on Adam's lanes 2 and 3 | Alex_Env | Player.prefab (via the greybox tool), ViewmodelArms.prefab | 2026-11-13 |

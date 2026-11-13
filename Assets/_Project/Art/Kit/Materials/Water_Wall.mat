@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Water_Wall
+  m_Shader: {fileID: 4800000, guid: d4b0cddae72cd1a49a42d3bab911e092, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _Absorption: 8
+    - _BubbleCell: 0.2
+    - _BubbleChance: 0.35
+    - _BubbleRise: 0.3
+    - _BubbleSize: 0.022
+    - _CausticScale: 0.16
+    - _CausticSpeed: 0.8
+    - _CausticWidth: 0.09
+    - _EdgePower: 4
+    - _FillLevel: 2.35
+    - _PaneBottom: 0.06
+    - _ShaftFade: 1.4
+    - _ShaftSpacing: 0.28
+    - _ShaftTilt: 0.25
+    - _StreakAngle: 32
+    - _StreakSpacing: 2.2
+    - _StreakWide: 0.22
+    - _SurfaceWidth: 0.006
+    - _TankDepth: 0.3
+    - _WaveHeight: 0.025
+    - _WaveLength: 0.8
+    - _WaveSpeed: 0.3
+    m_Colors:
+    - _BackColor: {r: 0.7, g: 0.93, b: 1, a: 1}
+    - _BubbleColor: {r: 1, g: 1, b: 1, a: 0.9}
+    - _CausticColor: {r: 1, g: 1, b: 1, a: 0.8}
+    - _DeepColor: {r: 0, g: 0.13999996, b: 0.39999998, a: 1}
+    - _EdgeColor: {r: 0.86, g: 0.96999997, b: 1, a: 0.45}
+    - _GlassColor: {r: 0.85, g: 0.96, b: 1, a: 0.12}
+    - _ShaftColor: {r: 0.9, g: 1, b: 1, a: 0.22}
+    - _ShallowColor: {r: 0.19999996, g: 0.74, b: 0.86, a: 1}
+    - _StreakColor: {r: 1, g: 1, b: 1, a: 0.18}
+    - _SurfaceColor: {r: 1, g: 1, b: 1, a: 0.95}
+    - _UndersideColor: {r: 0.75, g: 0.97999996, b: 1, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
+--- !u!114 &6595512866955792271
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Editor::UnityEditor.Rendering.Universal.AssetVersion
+  version: 10

@@ -10,6 +10,9 @@
 #  Modified  : Claude Opus 5.5, 2026-11-12 — adds the office-direction pieces (cobalt and portal walls,
 #              stair steps, locked door, strip light).
 #  Modified  : Claude Opus 5.5, 2026-11-12 — adds the round-5 labyrinth pieces.
+#  Modified  : Claude Opus 5.5, 2026-11-13 — adds zone signs, the desk and the pod chair.
+#  Modified  : Claude Opus 5.5, 2026-11-13 — adds the detail-pass pieces (columns, workstations, partitions...).
+#  Modified  : Claude Opus 5.5, 2026-11-13 — adds the Japanese office props (the mix, concepts/Japanese_Aero).
 # -----------------------------------------------------------------------------
 # Usage: ArtSource/Kit/build_all.sh <path to blender-modeling skill>
 set -euo pipefail
@@ -20,7 +23,11 @@ PIECES="Slab_4x4 Slab_2x4 Slab_4x2 Slab_2x2 Slab_Stairwell Wall_Solid_4m Wall_So
 Window_4m Window_2m Column_Facade Column_CornerL Column_CornerR Partition_Glass_4m Partition_Glass_2m Stair_Flight Stair_Column Stair_CagePanel
 Wall_Solid_4m_Cobalt Wall_Solid_2m_Cobalt Wall_Solid_4m_PortalHead Wall_Door_4m_PortalHead Stair_Steps Stair_LockedDoor Ceiling_LightStrip
 Wall_Return_2x2 Wall_Return_2x2_Cobalt Wall_Niche_4m Counter_Capsule_2m Cover_Block_2m Partition_Frost_4m Partition_Frost_2m
-Stair_Straight_2m Ramp_2x4 Guard_Glass_4m Guard_Glass_2m Slab_4x4_LightLine"
+Stair_Straight_2m Ramp_2x4 Guard_Glass_4m Guard_Glass_2m Slab_4x4_LightLine
+Sign_Zone_L Sign_Zone_R Sign_Zone_C Sign_Zone_H Sign_Zone_A Desk_Sculpt Chair_Pod
+Column_Graphic Column_Graphic_Tall Workstation_Bench Chair_Task Storage_Low Copier Desk_Reception Guard_Rail_4m
+Guard_Rail_2m Partition_Header_4m Partition_Header_2m Partition_Header_Curve_2x2 Light_Pendant_Linear Carpet_Overlay_4x4 Ceiling_Grid_4x4 Planter_Box
+Water_Server Umbrella_Stand Vending_Machine Slipper_Cabinet Phone_Desk Doc_Tray Logo_Aonagi Sign_LED_Reception Water_Wall"
 
 for p in $PIECES; do
   $MDL build "$HERE/kit_pieces.py" --out "$HERE/build/$p.blend" --set PIECE="$p" > "$HERE/build/$p.build.log"

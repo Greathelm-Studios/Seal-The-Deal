@@ -1,0 +1,10 @@
+MrEliptik Office low poly pack - greybox stand-in throwable props (docs/GDD.md: no packs ship; replace before store screenshots).
+Source  : https://mreliptik.itch.io/office-low-poly-pack (office_pack.zip, downloaded 2026-11-13)
+Licence : CC0 1.0, see LICENSE.txt. No credit required.
+Changed : the pack ships GLB only, which Unity does not import here, so each model was converted to FBX with headless
+          Blender (glTF import, each object's transform baked into its vertices so the root is unrotated at scale 1, FBX export
+          with -Z forward, Y up). Shapes, sizes and materials are otherwise as published.
+Left out: all_objects.glb (every model in one file) and desktop.glb / mousepad.glb (132-byte placeholder files in the zip, no mesh).
+Heavy   : keyboard, keyboard_slim (93,342 triangles each) and laptop (94,772) model every key; too heavy to use as they are.
+Scale   : not corrected. As published the monitor is 1.0 m wide, the chair 1.6 m tall and desk_big 3.1 m long.
+Note    : written by Claude Fable 5.2 (Claude Code) on 2026-11-13 at Alex's request; not reviewed by a human.

@@ -46,6 +46,7 @@ GameObject:
   - component: {fileID: 4680666766096500643}
   - component: {fileID: 5842299367726580714}
   - component: {fileID: 7581206824313403346}
+  - component: {fileID: 3526223773198346160}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -219,6 +220,22 @@ MonoBehaviour:
     m_Bits: 128
   _cameraTarget: {fileID: 4165610245162811838}
   _leanPivot: {fileID: 1549759532965773935}
+--- !u!114 &3526223773198346160
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4715390566021658440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f39c8b60806276841b858f622b9e325c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Player.PlayerViewmodel
+  _motor: {fileID: 7581206824313403346}
+  _armsPrefab: {fileID: 1117558304164549617, guid: 4c4575d2c4f22844196db0122902ccf4, type: 3}
+  _profile: {fileID: 11400000, guid: 494c95c72d3d1884cb859767c6a6c274, type: 2}
+  _actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
 --- !u!1 &7111191965594976901
 GameObject:
   m_ObjectHideFlags: 0
@@ -286,6 +303,7 @@ MonoBehaviour:
   _solid:
     serializedVersion: 2
     m_Bits: 4294967231
+  _hitProfile: {fileID: 0}
 --- !u!1001 &6635744345043095598
 PrefabInstance:
   m_ObjectHideFlags: 0

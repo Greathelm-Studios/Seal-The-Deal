@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9c7b960ab8328d488bf6215c7853921, type: 3}
+  m_Name: DefaultViewmodel
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Player.ViewmodelProfile
+  FieldOfView: 62
+  NearDistance: 0.01
+  FarDistance: 5
+  GunPosition: {x: 0.082, y: -0.055, z: 0.32}
+  GunTurn: {x: -4, y: -9, z: 0}
+  ShoulderPosition: {x: 0.17, y: -0.2, z: -0.08}
+  LookLagSeconds: 0.03
+  LookLagLimit: 5
+  LookLagSettleSeconds: 0.09
+  BobHeight: 0.012
+  BobSide: 0.008
+  BobStepsPerMetre: 0.55
+  BobFadeSeconds: 0.15
+  KickPitch: 6
+  KickBack: 0.035
+  KickRoll: 3
+  KickRecoverSeconds: 0.18
+  ReloadSeconds: 1.2
+  ReloadDrop: 0.1
+  ReloadTilt: 40
+  ReloadRoll: 25

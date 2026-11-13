@@ -8,6 +8,13 @@
 //  Modified  : Claude Fable 5.2, 2026-11-12 — the body is carried along with part of the
 //              player's acceleration (Alex: setting off and stopping "too floppy / wobbly")
 //              2026-11-13 — the neck keeps the pose's own bend (Alex: the idle "has a hunch")
+//              2026-11-13 — takes hits (Hit): a push on the struck part and its neighbours
+//              and briefly slack joints there (Alex: "test animations of being hit by certain
+//              powers of weapons"). Nothing changes for a body that is not hit.
+//              2026-11-13 — a hard enough hit knocks the body down: the hips' spring lets go,
+//              it falls and lies as a free ragdoll, then is drawn back up into its pose
+//              (Alex: "a ragdoll system when explosion systems or heavy or big props get
+//              thrown"). Only bodies with a hit profile, so only the test dummy today.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Gives the player a body made of real rigidbodies and joints that is driven
 //              toward the pose PlayerAnimator writes, and shows that body instead of the pose.
@@ -149,12 +156,22 @@ namespace CloseTheDeal.Player
         [Tooltip("What the ragdoll bumps into: everything solid in the level, but not players.")]
         [SerializeField] LayerMask _solid = ~0;
 
+        [Tooltip("Tuning for how the body reacts to hits. Optional: left empty, hits do nothing to this body. Read at runtime, never written.")]
+        [SerializeField] HitReactionProfile _hitProfile;
+
+        /// <summary>A blast closer to a part than this, metres, has no usable direction away from itself; the hit's own direction is used instead. WHY 0.01: the same cut-off <c>Knockback.ThrowVelocity</c> uses.</summary>
+        const float MinBlastDistance = 0.01f;
+
         /// <summary>One rigidbody of the ragdoll and the bone it stands for.</summary>
         struct Part
         {
             /// <summary>The bone this part turns. Its rotation and the body's are the same.</summary>
             public Transform Bone;
             public Rigidbody Body;
+            /// <summary>The part's one collider, for finding which part a hit landed on.</summary>
+            public Collider Shape;
+            /// <summary>0–1: how slack a hit has left this part's joint. Fades back to 0.</summary>
+            public float Weak;
             /// <summary>The joint to this part's parent; null for the hips.</summary>
             public ConfigurableJoint Joint;
             public int Parent;
@@ -184,9 +201,26 @@ namespace CloseTheDeal.Player
         float _nextLevelCopy;
         bool _built;
         bool _posed;
+        /// <summary>True while any part's joint is still slack from a hit.</summary>
+        bool _flinching;
+        /// <summary>The parts' usual low-friction surface, and the grippier one they wear while knocked down.</summary>
+        PhysicsMaterial _slippery, _grippy;
+        /// <summary>True from a knock-down until the body has lain long enough; then it starts getting up.</summary>
+        bool _down;
+        /// <summary>Seconds since the knock-down.</summary>
+        float _downTime;
+        /// <summary>0–1: how firmly the hips' spring and the joints hold the body. 1 = normal; 0 = a free, limp ragdoll (knocked down). Rises back to 1 as it gets up.</summary>
+        float _hold = 1f;
 
-        /// <summary>Where the ragdoll is, world space; <see cref="RagdollWorld"/> keeps level geometry near it.</summary>
-        public Vector3 Centre => _parts[Hips].TargetPosition;
+        /// <summary>Where the ragdoll is, world space; <see cref="RagdollWorld"/> keeps level geometry near it. The body itself while it is knocked down or getting up, since it may lie metres from where it stood.</summary>
+        public Vector3 Centre => _hold < 1f ? _parts[Hips].Body.position : _parts[Hips].TargetPosition;
+
+        /// <summary>True while the body is knocked down: falling or lying, before it starts to get up.</summary>
+        /// <remarks>Whatever owns the body's place in the world (the test dummy's root; later the player's capsule) decides where it gets up; while this is true the pose it will rise into should be kept at the body.</remarks>
+        public bool Down => _down;
+
+        /// <summary>Where the ragdoll's hips are, world space, metres. Only meaningful after the first frame.</summary>
+        public Vector3 HipsPosition => _built ? _parts[Hips].Body.position : transform.position;
 
         void Start()
         {
@@ -273,6 +307,16 @@ namespace CloseTheDeal.Player
                     Physics.IgnoreCollision(colliders[a], colliders[b]);
             }
 
+            _slippery = slippery;
+            // WHY a second material: upright, the parts must slide off walls and furniture
+            // (low friction, taking the lower of the two surfaces'); lying on the floor the same
+            // slipperiness lets a blasted body skate the length of a room.
+            _grippy = new PhysicsMaterial("Ragdoll (down)")
+            {
+                bounciness = 0f,
+                frictionCombine = PhysicsMaterialCombine.Maximum,
+                bounceCombine = PhysicsMaterialCombine.Minimum
+            };
             _parts[Hips].Body.inertiaTensor *= HipsSteadiness;
             _hipsTargetWas = _parts[Hips].Body.position;
             _playerWas = transform.position;
@@ -357,6 +401,7 @@ namespace CloseTheDeal.Player
             shape.transform.SetParent(go.transform, false);
             float length = Vector3.Distance(joint, end);
             float radius = Radii[index];
+            Collider made;
             if (length > radius * 2f)
             {
                 // A capsule's long axis is its own Y; the child object is turned to lay it along the bone.
@@ -365,6 +410,7 @@ namespace CloseTheDeal.Player
                 capsule.radius = radius;
                 capsule.height = length + radius * 2f;
                 capsule.material = material;
+                made = capsule;
             }
             else
             {
@@ -372,6 +418,7 @@ namespace CloseTheDeal.Player
                 var ball = shape.AddComponent<SphereCollider>();
                 ball.radius = radius;
                 ball.material = material;
+                made = ball;
             }
 
             var body = go.AddComponent<Rigidbody>();
@@ -389,6 +436,7 @@ namespace CloseTheDeal.Player
             ref Part part = ref _parts[index];
             part.Bone = bone;
             part.Body = body;
+            part.Shape = made;
             part.Parent = parent;
             part.TargetPosition = part.WasPosition = joint;
             part.TargetRotation = part.WasRotation = bone.rotation;
@@ -427,14 +475,22 @@ namespace CloseTheDeal.Player
             ReadPose(dt, out Quaternion leftFootPose, out Quaternion rightFootPose);
             // The bodies are built in the T-pose; the first frame puts them on the real pose so the
             // character does not spawn with its arms out and let them fall.
-            if (!_posed || (_parts[Hips].Body.position - _parts[Hips].TargetPosition).sqrMagnitude > SnapDistance * SnapDistance)
+            // WHY not while knocked down or getting up: a floored body is meant to be far from
+            // its pose, and snapping it back would undo the fall.
+            if (!_posed || (_hold >= 1f && (_parts[Hips].Body.position - _parts[Hips].TargetPosition).sqrMagnitude > SnapDistance * SnapDistance))
             {
                 PutOnPose();
                 _posed = true;
             }
+            if (_flinching)
+                RecoverFromHits(dt);
+            if (_hold < 1f)
+                UpdateKnockDown(dt);
             Aim(_animator.Limp);
 
-            if (Time.time >= _nextLevelCopy)
+            // WHY every frame while knocked down: a thrown body covers more ground between the
+            // usual refreshes than the copies reach, and would fall through a floor not yet copied.
+            if (_hold < 1f || Time.time >= _nextLevelCopy)
             {
                 _nextLevelCopy = Time.time + RagdollWorld.RefreshTime;
                 RagdollWorld.CopyLevelAround(Centre, _solid);
@@ -503,6 +559,8 @@ namespace CloseTheDeal.Player
         void Aim(float limp)
         {
             float strength = Brace() * Mathf.Lerp(1f, _profile.LimpShare, limp);
+            if (_hold < 1f)
+                strength *= Mathf.Lerp(_hitProfile.DownLimpShare, 1f, Mathf.SmoothStep(0f, 1f, _hold));
             for (int i = 1; i < PartCount; i++)
             {
                 ref Part part = ref _parts[i];
@@ -513,6 +571,10 @@ namespace CloseTheDeal.Player
                     : i == Head ? _profile.HeadStrength
                     : i <= RightLowerArm ? _profile.ArmStrength
                     : _profile.LegStrength) * strength;
+                // A joint a hit has left slack. Skipped outright for a body that has not been
+                // hit, so its motion is exactly what it was before hits existed.
+                if (part.Weak > 0f)
+                    hz *= Mathf.Lerp(1f, _hitProfile.FlinchLimpShare, part.Weak);
                 float omega = 2f * Mathf.PI * hz;
                 // WHY "use acceleration": the motor then pulls as hard as it takes to swing whatever
                 // is hanging off the joint at the wanted speed, so one strength number means the
@@ -524,6 +586,189 @@ namespace CloseTheDeal.Player
                     maximumForce = float.MaxValue,
                     useAcceleration = true
                 };
+            }
+        }
+
+        /// <summary>
+        /// Makes the body react to a hit: the struck part and the parts joined to it are pushed,
+        /// and their joints go slack for a fraction of a second, more for a harder hit. A blast
+        /// (a hit with a radius) pushes every part in reach away from its centre.
+        /// </summary>
+        /// <param name="hit">Where, which way, how hard (newton-seconds) and what kind.</param>
+        /// <remarks>
+        /// <para>
+        /// Visual only, like the rest of this component: it moves this client's ragdoll and
+        /// nothing else, never the player (AGENTS.md §3). Does nothing without a hit profile, or
+        /// before the body's first frame. Call it from the main thread at any point in a frame;
+        /// the push is felt at the next ragdoll step. Allocates nothing.
+        /// </para>
+        /// <para>
+        /// A hit at least as hard as the hit profile's knock-down strength floors the body:
+        /// the hips' spring lets go, it falls and lies as a free ragdoll, and after a moment it
+        /// is drawn back up. Whatever owns the body's place in the world should keep the pose
+        /// at the body while <see cref="Down"/> is true, so it rises where it landed.
+        /// </para>
+        /// <para>
+        /// WHY the caller says how hard instead of a moving collider striking the ragdoll: the
+        /// ragdoll lives in a physics scene of its own, where bullets and thrown props do not
+        /// exist (see <see cref="RagdollWorld"/>).
+        /// </para>
+        /// </remarks>
+        /// <example>
+        /// <code>
+        /// ragdoll.Hit(new HitInfo { Point = hit.point, Direction = ray.direction, Impulse = 20f, Type = HitType.Bullet });
+        /// </code>
+        /// </example>
+        public void Hit(in HitInfo hit)
+        {
+            if (!_built || !_posed || _hitProfile == null || hit.Impulse <= 0f)
+                return;
+
+            if (!_down && _hitProfile.KnockDownImpulse > 0f && hit.Impulse >= _hitProfile.KnockDownImpulse
+                && (hit.Type != HitType.Bullet || _hitProfile.BulletsKnockDown))
+                KnockDown();
+
+            float impulse = hit.Impulse * _hitProfile.ImpulseShare;
+            float weak = Mathf.Clamp01(hit.Impulse / _hitProfile.FlinchFullImpulse);
+            Vector3 along = hit.Direction.normalized;
+
+            if (hit.Radius > 0f)
+            {
+                // A blast: the impulse is shared out by weight and by how near each part is, so
+                // the near side of the body is thrown harder and the body is turned as well as
+                // pushed.
+                float shares = 0f;
+                for (int i = 0; i < PartCount; i++)
+                    shares += BlastShare(i, hit);
+                if (shares <= 0f)
+                    return;
+                for (int i = 0; i < PartCount; i++)
+                {
+                    float share = BlastShare(i, hit);
+                    if (share <= 0f)
+                        continue;
+                    Vector3 centre = _parts[i].Body.worldCenterOfMass;
+                    Vector3 away = centre - hit.Point;
+                    float distance = away.magnitude;
+                    Kick(i, (distance > MinBlastDistance ? away / distance : along) * (impulse * share / shares), centre, weak);
+                }
+                return;
+            }
+
+            int struck = NearestPart(hit.Point);
+            Kick(struck, along * impulse, hit.Point, weak);
+            for (int i = 0; i < PartCount; i++)
+            {
+                if (i != struck && (_parts[i].Parent == struck || _parts[struck].Parent == i))
+                    Kick(i, along * (impulse * _hitProfile.NeighbourShare), _parts[i].Body.worldCenterOfMass, weak * _hitProfile.NeighbourShare);
+            }
+        }
+
+        /// <summary>How much of a blast one part takes, before the shares are made to add up to the whole: its weight times how far inside the blast's reach it is (1 at the centre, 0 at the edge).</summary>
+        float BlastShare(int index, in HitInfo hit)
+        {
+            Rigidbody body = _parts[index].Body;
+            float distance = Vector3.Distance(body.worldCenterOfMass, hit.Point);
+            return body.mass * (1f - Mathf.Clamp01(distance / hit.Radius));
+        }
+
+        /// <summary>The part whose collider is nearest a point, world space.</summary>
+        int NearestPart(Vector3 point)
+        {
+            int nearest = Hips;
+            float best = float.MaxValue;
+            for (int i = 0; i < PartCount; i++)
+            {
+                float distance = (_parts[i].Shape.ClosestPoint(point) - point).sqrMagnitude;
+                if (distance < best)
+                {
+                    best = distance;
+                    nearest = i;
+                }
+            }
+            return nearest;
+        }
+
+        /// <summary>Pushes one part and leaves its joint slack.</summary>
+        /// <param name="index">The part.</param>
+        /// <param name="impulse">The push, newton-seconds, world space; capped so the part leaves no faster than the profile allows.</param>
+        /// <param name="at">Where on the part it lands, world space.</param>
+        /// <param name="weak">0–1: how slack to leave the joint. A part already slacker keeps what it has.</param>
+        void Kick(int index, Vector3 impulse, Vector3 at, float weak)
+        {
+            ref Part part = ref _parts[index];
+            part.Body.AddForceAtPosition(Vector3.ClampMagnitude(impulse, part.Body.mass * _hitProfile.MaxKickSpeed), at, ForceMode.Impulse);
+            part.Weak = Mathf.Max(part.Weak, weak);
+            _flinching = true;
+        }
+
+        /// <summary>
+        /// Lets go of the body: the hips' spring stops holding it up and every joint goes
+        /// near-limp, so it falls and lies as a real ragdoll until <see cref="UpdateKnockDown"/>
+        /// stands it up again.
+        /// </summary>
+        /// <remarks>
+        /// WHY the parts switch to continuous collision while down: a limb thrown at the
+        /// profile's top speed moves several centimetres a step, and the level's floor slabs are
+        /// 0.2 m thick; checked only at each step's end, a fast part could end a step on the
+        /// far side of one. It is switched back on getting up because it costs more and an
+        /// upright body never moves that fast against the floor.
+        /// </remarks>
+        void KnockDown()
+        {
+            _down = true;
+            _downTime = 0f;
+            _hold = 0f;
+            // Set here, not once at spawn, so the profile value can be tuned while playing.
+            _grippy.dynamicFriction = _grippy.staticFriction = _hitProfile.DownFriction;
+            for (int i = 0; i < PartCount; i++)
+            {
+                _parts[i].Body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                _parts[i].Shape.sharedMaterial = _grippy;
+            }
+        }
+
+        /// <summary>
+        /// Runs the knock-down: keeps the body down until it has come to rest (or has lain as
+        /// long as the profile allows), then brings the hips' spring and the joints back to full
+        /// strength over the get-up time, which draws the body up into its pose.
+        /// </summary>
+        /// <param name="dt">Frame time, seconds.</param>
+        /// <remarks>
+        /// The get-up is the spring and the joints alone, with no get-up animation: the body is
+        /// hoisted by the hips rather than climbing to its feet. A clip to rise through is the
+        /// natural next step and would slot in as the pose during this blend.
+        /// </remarks>
+        void UpdateKnockDown(float dt)
+        {
+            if (_down)
+            {
+                _downTime += dt;
+                float settle = _hitProfile.SettleSpeed;
+                bool atRest = _parts[Hips].Body.linearVelocity.sqrMagnitude < settle * settle;
+                if (_downTime < _hitProfile.DownMaxTime && (_downTime < _hitProfile.DownMinTime || !atRest))
+                    return;
+                _down = false;
+                for (int i = 0; i < PartCount; i++)
+                {
+                    _parts[i].Body.collisionDetectionMode = CollisionDetectionMode.Discrete;
+                    _parts[i].Shape.sharedMaterial = _slippery;
+                }
+            }
+            _hold = Mathf.MoveTowards(_hold, 1f, dt / Mathf.Max(_hitProfile.GetUpTime, HitReactionProfile.MinFlinchRecover));
+        }
+
+        /// <summary>Gives the joints hits have slackened their strength back, a frame's worth.</summary>
+        /// <param name="dt">Frame time, seconds.</param>
+        void RecoverFromHits(float dt)
+        {
+            float fade = dt / Mathf.Max(_hitProfile.FlinchRecover, HitReactionProfile.MinFlinchRecover);
+            _flinching = false;
+            for (int i = 0; i < PartCount; i++)
+            {
+                ref Part part = ref _parts[i];
+                part.Weak = Mathf.MoveTowards(part.Weak, 0f, fade);
+                _flinching |= part.Weak > 0f;
             }
         }
 
@@ -545,7 +790,10 @@ namespace CloseTheDeal.Player
         /// <param name="dt">The step, seconds.</param>
         public void BeforeStep(float dt)
         {
-            Vector3 fall = Physics.gravity * _profile.RagdollGravity + _carryPush;
+            // Knocked down, the body is not carried along with anything: it is on its own.
+            Vector3 fall = Physics.gravity * _profile.RagdollGravity + (_hold < 1f ? Vector3.zero : _carryPush);
+            // How much of the hips' spring is working: none while down, all of it once up.
+            float held = _hold < 1f ? Mathf.SmoothStep(0f, 1f, _hold) : 1f;
             for (int i = 0; i < PartCount; i++)
             {
                 ref Part part = ref _parts[i];
@@ -560,7 +808,7 @@ namespace CloseTheDeal.Player
             // Scaled by the whole body's mass, because the whole body hangs from the hips.
             Vector3 pull = follow * follow * (hips.TargetPosition - hips.Body.position)
                 - 2f * _profile.HipsDamping * follow * (hips.Body.linearVelocity - _hipsTargetSpeed);
-            hips.Body.AddForce(pull * _totalMass, ForceMode.Force);
+            hips.Body.AddForce(pull * (_totalMass * held), ForceMode.Force);
 
             float upright = 2f * Mathf.PI * _profile.UprightStrength * Brace() * Mathf.Lerp(1f, _profile.LimpShare, limp);
             Quaternion off = hips.TargetRotation * Quaternion.Inverse(hips.Body.rotation);
@@ -571,7 +819,7 @@ namespace CloseTheDeal.Player
             {
                 Vector3 turn = upright * upright * (degrees * Mathf.Deg2Rad) * axis
                     - 2f * _profile.HipsDamping * upright * hips.Body.angularVelocity;
-                hips.Body.AddTorque(turn, ForceMode.Acceleration);
+                hips.Body.AddTorque(turn * held, ForceMode.Acceleration);
             }
         }
 

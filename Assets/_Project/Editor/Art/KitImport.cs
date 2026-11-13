@@ -18,6 +18,11 @@
 //  Modified  : Claude Opus 5.5, 2026-11-12 — the floor is a pale polished surface, not carpet.
 //  Modified  : Claude Opus 5.5, 2026-11-12 — labyrinth pieces (round 5), glossy white, cobalt and silver,
 //              Glass_Frosted, flat ceiling (no tile texture), and box colliders only for real boxes.
+//  Modified  : Claude Opus 5.5, 2026-11-13 — zone signs (visual only), the sculptural desk and pod chair.
+//  Modified  : Claude Opus 5.5, 2026-11-13 — detail-pass pieces; Carpet_Dark, Ceiling_Grid, Plant_Leaf.
+//  Modified  : Claude Opus 5.5, 2026-11-13 — Japanese corporate mix: palette, Accent_Aqua/Mist/Seal, Water_Wall,
+//              nine Japanese office props.
+//  Modified  : Claude Opus 5.5, 2026-11-13 — Water_Wall uses the Aero Water Pane shader (animated liquid).
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 // -----------------------------------------------------------------------------
 using System.Collections.Generic;
@@ -91,10 +96,24 @@ namespace CloseTheDeal.Editor.Art
             "Wall_Return_2x2", "Wall_Return_2x2_Cobalt", "Wall_Niche_4m", "Counter_Capsule_2m", "Cover_Block_2m",
             "Partition_Frost_4m", "Partition_Frost_2m", "Stair_Straight_2m", "Ramp_2x4", "Guard_Glass_4m",
             "Guard_Glass_2m", "Slab_4x4_LightLine",
+            // Fix list 2026-11-13: zone signs and props
+            "Sign_Zone_L", "Sign_Zone_R", "Sign_Zone_C", "Sign_Zone_H", "Sign_Zone_A", "Desk_Sculpt", "Chair_Pod",
+            // Detail pass 2026-11-13, after Alex's reference plates
+            "Column_Graphic", "Column_Graphic_Tall", "Workstation_Bench", "Chair_Task", "Storage_Low", "Copier",
+            "Desk_Reception", "Guard_Rail_4m", "Guard_Rail_2m", "Partition_Header_4m", "Partition_Header_2m", "Partition_Header_Curve_2x2",
+            "Light_Pendant_Linear", "Carpet_Overlay_4x4", "Ceiling_Grid_4x4", "Planter_Box",
+            // Japanese office props, the mix (ArtSource/Kit/concepts/Japanese_Aero/DECISION.md)
+            "Water_Server", "Umbrella_Stand", "Vending_Machine", "Slipper_Cabinet", "Phone_Desk",
+            "Doc_Tray", "Logo_Aonagi", "Sign_LED_Reception", "Water_Wall",
         };
 
         /// <summary>Pieces that are seen but never touched, so they have no collider (kit README).</summary>
-        static readonly HashSet<string> VisualOnly = new HashSet<string> { "Stair_Steps", "Ceiling_LightStrip" };
+        static readonly HashSet<string> VisualOnly = new HashSet<string>
+        {
+            "Stair_Steps", "Ceiling_LightStrip", "Sign_Zone_L", "Sign_Zone_R", "Sign_Zone_C", "Sign_Zone_H", "Sign_Zone_A",
+            "Light_Pendant_Linear", "Carpet_Overlay_4x4", "Ceiling_Grid_4x4",
+            "Phone_Desk", "Doc_Tray", "Logo_Aonagi", "Sign_LED_Reception",
+        };
 
         /// <summary>Pieces whose mesh is only a collider: the stair ramp is walked on, Stair_Steps is what is seen.</summary>
         static readonly HashSet<string> ColliderOnly = new HashSet<string> { "Stair_Flight" };
@@ -104,7 +123,9 @@ namespace CloseTheDeal.Editor.Art
         // plain polished surface whose interest comes from what it reflects, not from a texture.
         // WHY not Ceiling_Tile either: the approved labyrinth (round 5) has flat white ceilings with light lines,
         // not a tile grid. The texture stays in ArtSource/Kit/textures if a room set wants it back.
-        static readonly HashSet<string> Textured = new HashSet<string>();
+        // Carpet_Dark and Ceiling_Grid (2026-11-13): the reference plates' work-area carpet and tile grid, as
+        // separate materials on overlay pieces, so the polished floor and flat ceiling stay elsewhere.
+        static readonly HashSet<string> Textured = new HashSet<string> { "Carpet_Dark", "Ceiling_Grid" };
 
         /// <summary>Pieces with no collider mesh whose render mesh is the collider, not convex (kit README).</summary>
         static readonly HashSet<string> RenderMeshColliders = new HashSet<string> { "Slab_Stairwell", "Stair_Flight" };
@@ -117,11 +138,12 @@ namespace CloseTheDeal.Editor.Art
             // reflection probes (Close the Deal > Art > Bake Floor Reflections); without them it mirrors the sky.
             // WHY mid-pale, not white: a white floor reflecting a white room shows no reflection at
             // all. A slightly darker, near-mirror floor lets the reflections carry it.
-            ("Floor_Carpet", "B8C2CE", 0f, 0.97f, false),
-            ("Ceiling_Tile", "F3F4F4", 0f, 0.1f, false),
-            // Round 5 gloss levels (README_r5 "Material proposals"): gloss white lacquer, gloss cobalt, inset silver.
-            ("Wall_PaperWhite", "F3F4F4", 0f, 0.9f, false),
-            ("Frame_Aluminium", "C9CED3", 0.8f, 0.72f, false),
+            ("Floor_Carpet", "DCE8EC", 0f, 0.85f, false),   // the mix: reflections kept, less mirror
+            ("Ceiling_Tile", "F0F5F5", 0f, 0.1f, false),
+            // Japanese corporate mix (ArtSource/Kit/concepts/Japanese_Aero/DECISION.md): pearl lacquer at satin
+            // gloss rather than round 5's mirror gloss, and a cooler silver.
+            ("Wall_PaperWhite", "F4F8F8", 0f, 0.7f, false),
+            ("Frame_Aluminium", "C8D2D9", 0.85f, 0.65f, false),
             ("Glass_Clear", "B3D9F2", 0f, 0.95f, true),
             ("Door_Leaf", "C9CED3", 0f, 0.4f, false),
             ("Stair_Aluminium", "C9CED3", 0.6f, 0.65f, false),
@@ -129,12 +151,22 @@ namespace CloseTheDeal.Editor.Art
             ("Accent_Cobalt", "244FB9", 0f, 0.94f, false),
             ("Light_Strip", "FFFFFF", 0f, 0.5f, false),
             ("Door_LockedRed", "C0281E", 0f, 0.55f, false),
-            ("Glass_Frosted", "E6ECF2", 0f, 0.3f, false),
+            ("Glass_Frosted", "C6E9E6", 0f, 0.3f, false),
+            ("Carpet_Dark", "7E96AC", 0f, 0.06f, false),
+            ("Ceiling_Grid", "F0F5F5", 0f, 0.1f, false),
+            ("Plant_Leaf", "70AF59", 0f, 0.24f, false),
+            ("Accent_Aqua", "45BFC7", 0f, 0.76f, false),
+            ("Accent_Mist", "A8BFD1", 0f, 0.4f, false),
+            ("Accent_Seal", "C7473E", 0f, 0.35f, false),
+            ("Water_Wall", "7ADAD8", 0f, 0.9f, false),
         };
 
-        /// <summary>Glass_Frosted opacity. WHY 0.8: reads as "can't see through" next to the 5 % clear glass,
-        /// yet still lets light and colour through so the strips don't look like painted wall.</summary>
-        const float FrostAlpha = 0.8f;
+        /// <summary>Glass_Frosted opacity. WHY 0.65 (was 0.8): the mix's aqua pearl frost (Japanese_Aero/DECISION.md)
+        /// should glow with the light behind it; it still reads as "can't see through" next to the 5 % clear glass.</summary>
+        const float FrostAlpha = 0.65f;
+        /// <summary>The water wall's shader: animated liquid drawn on the flat panel (Art/Water/AeroWater.shader).
+        /// Alex 2026-11-13: "a glass pane with animated liquid inside ... a shader and not physical geometry".</summary>
+        const string WaterShaderName = "Close the Deal/Aero Water Pane";
 
         [MenuItem("Close the Deal/Art/Import Kit and Build Test Scene")]
         public static void RunFromMenu()
@@ -218,6 +250,23 @@ namespace CloseTheDeal.Editor.Art
                         Debug.LogWarning($"[Kit Import] Shader '{GlassShaderName}' not found; {m.name} falls back to transparent URP Lit.");
                         MakeTransparent(mat);
                     }
+                }
+                if (m.name == "Water_Wall")
+                {
+                    // WHY skip the rest: the water shader has its own colours (tuned in the Inspector and kept
+                    // across re-imports), so the Lit colour, smoothness and texture settings below don't apply.
+                    Shader water = Shader.Find(WaterShaderName);
+                    if (water != null)
+                    {
+                        mat.shader = water;
+                        mat.renderQueue = -1;
+                        EditorUtility.SetDirty(mat);
+                        result[m.name] = mat;
+                        continue;
+                    }
+                    Debug.LogWarning($"[Kit Import] Shader '{WaterShaderName}' not found; {m.name} falls back to transparent URP Lit.");
+                    c.a = FrostAlpha;
+                    MakeTransparent(mat);
                 }
                 if (m.name == "Glass_Frosted")
                 {

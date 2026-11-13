@@ -3,6 +3,8 @@
 #  Generator : Claude Opus 5.5 (Claude Code)
 #  Generated : 2026-11-12
 #  Prompt    : Alex approved the "White Trays + Cobalt Portal" office concepts; make the kit to them
+#  Modified  : Claude Opus 5.5, 2026-11-13 — adds Carpet_Dark (the reference plates' dark work-area
+#              carpet) and Ceiling_Grid (the tile grid, now a separate material over work areas).
 #  Reviewed  : NOT YET REVIEWED BY A HUMAN
 #  Summary   : Draws the two tiling textures the approved concepts lean on: the cheap ceiling-tile grid
 #              and quarter-turned carpet tiles. They are drawn by script, not painted, so the tile size
@@ -25,7 +27,8 @@ TILE = 0.5              # tile module, metres. WHY: divides the 2 m infill and 4
 CEILING = (0xF3, 0xF4, 0xF4)   # Paper White, bible §03
 CEILING_SEAM = (0xD3, 0xD8, 0xDE)   # grid tee colour: a cool light grey, so the grid reads without going busy
 CEILING_SEAM_PX = 6     # seam width, pixels (12 mm): the width of a cheap exposed-tee ceiling grid
-CARPET = (0x64, 0x6E, 0x86)    # kit Floor_Carpet value (kit_pieces.py)
+CARPET = (0x64, 0x6E, 0x86)    # old Floor_Carpet value (kit_pieces.py before the polished floor)
+CARPET_DARK = (0x7E, 0x96, 0xAC)   # Carpet_Dark (kit_pieces.py): paler blue work-area carpet (Japanese_Aero/DECISION.md)
 CARPET_SEAM = 0.88      # seam brightness relative to the carpet. WHY: just visible, so tiles read as tiles
 CARPET_STRIPE = 0.035   # stripe contrast, fraction of the base value. WHY: the bible asks for low-contrast carpet
 CARPET_STRIPE_PX = 10   # stripe pitch, pixels (20 mm): a fine loop-pile line at walking distance
@@ -42,7 +45,7 @@ def shade(c, k):
     return tuple(max(0, min(255, round(v * k))) for v in c)
 
 
-def ceiling():
+def ceiling(name='Ceiling_Tile.png'):
     im = Image.new('RGB', (SIZE, SIZE), CEILING)
     d = ImageDraw.Draw(im)
     h = CEILING_SEAM_PX // 2
@@ -51,12 +54,12 @@ def ceiling():
         p = k * T
         d.rectangle([p - h, 0, p + h - 1, SIZE], fill=CEILING_SEAM)
         d.rectangle([0, p - h, SIZE, p + h - 1], fill=CEILING_SEAM)
-    im.save(os.path.join(HERE, 'Ceiling_Tile.png'))
+    im.save(os.path.join(HERE, name))
 
 
-def carpet():
+def carpet(colour=CARPET, name='Floor_Carpet.png'):
     rng = random.Random(SEED)
-    im = Image.new('RGB', (SIZE, SIZE), CARPET)
+    im = Image.new('RGB', (SIZE, SIZE), colour)
     px = im.load()
     for ty in range(N):
         for tx in range(N):
@@ -68,11 +71,13 @@ def carpet():
                     k = base + (CARPET_STRIPE if (s // (CARPET_STRIPE_PX // 2)) % 2 else -CARPET_STRIPE) * 0.5
                     if x == 0 or y == 0:
                         k *= CARPET_SEAM
-                    px[tx * T + x, ty * T + y] = shade(CARPET, k)
-    im.save(os.path.join(HERE, 'Floor_Carpet.png'))
+                    px[tx * T + x, ty * T + y] = shade(colour, k)
+    im.save(os.path.join(HERE, name))
 
 
 if __name__ == '__main__':
     ceiling()
+    ceiling('Ceiling_Grid.png')   # the same grid under the name of the work-area ceiling material
     carpet()
-    print('wrote', os.path.join(HERE, 'Ceiling_Tile.png'), os.path.join(HERE, 'Floor_Carpet.png'))
+    carpet(CARPET_DARK, 'Carpet_Dark.png')
+    print('wrote the ceiling, ceiling grid, carpet and dark carpet textures to', HERE)

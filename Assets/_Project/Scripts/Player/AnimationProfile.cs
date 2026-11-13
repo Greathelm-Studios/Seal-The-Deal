@@ -84,6 +84,16 @@ namespace CloseTheDeal.Player
         [Tooltip("Falling speed at touchdown, in metres per second, that plays the whole landing crouch. Slower landings sink in proportion. A 1.6 m jump lands at about 9.7, so at 20 an ordinary jump sinks about halfway. Lower = deeper landings.")]
         [Range(3f, 40f)] public float LandFullSpeed = 20f;
 
+        [Header("Idle fidgets (little things he does while standing still)")]
+        [Tooltip("The fidgets: scratching, yawning, looking about. One is picked at random each time. Each must start and end on the idle pose and plays once. Empty = he only stands and breathes.")]
+        public AnimationClip[] FidgetClips = new AnimationClip[0];
+
+        [Tooltip("Shortest time he stands still between fidgets, in seconds. Lower = restless.")]
+        [Range(0.5f, 60f)] public float FidgetMinWait = 5f;
+
+        [Tooltip("Longest time he stands still between fidgets, in seconds. The wait is picked at random between the shortest and this each time.")]
+        [Range(0.5f, 120f)] public float FidgetMaxWait = 12f;
+
         [Header("Looseness (procedural pose only; unused while clips are assigned)")]
         [Tooltip("How fast the upper body wobbles after a start, stop or turn, in wobbles per second. Lower = big slow airy sways; higher = a quick shiver. The head always wobbles slower than the chest.")]
         [Range(0.5f, 6f)] public float WobbleSpeed = 2.2f;

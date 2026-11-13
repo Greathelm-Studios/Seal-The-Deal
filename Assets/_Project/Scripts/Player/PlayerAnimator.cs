@@ -15,6 +15,10 @@
 //              legs "really chaotic and wobbly")
 //              2026-11-13 — standing, the head turns first and the body follows past a
 //              threshold (Alex: "move the head first, then body, like a threshold of rotation")
+//              2026-11-13 — idle fidgets: now and then, standing, he scratches, yawns or
+//              looks about (Alex: "more animations in the idle ... to give it more life")
+//              2026-11-13 — the motor is optional, so a body with no player behind it (the
+//              hit-reaction test dummy) can stand, breathe and fidget with the same component
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Poses the player's humanoid skeleton every frame from how the body is moving,
 //              with no animation clips. Its own component, not part of PlayerMotor, because it
@@ -209,7 +213,21 @@ namespace CloseTheDeal.Player
 
         /// <summary>Where each clip plugs into the mixer: idle, then the eight run directions, then sprint, air and landing.</summary>
         const int IdleInput = 0, RunInput = 1, SprintInput = RunInput + AnimationProfile.RunDirections,
-            AirInput = SprintInput + 1, LandInput = AirInput + 1, InputCount = LandInput + 1;
+            AirInput = SprintInput + 1, LandInput = AirInput + 1, FidgetInput = LandInput + 1, InputCount = FidgetInput + 1;
+
+        /// <summary>
+        /// How long a fidget takes to blend in, and to blend out when the player moves off in
+        /// the middle of one, seconds. WHY short: every fidget clip starts and ends on the idle
+        /// pose, so the blend only has to hide being cut off early.
+        /// </summary>
+        const float FidgetBlendTime = 0.2f;
+
+        /// <summary>
+        /// How still the body has to be for a fidget to start or carry on: no more than this
+        /// much stride or air. WHY the same as <see cref="StandingStride"/>: a fidget mixed into
+        /// the first step of a run would drag an arm through it.
+        /// </summary>
+        const float FidgetStillness = StandingStride;
 
         /// <summary>Where the forward-going clips and one sideways clip sit in the profile's eight run directions (0 = forward, clockwise). The five sideways and backward clips are all one length, so any one of them gives it.</summary>
         const int ForwardDirection = 0, ForwardRightDirection = 1, SideDirection = 2, ForwardLeftDirection = 7;
@@ -294,8 +312,11 @@ namespace CloseTheDeal.Player
         [Tooltip("The clips, and the tuning for the ragdoll and the procedural pose. Read at runtime, never written.")]
         [SerializeField] AnimationProfile _profile;
 
-        [Tooltip("The player's motor: says whether the player is on the floor, knocked back or climbing, and how fast walking and sprinting are.")]
+        [Tooltip("The player's motor: says whether the player is on the floor, knocked back or climbing, and how fast walking and sprinting are. Leave empty for a body nobody is playing (a test dummy): it then always counts as standing on the floor, never knocked back, and never strides.")]
         [SerializeField] PlayerMotor _motor;
+
+        /// <summary>True when a motor was assigned at spawn. Checked once: asking Unity whether an object reference is alive costs more than a bool, and this is read every frame.</summary>
+        bool _hasMotor;
 
         [Tooltip("The character model's Animator. Its humanoid avatar is used once, at spawn, to find the skeleton's bones; the clips are then played onto it. It needs no controller.")]
         [SerializeField] Animator _avatar;
@@ -389,6 +410,12 @@ namespace CloseTheDeal.Player
         bool _usesClips;
         /// <summary>Seconds since the last touchdown, and how much of the landing clip that touchdown earned, 0–1.</summary>
         float _landTime, _landStrength;
+        /// <summary>One playable per fidget clip on the profile, made once; only the one being played is plugged into the mixer. Null entries where the profile has an empty slot.</summary>
+        AnimationClipPlayable[] _fidgets;
+        /// <summary>Which fidget is plugged in, or -1 for none.</summary>
+        int _fidget = -1;
+        /// <summary>How far into the current fidget, seconds; how much of it shows, 0–1; and how long until the next one may start, seconds.</summary>
+        float _fidgetTime, _fidgetWeight, _fidgetWait;
         /// <summary>How much of the run each direction's clip is showing, 0–1, summing to 1. Eased toward the direction of travel; starts as all forward.</summary>
         readonly float[] _runShares = { 1f, 0f, 0f, 0f, 0f, 0f, 0f, 0f };
         /// <summary>How far the body is turned from where the player is looking, degrees, positive to the right of the look. 0 once it has caught up.</summary>
@@ -419,12 +446,13 @@ namespace CloseTheDeal.Player
         /// </summary>
         void Start()
         {
-            if (_profile == null || _motor == null || _avatar == null || _avatar.avatar == null || !_avatar.avatar.isHuman)
+            if (_profile == null || _avatar == null || _avatar.avatar == null || !_avatar.avatar.isHuman)
             {
-                Debug.LogError("[PlayerAnimator] Needs a profile, a motor and a humanoid Animator; the character will stay in its rest pose.", this);
+                Debug.LogError("[PlayerAnimator] Needs a profile and a humanoid Animator; the character will stay in its rest pose.", this);
                 enabled = false;
                 return;
             }
+            _hasMotor = _motor != null;
 
             _model = _avatar.transform;
             _hips = Find(HumanBodyBones.Hips);
@@ -511,6 +539,17 @@ namespace CloseTheDeal.Player
             AddClip(AirInput, _profile.AirClip);
             AddClip(LandInput, _profile.LandClip);
 
+            AnimationClip[] fidgets = _profile.FidgetClips;
+            _fidgets = new AnimationClipPlayable[fidgets != null ? fidgets.Length : 0];
+            for (int i = 0; i < _fidgets.Length; i++)
+            {
+                if (fidgets[i] == null)
+                    continue;
+                _fidgets[i] = AnimationClipPlayable.Create(_graph, fidgets[i]);
+                _fidgets[i].SetSpeed(0d);
+            }
+            _fidgetWait = Random.Range(_profile.FidgetMinWait, _profile.FidgetMaxWait);
+
             AnimationPlayableOutput output = AnimationPlayableOutput.Create(_graph, "Pose", _avatar);
             output.SetSourcePlayable(_mixer);
         }
@@ -553,7 +592,7 @@ namespace CloseTheDeal.Player
                 BuildClipGraph();
 
             MeasureMovement(dt, out float speed, out float sprint);
-            bool onFloor = _motor.Grounded && _motor.State != MoveState.Mantling;
+            bool onFloor = !_hasMotor || (_motor.Grounded && _motor.State != MoveState.Mantling);
             UpdateWeights(dt, speed, sprint, onFloor);
             if (_usesClips)
                 PoseFromClips(sprint, dt);
@@ -602,6 +641,11 @@ namespace CloseTheDeal.Player
             _turn.Step(new Vector3(_yawRate, 0f, 0f), _profile.WobbleSpeed, _profile.WobbleDamping, step);
             _land.Step(Vector3.zero, _profile.LandBounce, LandDamping, step);
 
+            if (!_hasMotor)
+            {
+                sprint = 0f;
+                return;
+            }
             MovementProfile movement = _motor.Profile;
             sprint = Mathf.InverseLerp(movement.WalkSpeed, movement.SprintSpeed, speed);
         }
@@ -612,7 +656,9 @@ namespace CloseTheDeal.Player
             // WHY SmoothDamp and not a fixed rate: a blend that moves at a constant rate starts
             // and stops dead, and every limb pops at both ends. This eases in and out.
             float ease = _profile.PoseBlendTime;
-            float stride = Mathf.Clamp01(speed / _motor.Profile.WalkSpeed);
+            // With no motor there is no walking speed to measure a stride against: it stands.
+            float walkSpeed = _hasMotor ? _motor.Profile.WalkSpeed : 0f;
+            float stride = walkSpeed > 0f ? Mathf.Clamp01(speed / walkSpeed) : 0f;
             // With clips, a dip in speed shorter than the hold time does not shrink the stride.
             if (stride >= _heldStride || !_usesClips)
             {
@@ -627,7 +673,7 @@ namespace CloseTheDeal.Player
             }
             _moveWeight = Mathf.SmoothDamp(_moveWeight, _heldStride, ref _moveWeightRate, ease, Mathf.Infinity, dt);
             _airWeight = Mathf.SmoothDamp(_airWeight, onFloor ? 0f : 1f, ref _airWeightRate, ease, Mathf.Infinity, dt);
-            _knocked = Mathf.SmoothDamp(_knocked, _motor.State == MoveState.Knocked ? 1f : 0f, ref _knockedRate, ease, Mathf.Infinity, dt);
+            _knocked = Mathf.SmoothDamp(_knocked, _hasMotor && _motor.State == MoveState.Knocked ? 1f : 0f, ref _knockedRate, ease, Mathf.Infinity, dt);
             _stagger = Mathf.MoveTowards(_stagger, 0f, dt / _profile.StaggerRecover);
 
             if (_usesClips)
@@ -646,7 +692,7 @@ namespace CloseTheDeal.Player
                 // and lifted 26 cm two and a half times a second, which read as chaotic.
                 float forward = _runShares[ForwardDirection] + _runShares[ForwardRightDirection] + _runShares[ForwardLeftDirection];
                 ground = Mathf.Lerp(_profile.SideClipSpeed * _clipLengths[RunInput + SideDirection], ground, forward);
-                float matched = Mathf.Max(speed, SlowestCadence * _motor.Profile.WalkSpeed);
+                float matched = Mathf.Max(speed, SlowestCadence * walkSpeed);
                 _phase = _moveWeight < StandingStride && stride < StandingStride
                     ? 0f
                     : Mathf.Repeat(_phase + matched / ground * dt, 1f);
@@ -727,7 +773,9 @@ namespace CloseTheDeal.Player
             if (Mathf.Abs(Mathf.DeltaAngle(_runDirection * RunDirectionStep, heading)) > RunDirectionStep * 0.5f + RunDirectionSlack)
                 _runDirection = Mathf.RoundToInt(Mathf.Repeat(heading, 360f) / RunDirectionStep) % AnimationProfile.RunDirections;
 
-            _mixer.SetInputWeight(IdleInput, ground - moving);
+            float fidget = Fidget(dt, ground - moving);
+            _mixer.SetInputWeight(IdleInput, (ground - moving) * (1f - fidget));
+            _mixer.SetInputWeight(FidgetInput, (ground - moving) * fidget);
             // Each direction's share eases toward all or nothing, so a change of direction
             // cross-fades straight from one clip to the other. Every stride clip sits at the same
             // point of its cycle, whatever its length.
@@ -757,6 +805,58 @@ namespace CloseTheDeal.Player
             _graph.Evaluate();
             TurnHeadFirst(dt);
             Breathe(ground - moving);
+        }
+
+        /// <summary>
+        /// Runs the idle fidgets: waits a random while, plays one of the profile's fidget clips
+        /// in place of the idle, then waits again.
+        /// </summary>
+        /// <param name="dt">Frame time, seconds.</param>
+        /// <param name="standing">How much of the pose is the idle, 0–1.</param>
+        /// <returns>How much of the idle's share the fidget takes this frame, 0–1.</returns>
+        /// <remarks>
+        /// <para>
+        /// Which fidget and when are picked with Unity's random numbers on each client, like the
+        /// rest of the pose: two screens will see the same player scratch at different moments.
+        /// Nothing reads it back, so nothing can desync (AGENTS.md §3).
+        /// </para>
+        /// <para>
+        /// A fidget only starts, and only keeps its place, while the body is standing still on
+        /// the floor. Moving off blends it out and drops it; the wait starts again from there.
+        /// </para>
+        /// </remarks>
+        float Fidget(float dt, float standing)
+        {
+            bool still = _moveWeight < FidgetStillness && _airWeight < FidgetStillness && standing > 1f - FidgetStillness && !_bodyTurning;
+            if (_fidget < 0)
+            {
+                if (!still || _fidgets.Length == 0)
+                    return 0f;
+                _fidgetWait -= dt;
+                if (_fidgetWait > 0f)
+                    return 0f;
+                int pick = Random.Range(0, _fidgets.Length);
+                if (!_fidgets[pick].IsValid())
+                    return 0f;
+                _fidget = pick;
+                _fidgetTime = 0f;
+                _fidgetWeight = 0f;
+                _graph.Disconnect(_mixer, FidgetInput);
+                _graph.Connect(_fidgets[pick], 0, _mixer, FidgetInput);
+            }
+
+            float length = _profile.FidgetClips[_fidget].length;
+            _fidgetTime += dt;
+            _fidgetWeight = Mathf.MoveTowards(_fidgetWeight, still && _fidgetTime < length ? 1f : 0f, dt / FidgetBlendTime);
+            _fidgets[_fidget].SetTime(Mathf.Min(_fidgetTime, length));
+            if (_fidgetWeight <= 0f && (!still || _fidgetTime >= length))
+            {
+                _graph.Disconnect(_mixer, FidgetInput);
+                _fidget = -1;
+                _fidgetWait = Random.Range(_profile.FidgetMinWait, _profile.FidgetMaxWait);
+                return 0f;
+            }
+            return _fidgetWeight;
         }
 
         /// <summary>

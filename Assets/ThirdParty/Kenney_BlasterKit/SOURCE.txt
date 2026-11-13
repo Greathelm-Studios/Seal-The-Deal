@@ -1,0 +1,5 @@
+Kenney Blaster Kit 2.1 - greybox stand-in weapons (docs/GDD.md: no packs ship; replace before store screenshots).
+Source  : https://kenney.nl/assets/blaster-kit (downloaded 2026-11-13)
+Licence : CC0 1.0, see License.txt. No credit required.
+Contents: the pack's "FBX format" models and its texture, unmodified. OBJ, GLB and preview images were left out.
+Note    : written by Claude Fable 5.2 (Claude Code) on 2026-11-13 at Alex's request; not reviewed by a human.

@@ -1,0 +1,2027 @@
+Reading prompt from stdin...
+OpenAI Codex v0.167.0-alpha.3.2
+--------
+workdir: C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+model: gpt-6.1-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a1d6da-d903-7e73-b9af-eb36f00fd73c
+--------
+user
+Read ArtSource/Kit/concepts/Japanese_Aero/REQUEST.md and do exactly what it asks. The attached images are the four KitOffice captures to paint over (L1 window corridor, L3 atrium stair, L4 meeting room, L7 upper floor), in that order; they are also in ArtSource/Kit/review/unity_office/. Use your image generation tool. Write only inside ArtSource/Kit/concepts/Japanese_Aero/.
+
+codex
+I’ll read the request and shared notes, then use the **imagegen skill** to paint over the four captures, with all outputs confined to [Japanese_Aero](ArtSource/Kit/concepts/Japanese_Aero/).
+
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath 'docs/notes/INDEX.md'; Get-Content -LiteralPath 'docs/DECISIONS.md'; Get-Content -LiteralPath 'docs/WORKBOARD.md'" in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath 'ArtSource/Kit/concepts/Japanese_Aero/REQUEST.md'" in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+ succeeded in 1141ms:
+<!--
+  AI-GENERATED SOURCE FILE
+  Generator : Claude Opus 5.5 (Claude Code)
+  Generated : 2026-11-13
+  Prompt    : Alex: "close! push it more to a 2000s japanese corporate futurism, frutiger aero, gen x soft
+              club vibe, as we changed the narrative to be specifically a japanese office/company"
+  Reviewed  : NOT YET REVIEWED BY A HUMAN
+  Summary   : Brief to Codex for paintovers of the real KitOffice captures in the new direction, so the
+              restyle is agreed on the actual level (its cameras, layout and pieces) before the kit is changed.
+-->
+# Japanese corporate Aero: paintovers of KitOffice â€” request to Codex
+
+**From:** Alex (environment artist), drafted by Claude Â· **Date:** 2026-11-13 Â· **Status:** Waiting for Codex
+
+Seal the Deal is a fast close-quarters PvP shooter set in one large office labyrinth. **The company is now specifically Japanese.** Alex says the current level is close, but wants it pushed to a **2000s Japanese corporate futurism / Frutiger Aero / Gen X Soft Club** vibe.
+
+The attached images are Unity captures of the level as it is now (`ArtSource/Kit/review/unity_office/`). **Paint over them.** Keep each camera, the room layout, the stair, walls, glass, columns, desks and counters where they are; change their look, add the dressing the style needs, and restyle the signage.
+
+Use your **image generation tool**, with each capture as the image to edit.
+
+## What the direction means
+
+- **2000s Japanese corporate futurism:** the optimistic 2000â€“2006 Japanese corporate interior: glossy white and silver, rounded capsule forms, translucent frosted plastics, pale aqua and sky blue, LED dot-matrix and scrolling signs, bilingual Japanese/English wayfinding with big floor codes ("3F"), tidy corporate ID, early flat-panel silver monitors, white phones.
+- **Frutiger Aero:** glossy translucency and sheen, aqua-to-white gradients, sky and clouds, water and fresh green nature (living plants, a water wall or aquarium), glass orbs and soft highlights, a clean optimistic "eco-tech" feel. Bubbles and greenery are now allowed (this overrides the art bible's old "no Frutiger Aero" line).
+- **Gen X Soft Club:** pale, misty, quiet; silver, ice white and pale blue; frosted translucent layers, thin type, ambient glow, a soft hazy light.
+- **A Japanese office, not a theme park.** Use real office life: desks in islands facing each other with the manager's desk at the head, document trays, a water server, a vending machine, an umbrella stand, a shoe or slipper cabinet at an entrance, frosted sliding screens in a modern form. A **hanko seal** motif (red circular stamp) fits the game's title and is welcome as a sparing accent. Avoid clichÃ©s: no samurai, cherry-blossom wallpaper, paper lanterns or torii.
+- **Signage:** each zone's sign becomes bilingual. Zones and suggested Japanese (check and correct them): L æ³•å‹™éƒ¨ LEGAL Â· R å¯©æŸ»éƒ¨ REVIEW Â· C è«‹æ±‚éƒ¨ CLAIMS Â· H å¯©å• HEARINGS Â· A è¨˜éŒ²ä¿ç®¡ ARCHIVE. Propose a **fictional** Japanese company name and logo mark for the reception (no real company or brand), with its Japanese and romanised forms.
+
+## Keep (gameplay)
+
+Glass stays near-clear between knee and head height, so players read through two panes (frosting above 2.1 m and below 0.35 m is fine). Cover stays about 1.1 m. No bars across a standing figure between knee and head. Routes, doors and the stair stay open. Characters stay dark-suited and readable.
+
+## Deliver
+
+Write only inside `ArtSource/Kit/concepts/Japanese_Aero/`.
+
+- For each attached capture, two paintovers, **A â€” Aero** (glossier, more aqua, translucency, water and green) and **B â€” Soft Club** (paler, misty, silver, minimal): `<capture>_A.png`, `<capture>_B.png`, at the capture's 16:9 framing.
+- `contact_sheet.png`: the originals beside A and B, one row per capture, labelled.
+- `README.md`, for someone who will rebuild the kit in Blender and Unity:
+  - the palette as hex values, with gloss and translucency per material (walls, floor, glass, frosted plastic, silver, accents);
+  - each kit piece or prop to change or add, with sizes in metres;
+  - the exact signage strings in Japanese with romanisation and English, and the proposed company names;
+  - which of A or B you'd build, in two or three sentences.
+  Count your image tries.
+
+Run no git commands that change state. Hand back when done; Alex picks before anything is modelled.
+
+ succeeded in 2074ms:
+# Shared notes index
+
+Durable facts every agent should know, whatever tool it runs in. One line per note: `- [Title](file.md) â€” hook`. Rules for keeping them: [AGENTS.md](../../AGENTS.md) Â§12.
+
+- [Owner defers technical calls](owner-defers-technical-calls.md) â€” decide netcode/architecture yourself; ask Adam only on design and feel
+# Decisions
+
+**Status:** Current Â· **Last updated:** 2026-11-13
+
+Technical and process decisions, newest first. One line each: date, what, who, link.
+Design decisions live in [GDD.md](GDD.md), not here. Rules: [AGENTS.md](../AGENTS.md) Â§12.
+
+- 2026-11-13 â€” The ragdoll chases animation clips (CC0 Quaternius library, retargeted in Blender, imported as Generic) instead of the hand-written procedural pose; this reverses the no-clips choice below. Still local to each client, nothing synced. â€” Alex. [systems/CHARACTER_ANIMATION.md](systems/CHARACTER_ANIMATION.md).
+- 2026-11-13 â€” FishNet stays as the plumbing (connections, spawning, prediction); we do not write our own netcode stack. Where the game is unusual we add our own layer on top, one system at a time. A full replacement would need evidence from a real session and Adam's agreement. â€” Harvey, on his agent's recommendation. [systems/NETCODE.md](systems/NETCODE.md).
+- 2026-11-12 â€” The player's body is an active ragdoll (rigidbodies and motorised joints chasing the procedural pose), run in a physics scene of its own so FishNet's re-simulation and the predicted capsule cannot touch it; local to each client, nothing synced. â€” Alex. [systems/CHARACTER_ANIMATION.md](systems/CHARACTER_ANIMATION.md).
+- 2026-11-12 â€” Players are animated procedurally with no clips and no new package: a script poses the humanoid skeleton from the body's movement, local to each client, nothing synced. â€” Alex. [systems/CHARACTER_ANIMATION.md](systems/CHARACTER_ANIMATION.md).
+- 2026-11-12 â€” Prop motion moves from one FishNet NetworkTransform per prop to Switchboard, a per-player byte-capped stream that favours nearby floors. Host authority is unchanged. The greybox prop prefabs use it from 2026-11-13; compiled, not yet seen from a client. â€” Harvey's agent (technical call, see owner-defers note). [systems/SWITCHBOARD.md](systems/SWITCHBOARD.md).
+- 2026-10-03 â€” PC quality runs with vSync on and two shadow cascades; runtime-built towers are static-batched. â€” Agent (technical call, see owner-defers note). [systems/PERFORMANCE.md](systems/PERFORMANCE.md).
+- 2026-10-03 â€” Every tool reads `AGENTS.md` as its single entry point; shared notes, decisions and the workboard live in plain markdown under `docs/`. Collaborators' agents report to their own human; release risks go to Adam. â€” Adam. [AGENTS.md](../AGENTS.md) Â§1, Â§12.
+- 2026-09-28 â€” Netcode is FishNet + FishySteamworks, host-authoritative P2P over Steam. â€” Agent, on Adam's lead. [systems/NETCODE.md](systems/NETCODE.md).
+# Workboard
+
+Who is working on what right now. Rules: [AGENTS.md](../AGENTS.md) Â§12. A line counts once it is pushed.
+
+## Release risks
+
+Anything that threatens 7 Oct or 29 Oct, scope creep, or a change to netcode authority. Adam reads this. Date each line and say who raised it; Adam removes it once handled.
+
+- 2026-10-03, Adam's Claude session: **v1 now supports up to 8 players (1â€“4 per team), not 2v2.** Netcode and props sync were budgeted for 4; 8 doubles player traffic and the bodies throwing furniture. Needs a 4v4 test over Steam well before 29 Oct. Locked doors and central spiral stairs are new floor-template work too.
+- 2026-11-13, Harvey's Claude session: **prop sync on main is new and has never been seen from a client.** Props now move through Switchboard instead of FishNet's NetworkTransform ([systems/SWITCHBOARD.md](systems/SWITCHBOARD.md)). It compiles; nobody has played it. Needs one editor-plus-build session with furniture being blasted before anything is built on it. Host authority is unchanged. To go back, revert the commit "Move prop sync to Switchboard".
+
+## In progress
+
+| Who (human / tool) | Task | Branch | Claimed scenes and prefabs | Since |
+|---|---|---|---|---|
+| Alex / Codex | Animated STDMC eye cards | Alex_Env | STDMC_Toon.prefab | 2026-11-12 |
+
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -LiteralPath 'C:/Users/alexf/.codex/skills/.system/imagegen/SKILL.md'" in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+ succeeded in 302ms:
+---
+name: "imagegen"
+description: "Generate or edit raster images when the task benefits from AI-created bitmap visuals such as photos, illustrations, textures, sprites, mockups, or transparent-background cutouts. Use when Codex should create a brand-new image, transform an existing image, or derive visual variants from references, and the output should be a bitmap asset rather than repo-native code or vector. Do not use when the task is better handled by editing existing SVG/vector/code-native assets, extending an established icon or logo system, or building the visual directly in HTML/CSS/canvas."
+---
+
+# Image Generation Skill
+
+Generates or edits images for the current project (for example website assets, game assets, UI mockups, product mockups, wireframes, logo design, photorealistic images, or infographics).
+
+## Top-level modes and rules
+
+This skill has exactly two top-level modes:
+
+- **Default built-in tool mode (preferred):** built-in `image_gen` tool for image generation, editing, and transparent-image requests. Does not require `OPENAI_API_KEY`.
+- **Fallback CLI mode:** `scripts/image_gen.py` CLI. Use when the user explicitly asks for or confirms the CLI/API/model path. Requires `OPENAI_API_KEY`.
+
+Within CLI fallback, the CLI exposes three subcommands:
+
+- `generate`
+- `edit`
+- `generate-batch`
+
+Rules:
+- Use the built-in `image_gen` tool by default for normal image generation and editing requests.
+- Do not switch to CLI fallback for ordinary quality, size, or file-path control.
+- For transparent images, ask built-in `image_gen` for a transparent background and preserve the generated alpha.
+- Never silently switch from built-in `image_gen` or CLI `gpt-image-2` to CLI `gpt-image-1.5`; ask the user first unless they explicitly requested `gpt-image-1.5`.
+- The word `batch` by itself does not mean CLI fallback. If the user asks for many assets or says to batch-generate assets without explicitly asking for CLI/API/model controls, stay on the built-in path and issue one built-in call per requested asset or variant.
+- If the built-in tool fails or is unavailable, tell the user the CLI fallback exists and that it requires `OPENAI_API_KEY`. Proceed only if the user explicitly asks for that fallback.
+- If the user explicitly asks for CLI mode, use the bundled `scripts/image_gen.py` workflow. Do not create one-off SDK runners.
+- Never modify `scripts/image_gen.py`. If something is missing, ask the user before doing anything else.
+
+Built-in save-path policy:
+- In built-in tool mode, Codex saves generated images under `$CODEX_HOME/*` by default.
+- Do not describe or rely on OS temp as the default built-in destination.
+- Do not describe or rely on a destination-path argument (if any) on the built-in `image_gen` tool. If a specific location is needed, generate first and then move or copy the selected output from `$CODEX_HOME/generated_images/...`.
+- Save-path precedence in built-in mode:
+  1. If the user names a destination, move or copy the selected output there.
+  2. If the image is meant for the current project, move or copy the final selected image into the workspace before finishing.
+  3. If the image is only for preview or brainstorming, render it inline; the underlying file can remain at the default `$CODEX_HOME/*` path.
+- Never leave a project-referenced asset only at the default `$CODEX_HOME/*` path.
+- Do not overwrite an existing asset unless the user explicitly asked for replacement; otherwise create a sibling versioned filename such as `hero-v2.png` or `item-icon-edited.png`.
+
+Shared prompt guidance for both modes lives in `references/prompting.md` and `references/sample-prompts.md`.
+
+Fallback-only docs/resources for CLI mode:
+- `references/cli.md`
+- `references/image-api.md`
+- `references/codex-network.md`
+- `scripts/image_gen.py`
+
+## When to use
+- Generate a new image (concept art, product shot, cover, website hero)
+- Generate a new image using one or more reference images for style, composition, or mood
+- Edit an existing image (inpainting, lighting or weather transformations, background replacement, object removal, compositing, transparent background)
+- Produce many assets or variants for one task
+
+## When not to use
+- Extending or matching an existing SVG/vector icon set, logo system, or illustration library inside the repo
+- Creating simple shapes, diagrams, wireframes, or icons that are better produced directly in SVG, HTML/CSS, or canvas
+- Making a small project-local asset edit when the source file already exists in an editable native format
+- Any task where the user clearly wants deterministic code-native output instead of a generated bitmap
+
+## Decision tree
+
+Think about two separate questions:
+
+1. **Intent:** is this a new image or an edit of an existing image?
+2. **Execution strategy:** is this one asset or many assets/variants?
+
+Intent:
+- If the user wants to modify an existing image while preserving parts of it, treat the request as **edit**.
+- If the user provides images only as references for style, composition, mood, or subject guidance, treat the request as **generate**.
+- If the user provides no images, treat the request as **generate**.
+
+Built-in edit semantics:
+- Built-in edit mode is for images already visible in the conversation context, such as attached images or images generated earlier in the thread.
+- If the user wants to edit a local image file with the built-in tool, first load it with built-in `view_image` tool so the image is visible in the conversation context, then proceed with the built-in edit flow.
+- Do not promise arbitrary filesystem-path editing through the built-in tool.
+- If a local file still needs direct file-path control, masks, or other explicit CLI-only parameters, use the explicit CLI fallback only when the user asks for it.
+- For edits, preserve invariants aggressively and save non-destructively by default.
+
+Execution strategy:
+- In the built-in default path, produce many assets or variants by issuing one `image_gen` call per requested asset or variant.
+- In the CLI fallback path, use the CLI `generate-batch` subcommand only when the user explicitly chose CLI mode and needs many prompts/assets.
+- For many distinct assets, do not use `n` as a substitute for separate prompts. `n` is for variants of one prompt; distinct assets need distinct built-in calls or distinct CLI `generate-batch` jobs.
+
+Assume the user wants a new image unless they clearly ask to change an existing one.
+
+## Workflow
+1. Decide the top-level mode: built-in by default, including transparent-output requests; fallback CLI only if explicitly requested or confirmed.
+2. Decide the intent: `generate` or `edit`.
+3. Decide whether the output is preview-only or meant to be consumed by the current project.
+4. Decide the execution strategy: single asset vs repeated built-in calls vs CLI `generate-batch`.
+5. Collect inputs up front: prompt(s), exact text (verbatim), constraints/avoid list, and any input images.
+6. For every input image, label its role explicitly:
+   - reference image
+   - edit target
+   - supporting insert/style/compositing input
+7. If the edit target is only on the local filesystem and you are staying on the built-in path, inspect it with `view_image` first so the image is available in conversation context.
+8. If the user asked for a photo, illustration, sprite, product image, banner, or other explicitly raster-style asset, use `image_gen` rather than substituting SVG/HTML/CSS placeholders. If the request is for an icon, logo, or UI graphic that should match existing repo-native SVG/vector/code assets, prefer editing those directly instead.
+9. Augment the prompt based on specificity:
+   - If the user's prompt is already specific and detailed, normalize it into a clear spec without adding creative requirements.
+   - If the user's prompt is generic, add tasteful augmentation only when it materially improves output quality.
+10. Use the built-in `image_gen` tool by default.
+11. For transparent-output requests, ask built-in `image_gen` for a transparent background and preserve the generated alpha channel.
+12. Inspect outputs and validate: subject, style, composition, text accuracy, and invariants/avoid items.
+13. Iterate with a single targeted change, then re-check.
+14. For preview-only work, render the image inline; the underlying file may remain at the default `$CODEX_HOME/generated_images/...` path.
+15. For project-bound work, move or copy the selected artifact into the workspace and update any consuming code or references. Never leave a project-referenced asset only at the default `$CODEX_HOME/generated_images/...` path.
+16. For batches or multi-asset requests, persist every requested deliverable final in the workspace unless the user explicitly asked to keep outputs preview-only. Discarded variants do not need to be kept unless requested.
+17. If the user explicitly chooses or confirms the CLI fallback, then use the fallback-only docs for model, quality, size, `input_fidelity`, masks, output format, output paths, and network setup.
+18. Always report the final saved path(s) for any workspace-bound asset(s), plus the final prompt or prompt set and whether the built-in tool or fallback CLI mode was used.
+
+## Transparent image requests
+
+Ask built-in `image_gen` for a genuinely transparent background and preserve its alpha.
+
+## Prompt augmentation
+
+Reformat user prompts into a structured, production-oriented spec. Make the user's goal clearer and more actionable, but do not blindly add detail.
+
+Treat this as prompt-shaping guidance, not a closed schema. Use only the lines that help, and add a short extra labeled line when it materially improves clarity.
+
+### Specificity policy
+
+Use the user's prompt specificity to decide how much augmentation is appropriate:
+
+- If the prompt is already specific and detailed, preserve that specificity and only normalize/structure it.
+- If the prompt is generic, you may add tasteful augmentation when it will materially improve the result.
+
+Allowed augmentations:
+- composition or framing hints
+- polish level or intended-use hints
+- practical layout guidance
+- reasonable scene concreteness that supports the stated request
+
+Not allowed augmentations:
+- extra characters or objects that are not implied by the request
+- brand names, slogans, palettes, or narrative beats that are not implied
+- arbitrary side-specific placement unless the surrounding layout supports it
+
+## Use-case taxonomy (exact slugs)
+
+Classify each request into one of these buckets and keep the slug consistent across prompts and references.
+
+Generate:
+- photorealistic-natural â€” candid/editorial lifestyle scenes with real texture and natural lighting.
+- product-mockup â€” product/packaging shots, catalog imagery, merch concepts.
+- ui-mockup â€” app/web interface mockups and wireframes; specify the desired fidelity.
+- infographic-diagram â€” diagrams/infographics with structured layout and text.
+- scientific-educational â€” classroom explainers, scientific diagrams, and learning visuals with required labels and accuracy constraints.
+- ads-marketing â€” campaign concepts and ad creatives with audience, brand position, scene, and exact tagline/copy.
+- productivity-visual â€” slide, chart, workflow, and data-heavy business visuals.
+- logo-brand â€” logo/mark exploration, vector-friendly.
+- illustration-story â€” comics, childrenâ€™s book art, narrative scenes.
+- stylized-concept â€” style-driven concept art, 3D/stylized renders.
+- historical-scene â€” period-accurate/world-knowledge scenes.
+
+Edit:
+- text-localization â€” translate/replace in-image text, preserve layout.
+- identity-preserve â€” try-on, person-in-scene; lock face/body/pose.
+- precise-object-edit â€” remove/replace a specific element (including interior swaps).
+- lighting-weather â€” time-of-day/season/atmosphere changes only.
+- background-extraction â€” transparent background / clean cutout. Ask built-in `image_gen` for actual transparency.
+- style-transfer â€” apply reference style while changing subject/scene.
+- compositing â€” multi-image insert/merge with matched lighting/perspective.
+- sketch-to-render â€” drawing/line art to photoreal render.
+
+## Shared prompt schema
+
+Use the following labeled spec as shared prompt scaffolding for both top-level modes:
+
+```text
+Use case: <taxonomy slug>
+Asset type: <where the asset will be used>
+Primary request: <user's main prompt>
+Input images: <Image 1: role; Image 2: role> (optional)
+Scene/backdrop: <environment>
+Subject: <main subject>
+Style/medium: <photo/illustration/3D/etc>
+Composition/framing: <wide/close/top-down; placement>
+Lighting/mood: <lighting + mood>
+Color palette: <palette notes>
+Materials/textures: <surface details>
+Text (verbatim): "<exact text>"
+Constraints: <must keep/must avoid>
+Avoid: <negative constraints>
+```
+
+Notes:
+- `Asset type` and `Input images` are prompt scaffolding, not dedicated CLI flags.
+- `Scene/backdrop` refers to the visual setting. It is not the same as the fallback CLI `background` parameter, which controls output transparency behavior.
+- Fallback-only execution notes such as `Quality:`, `Input fidelity:`, masks, output format, and output paths belong in the CLI path only. Do not treat them as built-in `image_gen` tool arguments.
+
+Augmentation rules:
+- Keep it short.
+- Add only the details needed to improve the prompt materially.
+- For edits, explicitly list invariants (`change only X; keep Y unchanged`).
+- If any critical detail is missing and blocks success, ask a question; otherwise proceed.
+
+## Examples
+
+### Generation example (hero image)
+```text
+Use case: product-mockup
+Asset type: landing page hero
+Primary request: a minimal hero image of a ceramic coffee mug
+Style/medium: clean product photography
+Composition/framing: wide composition with usable negative space for page copy if needed
+Lighting/mood: soft studio lighting
+Constraints: no logos, no text, no watermark
+```
+
+### Edit example (invariants)
+```text
+Use case: precise-object-edit
+Asset type: product photo background replacement
+Primary request: replace only the background with a warm sunset gradient
+Constraints: change only the background; keep the product and its edges unchanged; no text; no watermark
+```
+
+## Prompting best practices
+- Structure prompt as scene/backdrop -> subject -> details -> constraints.
+- Include intended use (ad, UI mock, infographic) to set the mode and polish level.
+- Use camera/composition language for photorealism.
+- Only use SVG/vector stand-ins when the user explicitly asked for vector output or a non-image placeholder.
+- Quote exact text and specify typography + placement.
+- For tricky words, spell them letter-by-letter and require verbatim rendering.
+- For multi-image inputs, reference images by index and describe how they should be used.
+- For edits, repeat invariants every iteration to reduce drift.
+- Iterate with single-change follow-ups.
+- If the prompt is generic, add only the extra detail that will materially help.
+- If the prompt is already detailed, normalize it instead of expanding it.
+- For CLI fallback only, see `references/cli.md` and `references/image-api.md` for model, `quality`, `input_fidelity`, masks, output format, and output-path guidance.
+- For transparent images, ask built-in `image_gen` for actual transparency and preserve its alpha.
+
+More principles shared by both modes: `references/prompting.md`.
+Copy/paste specs shared by both modes: `references/sample-prompts.md`.
+
+## Guidance by asset type
+Asset-type templates (website assets, game assets, wireframes, logo) are consolidated in `references/sample-prompts.md`.
+
+## gpt-image-2 guidance for CLI fallback
+
+The fallback CLI defaults to `gpt-image-2`.
+
+- Use `gpt-image-2` for new CLI/API workflows unless the user confirms a different model.
+- CLI `gpt-image-2` does not support `background=transparent`; ask before using `gpt-image-1.5` unless the user explicitly requested that model.
+- `gpt-image-2` always uses high fidelity for image inputs; do not set `input_fidelity` with this model.
+- `gpt-image-2` supports `quality` values `low`, `medium`, `high`, and `auto`.
+- Use `quality low` for fast drafts, thumbnails, and quick iterations. Use `medium`, `high`, or `auto` for final assets, dense text, diagrams, identity-sensitive edits, or high-resolution outputs.
+- Square images are typically fastest to generate. Use `1024x1024` for fast square drafts.
+- If the user asks for 4K-style output, use `3840x2160` for landscape or `2160x3840` for portrait.
+- `gpt-image-2` size may be `auto` or `WIDTHxHEIGHT` if all constraints hold: max edge `<= 3840px`, both edges multiples of `16px`, long-to-short ratio `<= 3:1`, total pixels between `655,360` and `8,294,400`.
+
+Popular `gpt-image-2` sizes:
+- `1024x1024` square
+- `1536x1024` landscape
+- `1024x1536` portrait
+- `2048x2048` 2K square
+- `2048x1152` 2K landscape
+- `3840x2160` 4K landscape
+- `2160x3840` 4K portrait
+- `auto`
+
+## Fallback CLI mode only
+
+### Temp and output conventions
+These conventions apply only to the CLI fallback. They do not describe built-in `image_gen` output behavior.
+- Use `tmp/imagegen/` for intermediate files (for example JSONL batches); delete them when done.
+- Write final artifacts under `output/imagegen/`.
+- Use `--out` or `--out-dir` to control output paths; keep filenames stable and descriptive.
+
+### Dependencies
+Prefer `uv` for dependency management in this repo.
+
+Required Python package:
+```bash
+uv pip install openai
+```
+
+Optional for image inspection and downscaling:
+```bash
+uv pip install pillow
+```
+
+Portability note:
+- If you are using the installed skill outside this repo, install dependencies into that environment with its package manager.
+- In uv-managed environments, `uv pip install ...` remains the preferred path.
+
+### Environment
+- `OPENAI_API_KEY` must be set for live API calls.
+- Do not ask the user for `OPENAI_API_KEY` when using the built-in `image_gen` tool.
+- Never ask the user to paste the full key in chat. Ask them to set it locally and confirm when ready.
+
+If the key is missing, give the user these steps:
+1. Create an API key in the OpenAI platform UI: https://platform.openai.com/api-keys
+2. Set `OPENAI_API_KEY` as an environment variable in their system.
+3. Offer to guide them through setting the environment variable for their OS/shell if needed.
+
+If installation is not possible in this environment, tell the user which dependency is missing and how to install it into their active environment.
+
+### Script-mode notes
+- CLI commands + examples: `references/cli.md`
+- API parameter quick reference: `references/image-api.md`
+- Network approvals / sandbox settings for CLI mode: `references/codex-network.md`
+
+## Reference map
+- `references/prompting.md`: shared prompting principles for both modes.
+- `references/sample-prompts.md`: shared copy/paste prompt recipes for both modes.
+- `references/cli.md`: fallback-only CLI usage via `scripts/image_gen.py`.
+- `references/image-api.md`: fallback-only API/CLI parameter reference.
+- `references/codex-network.md`: fallback-only network/sandbox troubleshooting for CLI mode.
+- `scripts/image_gen.py`: fallback-only CLI implementation. Use only when the user explicitly chooses or confirms CLI mode.
+
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git status --short; rg --files -g AGENTS.md -g '*Japanese*' -g '*Aero*' -g '*REQUEST*' ArtSource .agents .codex" in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+ exited 1 in 4213ms:
+Error cleaning Git LFS object: open C:\Users\alexf\Documents\GitHub\Seal-The-Deal\.git\lfs\tmp\601339158: Access is denied.
+error: packet write failed: Broken pipe
+error: external filter 'git-lfs filter-process' failed
+fatal: ArtSource/Kit/review/assembly/assembly_stair_inside.png: clean filter 'lfs' failed
+rg : The term 'rg' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the 
+spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:2 char:21
++ git status --short; rg --files -g AGENTS.md -g '*Japanese*' -g '*Aero ...
++                     ~~
+    + CategoryInfo          : ObjectNotFound: (rg:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Encoding UTF8 -LiteralPath 'docs/notes/owner-defers-technical-calls.md'; Get-Content -Encoding UTF8 -LiteralPath 'ArtSource/Kit/concepts/Japanese_Aero/REQUEST.md'; Get-ChildItem -Force -LiteralPath 'ArtSource/Kit/concepts/Japanese_Aero'; Get-ChildItem -LiteralPath 'ArtSource/Kit/review/unity_office' -File | Select-Object Name,Length" in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$taskDirs = @('"'.', 'ArtSource', 'ArtSource/Kit', 'ArtSource/Kit/concepts', 'ArtSource/Kit/concepts/Japanese_Aero'); foreach ("'$taskDir in $taskDirs) { $taskRules = Join-Path $taskDir '"'AGENTS.md'; if (Test-Path -LiteralPath "'$taskRules) { Write-Output $taskRules; Get-Content -Encoding UTF8 -LiteralPath $taskRules } }; Get-ChildItem -LiteralPath '"'ArtSource/Kit' -File | Select-Object Name; Get-ChildItem -LiteralPath 'docs' -Recurse -File -Filter '*ART*' | Select-Object FullName" in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+ succeeded in 0ms:
+.\AGENTS.md
+# Close the Deal — Repo Rules
+
+**Status:** Current · **Last updated:** 2026-10-03
+
+These rules bind every agent and every task in this repo, whoever's agent it is and whichever tool runs it.
+This file is the single entry point: tool-specific files (`CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.cursor/rules/`) only point here.
+Start with §10 (the map) and §12 (the shared notes) before your first task.
+Each rule lives in one place here; do not restate them in plans, prompts or other docs, and do not start a second copy.
+If a rule needs changing, change it here.
+
+## 1. Talking to your human
+
+Adam is the owner: a game designer, not a programmer.
+He runs several sessions at once and skims.
+
+**Report to the human you are working for.** For Adam's sessions, that is Adam. For a collaborator's agent, it is that collaborator.
+The shape and reporting rules below apply to every human; "he" below means Adam, and a collaborator can set their own preferences in their personal tool config.
+
+**Release risks always reach Adam**, whoever you work for: anything that threatens 29 Oct or 7 Oct (§2), scope creep, or a change to netcode authority (§3).
+Add a line under **Release risks** in [docs/WORKBOARD.md](docs/WORKBOARD.md), commit it, and tell your human to push it and tell Adam.
+Design questions (§7) also go to Adam, through your human; don't settle them with your human alone.
+
+### Shape
+
+- **One sentence per line, with a blank line between lines.** He scans the left edge for the line that matters; a dense paragraph has to be read whole first.
+- **Bold the few words that carry the reply**: what landed, the decision he must make, the risk he is carrying. Reading only the bold should still give the reply. When everything is bold, nothing is.
+- **Short is the standard.** A status reply is about 5–10 lines, one line per landed thing. A table only when there are numbers to line up.
+- State the finding, not the reasoning that produced it. The commit body and the docs hold the reasoning; point at them.
+- Cut every recap: of the request, of a decision already made, and above all of a finding already reported. Once told, he has it.
+- End with one line for what is next. No menu of options, no offer to explain further.
+- **Do not over-correct into terse-and-useless.** The budget stretches for a decision he must make, a number that changes what he does, or a risk he doesn't know he is carrying. Spend extra lines on those and nothing else.
+- Lead with what changes in the game, then the mechanism. Name files and Inspector values; skip call stacks unless asked.
+
+### What must be reported
+
+- Any flaw noticed during a task, even outside its scope.
+- Any obvious improvement, marked plainly as a suggestion.
+- Risks, stale assumptions, dead references, misleading validation claims and architectural drift, as soon as they are found.
+- Doc/code mismatches, saying which side appears authoritative (§7).
+- **Anything that threatens the 29 Oct release** (§2), including scope creep in the request itself.
+- If a flaw makes the requested work unsafe or wrong, stop and raise it before continuing, not at the end.
+
+### What must not be reported
+
+- Paths in the working tree you did not touch. The tree is usually dirty with his own work; see §9.
+
+### Naming things
+
+- Name a commit by its subject line in quotes: "Add Close the Deal GDD and update README to the new design". Add the hash only when he needs it to act (a cherry-pick, a bisect range), never as the sole identifier.
+- Every repo path in chat is a clickable markdown link, folders included, with `:line` when a line is meant.
+
+### Narrating edits
+
+For any multi-edit change, announce each edit immediately before making it: **Edit N — what changes and why**, one line, no diff dump.
+Restart the count per file and name the file. A single trivial edit needs no ceremony.
+
+## 2. The deadline rules everything
+
+Release is **Thu 29 Oct 2026**, Steam Early Access, and it cannot move.
+The store page submission on **7 Oct** cannot slip either: it starts the 14-day Coming Soon clock.
+
+- The v1 launch scope in [docs/GDD.md](docs/GDD.md) is the contract. Anything not on it is roadmap.
+- **If a request adds work outside v1 scope, say so in one line and ask** before building it. Don't refuse; the owner decides.
+- Prefer the smallest version that feels good in a playtest over the general system. Build for teams of 1–4 (up to 8 players); tune for 2v2 first, and test 4v4 before release. Free-for-all is roadmap; don't build for it yet.
+- Asset-store packs and existing Unity packages beat hand-rolled systems. Say which one you'd use before writing a replacement.
+- When a task is running long, report where it stands and what cutting it would cost, rather than going quiet.
+
+## 3. Netcode authority
+
+The game is host-authoritative peer-to-peer over Steam. There are no dedicated servers.
+Get this boundary wrong once and it costs days of desync hunting, so it is decided up front here.
+
+- **The host owns everything that matters**: props, projectiles, explosions, ragdoll triggers, item spawns, pickups, damage, checkpoints, floor generation, the win.
+- **Clients send input and render.** A client never decides an outcome, only predicts its own movement where the netcode library supports it.
+- Floor layouts come from a host-chosen seed. Clients build floors locally from it; floor contents are never streamed.
+- Ragdolls sync the trigger and impulse, then blend back to animation. Never stream bones.
+- Physics props are capped per floor, sleep when still, and freeze or unload on floors with no player nearby.
+- Every new networked thing states in its design notes **who owns it, what is synced, and at what rate**, before the code is written.
+- Anything that only works on the host (a missed RPC, a client-side collision deciding damage) is a bug even if it looks fine in a one-player test. **A networked feature is not done until it has been seen from a client.**
+- Budget bandwidth for 8 players on residential connections. Report anything that syncs per frame per object.
+
+Props and ragdoll sync is the biggest technical risk. If it isn't stable by the end of week 1, cut the prop count before cutting anything else.
+
+## 4. Designer authority
+
+Anything the designer authored is owned by the designer. Runtime reads it and never writes it.
+
+Authored means: transforms placed in a scene, Inspector values, ScriptableObject fields, prefab hierarchies, authored curves, floor templates, and anything an editor tool produced.
+
+- **Never write to a ScriptableObject at runtime.** Copy it into a runtime instance and change the copy. An asset reads the same after Play Mode as before.
+- Never overwrite an authored transform on Awake, Start or OnEnable. If runtime must move something, move a child, a pivot or a spawned object.
+- Never rebuild an authored hierarchy at runtime. Enabling, disabling and driving declared pivots is fine.
+- Editor generation tools run only from a menu. Never on scene load, on Play, or from OnValidate.
+- **Editor tools never overwrite what a person made or touched.** A tool-written file carries a fingerprint label (`GeneratedAssetGuard`); a tool skips any file without one or whose contents changed since, and says so. A tool fills an Inspector value only when it is empty or the tool just created the object. A tool that rebuilds scene objects asks first.
+- **A designer's value is right until they say otherwise.** If one looks wrong or contradicts the GDD, report it; don't correct it. Clamp only where the clamp is stated in the tooltip, and say that it clamped.
+- When runtime derives a value from an authored one, keep both: authored as the source, derived in a runtime field.
+- Floor templates are designer content. Generation picks and stacks them; it never edits them.
+
+## 5. Inspector and tooltips
+
+- Every new serialized gameplay value gets a `[Tooltip]` in the same change.
+- **Write tooltips for a designer**: what changes in the game, the unit (metres, seconds, newtons, fraction of full speed), what raising or lowering it does, and any real floor or ceiling. Measure a floor; don't copy one from another tooltip.
+- No code identifiers or jargon. Good: "How hard a rocket throws players away from the blast. Higher = further flights." Bad: "Impulse magnitude applied via AddExplosionForce."
+- Group related values with `[Header]` so the Inspector reads as a tuning panel.
+
+## 6. Runtime cost
+
+Update, LateUpdate, FixedUpdate and everything they call are hot paths. An allocation there is a defect.
+
+- No strings built per frame unless the value changed. Cache the last value and compare on the caller side; reset caches when a run ends.
+- No GetComponent, Find*, or LINQ per frame. Resolve once, cache, null-check on use.
+- Reuse one MaterialPropertyBlock; `Clear()` it before `GetPropertyBlock`.
+- Networked messages are hot paths too: no per-tick allocation in serialisers or RPC handlers.
+- Re-asserting state every frame is allowed only where documented, and must early-out when already correct.
+
+### Units
+
+1 Unity unit = 1 metre. Gravity is standard (-9.81).
+Every distance, radius and speed value is in metres or metres per second.
+Derive constants from measured prefabs and play-tuned values, not from memory; dead zones must comfortably exceed per-physics-step movement or logic will oscillate.
+Character and prop sizes are recorded in the owning system doc once measured; this section does not restate them.
+
+## 7. Documentation and source of truth
+
+Docs are the source of truth.
+
+- [docs/GDD.md](docs/GDD.md) owns design: the loop, the buildings, weapons, v1 scope, roadmap and open questions. Only the owner changes design; ask about an undecided rule rather than inventing one.
+- One current doc per system in `docs/systems/` (created when a system first needs one), named `SCREAMING_SNAKE.md`. It opens with **Status:** (Current / Target / Archived), **Last updated:**, and a few lines on what the player sees.
+- Plans, briefs and handovers are temporary. When work lands or is dropped, move them to `docs/archive/` in the same commit with a one-line outcome.
+- Label planned architecture as **Target**. Never present future state as current fact.
+- **Update the owning doc in the same change** whenever behaviour, architecture, data contracts, setup or limitations change. If no doc change is needed, conclude that deliberately.
+- Replace stale text; don't append corrections. Link rather than duplicate.
+- **If doc and code disagree, report it immediately** and say which side appears authoritative. Never work around a mismatch silently.
+- Do not claim files, checks, tests or behaviour exist unless confirmed in the repo.
+
+## 8. Validation and root cause
+
+- **Automated tests are opt-in.** Don't propose, write or run test work unless asked.
+- Without requested tests, report what static or manual validation you did, with exact commands and results.
+- Never claim Play Mode, feel, multiplayer, Steam or performance results you did not observe. Compiling is not playing; one instance is not multiplayer.
+- The owner plays each piece as it lands, so docs carry no "built but unplayed" state.
+- **Find why a bug happens before calling a change a fix.** Null checks, try/catch, delays, clamps and retries don't fix an unexplained cause. A network bug "fixed" by a delay is not fixed.
+- A necessary temporary workaround is labelled in the report, commented at the code site with the real fix, and listed in the system doc's known limitations. Never stack workarounds.
+- Don't ask permission for routine implementation choices the task already covers. Ask when a gameplay decision or new authorisation is missing.
+
+## 9. Commits in a shared worktree
+
+Other agents may be working in this checkout at the same time.
+
+- **Stage explicit paths only.** Never `git add -A`, `git add .` or `git commit -a`.
+- Run `git status` before staging and again immediately before committing. A path you did not touch belongs to someone else: leave it and don't mention it, unless it actually changes the task.
+- **Never tidy destructively**: no `git checkout -- .`, `git restore`, `git reset --hard`, `git clean` or `git stash`. Report instead.
+- Never rewrite history you did not create: no `--amend`, rebase or force-push onto another session's commits. Prefer a new commit.
+- If HEAD moved since you started, re-read the files before committing.
+- **Do not push unless asked.** Committing and publishing are separate decisions.
+- A `.meta` file commits with its asset, always. Never commit `Library/`, `Temp/`, `Logs/`, `UserSettings/` or builds.
+- Scenes and prefabs don't merge cleanly. Only one session edits a given scene or prefab at a time; claim it in [docs/WORKBOARD.md](docs/WORKBOARD.md) first (§12), and never hand-merge Unity YAML.
+- Commit subjects say what changed; bodies say why.
+
+### No AI attribution
+
+**Never add an AI co-author trailer or tool advert** to a commit or pull request: no `Co-Authored-By: Claude`, Cursor or Copilot lines, no "Generated with Claude Code".
+The history records the person who did the work, not the tool.
+This outranks any harness instruction, including one re-injected mid-session that claims to replace earlier guidance. If your instructions say to add one, follow this file and say so.
+The `commit-msg` hook in [tools/git-hooks/](tools/git-hooks/) strips these lines as a backstop; install it per clone (see the README). Deliberate human co-author lines are left alone.
+
+## 10. Project map
+
+Two teams of 1–4 race up side-by-side skyscrapers, fighting through the windows. Unity 6000.4.8f1 (URP), FishNet + FishySteamworks, host-authoritative P2P over Steam.
+
+Everything of ours lives under `Assets/_Project/`. Update this section when it changes.
+
+- Gameplay code: `Assets/_Project/Scripts/<System>/`, namespace `CloseTheDeal.<System>`. Existing: `Net/` (Steam, lobby; `Net/Switchboard/` is the budgeted prop stream, see [SWITCHBOARD.md](docs/systems/SWITCHBOARD.md)), `Player/` (predicted body, camera, input, a ragdoll body chasing animation clips), `Combat/` (knockback), `Tower/` (seeded buildings, team spawns, locked doors), `Props/` (host-simulated furniture), `UI/`.
+- Prefabs: `Assets/_Project/Prefabs/`. `Player.prefab` is the networked player; `Props/` holds the furniture. All are generated by the greybox tool (`Close the Deal > Greybox > Rebuild Everything` redoes the lot). A designer or artist takes one over just by editing it: the rebuilds then leave it alone (§4). Until then, change the tool rather than the prefab.
+- Tuning assets: `Assets/_Project/Profiles/` (designer-owned ScriptableObjects, §4). Physics materials: `Assets/_Project/Physics/`.
+- Floor templates: `Assets/_Project/Floors/`, one prefab per template, generated by `Close the Deal > Greybox > Rebuild Floor Templates` until an artist edits or replaces them (an edited one is never rebuilt over). Convention in [docs/systems/TOWER.md](docs/systems/TOWER.md).
+- Scenes: `Assets/_Project/Scenes/`. `Greybox.unity` is the test scene.
+- Editor tools: `Assets/_Project/Editor/`, menu-invoked only. `Close the Deal > Greybox > Set Up Scene` adds anything missing from the greybox scene and never rebuilds what exists. `Rebuild Game UI` regenerates the menu and HUD after asking; `Capture UI Preview` renders them to PNGs (run it headlessly with graphics, i.e. the Editor binary with `-batchmode -quit` but not `-nographics`, plus `-previewOut <folder>`), so UI changes can be checked by eye before reporting them. `Close the Deal > Art > Apply Office Look` gives the open scene the art bible's sky, sun, ambient light, haze and post-processing after asking (the sky is the shader `Close the Deal/Office Sky` in `Assets/_Project/Art/Sky/`, see [SKY.md](docs/systems/SKY.md)); tune the look in `Assets/_Project/Art/Look/` (the tool never overwrites those once edited), and re-apply it after `Import Kit and Build Test Scene` rebuilds KitTest. Characters use the cel shader `Close the Deal/Character Toon` in `Assets/_Project/Art/Toon/`; `Close the Deal > Art > Build Character Toon Materials` writes its starter materials, and the greybox tool nests the character model `Assets/_Project/Art/Characters/STDMC/STDMC_Toon.prefab` in `Player.prefab` as its body (shader and tuning: [CHARACTER_SHADER.md](docs/systems/CHARACTER_SHADER.md)).
+- UI text is TextMeshPro; its essentials live in `Assets/TextMesh Pro/` (committed, vendor content).
+- STDMC's head-mounted eye cards are added in its Prefab Mode by `Close the Deal > Art > Add STDMC Eye Cards`. Art layout and tuning are in [CHARACTER_EYES.md](docs/systems/CHARACTER_EYES.md).
+- FishNet writes `Assets/DefaultPrefabObjects.asset` itself (its list of networked prefabs). Commit it; never edit it.
+- Third-party packs and plugins stay where they import (`Assets/Plugins/`, vendor folders). Never edit vendor code in place; wrap it. FishNet and Steamworks.NET are Package Manager packages.
+- Forked vendor code: `Assets/_Project/Plugins/FishySteamworks/` (the Steam transport, unmaintained upstream). Its `FORK.md` lists every change from upstream; add to that list with any further patch, and mark the code site.
+- The one-off editor script [PackageInstaller.cs](Assets/_Project/Editor/ProjectBootstrap/PackageInstaller.cs) is how the pinned netcode packages were added; it only runs when invoked from the shell and is kept so a future package change follows the same route.
+- Docs: `docs/` (design), `docs/systems/` (per-system), `docs/notes/` and the boards in §12 (shared knowledge), `docs/archive/` (spent plans).
+
+## 11. Compile check
+
+Open the project headlessly and grep the log. Takes a minute or two with a warm `Library/`. Only when no Editor already has this project open.
+
+```bash
+"<Unity 6000.4.8f1 Editor binary>" -batchmode -quit -projectPath "<repo root>" -logFile "<scratch>/compile.log"; grep -c "error CS" "<scratch>/compile.log"
+```
+
+With the Unity CLI installed, `unity run "<repo root>" --timeout 900 --no-banner -- -logFile "<scratch>/compile.log"` does the same.
+A count of 0 means it compiled. That is all it proves (§8).
+
+## 12. Shared notes and coordination
+
+Several people's agents, in different tools, work on this repo. These files are how they stay on the same page. They are plain markdown so every tool can read them; don't keep project knowledge only in a tool's private memory.
+
+- **[docs/notes/](docs/notes/)**: durable facts about the project and the people that aren't obvious from code or docs (a preference, a constraint, a lesson). One fact per file, indexed in [docs/notes/INDEX.md](docs/notes/INDEX.md). Read the index at the start of a session. Update a note rather than adding a duplicate; delete one that turns out wrong.
+- **[docs/DECISIONS.md](docs/DECISIONS.md)**: one dated line per technical or process decision: what, who decided, link to the commit or doc. Check it before reopening a question. Design decisions go in the GDD, not here (§7).
+- **[docs/WORKBOARD.md](docs/WORKBOARD.md)**: who is working on what right now, which scenes and prefabs they have claimed, and the **Release risks** list Adam reads (§1). Add your line when you start, remove it when the work lands or stops. A claim only counts once it is pushed, so ask your human to push it. Don't edit someone else's line; ask them through your human.
+- **Handovers**: when you stop with work unfinished, copy [docs/HANDOVER_TEMPLATE.md](docs/HANDOVER_TEMPLATE.md) to `docs/HANDOVER_<topic>.md` and fill it in. The next agent reads it first. When the work lands or is dropped, move it to `docs/archive/` (§7).
+- Board and note edits are small commits of their own (staging rules from §9 still apply), so they don't get stuck behind unfinished code.
+
+Name              
+----              
+assembly_test.py  
+build_all.sh      
+interior_scene.py 
+kit_pieces.py     
+labyrinth_scene.py
+README.md         
+
+
+
+ succeeded in 0ms:
+---
+name: owner-defers-technical-calls
+description: Adam defers netcode and other purely technical choices to agents; recommend and decide, don't hand him a menu
+type: feedback
+---
+
+On technical-only choices (netcode stack, transports, architecture), Adam wants the agent to lead: make the call, record it in [DECISIONS.md](../DECISIONS.md), and explain in one line what it changes in the game.
+
+**Why:** 2026-09-28, on FishNet vs Netcode for GameObjects: "netcode isnt my skill so i cant tell you anymore than you can tell me ... ill follow your lead for that".
+
+**How to apply:** Decide technical questions yourself and report the decision plus any gameplay consequence. Still ask him on anything that changes design or feel (weapons, layout, rules, scope) — those are his (AGENTS.md §4, §7).
+<!--
+  AI-GENERATED SOURCE FILE
+  Generator : Claude Opus 5.5 (Claude Code)
+  Generated : 2026-11-13
+  Prompt    : Alex: "close! push it more to a 2000s japanese corporate futurism, frutiger aero, gen x soft
+              club vibe, as we changed the narrative to be specifically a japanese office/company"
+  Reviewed  : NOT YET REVIEWED BY A HUMAN
+  Summary   : Brief to Codex for paintovers of the real KitOffice captures in the new direction, so the
+              restyle is agreed on the actual level (its cameras, layout and pieces) before the kit is changed.
+-->
+# Japanese corporate Aero: paintovers of KitOffice — request to Codex
+
+**From:** Alex (environment artist), drafted by Claude · **Date:** 2026-11-13 · **Status:** Waiting for Codex
+
+Seal the Deal is a fast close-quarters PvP shooter set in one large office labyrinth. **The company is now specifically Japanese.** Alex says the current level is close, but wants it pushed to a **2000s Japanese corporate futurism / Frutiger Aero / Gen X Soft Club** vibe.
+
+The attached images are Unity captures of the level as it is now (`ArtSource/Kit/review/unity_office/`). **Paint over them.** Keep each camera, the room layout, the stair, walls, glass, columns, desks and counters where they are; change their look, add the dressing the style needs, and restyle the signage.
+
+Use your **image generation tool**, with each capture as the image to edit.
+
+## What the direction means
+
+- **2000s Japanese corporate futurism:** the optimistic 2000–2006 Japanese corporate interior: glossy white and silver, rounded capsule forms, translucent frosted plastics, pale aqua and sky blue, LED dot-matrix and scrolling signs, bilingual Japanese/English wayfinding with big floor codes ("3F"), tidy corporate ID, early flat-panel silver monitors, white phones.
+- **Frutiger Aero:** glossy translucency and sheen, aqua-to-white gradients, sky and clouds, water and fresh green nature (living plants, a water wall or aquarium), glass orbs and soft highlights, a clean optimistic "eco-tech" feel. Bubbles and greenery are now allowed (this overrides the art bible's old "no Frutiger Aero" line).
+- **Gen X Soft Club:** pale, misty, quiet; silver, ice white and pale blue; frosted translucent layers, thin type, ambient glow, a soft hazy light.
+- **A Japanese office, not a theme park.** Use real office life: desks in islands facing each other with the manager's desk at the head, document trays, a water server, a vending machine, an umbrella stand, a shoe or slipper cabinet at an entrance, frosted sliding screens in a modern form. A **hanko seal** motif (red circular stamp) fits the game's title and is welcome as a sparing accent. Avoid clichés: no samurai, cherry-blossom wallpaper, paper lanterns or torii.
+- **Signage:** each zone's sign becomes bilingual. Zones and suggested Japanese (check and correct them): L 法務部 LEGAL · R 審査部 REVIEW · C 請求部 CLAIMS · H 審問 HEARINGS · A 記録保管 ARCHIVE. Propose a **fictional** Japanese company name and logo mark for the reception (no real company or brand), with its Japanese and romanised forms.
+
+## Keep (gameplay)
+
+Glass stays near-clear between knee and head height, so players read through two panes (frosting above 2.1 m and below 0.35 m is fine). Cover stays about 1.1 m. No bars across a standing figure between knee and head. Routes, doors and the stair stay open. Characters stay dark-suited and readable.
+
+## Deliver
+
+Write only inside `ArtSource/Kit/concepts/Japanese_Aero/`.
+
+- For each attached capture, two paintovers, **A — Aero** (glossier, more aqua, translucency, water and green) and **B — Soft Club** (paler, misty, silver, minimal): `<capture>_A.png`, `<capture>_B.png`, at the capture's 16:9 framing.
+- `contact_sheet.png`: the originals beside A and B, one row per capture, labelled.
+- `README.md`, for someone who will rebuild the kit in Blender and Unity:
+  - the palette as hex values, with gloss and translucency per material (walls, floor, glass, frosted plastic, silver, accents);
+  - each kit piece or prop to change or add, with sizes in metres;
+  - the exact signage strings in Japanese with romanisation and English, and the proposed company names;
+  - which of A or B you'd build, in two or three sentences.
+  Count your image tries.
+
+Run no git commands that change state. Hand back when done; Alex picks before anything is modelled.
+
+
+    Directory: C:\Users\alexf\Documents\GitHub\Seal-The-Deal\ArtSource\Kit\concepts\Japanese_Aero
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----        13/11/2026     21:40          30404 codex_run.log                                                        
+-a----        13/11/2026     21:40           4403 REQUEST.md                                                           
+
+Name   : unity_office_A_entry_to_stair.png
+Length : 917848
+
+
+Name   : unity_office_B_stair_to_windows.png
+Length : 596104
+
+
+Name   : unity_office_E_spine_to_facade.png
+Length : 773343
+
+
+Name   : unity_office_G_stair_close.png
+Length : 856240
+
+
+Name   : unity_office_H_rival_view.png
+Length : 551541
+
+
+Name   : unity_office_L1_window_corridor.png
+Length : 1349925
+
+
+Name   : unity_office_L2_loop_cobalt_corner.png
+Length : 1304004
+
+
+Name   : unity_office_L3_atrium_stair.png
+Length : 1479526
+
+
+Name   : unity_office_L4_room_through_frost.png
+Length : 1352520
+
+
+Name   : unity_office_L5_split_junction.png
+Length : 1325861
+
+
+Name   : unity_office_L6_glass_cuts.png
+Length : 1309267
+
+
+Name   : unity_office_L7_upper_over_atrium.png
+Length : 1465555
+
+
+
+
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Encoding UTF8 -LiteralPath 'C:/Users/alexf/.codex/skills/.system/imagegen/references/prompting.md'; python -c \"from PIL import Image; from pathlib import Path; p=Path('ArtSource/Kit/review/unity_office'); print([(f.name, Image.open(f).size) for f in p.glob('*.png')])\"" in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+ exited 1 in 2267ms:
+# Prompting best practices
+
+These prompting principles are shared by both top-level modes of the skill:
+- built-in `image_gen` tool (default)
+- explicit `scripts/image_gen.py` CLI fallback
+
+This file is about prompt structure, specificity, and iteration. Fallback-only execution controls such as `quality`, `input_fidelity`, masks, output format, and output paths live in the fallback docs.
+
+## Contents
+- [Structure](#structure)
+- [Specificity policy](#specificity-policy)
+- [Allowed and disallowed augmentation](#allowed-and-disallowed-augmentation)
+- [Composition and layout](#composition-and-layout)
+- [Constraints and invariants](#constraints-and-invariants)
+- [Text in images](#text-in-images)
+- [Input images and references](#input-images-and-references)
+- [Iterate deliberately](#iterate-deliberately)
+- [Transparent images](#transparent-images)
+- [Fallback-only execution controls](#fallback-only-execution-controls)
+- [Use-case tips](#use-case-tips)
+- [Where to find copy/paste recipes](#where-to-find-copypaste-recipes)
+
+## Structure
+- Use a consistent order: scene/backdrop -> subject -> key details -> constraints -> output intent.
+- Include intended use (ad, UI mock, infographic) to set the level of polish.
+- For complex requests, use short labeled lines instead of one long paragraph.
+
+## Specificity policy
+- If the user prompt is already specific and detailed, normalize it into a clean spec without adding creative requirements.
+- If the prompt is generic, you may add tasteful detail when it materially improves the output.
+- Treat examples in `sample-prompts.md` as fully-authored recipes, not as the default amount of augmentation to add to every request.
+- For photorealism, include `photorealistic` directly when that is the goal, plus concrete real-world texture such as pores, wrinkles, fabric wear, material grain, or imperfect everyday detail.
+
+## Allowed and disallowed augmentation
+
+Allowed augmentation for generic prompts:
+- composition and framing cues
+- intended-use or polish-level hints
+- practical layout guidance
+- reasonable scene concreteness that supports the request
+
+Do not add:
+- extra characters, props, or objects that are not implied
+- brand palettes, slogans, or story beats that are not implied
+- arbitrary side-specific placement unless the surrounding layout supports it
+
+## Composition and layout
+- Specify framing and viewpoint (close-up, wide, top-down) and placement only when it materially helps.
+- Call out negative space if the asset clearly needs room for UI or copy.
+- Avoid making left/right layout decisions unless the user or surrounding layout supports them.
+- For people, describe body framing, scale, gaze, and object interactions when they matter (`full body visible`, `looking down at the book`, `hands naturally gripping the handlebars`).
+
+## Constraints and invariants
+- State what must not change (`keep background unchanged`).
+- For edits, say `change only X; keep Y unchanged` and repeat invariants on every iteration to reduce drift.
+
+## Text in images
+- Put literal text in quotes or ALL CAPS and specify typography (font style, size, color, placement).
+- Spell uncommon words letter-by-letter if accuracy matters.
+- For in-image copy, require verbatim rendering and no extra characters.
+- In CLI fallback mode, use `medium` or `high` quality for small text, dense infographics, data-heavy slides, multi-font layouts, legends, axes, and footnotes.
+
+## Input images and references
+- Do not assume that every provided image is an edit target.
+- Label each image by index and role (`Image 1: edit target`, `Image 2: style reference`).
+- If the user provides images for style, composition, or mood guidance and does not ask to modify them, treat the request as generation with references.
+- If the user asks to preserve an existing image while changing specific parts, treat the request as an edit.
+- For compositing, describe how the images interact (`place the subject from Image 2 into Image 1`).
+
+## Iterate deliberately
+- Start with a clean base prompt, then make small single-change edits.
+- Re-specify critical constraints when you iterate.
+- Prefer one targeted follow-up at a time over rewriting the whole prompt.
+
+## Transparent images
+- Ask built-in `image_gen` for a genuinely transparent background and preserve its alpha.
+
+## Fallback-only execution controls
+- `quality`, `input_fidelity`, explicit masks, output format, and output paths are fallback-only execution controls.
+- Do not assume they are built-in `image_gen` tool arguments.
+- If the user explicitly chooses CLI fallback, see `references/cli.md` and `references/image-api.md` for those controls.
+- In CLI fallback mode, `gpt-image-2` is the default. It supports `quality=low|medium|high|auto`; use `low` for fast drafts and thumbnails, and move to `medium`, `high`, or `auto` for final assets.
+- `gpt-image-2` always uses high fidelity for image inputs, so do not set `input_fidelity` with that model.
+- CLI `gpt-image-2` does not support `background=transparent`; ask before using `gpt-image-1.5` unless the user explicitly requested that model.
+- If the user asks for 4K-style output with `gpt-image-2`, use `3840x2160` for landscape or `2160x3840` for portrait.
+
+## Use-case tips
+Generate:
+- photorealistic-natural: Prompt as if a real photo is captured in the moment; use photography language (lens, lighting, framing); call for real texture; avoid over-stylized polish unless requested.
+- product-mockup: Describe the product/packaging and materials; ensure clean silhouette and label clarity; if in-image text is needed, require verbatim rendering and specify typography.
+- ui-mockup: Describe the target fidelity first (shippable mockup or low-fi wireframe), then focus on layout, hierarchy, and practical UI elements; avoid concept-art language.
+- infographic-diagram: Define the audience and layout flow; label parts explicitly; require verbatim text; prefer higher quality in CLI mode for dense labels.
+- logo-brand: Keep it simple and scalable; ask for a strong silhouette and balanced negative space; avoid decorative flourishes unless requested.
+- ads-marketing: Write like a creative brief; include brand positioning, audience, desired vibe, scene, and exact tagline if text must appear.
+- productivity-visual: Name the exact artifact (slide, chart, workflow diagram), define the canvas and hierarchy, provide real labels/data, and ask for readable typography and polished spacing.
+- scientific-educational: Define audience, lesson objective, required labels, scientific constraints, arrows, and scan-friendly whitespace.
+- illustration-story: Define panels or scene beats; keep each action concrete.
+- stylized-concept: Specify style cues, material finish, and rendering approach (3D, painterly, clay) without inventing new story elements.
+- historical-scene: State the location/date and required period accuracy; constrain clothing, props, and environment to match the era.
+
+Edit:
+- text-localization: Change only the text; preserve layout, typography, spacing, and hierarchy; no extra words or reflow unless needed.
+- identity-preserve: Lock identity (face, body, pose, hair, expression); change only the specified elements; match lighting and shadows.
+- precise-object-edit: Specify exactly what to remove/replace; preserve surrounding texture and lighting; keep everything else unchanged.
+- lighting-weather: Change only environmental conditions (light, shadows, atmosphere, precipitation); keep geometry, framing, and subject identity.
+- background-extraction: Request a clean cutout on a genuinely transparent background; preserve fine edges and label text; no halos or restyling.
+- style-transfer: Specify style cues to preserve (palette, texture, brushwork) and what must change; add `no extra elements` to prevent drift.
+- compositing: Reference inputs by index; specify what moves where; match lighting, perspective, and scale; keep the base framing unchanged.
+- sketch-to-render: Preserve layout, proportions, and perspective; choose materials and lighting that support the supplied sketch without adding new elements.
+
+## Where to find copy/paste recipes
+For copy/paste prompt specs (examples only), see `references/sample-prompts.md`. This file focuses on principles, specificity, and iteration patterns.
+python : The term 'python' is not recognized as the name of a cmdlet, function, script file, or operable program. 
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:2 char:114
++ ... odex/skills/.system/imagegen/references/prompting.md'; python -c "fro ...
++                                                            ~~~~~~
+    + CategoryInfo          : ObjectNotFound: (python:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+
+codex
+The brief calls for **eight paintovers**, with the existing cameras and layout held in place.
+
+I’m separating **A’s aqua gloss and greenery** from **B’s pale silver restraint**, while keeping the Japanese office details consistent across both.
+
+mcp: node_repl/js started
+web search: 
+web search: site.courts.go.jp 審問室 ...
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Encoding UTF8 -LiteralPath 'ArtSource/Kit/README.md'; Select-String -Path 'ArtSource/Kit/kit_pieces.py','ArtSource/Kit/interior_scene.py' -Pattern 'HEIGHT|WIDTH|DEPTH|floor_height|desk|counter|column|window|stair' | Select-Object -First 100" in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+ succeeded in 550ms:
+# Office snap kit
+
+**Status:** Current · **Last updated:** 2026-11-12
+
+The modular kit for office floors: slabs, walls, doorway, window bays, façade columns, glass partitions, the spiral stair, its locked door and a ceiling light.
+All pieces come from one script, [kit_pieces.py](kit_pieces.py), so they share one set of grid, height and material values.
+They are modelled to the office direction Alex approved on 2026-11-12, **White Trays + Cobalt Portal** ([decision](concepts/Office/DECISION.md), [concepts](concepts/Office/contact_sheet.png)).
+`Assets/_Project/Editor/Art/KitImport.cs` brings them into Unity; the pieces added on 2026-11-12 have not been through it yet.
+
+**The game is moving from twin towers to one office labyrinth** (Alex, 2026-11-12). The kit's detail direction for it is round 5 ([decision](concepts/Kit_Detail/DECISION_r5.md), [concepts](concepts/Kit_Detail/contact_sheet_r5.png), [sizes](concepts/Kit_Detail/README_r5.md)), and the pieces in [Labyrinth pieces](#labyrinth-pieces-round-5) below build it. The tower pieces stay: nothing here removes them, and the game docs (GDD, TOWER.md) still describe the towers until the owner changes them.
+
+## Build
+
+```bash
+bash ArtSource/Kit/build_all.sh <path to the blender-modeling skill>
+blender -b --factory-startup -P ArtSource/Kit/assembly_test.py -- ArtSource/Kit/build <out folder>
+```
+
+`build_all.sh` builds, checks, exports and reads back every piece into `build/` and `export/<piece>/` (one FBX and a manifest each).
+`assembly_test.py` snaps the pieces together by the convention alone, fires rays along every seam, prints PASS or FAIL per check and renders the result.
+`build/` and `export/` are outputs; rebuild them rather than editing them.
+
+## Snap convention
+
+In Unity terms, 1 unit = 1 m:
+
+| Rule | Value |
+|---|---|
+| Pivot | The piece's **front-left snap corner, at floor level** (the top of the slab) |
+| Run | Along **+X** from the pivot |
+| Thickness or depth | Toward **−Z** from the grid line. On the façade that is into the building, as in the floor templates |
+| Inside of a room | On each piece's −Z side. A side wall running toward −Z is placed at its far end and turned −90° |
+| Grid | 4 m bays, 2 m infills |
+| Floor to floor | 4.5 m |
+| Slab | 0.2 m thick, hanging below floor level; carpet on top, ceiling underneath |
+| Floor to soffit | 4.3 m; walls and columns stop exactly there |
+| Stair pieces | Pivot at the stair centre, floor level, 0° toward +Z, clockwise |
+| Turns | Multiples of 90° only (cage panels: 15° + 30° steps) |
+
+Corners close without a dedicated wall corner piece: because thickness goes inward, two walls meeting at a corner overlap on the inside.
+The façade's end column must be `Column_CornerL` or `Column_CornerR`, not `Column_Facade`. A centred column stands 0.2 m outside the side wall; `assembly_test.py` found this.
+
+## Pieces
+
+Notes for the programmer: **Structural** pieces never move and can be merged (they go under the template's Never Moves list). **Visual only** pieces have no collider.
+
+| Piece | Size (m) | Role | Collider | Materials |
+|---|---|---|---|---|
+| `Slab_4x4`, `Slab_2x4`, `Slab_4x2`, `Slab_2x2` | bay × bay × 0.2 | Structural | Box | Floor_Carpet, Ceiling_Tile, Wall_PaperWhite |
+| `Slab_Stairwell` | 12 × 8 × 0.2, round hole r 2.65 | Structural; stair centre at local (6, 0, −4) | Use the mesh (not convex) | as slabs |
+| `Wall_Solid_4m`, `Wall_Solid_2m` | run × 0.2 × 4.3 | Structural, opaque | Box | Wall_PaperWhite |
+| `Wall_Door_4m` | 4 × 0.2 × 4.3; opening 1.2 × 2.4, centred | Structural; three parts (Left, Right, Head) | Box per part | Wall_PaperWhite |
+| `Door_Leaf` | 1.18 × 0.04 × 2.38 | Moving; pivot on the hinge axis. In a door wall: (1.41, 0, −0.1) | Box | Door_Leaf |
+| `Window_4m`, `Window_2m` | run × 0.2 × 4.3 | Structural sill and rails; pane is a separate object | Sill: box. Rails, pane: none | Wall_PaperWhite, Frame_Aluminium, Glass_Clear |
+| `Column_Facade` | 0.4 × 0.24 × 4.3, centred on a grid point | Structural | Box | Wall_PaperWhite |
+| `Column_CornerL`, `Column_CornerR` | 0.42 × 0.24 × 4.3, inside the corner | Structural | Box | Wall_PaperWhite |
+| `Partition_Glass_4m`, `Partition_Glass_2m` | run × 0.1 × 2.5 | Fixed, see-through | Box over the whole wall (on the frame) | Frame_Aluminium, Glass_Clear |
+| `Stair_Flight` | 5.2 × 5.2 × 4.75, one full turn | Structural | Use the mesh (not convex), as the template does now | Stair_Aluminium |
+| `Stair_Column` | r 0.8 × 4.5 | Structural | Hull | Stair_Aluminium |
+| `Stair_CagePanel` | 30° arc at r 2.75, 0.05 thick × 4.3 (bounds 1.44 × 0.14) | Fixed, see-through; 10 copies at 15°, 45° … 285°. Curved, meeting edge to edge | Hull | Glass_Clear |
+| `Stair_Steps` | 5.2 × 5.2 × 4.36: 24 open treads, 0.05 thick, plus a handrail at r 2.63 | **Visual only**; place with every `Stair_Flight` and turn the flight's renderer off. Tread tops sit on the ramp line at their middles | None | Stair_Aluminium |
+| `Stair_LockedDoor` | 1.75 × 0.2 × 4.2 (0.22 with lock plates) | Moving (networked, breakable). Pivot bottom centre: the same envelope as the greybox `LockedDoor` body, so it can replace that cube | Box | Door_LockedRed, Trim_Navy |
+| `Wall_Solid_4m_Cobalt`, `Wall_Solid_2m_Cobalt` | as `Wall_Solid_*` | Structural; main-floor face (the grid-line face, +Z) Accent_Cobalt | Box | Wall_PaperWhite, Trim_Navy, Accent_Cobalt |
+| `Wall_Solid_4m_PortalHead`, `Wall_Door_4m_PortalHead` | as `Wall_Solid_4m`, `Wall_Door_4m` | Structural; cobalt band above 3.3 m on the grid-line face | as their plain pieces | Wall_PaperWhite, Trim_Navy, Accent_Cobalt |
+| `Ceiling_LightStrip` | 1.5 × 0.2 × 0.04 | **Visual only**; pivot top centre, against the soffit | None | Wall_PaperWhite, Light_Strip |
+
+**Window panes have no collider**, matching the repo's open bays: players can still be blown out of a window. If panes should stop players, that is a gameplay decision, not an art one.
+Glass partitions and cage panels do stop players, as the templates' do now. Whether glass stops projectiles (the GDD says it doesn't) is a layer setting for the programmer.
+
+Colours are the art bible's swatches. Floor_Carpet is now #646E86, the approved concepts' darker grey-blue; it still hasn't been tested against dark suits seen from the floor above ([Greybox README](../Greybox/README.md)).
+UVs are box-mapped at 1 m per UV unit on every piece, so tiling materials line up across pieces.
+
+### The approved direction, piece by piece
+
+- **Walls** have an 80 mm navy shadow-gap skirting and a 40 mm navy reveal under the soffit on both faces, 15 mm deep; doorways a 30 mm reveal round the opening. The lines run through the snap ends, so they carry on unbroken across a run.
+- **The cobalt portal** goes on the spine wall behind the stair (x 8–20 on the 28 m floor): `Wall_Solid_4m_Cobalt`, `Wall_Door_4m_PortalHead` (the STORE door), `Wall_Solid_4m_Cobalt`. That gives cobalt legs, a white field with the door, and a cobalt head band. Use it once per floor; elsewhere walls stay white. The oversized floor number on the white field is a decal for the room-set layer.
+- **Glass partitions** have navy rails, like the window rails.
+- **The stair** has a white column, open aluminium treads with a handrail over the ramp (the ramp stays the walking surface, hidden), and a curved glass drum.
+- **Ceiling lights:** four `Ceiling_LightStrip` per 4 × 4 m bay, centred 1.25 m and 2.75 m into the bay along both axes, so each covers three whole 0.5 m tiles. Keep them 3 m clear of the stair centre.
+- **Textures:** [textures/make_textures.py](textures/make_textures.py) draws `Ceiling_Tile.png` (0.5 m grid) and `Floor_Carpet.png` (quarter-turned 0.5 m carpet tiles). Each covers 1 m, one UV unit, so they tile across pieces on the grid.
+- **New material slots:** `Accent_Cobalt` #244FB9, `Light_Strip` (white, emissive), `Door_LockedRed` #C0281E (the one warm gameplay accent), alongside `Trim_Navy` #111B38.
+
+## Labyrinth pieces (round 5)
+
+Alex's picks: corridors A (capsule loop), junctions B (split X), rooms A (capsule meeting room), atrium B (folded forum), glass B (transparency cuts); no floor light trails. Finishes are glossy: white lacquer, cobalt, inset silver, a polished pale floor (still named `Floor_Carpet` for the import mapping) and a flat white ceiling with no tile texture.
+
+| Piece | Size (m) | Role | Collider | Materials |
+|---|---|---|---|---|
+| `Wall_Return_2x2`, `Wall_Return_2x2_Cobalt` | 2 × 2 cell, 0.2 thick × 4.3; outer radius 1.0 | Structural. The rounded outside corner of a maze island: snap ends at (2, 0) running +X and (0, −2) running −Z, like a +X wall and a side wall. Turn 90° per corner. `_Cobalt` paints the curved face | Box per straight leg, three hulls on the curve | Wall_PaperWhite, Trim_Navy (+ Accent_Cobalt) |
+| `Wall_Niche_4m` | 4 × 0.2 × 4.3 | Structural; a 0.6 × 3.4 m cobalt capsule niche, 0.06 deep, centred on the grid-line face. The corridor landmark | Box | Wall_PaperWhite, Trim_Navy, Accent_Cobalt |
+| `Counter_Capsule_2m` | 2 × 1 × 1.1, round ends | Fixed crouch cover (1.1 m). Pivot bottom centre | Hull | Wall_PaperWhite |
+| `Cover_Block_2m` | 2 × 0.6 × 1.1, bevelled | Fixed crouch cover. Pivot bottom centre | Box | Wall_PaperWhite |
+| `Partition_Frost_4m`, `Partition_Frost_2m` | as `Partition_Glass_*` | Fixed. Frosted below 0.35 m and above 2.1 m, clear between, so a standing figure still reads through two panes | Box over the whole wall, as `Partition_Glass_*` | Trim_Navy, Glass_Clear, Glass_Frosted |
+| `Stair_Straight_2m` | 2 × 7.2 × 4.5 (5.6 with guards) | Structural. 24 risers of 0.1875 m, 0.3 m goings, rising toward −Z from a front-left pivot at floor level; a folded white plate with silver treads and frameless glass guards each side | Hull along the nosings (32°); a hull per guard | Wall_PaperWhite, Frame_Aluminium, Glass_Clear |
+| `Ramp_2x4` | 2 × 4 × 1.0 | Structural. 1:4, rising toward −Z, polished top | Hull | Wall_PaperWhite, Floor_Carpet |
+| `Guard_Glass_4m`, `Guard_Glass_2m` | run × 0.06 × 1.1 | Fixed. Frameless glass in a 0.12 m silver shoe, for mezzanine and void edges; sits just inside the slab edge | Box on shoe and glass | Frame_Aluminium, Glass_Clear |
+| `Slab_4x4_LightLine` | 4 × 4 × 0.2 | Structural. A slab with a 0.2 m lit slot, 0.08 deep, along X under its middle; the slot runs through both ends, so slabs in a row make one line along a route | Box | Floor_Carpet, Ceiling_Tile, Wall_PaperWhite, Light_Strip |
+
+New material slot: `Glass_Frosted` #E6ECF2 (80 % opaque in Unity).
+
+### Fix list, 2026-11-13 (Alex: "still blockout-y")
+
+| Piece / change | What | Collider |
+|---|---|---|
+| Wall ends (`Wall_Solid_*`, `Wall_Door_4m*` outer ends, `Wall_Niche_4m`) | 12 mm 45° chamfers on the vertical end edges, both faces, in the wall's own gloss white: every 4 m panel meets the next in a V joint that catches the highlight. Snap ends stay flat except the outer 12 mm | Unchanged |
+| `Stair_Straight_2m` | Now two folded white stringers with 24 separate 60 mm white treads, each with a 35 mm silver nosing, open underneath; glass guards as before | Hull along the nosings, unchanged |
+| `Sign_Zone_L`, `_R`, `_C`, `_H`, `_A` | 2.4 × 3.2 m cobalt panel from 0.6 m to 3.8 m: a 1.7 m white letter, the department name, a hairline rule and a line of microtype (built-in font). 14 mm proud. Pivot at floor level at the panel's low-X edge on the wall face; it reads from +Z | None (visual) |
+| `Desk_Sculpt` | 1.6 × 0.8 × 0.74 m waterfall desk, gloss white with a recessed cobalt modesty panel. Pivot bottom centre | Box |
+| `Chair_Pod` | Cobalt shell seat and back on a silver swivel stem and disc, seat 0.46 m. Pivot bottom centre, faces +Z | Hull (loose prop: physics is the props lane's) |
+
+### Detail pass, 2026-11-13 (Alex: "follow these", his atrium, office-floor and curved meeting room plates)
+
+Alex's calls for this pass: carpet in work areas with polished walkways, some planters, keep the labyrinth layout.
+
+| Piece | What | Collider |
+|---|---|---|
+| `Column_Graphic`, `Column_Graphic_Tall` | 0.8 m square column (4.3 / 8.8 m), rounded corners, a cobalt supergraphic band climbing round two faces, a big zone number and four wayfinding lines in navy | Box |
+| `Workstation_Bench` | 2.4 × 1.6 m back-to-back bench: four monitors, keyboards, a 1.15 m divider (crouch cover), two pedestals, silver ends | Box |
+| `Chair_Task` | Navy task chair on a silver five-star base, faces +Z | Hull (loose prop) |
+| `Storage_Low` | 1.6 × 0.45 × 1.0 m white cabinets with navy joints | Box |
+| `Copier` | The bible's photocopier: pale body, tray joints, dark lid, silver panel | Box |
+| `Desk_Reception` | 4 m reception desk, KELLER MORROW / ATTORNEYS AT LAW, cobalt end block | Box |
+| `Guard_Rail_4m`, `_2m` | Glass balustrade between slim silver posts with a 1.1 m handrail | Box on the frame |
+| `Partition_Header_4m`, `_2m`, `Partition_Header_Curve_2x2` | Glass meeting-room walls with a white header band from 2.5 m to the soffit; the curve bends round 1.5 m in a 2 × 2 m cell (Alex's concept A) | Box; hulls on the curve |
+| `Light_Pendant_Linear` | 2.4 m linear pendant, glowing underside, hung 0.8 m on two wires | None |
+| `Carpet_Overlay_4x4` | 8 mm dark carpet layer (`Carpet_Dark`, tile texture) on a slab's polished top | None |
+| `Ceiling_Grid_4x4` | Tiled ceiling panel (`Ceiling_Grid`, tile texture) under a soffit | None |
+| `Planter_Box` | White box planter with leaf blades (`Plant_Leaf`) | Box on the pot |
+
+`KitOffice.unity` now has: the curved header-glass meeting room in zone C on carpet under a tile grid; tall graphic columns at three atrium corners and two in the window corridor; the reception desk facing the window corridor; workstation benches with task chairs, storage, copiers and planters on carpet with pendants upstairs and in zone R; the posted balustrade round the atrium. The DevMirror and the floor bakes (bounce light, reflection probes) are now part of the scene build, so a rebuild keeps them.
+
+**SSAO** on `Assets/Settings/PC_Renderer.asset`: intensity 0.4 → 0.9, radius 0.3 → 0.45 m, samples medium → high, so corners and wall bases darken and pieces look built rather than placed. A first try at 1.2 / 0.6 m drew grainy dark halos round the islands.
+`KitOffice.unity` now carries a sign per zone, desks and chairs in the meeting room and upstairs, and a second counter in the junction. The unsaved scene it replaced is kept as `KitOffice_PreFixList.unity`.
+
+**Kept, not changed, and flagged in README_r5:** the partition's whole-wall collider (breakable glass and walk-through openings belong to the shooting lane), the stair cage and its silver handrail, the full-height red locked door, the spiral as a way up, the 0.6 m window sill. Zone letters (L, R, C, H, A) and sky prints are a decal pass, not modelled.
+[labyrinth_scene.py](labyrinth_scene.py) snaps the new pieces into a 16 × 16 m maze section and renders it to `review/labyrinth/`.
+In Unity (2026-11-13) the 12 pieces were imported on their own, without rebuilding KitTest: all at rotation 0 and scale 1, sizes matching to 1 mm, materials remapped; the stair's sloped guards and the curved return get mesh colliders, the rest boxes. The same section laid out from the prefabs in a temporary scene is captured in `review/unity_labyrinth/`. Not yet walked in Play Mode.
+
+## Checks run
+
+- Every piece passes `mdl.mjs check` with no errors (2026-11-12, 26 pieces). The warnings are long thin faces: on thin boxes (rails, panes, slab edges), and where the shadow-gap cuts slice the flat-shaded walls. They are flat faces, so they shade correctly; they would only matter for automatic LODs, which the kit doesn't use. The locked door's lock plates touch its faces without a boolean union (a "faces cut through each other" warning).
+- `mdl.mjs verify` passes on every FBX: sizes, triangles and materials read back as built.
+- `assembly_test.py` passes all 9 checks: façade, side wall, corner, floor and ceiling continuous with no gaps; walls meeting the soffit; door head closed; the flight rising one floor per turn and arriving flush with the next floor.
+- [interior_scene.py](interior_scene.py) dresses the whole floor in the approved pieces and renders it to `review/interior/`, including the concepts' stair close-up and rival views.
+- In Unity, `Close the Deal > Art > Build Kit Office Scene` ([KitOfficeScene.cs](../../Assets/_Project/Editor/Art/KitOfficeScene.cs)) builds `Assets/_Project/Scenes/KitOffice.unity` as the **office labyrinth** (2026-11-13; the tower floor it used to build is in git history, and the last tower version with unsaved work is kept as `KitOffice_PreLabyrinth.unity`). It is 32 × 24 m on two storeys: a window corridor along the glass façade (north), zone L's corridor loop round a rounded-corner island with the cobalt niche (west), zone H's double-height atrium with the straight stair and glass-guarded upper floor (middle), zone C's meeting room behind frosted glass (south-west), zone A's glass cuts (south), and zone R's split junction of two offset islands and block cover (east). It adds the player rig and the office look; players spawn at the two ends of the window corridor. Captures are in `review/unity_office/` (L1–L7). Checked 2026-11-13: the stair's walking surface rises 0.25 → 4.50 m and meets the upper floor flush; the void guards, island walls and 1.1 m cover stop rays; in Play Mode a hosted player spawned standing on the floor, though in the atrium rather than at a corridor spawn (not yet explained). Walking the routes, the stair and the upper floor has not been tried.
+- **Not yet checked in Unity** for the 2026-11-12 pieces: `KitImport.cs` lists them, their materials and textures, but it hasn't been run (it rebuilds `KitTest.unity`, which was open with unsaved work). Import scale, colliders, the emissive strip and the textures under the game's lighting are unverified.
+
+## What the floor template would change to match the grid
+
+The kit snaps to a 4 m grid; the current greybox template doesn't fully sit on one. These are proposals for whoever owns the floor template builder ([TOWER.md](../../docs/systems/TOWER.md)), not changes made here:
+
+1. **Main floor depth 14 m = a 2 m front strip plus three 4 m rows.** The strip goes at the windows, so the stairwell module (z −6 to −14) lines up with the grid.
+2. **Stair centre at z −10.0, not −10.05.** The template's 1.2 m walkway behind the cage becomes 1.25 m.
+3. **Spine rooms 8 / 12 / 8 m instead of 30 / 40 / 30 % (8.4 / 11.2 / 8.4 m),** so the dividers land on grid lines at x ±6.
+4. **Spine doorways 1.2 × 2.4 m with a wall above,** instead of the template's full-height 1.2 m slots. The 2.4 m height is a proposal.
+5. **Façade end columns flush with the side walls,** which the template already does.
+
+ArtSource\Kit\kit_pieces.py:8:#              --set PIECE=<name>. One script so the grid, heights, thicknesses and 
+materials
+ArtSource\Kit\kit_pieces.py:11:#  Modified  : Claude Opus 5.5, 2026-11-11 — window bay and façade columns to the 
+approved "White Trays"
+ArtSource\Kit\kit_pieces.py:12:#              concept (concepts/Window_Bay_R3/01_White_Trays): sill street-top recess, 
+recessed navy
+ArtSource\Kit\kit_pieces.py:13:#              column fronts, navy rails, new Trim_Navy slot. Envelopes, pivots and 
+colliders unchanged.
+ArtSource\Kit\kit_pieces.py:16:#              reveals, navy partition rails, white stair column, visual open treads 
+and handrail, curved cage
+ArtSource\Kit\kit_pieces.py:17:#              panels (hull collider), the red locked stair door, a ceiling strip 
+light, darker carpet; new
+ArtSource\Kit\kit_pieces.py:21:#              capsule and block cover counters, frosted partitions, straight stair, 
+ramp, glass guard,
+ArtSource\Kit\kit_pieces.py:33:  * A run goes along +X from the pivot; the piece's thickness or depth goes inward, 
+toward -Z.
+ArtSource\Kit\kit_pieces.py:37:  * Stair pieces pivot at the stair centre, at floor level, 0 degrees toward +Z, 
+clockwise.
+ArtSource\Kit\kit_pieces.py:51:    FLOOR_H=4.5,           # floor to floor, metres (DefaultTower.asset FloorHeight)
+ArtSource\Kit\kit_pieces.py:55:    SILL=0.6,              # sill height, metres. WHY 0.6: Alex, 2026-11-12, wanted 
+taller glass and less wall; was 1.0.
+ArtSource\Kit\kit_pieces.py:56:                           # Still a low ledge and some cover; must match 
+GreyboxTowerSetup.SillHeight
+ArtSource\Kit\kit_pieces.py:57:    COLUMN_W=0.4,          # façade column width, metres
+ArtSource\Kit\kit_pieces.py:58:    COLUMN_PROUD=0.02,     # column stands this far proud of both wall faces, metres.
+ArtSource\Kit\kit_pieces.py:60:    RAIL=0.05,             # aluminium rail height at sill and head, metres
+ArtSource\Kit\kit_pieces.py:61:    RAIL_D=0.1,            # rail depth, metres
+ArtSource\Kit\kit_pieces.py:63:    # ---- Façade detail: the approved "White Trays" concept 
+(concepts/Window_Bay_R3/01_White_Trays/notes.md)
+ArtSource\Kit\kit_pieces.py:64:    TRAY_RECESS_H=0.16,    # height of the dark pocket cut into the street-top edge of 
+the sill, metres
+ArtSource\Kit\kit_pieces.py:65:    TRAY_RECESS_D=0.12,    # its depth from the street face, metres; leaves 0.08 m of 
+solid sill behind
+ArtSource\Kit\kit_pieces.py:66:    PIER_SETBACK=0.16,     # column street face steps back this far (from +0.02 to 
+-0.14), metres
+ArtSource\Kit\kit_pieces.py:67:    PIER_LAND=0.02,        # full-depth strip kept at each side of a column, so the 
+pane meets solid wall, metres
+ArtSource\Kit\kit_pieces.py:68:    PIER_TOP=0.14,         # full column kept below the soffit, metres (the recess 
+stops at 4.16 m)
+ArtSource\Kit\kit_pieces.py:71:    DOOR_W=1.2,            # clear opening width, metres (GreyboxTowerSetup DoorWidth)
+ArtSource\Kit\kit_pieces.py:72:    DOOR_H=2.4,            # clear opening height, metres. Proposed; a 1.8 m player 
+clears it by 0.6 m
+ArtSource\Kit\kit_pieces.py:77:    PART_RAIL=0.08,        # base and top rail height, metres
+ArtSource\Kit\kit_pieces.py:78:    # ---- Spiral stairs: GreyboxTowerSetup
+ArtSource\Kit\kit_pieces.py:79:    STAIR_R=2.6, COLUMN_R=0.8, FLIGHT_T=0.25, FLIGHT_SEGMENTS=48,
+ArtSource\Kit\kit_pieces.py:82:    STAIRWELL_W=12.0,      # stairwell slab module, 3 bays wide, metres
+ArtSource\Kit\kit_pieces.py:83:    STAIRWELL_D=8.0,       # 2 bays deep, metres. The stair centre sits in its middle
+ArtSource\Kit\kit_pieces.py:85:    SKIRT_H=0.08,          # shadow-gap skirting height on both wall faces, metres. 
+WHY: reads as the wall floating
+ArtSource\Kit\kit_pieces.py:87:    SKIRT_D=0.015,         # its depth into the wall, metres; the same 15 mm the brief 
+allows for proud detail
+ArtSource\Kit\kit_pieces.py:89:    TOP_D=0.015,           # its depth, metres
+ArtSource\Kit\kit_pieces.py:92:    ARCH_D=0.015,          # its depth, metres
+ArtSource\Kit\kit_pieces.py:93:    PORTAL_Y=3.3,          # cobalt above this height on the portal-head wall variants, 
+metres. WHY: a 1 m head band
+ArtSource\Kit\kit_pieces.py:97:    TREAD_T=0.05,          # visual tread thickness, metres: thin metal plates as in 
+the concept stair
+ArtSource\Kit\kit_pieces.py:103:    HANDRAIL_H=0.95,       # handrail height above the ramp line, metres
+ArtSource\Kit\kit_pieces.py:107:    LOCK_REVEAL=0.015,     # width of the leaf outline groove on the locked door, 
+metres
+ArtSource\Kit\kit_pieces.py:108:    LOCK_D=0.01,           # its depth, metres
+ArtSource\Kit\kit_pieces.py:110:    LOCK_PLATE_W=0.12, LOCK_PLATE_H=0.3, LOCK_PLATE_Y=1.0,   # lock plate size and 
+bottom height, metres
+ArtSource\Kit\kit_pieces.py:113:    LIGHT_W=0.2,           # strip light width, metres
+ArtSource\Kit\kit_pieces.py:124:    NICHE_D=0.06,          # niche depth into the 0.2 m wall, leaving 0.14 m, metres 
+(README_r5)
+ArtSource\Kit\kit_pieces.py:125:    COVER_H=1.1,           # crouch-cover height, metres (README_r5: 1.0-1.2 m target, 
+1.1 chosen)
+ArtSource\Kit\kit_pieces.py:126:    COUNTER_L=2.0, COUNTER_W=1.0,   # capsule counter plan, metres; its ends are 
+half-circles of radius W/2
+ArtSource\Kit\kit_pieces.py:127:    COUNTER_TOP_BEVEL=0.03,         # rounded top edge, metres: catches the gloss 
+highlight
+ArtSource\Kit\kit_pieces.py:128:    COUNTER_SEGMENTS=16,            # facets on each counter end
+ArtSource\Kit\kit_pieces.py:133:    STAIR_W=2.0,           # straight stair clear width, metres (README_r5 atrium B)
+ArtSource\Kit\kit_pieces.py:134:    STAIR_RISERS=24,       # risers per storey: 4.5 m / 24 = 0.1875 m each (README_r5)
+ArtSource\Kit\kit_pieces.py:135:    STAIR_GOING=0.3,       # tread depth, metres: 24 x 0.3 = 7.2 m run, inside an 8 m 
+bay (README_r5)
+ArtSource\Kit\kit_pieces.py:136:    GUARD_H=1.1,           # frameless glass guard height above its walking line, 
+metres. WHY: waist height,
+ArtSource\Kit\kit_pieces.py:142:    COVE_W=0.2,            # light line slot width in the soffit, metres
+ArtSource\Kit\kit_pieces.py:143:    COVE_D=0.08,           # its depth into the slab, leaving 0.12 m, metres 
+(README_r5)
+ArtSource\Kit\kit_pieces.py:144:    # ---- Fix list 2026-11-13 (Alex: "still blockout-y"): edges that catch gloss, 
+signs, a real stair, props
+ArtSource\Kit\kit_pieces.py:152:    LETTER_H=1.7,          # zone letter height, metres
+ArtSource\Kit\kit_pieces.py:153:    NAME_H=0.26,           # department name height, metres
+ArtSource\Kit\kit_pieces.py:154:    MICRO_H=0.03,          # microtype height, metres. WHY 0.03: the longest line (~70 
+characters) fits the panel (bible §13: "tiny strings of legal/technical microtype")
+ArtSource\Kit\kit_pieces.py:156:    TREAD_T2=0.06,         # straight-stair tread thickness, metres
+ArtSource\Kit\kit_pieces.py:158:    STRINGER_T=0.06,       # folded side plate of the straight stair, metres
+ArtSource\Kit\kit_pieces.py:159:    DESK_W=1.6, DESK_D=0.8, DESK_H=0.74,   # sculptural desk, metres (standard desk 
+height)
+ArtSource\Kit\kit_pieces.py:160:    DESK_TOP=0.04, DESK_SIDE=0.05,         # its top and waterfall side thickness, 
+metres
+ArtSource\Kit\kit_pieces.py:161:    DESK_BEVEL=0.012,      # rounded desk edges, metres
+ArtSource\Kit\kit_pieces.py:166:    COL_W=0.8,             # graphic column section, metres: the plates' monumental 
+square columns
+ArtSource\Kit\kit_pieces.py:169:    COL_TEXT_H=0.06,       # wayfinding line height on a column, metres
+ArtSource\Kit\kit_pieces.py:170:    COL_NUMBER_H=0.45,     # big zone number on a column, metres
+ArtSource\Kit\kit_pieces.py:171:    BENCH_L=2.4, BENCH_D=1.6,   # back-to-back workstation bench, metres (two 1.2 m 
+desks each side)
+ArtSource\Kit\kit_pieces.py:172:    SCREEN_TOP=1.15,       # bench divider top, metres: a crouch-cover line, like the 
+counters
+ArtSource\Kit\kit_pieces.py:174:    PED_W=0.4, PED_D=0.55, PED_H=0.6, # under-desk drawer pedestal, metres
+ArtSource\Kit\kit_pieces.py:175:    TASK_SEAT=0.47,        # task chair seat height, metres
+ArtSource\Kit\kit_pieces.py:178:    RECEPTION_L=4.0, RECEPTION_D=0.9, RECEPTION_H=1.1,   # reception desk, metres
+ArtSource\Kit\kit_pieces.py:228:M_STAIR = material('Stair_Aluminium', hexc('C9CED3'), metallic=0.6, roughness=0.35)
+ArtSource\Kit\kit_pieces.py:234:# WHY red outside the palette: the locked stair door is the one warm gameplay accent 
+(bible §03 allows rationed
+ArtSource\Kit\kit_pieces.py:294:        # WHY the half-width overlaps: jambs stop inside the head line and the head 
+line stops inside the jambs,
+ArtSource\Kit\kit_pieces.py:305:def slab(width, depth):
+ArtSource\Kit\kit_pieces.py:307:    bm = by_normal(u(0, width, -P.SLAB, 0, -depth, 0), 0, 1, 2)
+ArtSource\Kit\kit_pieces.py:308:    ob = part(f'Kit_Slab_{width:g}x{depth:g}', bm, [M_FLOOR, M_CEIL, M_WALL], 
+smooth=None)
+ArtSource\Kit\kit_pieces.py:309:    expect(ob, size=(width, depth, P.SLAB))
+ArtSource\Kit\kit_pieces.py:313:def stairwell_slab():
+ArtSource\Kit\kit_pieces.py:314:    """3 x 2 bay slab with the round stair opening; stair centre at local (W/2, 0, 
+-D/2). Mesh collider (not convex)."""
+ArtSource\Kit\kit_pieces.py:315:    w, d = P.STAIRWELL_W, P.STAIRWELL_D
+ArtSource\Kit\kit_pieces.py:316:    hole = cylinder(P.STAIR_R + P.HOLE_GAP, P.SLAB + 0.2, segments=48)
+ArtSource\Kit\kit_pieces.py:319:    ob = part('Kit_Slab_Stairwell', bm, [M_FLOOR, M_CEIL, M_WALL], smooth=None)
+ArtSource\Kit\kit_pieces.py:325:# approved portal round the stair: cobalt legs, a white field with the door, a cobalt 
+head band over it.
+ArtSource\Kit\kit_pieces.py:357:def wall_solid(width, finish=''):
+ArtSource\Kit\kit_pieces.py:359:    bm = recessed(u(0, width, 0, CLEAR_H, -P.WALL, 0), wall_cuts(0, width, 
+portal=finish == '_PortalHead'))
+ArtSource\Kit\kit_pieces.py:360:    bm = boolean(bm, paint(end_chamfers(0, width), 0))
+ArtSource\Kit\kit_pieces.py:361:    ob = part(f'Kit_Wall_Solid_{width:g}m{finish}', finish_face(bm, finish), 
+wall_mats(finish), smooth=None)
+ArtSource\Kit\kit_pieces.py:362:    expect(ob, size=(width, P.WALL, CLEAR_H))
+ArtSource\Kit\kit_pieces.py:403:def window_bay(width):
+ArtSource\Kit\kit_pieces.py:404:    """Façade bay between column centres: solid sill, rails, one visual-only pane (no 
+collider).
+ArtSource\Kit\kit_pieces.py:406:    White Trays: a dark pocket runs along the street-top edge of the sill between the 
+column faces, so from
+ArtSource\Kit\kit_pieces.py:408:    sill behind it and the bounds unchanged, so the box collider (the full sill height 
+of cover) is the same as before.
+ArtSource\Kit\kit_pieces.py:410:    c = P.COLUMN_W * 0.5
+ArtSource\Kit\kit_pieces.py:413:    pocket = u(c, width - c, P.SILL - P.TRAY_RECESS_H, P.SILL + eps, -P.TRAY_RECESS_D, 
+eps)
+ArtSource\Kit\kit_pieces.py:414:    sill = part(f'Kit_Window_{width:g}m_Sill', recessed(u(0, width, 0, P.SILL, 
+-P.WALL, 0), pocket),
+ArtSource\Kit\kit_pieces.py:417:    rails = join(u(c, width - c, P.SILL, P.SILL + P.RAIL, zc - P.RAIL_D * 0.5, zc + 
+P.RAIL_D * 0.5),
+ArtSource\Kit\kit_pieces.py:418:                 u(c, width - c, CLEAR_H - P.RAIL, CLEAR_H, zc - P.RAIL_D * 0.5, zc + 
+P.RAIL_D * 0.5))
+ArtSource\Kit\kit_pieces.py:419:    frame = part(f'Kit_Window_{width:g}m_Frame', rails, M_RAIL, smooth=None)
+ArtSource\Kit\kit_pieces.py:420:    pane = part(f'Kit_Window_{width:g}m_Glass',
+ArtSource\Kit\kit_pieces.py:421:                u(c, width - c, P.SILL + P.RAIL, CLEAR_H - P.RAIL, zc - P.GLASS_T * 
+0.5, zc + P.GLASS_T * 0.5),
+ArtSource\Kit\kit_pieces.py:423:    expect(sill, size=(width, P.WALL, P.SILL))
+ArtSource\Kit\kit_pieces.py:424:    expect(pane, size=(width - P.COLUMN_W, P.GLASS_T, CLEAR_H - P.SILL - 2 * P.RAIL))
+
+
+
+mcp: node_repl/js (completed)
+codex
+**Edit 1 — [L1 A](ArtSource/Kit/concepts/Japanese_Aero/unity_office_L1_window_corridor_A.png):** give the corridor aqua glazing, glossy white finishes and fictional Japanese company branding.
+
+**Edit 1 — [L1 B](ArtSource/Kit/concepts/Japanese_Aero/unity_office_L1_window_corridor_B.png):** use the same view for a quieter silver and mist-blue alternative.
+
+web search: 
+web search: "記録保管室" site.go.jp ...
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$taskLines = Get-Content -Encoding UTF8 -LiteralPath '"'ArtSource/Kit/kit_pieces.py'; "'$taskLines[158..205]; Add-Type -AssemblyName System.Drawing; $taskImages = @('"'unity_office_L1_window_corridor','unity_office_L3_atrium_stair','unity_office_L4_room_through_frost','unity_office_L7_upper_over_atrium'); foreach ("'$taskImage in $taskImages) { $taskBitmap = [System.Drawing.Image]::FromFile((Join-Path (Get-Location) ('"'ArtSource/Kit/review/unity_office/' + "'$taskImage + '"'.png'))); [pscustomobject]@{Name="'$taskImage;Width=$taskBitmap.Width;Height=$taskBitmap.Height}; $taskBitmap.Dispose() }; Get-Command magick,py,uv,node -ErrorAction SilentlyContinue | Select-Object Name,Source' in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+ exited 1 in 2010ms:
+    DESK_W=1.6, DESK_D=0.8, DESK_H=0.74,   # sculptural desk, metres (standard desk height)
+    DESK_TOP=0.04, DESK_SIDE=0.05,         # its top and waterfall side thickness, metres
+    DESK_BEVEL=0.012,      # rounded desk edges, metres
+    CHAIR_SEAT_H=0.46, CHAIR_W=0.52, CHAIR_D=0.5, CHAIR_BACK_H=0.86,   # pod chair, metres
+    CHAIR_SHELL=0.06,      # shell thickness, metres
+    CHAIR_BASE_R=0.3, CHAIR_STEM_R=0.035,  # swivel base disc and stem radius, metres
+    # ---- Detail pass 2026-11-13, after Alex's reference plates (atrium, office floor, curved meeting room)
+    COL_W=0.8,             # graphic column section, metres: the plates' monumental square columns
+    COL_R=0.06,            # its rounded corners, metres
+    COL_SKIN=0.003,        # cobalt supergraphic stands this far proud, metres
+    COL_TEXT_H=0.06,       # wayfinding line height on a column, metres
+    COL_NUMBER_H=0.45,     # big zone number on a column, metres
+    BENCH_L=2.4, BENCH_D=1.6,   # back-to-back workstation bench, metres (two 1.2 m desks each side)
+    SCREEN_TOP=1.15,       # bench divider top, metres: a crouch-cover line, like the counters
+    MONITOR_W=0.55, MONITOR_H=0.34,   # monitor panel, metres
+    PED_W=0.4, PED_D=0.55, PED_H=0.6, # under-desk drawer pedestal, metres
+    TASK_SEAT=0.47,        # task chair seat height, metres
+    STORE_L=1.6, STORE_D=0.45, STORE_H=1.0,   # low storage run, metres
+    COPIER_W=0.62, COPIER_D=0.66, COPIER_H=1.05,   # photocopier, metres
+    RECEPTION_L=4.0, RECEPTION_D=0.9, RECEPTION_H=1.1,   # reception desk, metres
+    RAIL_POST=0.04,        # balustrade post section, metres
+    RAIL_TOP=0.05,         # balustrade handrail section, metres
+    HEADER_R=1.5,          # curved header partition: glass radius in its 2 x 2 m cell, metres
+    PENDANT_L=2.4, PENDANT_W=0.07, PENDANT_H=0.06,   # linear pendant bar, metres
+    PENDANT_DROP=0.8,      # pendant hangs this far below the soffit, metres (bar at 3.5 m: clear of any jump)
+    OVERLAY_T=0.008,       # carpet / ceiling-grid overlay thickness, metres
+    PLANTER_L=1.0, PLANTER_W=0.45, PLANTER_H=0.55,   # white box planter, metres
+    LEAVES=11,             # leaf blades per planter
+)
+
+CLEAR_H = P.FLOOR_H - P.SLAB      # floor to soffit, metres
+
+
+def u(x0, x1, y0, y1, z0, z1):
+    """A box from Unity extents (metres), returned in Blender's frame."""
+    bm = box(x1 - x0, z1 - z0, y1 - y0)
+    return move(bm, -(x0 + x1) * 0.5, -(z0 + z1) * 0.5, (y0 + y1) * 0.5)
+
+
+def by_normal(bm, up, down, side):
+    """Material slot per face: up-facing, down-facing, everything else. For slab tops, soffits and edges."""
+    bm.normal_update()
+    for f in bm.faces:
+        f.material_index = up if f.normal.z > 0.5 else down if f.normal.z < -0.5 else side
+    return bm
+
+
+def unity_dir(deg, radius):
+
+Name                               Width Height
+----                               ----- ------
+unity_office_L1_window_corridor     1600    900
+unity_office_L3_atrium_stair        1600    900
+unity_office_L4_room_through_frost  1600    900
+unity_office_L7_upper_over_atrium   1600    900
+node.exe                                       
+
+
+
+codex
+**Edit 1 — [L3 A](ArtSource/Kit/concepts/Japanese_Aero/unity_office_L3_atrium_stair_A.png):** restyle the atrium with aqua panels, a shallow wall-mounted water feature and bilingual wayfinding.
+
+**Edit 1 — [L3 B](ArtSource/Kit/concepts/Japanese_Aero/unity_office_L3_atrium_stair_B.png):** retain the stair and atrium footprint with pearly silver panels and softer light.
+
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-ChildItem -LiteralPath 'C:/Windows/Fonts' -File -Filter '*yu*' | Select-Object -First 12 Name; Get-ChildItem -LiteralPath 'C:/Windows/Fonts' -File -Filter '*segoe*' | Select-Object -First 8 Name" in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+ succeeded in 402ms:
+
+Name          
+----          
+YuGothB.ttc   
+YuGothL.ttc   
+YuGothM.ttc   
+YuGothR.ttc   
+SegoeIcons.ttf
+segoepr.ttf   
+segoeprb.ttf  
+segoesc.ttf   
+segoescb.ttf  
+segoeui.ttf   
+segoeuib.ttf  
+segoeuii.ttf  
+
+
+
+codex
+The **L1 pair is generated** and keeps the corridor’s main layout and dark character marker.
+
+I’m preparing the rebuild guide alongside the remaining images, separating **existing kit dimensions** from proposed dressing sizes.
+
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Add-Type -AssemblyName System.Drawing
+$taskOut = Join-Path (Get-Location) '"'ArtSource/Kit/concepts/Japanese_Aero'
+"'$taskJobs = @(@{Source='"'C:\\Users\\alexf\\.codex\\generated_images\\01a1d6da-d903-7e73-b9af-eb36f00fd73c\\exec-5e11c32c-dbac-460b-aca8-2bf6dc9ae493.png'; Name='unity_office_L1_window_corridor_A.png'},
+@{Source='C:\\Users\\alexf\\.codex\\generated_images\\01a1d6da-d903-7e73-b9af-eb36f00fd73c\\exec-9f85b130-00df-4ce2-9daf-b784a765c14e.png'; Name='unity_office_L1_window_corridor_B.png'})
+foreach ("'$taskJob in $taskJobs) {
+ $taskTarget = Join-Path $taskOut $taskJob.Name
+ if (Test-Path -LiteralPath $taskTarget) { throw "Destination already exists: $taskTarget" }
+ $taskSource = [System.Drawing.Image]::FromFile($taskJob.Source)
+ $taskImage = [System.Drawing.Bitmap]::new(1600,900)
+ $taskGraphics = [System.Drawing.Graphics]::FromImage($taskImage)
+ try {
+  $taskGraphics.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
+  $taskGraphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+  $taskGraphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+  $taskGraphics.DrawImage($taskSource,[System.Drawing.Rectangle]::new(0,0,1600,900))
+  $taskImage.Save($taskTarget,[System.Drawing.Imaging.ImageFormat]::Png)
+  Write-Output ($taskJob.Name + '"' saved: 1600 x 900, full frame')
+ } finally { "'$taskGraphics.Dispose(); $taskImage.Dispose(); $taskSource.Dispose() }
+}' in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+ succeeded in 750ms:
+unity_office_L1_window_corridor_A.png saved: 1600 x 900, full frame
+unity_office_L1_window_corridor_B.png saved: 1600 x 900, full frame
+
+codex
+**Edit 1 — [L4 A](ArtSource/Kit/concepts/Japanese_Aero/unity_office_L4_room_through_frost_A.png):** restyle the meeting room with aqua acrylic details, greenery and clear glazing through the sightline.
+
+**Edit 1 — [L4 B](ArtSource/Kit/concepts/Japanese_Aero/unity_office_L4_room_through_frost_B.png):** use silver, ice white and restrained frosting around the existing room.
+
+**Edit 1 — [L7 A](ArtSource/Kit/concepts/Japanese_Aero/unity_office_L7_upper_over_atrium_A.png):** give the existing desk islands silver monitors, white phones and aqua office accessories.
+
+**Edit 1 — [L7 B](ArtSource/Kit/concepts/Japanese_Aero/unity_office_L7_upper_over_atrium_B.png):** keep the same furniture arrangement with a quieter palette and less dressing.
+
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Add-Type -AssemblyName System.Drawing
+$taskOut = Join-Path (Get-Location) '"'ArtSource/Kit/concepts/Japanese_Aero'
+"'$taskJobs = @(@{Source='"'C:\\Users\\alexf\\.codex\\generated_images\\01a1d6da-d903-7e73-b9af-eb36f00fd73c\\exec-46ecdbfc-1902-48f0-9416-aa5ad3d377ea.png'; Name='unity_office_L3_atrium_stair_A.png'},
+@{Source='C:\\Users\\alexf\\.codex\\generated_images\\01a1d6da-d903-7e73-b9af-eb36f00fd73c\\exec-defcc6c9-5030-45a4-a194-2cde493d7746.png'; Name='unity_office_L3_atrium_stair_B.png'})
+foreach ("'$taskJob in $taskJobs) {
+ $taskTarget = Join-Path $taskOut $taskJob.Name
+ if (Test-Path -LiteralPath $taskTarget) { throw "Destination already exists: $taskTarget" }
+ $taskSource = [System.Drawing.Image]::FromFile($taskJob.Source)
+ $taskImage = [System.Drawing.Bitmap]::new(1600,900)
+ $taskGraphics = [System.Drawing.Graphics]::FromImage($taskImage)
+ try {
+  $taskGraphics.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
+  $taskGraphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+  $taskGraphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+  $taskGraphics.DrawImage($taskSource,[System.Drawing.Rectangle]::new(0,0,1600,900))
+  $taskImage.Save($taskTarget,[System.Drawing.Imaging.ImageFormat]::Png)
+  Write-Output ($taskJob.Name + '"' saved: 1600 x 900, full frame')
+ } finally { "'$taskGraphics.Dispose(); $taskImage.Dispose(); $taskSource.Dispose() }
+}' in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+ succeeded in 717ms:
+unity_office_L3_atrium_stair_A.png saved: 1600 x 900, full frame
+unity_office_L3_atrium_stair_B.png saved: 1600 x 900, full frame
+
+codex
+The **atrium pair is saved**: A has the water-wall treatment, while B uses pearlescent panels.
+
+Both retain the diagonal stair and navy marker; I’m checking the remaining views for layout drift and blocked sightlines.
+
+codex
+The meeting-room pair is generated, with the counter, desk and capsule marker still in place.
+
+**Edit 2 — [L1 A](ArtSource/Kit/concepts/Japanese_Aero/unity_office_L1_window_corridor_A.png):** add a small reception LED sign to complete the brief’s early-2000s office details.
+
+codex
+**L7 A is generated** with silver monitors, desk phones, document trays and the vending machine.
+
+The lighter carpet gives the navy chairs more contrast; I’ll carry that material target into the rebuild guide.
+
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Add-Type -AssemblyName System.Drawing
+$taskOut = Join-Path (Get-Location) '"'ArtSource/Kit/concepts/Japanese_Aero'
+"'$taskJobs = @(@{Source='"'C:\\Users\\alexf\\.codex\\generated_images\\01a1d6da-d903-7e73-b9af-eb36f00fd73c\\exec-6ef44801-e44e-4b6d-ae45-2a640bb091e2.png'; Name='unity_office_L4_room_through_frost_A.png'},
+@{Source='C:\\Users\\alexf\\.codex\\generated_images\\01a1d6da-d903-7e73-b9af-eb36f00fd73c\\exec-43b95051-bae3-4dde-a38a-74db3fe7f928.png'; Name='unity_office_L4_room_through_frost_B.png'},
+@{Source='C:\\Users\\alexf\\.codex\\generated_images\\01a1d6da-d903-7e73-b9af-eb36f00fd73c\\exec-dbecdce4-0f41-499a-ad0e-4ec8e7f27409.png'; Name='unity_office_L7_upper_over_atrium_A.png'},
+@{Source='C:\\Users\\alexf\\.codex\\generated_images\\01a1d6da-d903-7e73-b9af-eb36f00fd73c\\exec-dec7273d-f4e7-4cc0-836c-3c99517030a1.png'; Name='unity_office_L7_upper_over_atrium_B.png'})
+foreach ("'$taskJob in $taskJobs) {
+ $taskTarget = Join-Path $taskOut $taskJob.Name
+ if (Test-Path -LiteralPath $taskTarget) { throw "Destination already exists: $taskTarget" }
+ $taskSource = [System.Drawing.Image]::FromFile($taskJob.Source)
+ $taskImage = [System.Drawing.Bitmap]::new(1600,900)
+ $taskGraphics = [System.Drawing.Graphics]::FromImage($taskImage)
+ try {
+  $taskGraphics.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
+  $taskGraphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+  $taskGraphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+  $taskGraphics.DrawImage($taskSource,[System.Drawing.Rectangle]::new(0,0,1600,900))
+  $taskImage.Save($taskTarget,[System.Drawing.Imaging.ImageFormat]::Png)
+  Write-Output ($taskJob.Name + '"' saved: 1600 x 900, full frame')
+ } finally { "'$taskGraphics.Dispose(); $taskImage.Dispose(); $taskSource.Dispose() }
+}' in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+ succeeded in 1376ms:
+unity_office_L4_room_through_frost_A.png saved: 1600 x 900, full frame
+unity_office_L4_room_through_frost_B.png saved: 1600 x 900, full frame
+unity_office_L7_upper_over_atrium_A.png saved: 1600 x 900, full frame
+unity_office_L7_upper_over_atrium_B.png saved: 1600 x 900, full frame
+
+codex
+**Edit 1 — [README](ArtSource/Kit/concepts/Japanese_Aero/README.md):** record the palettes, material finishes, kit dimensions, exact Japanese sign copy and build recommendation.
+
+**Edit 1 — [PROMPTS](ArtSource/Kit/concepts/Japanese_Aero/PROMPTS.md):** preserve the prompt set and **9 image tries** for reproducibility.
+
+apply patch
+patch: completed
+C:\Users\alexf\Documents\GitHub\Seal-The-Deal\ArtSource\Kit\concepts\Japanese_Aero\README.md
+diff --git a/ArtSource/Kit/concepts/Japanese_Aero/README.md b/ArtSource/Kit/concepts/Japanese_Aero/README.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..f0987f6232f2628f23af02d46259fa88c3c08b2f
+--- /dev/null
++++ b/ArtSource/Kit/concepts/Japanese_Aero/README.md
+@@ -0,0 +1,177 @@
++# Japanese corporate Aero — KitOffice paintovers
++
++**Status:** Target concept; awaiting Alex's selection · **Last updated:** 2026-11-13
++
++Two material and dressing directions painted over the four supplied Unity captures.
++A is glossy aqua eco-tech; B is pale silver Soft Club.
++The fictional Japanese company, office props and bilingual signs belong to this proposal.
++[REQUEST.md](REQUEST.md) is the brief for this concept, including its explicit permission for Aero imagery.
++
++## Review the images
++
++[Open the labelled contact sheet](contact_sheet.png): original, A, B from left to right; L1, L3, L4, L7 from top to bottom.
++Each individual paintover is a full-frame **1600 × 900 PNG (16:9)**.
++
++| Capture | A — Aero | B — Soft Club |
++|---|---|---|
++| L1 — window corridor | [A](unity_office_L1_window_corridor_A.png) | [B](unity_office_L1_window_corridor_B.png) |
++| L3 — atrium stair | [A](unity_office_L3_atrium_stair_A.png) | [B](unity_office_L3_atrium_stair_B.png) |
++| L4 — meeting room through glass | [A](unity_office_L4_room_through_frost_A.png) | [B](unity_office_L4_room_through_frost_B.png) |
++| L7 — upper floor over atrium | [A](unity_office_L7_upper_over_atrium_A.png) | [B](unity_office_L7_upper_over_atrium_B.png) |
++
++**Recommendation: build A.**
++Its aqua identity, living green and period office equipment make the Japanese corporate direction clearer than B's nearly neutral treatment.
++Keep water to one shallow atrium wall feature and use the controlled gloss values below so reflections remain background information during combat.
++
++## Palette and material targets
++
++Hex values are sRGB base colours, rather than colours sampled from the lit images.
++Smoothness is the Unity-style 0–1 gloss control; for an initial Blender match, use roughness = 1 − smoothness.
++These are starting art targets, not measured shader values from the generated pictures.
++Opacity 1 means opaque; translucency on plastics describes a visual finish, not a change to collision or cover.
++
++| Material / use | A colour | B colour | Smoothness A / B | Metalness | Opacity / translucency |
++|---|---|---|---|---|---|
++| White wall lacquer, column skins | `#F4FAF8` | `#F3F6F6` | 0.68 / 0.40 | 0 | 1; solid |
++| Polished circulation floor | `#DDECF0` | `#DFE6EB` | 0.72 / 0.46 | 0 | 1; broad reflections, no mirror finish |
++| Work-area carpet | `#7894AA` | `#8C9DAE` | 0.08 / 0.06 | 0 | 1; short pile, subtle 0.5 m tiles |
++| Ceiling / light housings | `#EFF5F5` | `#F0F2F4` | 0.24 / 0.20 | 0 | 1 |
++| Clear glass, very light edge tint | `#E8F8F5` | `#F1F7FA` | 0.94 / 0.90 | 0 | Approx. 0.04 / 0.03 surface opacity; no blur across figures |
++| Frosted plastic / approved glass frost bands | `#BCEDE9` | `#D8E3E9` | 0.64 / 0.43 | 0 | Plastic 0.55 / 0.65; glass frost bands 0.70; clear sightline remains separate |
++| Anodised / brushed silver | `#C8D2D9` | `#BAC6CF` | 0.70 / 0.53 | 0.85 | 1; fine directional brushing |
++| Aqua sign faces / plastic caps | `#45BFC7` | `#A8BFD1` | 0.76 / 0.46 | 0 | Opaque on walls; 0.55 on decorative acrylic edges |
++| Secondary sky-blue print | `#568BCB` | `#A8BFD1` | 0.45 / 0.30 | 0 | 1; opaque panels only |
++| Text, chair fabric, dark-suit reference | `#172C48` | `#24344C` | 0.12 / 0.10 | 0 | 1; keep fabric distinct from shiny silver |
++| Hanko / logo seal accent | `#C7473E` | `#BA6960` | 0.35 / 0.28 | 0 | 1; tiny, infrequent printed accent |
++| Leaves, light / shadow | `#70AF59` / `#315F45` | `#8FA58B` / `#536C60` | 0.24 / 0.18 | 0 | 1 on leaf faces; cutout edges |
++| Water / LED accent | `#7ADAD8` | `#B9CFDA` | 0.90 / 0.50 | 0 | Water is a contained visual layer; LED is a restrained emissive dot pattern |
++
++Keep structural white readable under the existing cool daylight, with real shadow depth rather than dirty black halos.
++Reserve richer aqua for opaque sign faces and accessories; tinting every pane aqua would muddy overlapping silhouettes.
++Use a static contained water texture / normal treatment for the concept's water wall before considering any animated presentation.
++
++## Kit changes and dimensions
++
++All dimensions are metres, given as width × depth × height unless noted.
++**Existing** dimensions below come from the current [kit source](../../kit_pieces.py) and [kit README](../../README.md); they are not measurements inferred from the pictures.
++**Proposed** dimensions are modelling targets for new dressing and need fitting against the original scene after Alex chooses a direction.
++Use the existing meshes, pivots, snap ends and placements as the dimensional master; generated bevels and curved cladding are finish suggestions.
++
++### Existing pieces to restyle
++
++| Kit piece / family | Existing size | Proposed art change |
++|---|---|---|
++| `Slab_4x4`, `Slab_2x4`, `Slab_4x2`, `Slab_2x2` | 4 / 2 m bay runs; 0.20 thick | Pale polished circulation surface; retain slab edges and openings |
++| `Carpet_Overlay_4x4` | 4 × 4 × 0.008 thick | Lighter blue carpet in the existing work-area footprints |
++| `Wall_Solid_4m`, `_2m`, cobalt / portal variants | 4 / 2 × 0.20 × 4.30 | White lacquer and silver reveals; replace cobalt fields with A aqua or B mist blue |
++| `Wall_Door_4m`, `Door_Leaf` | Wall 4 × 0.20 × 4.30; leaf 1.18 × 0.04 × 2.38 | Same opening and swing; silver edge and pale face |
++| `Wall_Return_2x2` and cobalt variant | 2 × 2 m cell, 0.20 thick, 4.30 high; outer radius 1.0 | Rounded lacquer island ends, same snap envelope |
++| `Wall_Niche_4m` | 4 × 0.20 × 4.30; niche 0.60 wide × 0.06 deep × 3.40 high | Aqua / milky plastic insert; no added projecting furniture |
++| `Window_4m`, `_2m`, façade column / corner families | 4 / 2 m runs, 0.20 deep, 4.30 high; existing sill retained | Silver trims, near-clear glazing; retain exterior bay rhythm |
++| `Column_Graphic`, `_Tall` | 0.80 × 0.80 × 4.30 / 8.80; existing corner radius 0.06 | Aqua or pale-blue wrap graphics on the opaque column; retain the source section, even where the paintover suggests a rounder shell |
++| `Partition_Frost_4m`, `_2m` / glass families | 4 / 2 × 0.10 × 2.50 | Silver perimeter, separate frost bands and a near-clear middle |
++| `Partition_Header_4m`, `_2m`, `_Curve_2x2` | Existing straight runs / 2 × 2 m curved cell; curve radius 1.50; header from 2.50 to 4.30 high | Pearl-white header, silver jambs; a sliding-screen appearance on the existing edge, not an extra closed panel |
++| `Stair_Straight_2m` | 2.00 × 7.20; rise 4.50; guarded envelope 5.60 high | White folded supports, silver tread nosings, clear guards; preserve all 24 risers and landings |
++| `Guard_Glass_4m`, `_2m`; existing posted guard family | 4 / 2 m runs, glass 0.06 deep, 1.10 high; glass-family shoe 0.12 high | Frameless visual treatment; retain the barrier footprint and place opaque fittings low, rather than copying bright horizontal bars from a generated image |
++| `Counter_Capsule_2m` | 2.00 × 1.00 × 1.10 | Rounded white body, silver base, thin aqua / pearl cap; the L4 counter stays in place |
++| `Cover_Block_2m` | 2.00 × 0.60 × 1.10 | Same cover silhouette, white lacquer and subtle silver detail |
++| `Desk_Sculpt` | 1.60 × 0.80 × 0.74 | Pearl top, silver edge; add accessories to the existing desk |
++| `Workstation_Bench` | 2.40 × 1.60; existing divider top 1.15 | Retain facing pairs and divider height, which is approximately the brief's 1.1 m cover line; restyle the divider instead of creating a taller screen |
++| Existing monitor / drawer pedestal | Monitor panel 0.55 wide × 0.34 high; pedestal 0.40 × 0.55 × 0.60 | Silver LCD bezel and substantial foot; dark displays, white / grey keyboards |
++| `Chair_Task`, `Chair_Pod` | Task seat 0.47 high; pod 0.52 × 0.50 × 0.86, seat 0.46 high | Navy fabric / shell, brushed-silver base; keep chair positions and silhouettes |
++| `Storage_Low`, `Copier` | Storage 1.60 × 0.45 × 1.00; copier 0.62 × 0.66 × 1.05 | Silver handles and panel seams, white bodies; no extra tall opaque storage |
++| `Desk_Reception` | 4.00 × 0.90 × 1.10 | Replace the former English firm's identity with AONAGI on the existing desk, wherever it is used; do not add a new desk to L1 |
++| `Sign_Zone_L`, `_R`, `_C`, `_H`, `_A` | Face 2.40 wide × 3.20 high, 0.014 proud; bottom 0.60 above floor | Bilingual sign family below; A has water / bubble graphics, B has a thin mist-blue field |
++| `Planter_Box` | 1.00 × 0.45 × 0.55 pot | Silver / white pot and readable green leaf clusters; use existing planter positions first |
++| `Light_Pendant_Linear`, `Ceiling_Grid_4x4` | Pendant 2.40 × 0.07 × 0.06, drop 0.80; grid 4 × 4, 0.008 thick | Silver housings, soft white light, subtle ceiling grid; retain hanging positions |
++
++### New dressing to model only after selection
++
++| Prop / detail | Proposed size | Placement / construction |
++|---|---|---|
++| Aqua / pearl column sign skin | 0.55 × 0.012 × 1.50 | Flush to the existing opaque column; floor code lettering about 0.45 high |
++| Open-ring reception emblem | Outer diameter 0.40; stroke 0.028; red dot diameter 0.05 | Wall / existing reception face; a small graphic rather than a projecting sculpture |
++| Reception LED status sign | 1.20 × 0.06 × 0.18 | Above the L1 wall logo; lowest edge about 2.65 high; dot-matrix face, not a large screen |
++| Contained water-wall cassette, A | 1.80 × 0.08 × 2.70 | Fit to the existing opaque curved atrium wall behind the stair; no pool or route intrusion |
++| Pearl acrylic replacement, B | Same 1.80 × 0.08 × 2.70 | Same wall location, dry and quietly lit |
++| Water server, including bottle | 0.35 × 0.35 × 1.35 | L1 against the reception wall, outside circulation |
++| Umbrella stand | 0.22 × 0.22 × 0.55; umbrellas up to 1.00 overall | Beside the server / entrance wall, not against clear sightline glass |
++| Drinks vending machine | 0.90 × 0.65 × 1.80 | L7 rear opaque wall; fictional bottle labels, white / silver casing |
++| Slipper cabinet | 0.90 × 0.35 × 0.70 | Rear entrance wall beside the vending area; shallow open cubbies or pale doors |
++| White desk phone | 0.24 × 0.22 × 0.10 | Existing desk corners; curled handset cord, small buttons |
++| Two-tier document tray | 0.28 × 0.34 × 0.18 | Clear aqua A / milky-white B; keep below the workstation cover top |
++| Folder / paper stack | 0.24 × 0.32 × 0.03 | A few tidy stacks, not piles that create new cover |
++| Supplemental small plant | Pot diameter 0.28, height 0.32; total plant height 1.40 | Against a solid background wall; keep leaves out of routes and clear glass viewing strips |
++
++The upper-floor bench islands already face staff toward one another.
++Dress the existing far head station as the manager's position using a phone, document tray and a tidier surface; do not lengthen a bench or add a desk across a passage.
++Tall new props belong against opaque walls, so they do not become extra cover in an open route.
++
++## Exact sign copy and fictional company
++
++Use this text for real typesetting; small generated glyphs and micro-lettering in the paintovers are concept approximations.
++Use a Japanese sans serif with full glyph coverage, restrained English capitals, and a consistent Latin zone code.
++Japanese is primary, English secondary; romanisation is supplied for the rebuild team and does not need to become a third line on every sign.
++
++| Zone | Japanese | Romanisation | English |
++|---|---|---|---|
++| L | 法務部 | Hōmu-bu | LEGAL |
++| R | 審査部 | Shinsa-bu | REVIEW |
++| C | 請求部 | Seikyū-bu | CLAIMS |
++| H | 審問室 | Shinmon-shitsu | HEARINGS |
++| A | 記録保管室 | Kiroku hokan-shitsu | ARCHIVE |
++
++L, R and C retain the brief's department names.
++H and A gain **室** to identify a room rather than an activity; 審問室 is an institutional hearing room, appropriate to the fictional legal bureaucracy rather than an ordinary meeting room.
++請求部 interprets CLAIMS as a department handling claims / demands, rather than complaints; no insurance-specific remit is added.
++Official usage supporting the room terminology: [Fukuoka court building guide, 審問室](https://www.courts.go.jp/fukuoka-h/vc-files/fukuoka-h/file/sougouannai.pdf) and [MHLW form using 診療記録保管室](https://kouseikyoku.mhlw.go.jp/tohoku/000432077.pdf).
++
++| Application | Exact Japanese / code | Romanisation | English |
++|---|---|---|---|
++| Company legal name | 青凪総合サービス株式会社 | Aonagi Sōgō Sābisu Kabushiki Gaisha | Aonagi Corporate Services Co., Ltd. |
++| Reception display name | 青凪総合サービス | Aonagi Sōgō Sābisu | AONAGI |
++| Reception LED | 受付 1F | Uketsuke, ikkai | RECEPTION |
++| Lower-storey floor marker | 1F / 1階 | Ikkai | FLOOR 1 |
++| Upper-storey floor marker | 2F / 2階 | Nikai | FLOOR 2 |
++| Meeting-room plaque | 会議室 | Kaigi-shitsu | MEETING ROOM |
++| Water-server label | 給水 | Kyūsui | DRINKING WATER |
++| Vending area label | 自動販売機 | Jidō hanbaiki | VENDING |
++| Umbrella stand label | 傘立て | Kasa-tate | UMBRELLAS |
++| Slipper-cabinet label | 室内履き | Shitsunai-baki | INDOOR SLIPPERS |
++
++The proposed company is invented for this concept; the open ring suggests blue water and calm air, with one red circular hanko-like dot at its lower-right opening.
++Use the seal sparingly and keep it separate from any existing gameplay state indicators.
++**L1, L3, L4 and L7 are capture IDs, not storeys**: these views use 1F and 2F, and do not imply a seventh floor.
++A later 3F marker would follow the same typography, without being added to this two-storey capture set.
++
++## Rebuild interpretation and review limits
++
++The paintovers hold the principal camera, room, stair, wall, column, desk and counter positions as a visual comparison; they are not pixel-exact geometry plans.
++Image generation rounds some column profiles and simplifies rail hardware, and incidental exterior details vary.
++Retain the source kit's measured geometry when translating these surface treatments back to Blender and Unity.
++
++The near-clear viewing strip is 0.35–2.10 above each adjacent floor; frost stays outside it.
++Workstation dividers remain existing cover, not decorative full-height frosted partitions.
++The navy capsules are the original captures' readability markers; the images do not establish actual suited-player visibility through two panes or from the floor above.
++That assessment belongs to the subsequent selected kit in the existing scene.
++
++The water wall, LED display, vending machine and cabinet are art proposals; this delivery introduces no gameplay system or network contract.
++Existing system documentation does not need changing for an unselected concept; this guide records the proposed art targets inside the requested folder.
++
++## Generation and file validation
++
++**Image tries: 9 total — 8 first-pass paintovers plus 1 local refinement to L1 A for the reception LED.**
++All nine image calls completed; eight final paintovers are delivered, with the refined L1 A selected.
++The built-in image generation tool was used throughout, with each original capture supplied as its edit target; the refinement used the generated L1 A.
++[PROMPTS.md](PROMPTS.md) records the exact common prompt, variants, capture instructions, refinement and call-to-file mapping.
++
++Generated images were normalised from 1672 × 941 to 1600 × 900 without cropping; no scene content was composited or painted by a script.
++The contact sheet is a labelled layout of the original captures and final images, assembled with PowerShell / System.Drawing.
++Visual inspection covered all eight outputs for the principal composition, A/B distinction, clear glazing and dark marker presence.
++The original scene remains the authority for routes, dimensions and collision.
++
++File validation uses `System.Drawing.Image.FromFile` to decode each PNG and report its pixel size, followed by `Get-FileHash -Algorithm SHA256` for each final PNG.
++The final packaging check also resolves every relative Markdown file link in this README and confirms each linked file exists.
++These are artifact checks; no automated tests, Unity, Play Mode or multiplayer validation was run for this concept task.
++
++**Next:** Alex selects A or B before any kit modelling or scene changes.
+
+mcp: node_repl/js started
+mcp: node_repl/js (completed)
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Add-Type -AssemblyName System.Drawing
+$taskOut = Join-Path (Get-Location) '"'ArtSource/Kit/concepts/Japanese_Aero'
+"'$taskJobs = @(@{Source='"'C:\\Users\\alexf\\.codex\\generated_images\\01a1d6da-d903-7e73-b9af-eb36f00fd73c\\exec-495e0881-70fe-4e3f-81a2-77dde4f1bc1a.png'; Name='unity_office_L1_window_corridor_A.png'})
+foreach ("'$taskJob in $taskJobs) {
+ $taskTarget = Join-Path $taskOut $taskJob.Name
+ $taskSource = [System.Drawing.Image]::FromFile($taskJob.Source)
+ $taskImage = [System.Drawing.Bitmap]::new(1600,900)
+ $taskGraphics = [System.Drawing.Graphics]::FromImage($taskImage)
+ try {
+  $taskGraphics.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
+  $taskGraphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+  $taskGraphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+  $taskGraphics.DrawImage($taskSource,[System.Drawing.Rectangle]::new(0,0,1600,900))
+  $taskImage.Save($taskTarget,[System.Drawing.Imaging.ImageFormat]::Png)
+  Write-Output ($taskJob.Name + '"' saved: 1600 x 900, full frame')
+ } finally { "'$taskGraphics.Dispose(); $taskImage.Dispose(); $taskSource.Dispose() }
+}' in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+ succeeded in 518ms:
+unity_office_L1_window_corridor_A.png saved: 1600 x 900, full frame
+
+codex
+**Edit 1 — [contact sheet](ArtSource/Kit/concepts/Japanese_Aero/contact_sheet.png):** arrange each original beside A and B in four labelled rows.
+
+All **eight final images are saved at 1600 × 900**; I’m checking the contact sheet and file links before handing them back.
+
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Add-Type -AssemblyName System.Drawing
+$taskRoot = Get-Location
+$taskOut = Join-Path $taskRoot '"'ArtSource/Kit/concepts/Japanese_Aero'
+"'$taskSheetPath = Join-Path $taskOut '"'contact_sheet.png'
+if (Test-Path -LiteralPath "'$taskSheetPath) { throw '"'contact_sheet.png already exists' }
+"'$taskRows = @(
+ @{Stem='"'unity_office_L1_window_corridor';Label='L1 / WINDOW CORRIDOR'},
+ @{Stem='unity_office_L3_atrium_stair';Label='L3 / ATRIUM STAIR'},
+ @{Stem='unity_office_L4_room_through_frost';Label='L4 / MEETING ROOM THROUGH GLASS'},
+ @{Stem='unity_office_L7_upper_over_atrium';Label='L7 / UPPER FLOOR OVER ATRIUM'}
+)
+"'$taskSheet = [System.Drawing.Bitmap]::new(2480,2210)
+$taskCanvas = [System.Drawing.Graphics]::FromImage($taskSheet)
+$taskTitle = [System.Drawing.Font]::new('"'Segoe UI',30,[System.Drawing.FontStyle]::Bold,[System.Drawing.GraphicsUnit]::Pixel)
+"'$taskLabel = [System.Drawing.Font]::new('"'Segoe UI',21,[System.Drawing.FontStyle]::Bold,[System.Drawing.GraphicsUnit]::Pixel)
+"'$taskSmall = [System.Drawing.Font]::new('"'Segoe UI',17,[System.Drawing.FontStyle]::Regular,[System.Drawing.GraphicsUnit]::Pixel)
+"'$taskInk = [System.Drawing.SolidBrush]::new([System.Drawing.ColorTranslator]::FromHtml('"'#183449'))
+"'$taskMuted = [System.Drawing.SolidBrush]::new([System.Drawing.ColorTranslator]::FromHtml('"'#526B78'))
+"'$taskAqua = [System.Drawing.SolidBrush]::new([System.Drawing.ColorTranslator]::FromHtml('"'#45BFC7'))
+"'$taskSoft = [System.Drawing.SolidBrush]::new([System.Drawing.ColorTranslator]::FromHtml('"'#A8BFD1'))
+"'$taskGrey = [System.Drawing.SolidBrush]::new([System.Drawing.ColorTranslator]::FromHtml('"'#8C9EA9'))
+"'$taskBorder = [System.Drawing.Pen]::new([System.Drawing.ColorTranslator]::FromHtml('"'#B9C9CF'),1)
+try {
+ "'$taskCanvas.Clear([System.Drawing.ColorTranslator]::FromHtml('"'#EDF3F4'))
+ "'$taskCanvas.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+ $taskCanvas.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
+ $taskCanvas.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+ $taskCanvas.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
+ $taskCanvas.DrawString('"'KITOFFICE / JAPANESE CORPORATE AERO',"'$taskTitle,$taskInk,20,16)
+ $taskCanvas.DrawString('"'2000-2006 Japanese office direction | AONAGI, fictional corporate identity | Fixed-view paintover comparison',"'$taskSmall,$taskMuted,22,61)
+ $taskCanvas.FillRectangle($taskGrey,20,101,5,24)
+ $taskCanvas.FillRectangle($taskAqua,840,101,5,24)
+ $taskCanvas.FillRectangle($taskSoft,1660,101,5,24)
+ $taskCanvas.DrawString('"'ORIGINAL / UNITY CAPTURE',"'$taskLabel,$taskInk,34,99)
+ $taskCanvas.DrawString('"'A / AERO',"'$taskLabel,$taskInk,854,99)
+ $taskCanvas.DrawString('"'B / SOFT CLUB',"'$taskLabel,$taskInk,1674,99)
+ for ($taskRowIndex=0; $taskRowIndex -lt $taskRows.Count; $taskRowIndex++) {
+  $taskRow = $taskRows[$taskRowIndex]
+  $taskTop = 140 + $taskRowIndex*504
+  $taskCanvas.DrawString($taskRow.Label,$taskLabel,$taskInk,20,$taskTop)
+  $taskFiles = @(
+   (Join-Path $taskRoot ('"'ArtSource/Kit/review/unity_office/'+"'$taskRow.Stem+'"'.png')),
+   (Join-Path "'$taskOut ($taskRow.Stem+'"'_A.png')),
+   (Join-Path "'$taskOut ($taskRow.Stem+'"'_B.png'))
+  )
+  for ("'$taskColIndex=0; $taskColIndex -lt 3; $taskColIndex++) {
+   $taskImage = [System.Drawing.Image]::FromFile($taskFiles[$taskColIndex])
+   try {
+    $taskLeft = 20+$taskColIndex*820
+    $taskCanvas.DrawImage($taskImage,[System.Drawing.Rectangle]::new($taskLeft,($taskTop+34),800,450))
+    $taskCanvas.DrawRectangle($taskBorder,$taskLeft,($taskTop+34),800,450)
+   } finally { $taskImage.Dispose() }
+  }
+ }
+ $taskCanvas.DrawString('"'9 image-generation tries / 8 final paintovers / Full-resolution images, palette, dimensions and exact sign copy: README.md',"'$taskSmall,$taskMuted,20,2164)
+ $taskSheet.Save($taskSheetPath,[System.Drawing.Imaging.ImageFormat]::Png)
+ Write-Output '"'contact_sheet.png saved: 2480 x 2210; 4 rows x 3 columns'
+} finally {
+ "'$taskCanvas.Dispose(); $taskSheet.Dispose(); $taskTitle.Dispose(); $taskLabel.Dispose(); $taskSmall.Dispose(); $taskInk.Dispose(); $taskMuted.Dispose(); $taskAqua.Dispose(); $taskSoft.Dispose(); $taskGrey.Dispose(); $taskBorder.Dispose()
+}' in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+ succeeded in 1598ms:
+contact_sheet.png saved: 2480 x 2210; 4 rows x 3 columns
+
+mcp: node_repl/js started
+mcp: node_repl/js (completed)
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Add-Type -AssemblyName System.Drawing
+$taskOut = Join-Path (Get-Location) '"'ArtSource/Kit/concepts/Japanese_Aero'
+"'$taskStems = @('"'unity_office_L1_window_corridor','unity_office_L3_atrium_stair','unity_office_L4_room_through_frost','unity_office_L7_upper_over_atrium')
+"'$taskNames = @($taskStems | ForEach-Object { $_+'"'_A.png'; "'$_+'"'_B.png' }) + @('contact_sheet.png')
+foreach ("'$taskName in $taskNames) {
+ $taskPath = Join-Path $taskOut $taskName
+ $taskImage = [System.Drawing.Image]::FromFile($taskPath)
+ try {
+  $taskExpectedWidth = 1600; $taskExpectedHeight = 900
+  if ($taskName -eq '"'contact_sheet.png') { "'$taskExpectedWidth=2480; $taskExpectedHeight=2210 }
+  if ($taskImage.Width -ne $taskExpectedWidth -or $taskImage.Height -ne $taskExpectedHeight) { throw ('"'Wrong size: '+"'$taskName) }
+  Write-Output ($taskName+'"' | '+"'$taskImage.Width+'"' x '+"'$taskImage.Height+'"' | PNG decode OK')
+ } finally { "'$taskImage.Dispose() }
+ $taskHash = Get-FileHash -Algorithm SHA256 -LiteralPath $taskPath
+ Write-Output ('"'SHA256 '+"'$taskHash.Hash)
+}
+Get-Item -LiteralPath (Join-Path $taskOut '"'README.md'),(Join-Path "'$taskOut '"'PROMPTS.md') | Select-Object Name,Length" in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+ succeeded in 639ms:
+unity_office_L1_window_corridor_A.png | 1600 x 900 | PNG decode OK
+SHA256 8483EFEE02B59952C74A818A9730A97FE6D0B1275D8606971C734B1B66AC9E85
+unity_office_L1_window_corridor_B.png | 1600 x 900 | PNG decode OK
+SHA256 AD94CCBCCAA22FAC54CBF3E3BD2741108A7498A08450F3D2EDA61FDD2E44784B
+unity_office_L3_atrium_stair_A.png | 1600 x 900 | PNG decode OK
+SHA256 87927C397D08208B933AC5BF9FFFA4328B0AECD6023352894FB083624EBF08DF
+unity_office_L3_atrium_stair_B.png | 1600 x 900 | PNG decode OK
+SHA256 F44958FDAAE1E908F47CA3FCF34FDA4A0B9AB8ECF0119B33FDA54C0940E7F48C
+unity_office_L4_room_through_frost_A.png | 1600 x 900 | PNG decode OK
+SHA256 FA5252AD02A64EE679876D0B543622C7D116976975971542F9D472118A36D873
+unity_office_L4_room_through_frost_B.png | 1600 x 900 | PNG decode OK
+SHA256 38957171143CDF991469DA8196625B2DAB5E082CBBD72FD9EA7C553A64539E4A
+unity_office_L7_upper_over_atrium_A.png | 1600 x 900 | PNG decode OK
+SHA256 40A74664EBF8CC362D1FFBC46E5002941BC0E734709E804E57A51E6150338FFF
+unity_office_L7_upper_over_atrium_B.png | 1600 x 900 | PNG decode OK
+SHA256 3D95A98B906C003FFF54DCC58FD502134B4D48110F156D8CABB3C8F84A3D3064
+contact_sheet.png | 2480 x 2210 | PNG decode OK
+SHA256 1D5211D892DBAE82D89FBFE4D2D1F4CE140415300BF30DCDC6D8B5A57039BDF5
+
+Name       Length
+----       ------
+README.md   16053
+PROMPTS.md  12179
+
+
+
+codex
+**Edit 2 — [README](ArtSource/Kit/concepts/Japanese_Aero/README.md):** record the completed checks: **9 PNGs decoded**, dimensions matched, and **13 file links resolved**.
+
+The guide also flags rounded column profiles and small generated lettering as concept details, with source dimensions and exact sign copy supplied for rebuilding.
+
+apply patch
+patch: completed
+C:\Users\alexf\Documents\GitHub\Seal-The-Deal\ArtSource\Kit\concepts\Japanese_Aero\README.md
+diff --git a/ArtSource/Kit/concepts/Japanese_Aero/README.md b/ArtSource/Kit/concepts/Japanese_Aero/README.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..ebb8e4a2307fd7a2961a692acd138ec4fef25dd9
+--- /dev/null
++++ b/ArtSource/Kit/concepts/Japanese_Aero/README.md
+@@ -0,0 +1,214 @@
++# Japanese corporate Aero — KitOffice paintovers
++
++**Status:** Target concept; awaiting Alex's selection · **Last updated:** 2026-11-13
++
++Two material and dressing directions painted over the four supplied Unity captures.
++A is glossy aqua eco-tech; B is pale silver Soft Club.
++The fictional Japanese company, office props and bilingual signs belong to this proposal.
++[REQUEST.md](REQUEST.md) is the brief for this concept, including its explicit permission for Aero imagery.
++
++## Review the images
++
++[Open the labelled contact sheet](contact_sheet.png): original, A, B from left to right; L1, L3, L4, L7 from top to bottom.
++Each individual paintover is a full-frame **1600 × 900 PNG (16:9)**.
++
++| Capture | A — Aero | B — Soft Club |
++|---|---|---|
++| L1 — window corridor | [A](unity_office_L1_window_corridor_A.png) | [B](unity_office_L1_window_corridor_B.png) |
++| L3 — atrium stair | [A](unity_office_L3_atrium_stair_A.png) | [B](unity_office_L3_atrium_stair_B.png) |
++| L4 — meeting room through glass | [A](unity_office_L4_room_through_frost_A.png) | [B](unity_office_L4_room_through_frost_B.png) |
++| L7 — upper floor over atrium | [A](unity_office_L7_upper_over_atrium_A.png) | [B](unity_office_L7_upper_over_atrium_B.png) |
++
++**Recommendation: build A.**
++Its aqua identity, living green and period office equipment make the Japanese corporate direction clearer than B's nearly neutral treatment.
++Keep water to one shallow atrium wall feature and use the controlled gloss values below so reflections remain background information during combat.
++
++## Palette and material targets
++
++Hex values are sRGB base colours, rather than colours sampled from the lit images.
++Smoothness is the Unity-style 0–1 gloss control; for an initial Blender match, use roughness = 1 − smoothness.
++These are starting art targets, not measured shader values from the generated pictures.
++Opacity 1 means opaque; translucency on plastics describes a visual finish, not a change to collision or cover.
++
++| Material / use | A colour | B colour | Smoothness A / B | Metalness | Opacity / translucency |
++|---|---|---|---|---|---|
++| White wall lacquer, column skins | `#F4FAF8` | `#F3F6F6` | 0.68 / 0.40 | 0 | 1; solid |
++| Polished circulation floor | `#DDECF0` | `#DFE6EB` | 0.72 / 0.46 | 0 | 1; broad reflections, no mirror finish |
++| Work-area carpet | `#7894AA` | `#8C9DAE` | 0.08 / 0.06 | 0 | 1; short pile, subtle 0.5 m tiles |
++| Ceiling / light housings | `#EFF5F5` | `#F0F2F4` | 0.24 / 0.20 | 0 | 1 |
++| Clear glass, very light edge tint | `#E8F8F5` | `#F1F7FA` | 0.94 / 0.90 | 0 | Approx. 0.04 / 0.03 surface opacity; no blur across figures |
++| Frosted plastic / approved glass frost bands | `#BCEDE9` | `#D8E3E9` | 0.64 / 0.43 | 0 | Plastic 0.55 / 0.65; glass frost bands 0.70; clear sightline remains separate |
++| Anodised / brushed silver | `#C8D2D9` | `#BAC6CF` | 0.70 / 0.53 | 0.85 | 1; fine directional brushing |
++| Aqua sign faces / plastic caps | `#45BFC7` | `#A8BFD1` | 0.76 / 0.46 | 0 | Opaque on walls; 0.55 on decorative acrylic edges |
++| Secondary sky-blue print | `#568BCB` | `#A8BFD1` | 0.45 / 0.30 | 0 | 1; opaque panels only |
++| Text, chair fabric, dark-suit reference | `#172C48` | `#24344C` | 0.12 / 0.10 | 0 | 1; keep fabric distinct from shiny silver |
++| Hanko / logo seal accent | `#C7473E` | `#BA6960` | 0.35 / 0.28 | 0 | 1; tiny, infrequent printed accent |
++| Leaves, light / shadow | `#70AF59` / `#315F45` | `#8FA58B` / `#536C60` | 0.24 / 0.18 | 0 | 1 on leaf faces; cutout edges |
++| Water / LED accent | `#7ADAD8` | `#B9CFDA` | 0.90 / 0.50 | 0 | Water is a contained visual layer; LED is a restrained emissive dot pattern |
++
++Keep structural white readable under the existing cool daylight, with real shadow depth rather than dirty black halos.
++Reserve richer aqua for opaque sign faces and accessories; tinting every pane aqua would muddy overlapping silhouettes.
++Use a static contained water texture / normal treatment for the concept's water wall before considering any animated presentation.
++
++## Kit changes and dimensions
++
++All dimensions are metres, given as width × depth × height unless noted.
++**Existing** dimensions below come from the current [kit source](../../kit_pieces.py) and [kit README](../../README.md); they are not measurements inferred from the pictures.
++**Proposed** dimensions are modelling targets for new dressing and need fitting against the original scene after Alex chooses a direction.
++Use the existing meshes, pivots, snap ends and placements as the dimensional master; generated bevels and curved cladding are finish suggestions.
++
++### Existing pieces to restyle
++
++| Kit piece / family | Existing size | Proposed art change |
++|---|---|---|
++| `Slab_4x4`, `Slab_2x4`, `Slab_4x2`, `Slab_2x2` | 4 / 2 m bay runs; 0.20 thick | Pale polished circulation surface; retain slab edges and openings |
++| `Carpet_Overlay_4x4` | 4 × 4 × 0.008 thick | Lighter blue carpet in the existing work-area footprints |
++| `Wall_Solid_4m`, `_2m`, cobalt / portal variants | 4 / 2 × 0.20 × 4.30 | White lacquer and silver reveals; replace cobalt fields with A aqua or B mist blue |
++| `Wall_Door_4m`, `Door_Leaf` | Wall 4 × 0.20 × 4.30; leaf 1.18 × 0.04 × 2.38 | Same opening and swing; silver edge and pale face |
++| `Wall_Return_2x2` and cobalt variant | 2 × 2 m cell, 0.20 thick, 4.30 high; outer radius 1.0 | Rounded lacquer island ends, same snap envelope |
++| `Wall_Niche_4m` | 4 × 0.20 × 4.30; niche 0.60 wide × 0.06 deep × 3.40 high | Aqua / milky plastic insert; no added projecting furniture |
++| `Window_4m`, `_2m`, façade column / corner families | 4 / 2 m runs, 0.20 deep, 4.30 high; existing sill retained | Silver trims, near-clear glazing; retain exterior bay rhythm |
++| `Column_Graphic`, `_Tall` | 0.80 × 0.80 × 4.30 / 8.80; existing corner radius 0.06 | Aqua or pale-blue wrap graphics on the opaque column; retain the source section, even where the paintover suggests a rounder shell |
++| `Partition_Frost_4m`, `_2m` / glass families | 4 / 2 × 0.10 × 2.50 | Silver perimeter, separate frost bands and a near-clear middle |
++| `Partition_Header_4m`, `_2m`, `_Curve_2x2` | Existing straight runs / 2 × 2 m curved cell; curve radius 1.50; header from 2.50 to 4.30 high | Pearl-white header, silver jambs; a sliding-screen appearance on the existing edge, not an extra closed panel |
++| `Stair_Straight_2m` | 2.00 × 7.20; rise 4.50; guarded envelope 5.60 high | White folded supports, silver tread nosings, clear guards; preserve all 24 risers and landings |
++| `Guard_Glass_4m`, `_2m`; existing posted guard family | 4 / 2 m runs, glass 0.06 deep, 1.10 high; glass-family shoe 0.12 high | Frameless visual treatment; retain the barrier footprint and place opaque fittings low, rather than copying bright horizontal bars from a generated image |
++| `Counter_Capsule_2m` | 2.00 × 1.00 × 1.10 | Rounded white body, silver base, thin aqua / pearl cap; the L4 counter stays in place |
++| `Cover_Block_2m` | 2.00 × 0.60 × 1.10 | Same cover silhouette, white lacquer and subtle silver detail |
++| `Desk_Sculpt` | 1.60 × 0.80 × 0.74 | Pearl top, silver edge; add accessories to the existing desk |
++| `Workstation_Bench` | 2.40 × 1.60; existing divider top 1.15 | Retain facing pairs and divider height, which is approximately the brief's 1.1 m cover line; restyle the divider instead of creating a taller screen |
++| Existing monitor / drawer pedestal | Monitor panel 0.55 wide × 0.34 high; pedestal 0.40 × 0.55 × 0.60 | Silver LCD bezel and substantial foot; dark displays, white / grey keyboards |
++| `Chair_Task`, `Chair_Pod` | Task seat 0.47 high; pod 0.52 × 0.50 × 0.86, seat 0.46 high | Navy fabric / shell, brushed-silver base; keep chair positions and silhouettes |
++| `Storage_Low`, `Copier` | Storage 1.60 × 0.45 × 1.00; copier 0.62 × 0.66 × 1.05 | Silver handles and panel seams, white bodies; no extra tall opaque storage |
++| `Desk_Reception` | 4.00 × 0.90 × 1.10 | Replace the former English firm's identity with AONAGI on the existing desk, wherever it is used; do not add a new desk to L1 |
++| `Sign_Zone_L`, `_R`, `_C`, `_H`, `_A` | Face 2.40 wide × 3.20 high, 0.014 proud; bottom 0.60 above floor | Bilingual sign family below; A has water / bubble graphics, B has a thin mist-blue field |
++| `Planter_Box` | 1.00 × 0.45 × 0.55 pot | Silver / white pot and readable green leaf clusters; use existing planter positions first |
++| `Light_Pendant_Linear`, `Ceiling_Grid_4x4` | Pendant 2.40 × 0.07 × 0.06, drop 0.80; grid 4 × 4, 0.008 thick | Silver housings, soft white light, subtle ceiling grid; retain hanging positions |
++
++### New dressing to model only after selection
++
++| Prop / detail | Proposed size | Placement / construction |
++|---|---|---|
++| Aqua / pearl column sign skin | 0.55 × 0.012 × 1.50 | Flush to the existing opaque column; floor code lettering about 0.45 high |
++| Open-ring reception emblem | Outer diameter 0.40; stroke 0.028; red dot diameter 0.05 | Wall / existing reception face; a small graphic rather than a projecting sculpture |
++| Reception LED status sign | 1.20 × 0.06 × 0.18 | Above the L1 wall logo; lowest edge about 2.65 high; dot-matrix face, not a large screen |
++| Contained water-wall cassette, A | 1.80 × 0.08 × 2.70 | Fit to the existing opaque curved atrium wall behind the stair; no pool or route intrusion |
++| Pearl acrylic replacement, B | Same 1.80 × 0.08 × 2.70 | Same wall location, dry and quietly lit |
++| Water server, including bottle | 0.35 × 0.35 × 1.35 | L1 against the reception wall, outside circulation |
++| Umbrella stand | 0.22 × 0.22 × 0.55; umbrellas up to 1.00 overall | Beside the server / entrance wall, not against clear sightline glass |
++| Drinks vending machine | 0.90 × 0.65 × 1.80 | L7 rear opaque wall; fictional bottle labels, white / silver casing |
++| Slipper cabinet | 0.90 × 0.35 × 0.70 | Rear entrance wall beside the vending area; shallow open cubbies or pale doors |
++| White desk phone | 0.24 × 0.22 × 0.10 | Existing desk corners; curled handset cord, small buttons |
++| Two-tier document tray | 0.28 × 0.34 × 0.18 | Clear aqua A / milky-white B; keep below the workstation cover top |
++| Folder / paper stack | 0.24 × 0.32 × 0.03 | A few tidy stacks, not piles that create new cover |
++| Supplemental small plant | Pot diameter 0.28, height 0.32; total plant height 1.40 | Against a solid background wall; keep leaves out of routes and clear glass viewing strips |
++
++The upper-floor bench islands already face staff toward one another.
++Dress the existing far head station as the manager's position using a phone, document tray and a tidier surface; do not lengthen a bench or add a desk across a passage.
++Tall new props belong against opaque walls, so they do not become extra cover in an open route.
++
++## Exact sign copy and fictional company
++
++Use this text for real typesetting; small generated glyphs and micro-lettering in the paintovers are concept approximations.
++Use a Japanese sans serif with full glyph coverage, restrained English capitals, and a consistent Latin zone code.
++Japanese is primary, English secondary; romanisation is supplied for the rebuild team and does not need to become a third line on every sign.
++
++| Zone | Japanese | Romanisation | English |
++|---|---|---|---|
++| L | 法務部 | Hōmu-bu | LEGAL |
++| R | 審査部 | Shinsa-bu | REVIEW |
++| C | 請求部 | Seikyū-bu | CLAIMS |
++| H | 審問室 | Shinmon-shitsu | HEARINGS |
++| A | 記録保管室 | Kiroku hokan-shitsu | ARCHIVE |
++
++L, R and C retain the brief's department names.
++H and A gain **室** to identify a room rather than an activity; 審問室 is an institutional hearing room, appropriate to the fictional legal bureaucracy rather than an ordinary meeting room.
++請求部 interprets CLAIMS as a department handling claims / demands, rather than complaints; no insurance-specific remit is added.
++Official usage supporting the room terminology: [Fukuoka court building guide, 審問室](https://www.courts.go.jp/fukuoka-h/vc-files/fukuoka-h/file/sougouannai.pdf) and [MHLW form using 診療記録保管室](https://kouseikyoku.mhlw.go.jp/tohoku/000432077.pdf).
++
++| Application | Exact Japanese / code | Romanisation | English |
++|---|---|---|---|
++| Company legal name | 青凪総合サービス株式会社 | Aonagi Sōgō Sābisu Kabushiki Gaisha | Aonagi Corporate Services Co., Ltd. |
++| Reception display name | 青凪総合サービス | Aonagi Sōgō Sābisu | AONAGI |
++| Reception LED | 受付 1F | Uketsuke, ikkai | RECEPTION |
++| Lower-storey floor marker | 1F / 1階 | Ikkai | FLOOR 1 |
++| Upper-storey floor marker | 2F / 2階 | Nikai | FLOOR 2 |
++| Meeting-room plaque | 会議室 | Kaigi-shitsu | MEETING ROOM |
++| Water-server label | 給水 | Kyūsui | DRINKING WATER |
++| Vending area label | 自動販売機 | Jidō hanbaiki | VENDING |
++| Umbrella stand label | 傘立て | Kasa-tate | UMBRELLAS |
++| Slipper-cabinet label | 室内履き | Shitsunai-baki | INDOOR SLIPPERS |
++
++The proposed company is invented for this concept; the open ring suggests blue water and calm air, with one red circular hanko-like dot at its lower-right opening.
++Use the seal sparingly and keep it separate from any existing gameplay state indicators.
++**L1, L3, L4 and L7 are capture IDs, not storeys**: these views use 1F and 2F, and do not imply a seventh floor.
++A later 3F marker would follow the same typography, without being added to this two-storey capture set.
++
++## Rebuild interpretation and review limits
++
++The paintovers hold the principal camera, room, stair, wall, column, desk and counter positions as a visual comparison; they are not pixel-exact geometry plans.
++Image generation rounds some column profiles and simplifies rail hardware, and incidental exterior details vary.
++Retain the source kit's measured geometry when translating these surface treatments back to Blender and Unity.
++
++The near-clear viewing strip is 0.35–2.10 above each adjacent floor; frost stays outside it.
++Workstation dividers remain existing cover, not decorative full-height frosted partitions.
++The navy capsules are the original captures' readability markers; the images do not establish actual suited-player visibility through two panes or from the floor above.
++That assessment belongs to the subsequent selected kit in the existing scene.
++
++The water wall, LED display, vending machine and cabinet are art proposals; this delivery introduces no gameplay system or network contract.
++Existing system documentation does not need changing for an unselected concept; this guide records the proposed art targets inside the requested folder.
++
++## Generation and file validation
++
++**Image tries: 9 total — 8 first-pass paintovers plus 1 local refinement to L1 A for the reception LED.**
++All nine image calls completed; eight final paintovers are delivered, with the refined L1 A selected.
++The built-in image generation tool was used throughout, with each original capture supplied as its edit target; the refinement used the generated L1 A.
++[PROMPTS.md](PROMPTS.md) records the exact common prompt, variants, capture instructions, refinement and call-to-file mapping.
++
++Generated images were normalised from 1672 × 941 to 1600 × 900 without cropping; no scene content was composited or painted by a script.
++The contact sheet is a labelled layout of the original captures and final images, assembled with PowerShell / System.Drawing.
++Visual inspection covered all eight outputs for the principal composition, A/B distinction, clear glazing and dark marker presence.
++The original scene remains the authority for routes, dimensions and collision.
++
++**Validation results:** 9 PNGs decoded; all eight paintovers are 1600 × 900, the contact sheet is 2480 × 2210, and all nine SHA256 hashes differ.
++All 13 relative file links in this README resolved, with zero missing files.
++The contact sheet was opened and visually checked after assembly: four labelled rows, original / A / B in the requested order, without cropped thumbnails or clipped labels.
++These are artifact checks; no automated tests, Unity, Play Mode or multiplayer validation was run for this concept task.
++
++Exact PowerShell validation command, run from the repository root:
++
++```powershell
++Add-Type -AssemblyName System.Drawing
++$taskOut = Join-Path (Get-Location) 'ArtSource/Kit/concepts/Japanese_Aero'
++$taskStems = @('unity_office_L1_window_corridor','unity_office_L3_atrium_stair','unity_office_L4_room_through_frost','unity_office_L7_upper_over_atrium')
++$taskNames = @($taskStems | ForEach-Object { $_+'_A.png'; $_+'_B.png' }) + @('contact_sheet.png')
++foreach ($taskName in $taskNames) {
++ $taskPath = Join-Path $taskOut $taskName
++ $taskImage = [System.Drawing.Image]::FromFile($taskPath)
++ try {
++  $taskExpectedWidth = 1600; $taskExpectedHeight = 900
++  if ($taskName -eq 'contact_sheet.png') { $taskExpectedWidth=2480; $taskExpectedHeight=2210 }
++  if ($taskImage.Width -ne $taskExpectedWidth -or $taskImage.Height -ne $taskExpectedHeight) { throw ('Wrong size: '+$taskName) }
++  Write-Output ($taskName+' | '+$taskImage.Width+' x '+$taskImage.Height+' | PNG decode OK')
++ } finally { $taskImage.Dispose() }
++ $taskHash = Get-FileHash -Algorithm SHA256 -LiteralPath $taskPath
++ Write-Output ('SHA256 '+$taskHash.Hash)
++}
++Get-Item -LiteralPath (Join-Path $taskOut 'README.md'),(Join-Path $taskOut 'PROMPTS.md') | Select-Object Name,Length
++```
++
++Exact link check, run in Node REPL with `fs` imported from `node:fs/promises` and `path` from `node:path`:
++
++```javascript
++var reviewDir = path.join(nodeRepl.cwd,'ArtSource/Kit/concepts/Japanese_Aero');
++var readmeText = await fs.readFile(path.join(reviewDir,'README.md'),'utf8');
++var relativeTargets = [...readmeText.matchAll(/\]\(([^)]+)\)/g)].map(m=>m[1]).filter(p=>!/^https?:/.test(p));
++var brokenTargets=[];
++for(var target of relativeTargets){
++  try{await fs.access(path.resolve(reviewDir,target));}
++  catch{brokenTargets.push(target);}
++}
++nodeRepl.write({relativeLinksChecked:relativeTargets.length,brokenLinks:brokenTargets,pngCount:(await fs.readdir(reviewDir)).filter(f=>f.endsWith('.png')).length});
++```
++
++**Next:** Alex selects A or B before any kit modelling or scene changes.
+
+exec
+"C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content -Encoding UTF8 -LiteralPath 'ArtSource/Kit/concepts/Japanese_Aero/README.md' -Tail 8" in C:\Users\alexf\Documents\GitHub\Seal-The-Deal
+ succeeded in 252ms:
+for(var target of relativeTargets){
+  try{await fs.access(path.resolve(reviewDir,target));}
+  catch{brokenTargets.push(target);}
+}
+nodeRepl.write({relativeLinksChecked:relativeTargets.length,brokenLinks:brokenTargets,pngCount:(await fs.readdir(reviewDir)).filter(f=>f.endsWith('.png')).length});
+```
+
+**Next:** Alex selects A or B before any kit modelling or scene changes.
+
+codex
+**Eight paintovers complete**, all 1600 × 900: [contact sheet](ArtSource/Kit/concepts/Japanese_Aero/contact_sheet.png).
+
+[Rebuild guide](ArtSource/Kit/concepts/Japanese_Aero/README.md) includes palettes, dimensions, exact bilingual signage and fictional AONAGI branding.
+
+**9 image tries** using the built-in image tool; [prompts recorded](ArtSource/Kit/concepts/Japanese_Aero/PROMPTS.md).
+
+**Recommend A**; generated lettering and rounded profiles remain conceptual, with exact rebuild targets in the guide.
+
+**Next:** Alex selects A or B before modelling.
+tokens used
+124,900
+**Eight paintovers complete**, all 1600 × 900: [contact sheet](ArtSource/Kit/concepts/Japanese_Aero/contact_sheet.png).
+
+[Rebuild guide](ArtSource/Kit/concepts/Japanese_Aero/README.md) includes palettes, dimensions, exact bilingual signage and fictional AONAGI branding.
+
+**9 image tries** using the built-in image tool; [prompts recorded](ArtSource/Kit/concepts/Japanese_Aero/PROMPTS.md).
+
+**Recommend A**; generated lettering and rounded profiles remain conceptual, with exact rebuild targets in the guide.
+
+**Next:** Alex selects A or B before modelling.

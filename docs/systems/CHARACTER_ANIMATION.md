@@ -21,6 +21,7 @@ It is not limp. Animation clips say what the body should be doing every frame (s
 
 - **Standing:** as on the character sheet: feet together, legs straight, arms hanging straight down at his sides, head a little forward. He breathes: the chest tips back and the shoulders lift about 3 cm, sixteen times a minute.
 - **Looking round:** standing, the head leads. Up to 50 degrees either side only the head and shoulders turn; past that the body turns to face where you are looking. Moving or in the air, the body always faces the look.
+- **Fidgets:** every 5 to 12 seconds of standing still he does one small thing, picked at random: scratches the back of his head, scratches his hip, yawns and stretches both arms up, or looks left and right. Moving off cuts it short.
 - **Setting off:** the legs go from the stance straight into the first stride of the run, always the same first step. Most of the player's violent start (0 to 6 m/s in 0.13 s) now carries the whole body with it, so the top no longer bends back and the legs no longer trail.
 - **Running:** a full run with a forward lean, pumping bent arms and a heel kick. The legs turn over faster or slower to match the real speed across the floor.
 - **Strafing and back-pedalling:** the body keeps facing forward while the feet step sideways, diagonally or backwards (eight directions). Sideways and backwards are calm, upright steps. The legs are always on exactly one of the eight clips (the nearest to the way he is travelling), and a change of direction cross-fades to the new one over about an eighth of a second. A quick left-right flip keeps its stride instead of dropping toward the standing stance.
@@ -28,7 +29,7 @@ It is not limp. Animation clips say what the body should be doing every frame (s
 - **Stopping:** the legs keep their stride for a fifth of a second after the speed drops (so a flip of direction is not mistaken for a stop), then ease into the stance in about a quarter of a second; the arms come out for a moment.
 - **Jumping:** a held air pose with the arms out and the legs staggered, braced harder than on the floor.
 - **Landing:** a crouch whose depth grows with how fast the body came down, then it stands up into whatever it is doing next.
-- **Hits and knock-back:** running into something, or being blasted, weakens every joint for a moment, so the body goes properly limp.
+- **Hits and knock-back:** running into something, or being blasted, weakens every joint for a moment, so the body goes properly limp. Reactions to weapon hits (so far only on a test dummy) are in [HIT_REACTIONS.md](HIT_REACTIONS.md).
 - **Collisions:** every part bumps into the level and into other players' ragdolls.
 
 It hangs from its hips, which a spring drags along after the player. **It does not balance on its feet and cannot fall over**; the player capsule still decides where you are.
@@ -67,6 +68,7 @@ The price is that the level's colliders are in the other scene, so the ragdoll s
 | Sprint | `SprintUp_Loop` (made for 8.25 m/s) | Library 1's `Sprint_Loop` with the neck and head lifted 8 and 20 degrees |
 | Air | `Jump_Loop` | Library 1 |
 | Landing | `Jump_Land` | Library 1 |
+| Fidgets | `Fidget_ScratchHead`, `Fidget_ScratchHip`, `Fidget_Yawn`, `Fidget_LookAround` | Made in Blender on top of the idle pose with the skill's hand IK and bone turns; each is 2.5 s and starts and ends on the idle. Not captured motion |
 
 - **Licence:** the Quaternius library is CC0 (public domain); nothing to credit. **The Kevin Iglesias pack states no licence** on its page or in its download; the author told a commenter that a link to keviniglesias.com is enough credit. Until that is settled, treat its five clips as usable in the game but not cleared for redistribution in a public repository (Adam's call), and credit keviniglesias.com.
 - **How they were made:** retargeted onto `STDMC_Rigged.fbx`'s own skeleton in Blender with the `character-animation` skill, so each clip is plain bone animation that already fits this rig exactly.
@@ -86,6 +88,8 @@ All in `DefaultAnimation.asset`.
 | Side clip speed | How fast the legs step when moving sideways or backwards. At the default 6 a strafe at walking speed steps about one and a half times a second. Lower = quicker, busier steps that slide less. |
 | Head turn limit | How far you can look round with only the head and shoulders turning, in degrees either side, before the body follows. Standing only. |
 | Body turn speed | How fast the body turns to face the look once it follows, in degrees per second. |
+| Fidget clips | The list of fidgets; one is picked at random. Add or remove clips here. |
+| Fidget min wait / max wait | The shortest and longest he stands still between fidgets, in seconds. |
 | Land full speed | How hard a landing has to be to play the whole crouch. An ordinary jump lands at about 9.7 m/s, so the default of 20 gives about half. Lower = deeper landings. |
 
 **Standing** header (two values are used with the clips):
@@ -120,6 +124,7 @@ The headers marked "procedural pose only" do nothing while the clips are assigne
 - **Sideways running turns the body.** In the side runs the hips and legs face the way he is travelling and the chest is half turned; only the head stays forward. From another player's view he runs side-on.
 - **Sideways and backward runs are made for 4 m/s** and are played faster to cover 6 (Side clip speed, now 5); some foot slide remains.
 - **Run directions snap to eight.** A gamepad stick held between two of them uses the nearer clip, so the feet can point up to about 30 degrees off the true direction.
+- **Fidgets are hand-posed, not captured, and differ per screen.** They are simple arm and head moves with no finger work, and the hip scratch is small. Each client picks its own, so two players do not see the same fidget at the same moment.
 - **No turn-in-place, no crouch, no climb.** Mantling players use the air clip.
 - **It cannot fall over or lie on the floor.** The hips are always held up by their spring. A true free ragdoll on knock-out would need the motor to hand control over, which is netcode work.
 - **Joint limits are generic.** They are ordinary human ranges measured from the T-pose, not fitted to this character; the shoulders have none.

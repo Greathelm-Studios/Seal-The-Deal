@@ -31,6 +31,13 @@ MonoBehaviour:
   HeadTurnLimit: 50
   BodyTurnSpeed: 300
   LandFullSpeed: 20
+  FidgetClips:
+  - {fileID: -559334114680670186, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: 3720260867492600729, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: 5267119801021711081, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: 6008161288531264933, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  FidgetMinWait: 5
+  FidgetMaxWait: 12
   WobbleSpeed: 2.2
   WobbleDamping: 0.55
   LeanPerSpeed: 2.9
