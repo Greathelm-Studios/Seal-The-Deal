@@ -1,6 +1,6 @@
 # PLAYER MOVEMENT
 
-**Status:** Current · **Last updated:** 2026-10-03 · **Verified against:** the movement commit
+**Status:** Current · **Last updated:** 2026-11-12 · **Verified against:** the movement commit
 
 ## What happens in the game
 
@@ -55,7 +55,7 @@ Under [Assets/_Project/Scripts/](../../Assets/_Project/Scripts/):
 - `Combat/Knockback.cs`: turns a blast point into `ApplyKnockback` calls.
 - `UI/PredictionDebugHud.cs`: bottom-left readout of the local body's state, speed, last correction size and ping. The motor measures a correction by remembering where prediction put the body on each tick and comparing that with the host's position for the same tick when the reconcile arrives.
 
-Prefab: `Player.prefab` is a 1.8 m capsule with the pivot at the feet, mass 80, frictionless, rotation frozen. Its `Graphics` child is the FishNet graphical object: FishNet moves it smoothly between ticks, so visuals and camera never step. Under it, a `Lean` pivot at hip height (0.9 m) holds the body and nose; the owner's copy renders shadow-only (a part set to cast no shadow is hidden outright), and every part gets its own prefab shadow setting back when the owner leaves.
+Prefab: `Player.prefab` is a 1.8 m capsule with the pivot at the feet, mass 80, frictionless, rotation frozen. Its `Graphics` child is the FishNet graphical object: FishNet moves it smoothly between ticks, so visuals and camera never step. Under it, a `Lean` pivot at hip height (0.9 m) holds `Body`, a nested instance of the character model [STDMC_Toon](../../Assets/_Project/Art/Characters/STDMC/STDMC_Toon.prefab) with its feet at the player's feet. `Graphics` also carries `PlayerAnimator` and `PlayerRagdoll`, which pose the model's skeleton and run its ragdoll each frame ([CHARACTER_ANIMATION.md](CHARACTER_ANIMATION.md)). The owner's copy renders shadow-only (a part set to cast no shadow is hidden outright), and every part gets its own prefab shadow setting back when the owner leaves.
 
 ## Level rules (for whoever builds floors)
 
@@ -71,7 +71,8 @@ For comparison, ValhallaPVP's playtested baseline was ground acceleration 24 m/s
 
 ## Known limitations
 
-- No animation, no ragdoll: a knocked player is a flying capsule. Ragdoll blending is its own task.
+- No ragdoll: a knocked or mantling player holds the airborne pose. Animation is procedural and has its own doc, [CHARACTER_ANIMATION.md](CHARACTER_ANIMATION.md). Ragdoll blending is its own task.
+- **The animated body is wider than its collision.** The capsule is 0.7 m across; swinging arms and a leaning torso pass through walls and door frames.
 - The test blast is not a weapon: no projectile, no ammo, no cooldown, no visual. It exists so knockback can be tuned.
 - Spectators (the players you are not) guess one tick of input ahead; a sudden turn by them can show a small correction.
 - No ladders or ziplines yet; climbing means mantling.

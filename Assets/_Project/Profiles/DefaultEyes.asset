@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab6b2cb02a5304c4ca081e85feb3b4c8, type: 3}
+  m_Name: DefaultEyes
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Player.EyeProfile
+  _blinkInterval: {x: 2, y: 5}
+  _blinkDuration: 0.16
+  _glanceRange: 0.16
+  _glanceSpeed: 1.6
+  _winceThreshold: 0.35
+  _wideThreshold: 0.5
+  _focusThreshold: 0.5

@@ -1,0 +1,97 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d415bb5a718e8e343aa1295212b6f934, type: 3}
+  m_Name: DefaultAnimation
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Player.AnimationProfile
+  IdleClip: {fileID: 6245212886119452293, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  RunClips:
+  - {fileID: -8815886378510225334, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: -8576234654798019766, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: 658366401212279344, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: -5490207854439534253, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: -2282825991228640143, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: 8246108812256167756, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: -99423262778316901, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: -3649481565456798410, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  SprintClip: {fileID: -4950333804767787469, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  AirClip: {fileID: -3659967873887649963, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  LandClip: {fileID: 4832780573735333345, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  RunClipSpeed: 5.36
+  SprintClipSpeed: 8.25
+  LandFullSpeed: 20
+  WobbleSpeed: 2.2
+  WobbleDamping: 0.55
+  LeanPerSpeed: 2.9
+  HeadLean: 0.4
+  BodyCarry: 0.012
+  StopCrouch: 0.012
+  TurnLag: 0.015
+  TurnBank: 0.02
+  IdleArmDown: 80
+  IdleElbowBend: 16
+  IdleArmForward: 7
+  IdleArmDrift: 4
+  HipDrop: 0.04
+  BreathAmount: 2.2
+  BreathRate: 0.27
+  IdleSway: 0.018
+  IdleSwayRate: 0.13
+  IdleLook: 9
+  IdleLookRate: 0.2
+  RunCadence: 2.7
+  SprintCadence: 3.2
+  GroundTime: 0.38
+  StepReach: 0.36
+  SprintStepReach: 0.44
+  HeelKick: 0.36
+  SprintHeelKick: 0.5
+  RunCrouch: 0.13
+  Bounce: 0.06
+  FootRoll: 35
+  KickFootPitch: 70
+  HipTwist: 6
+  ShoulderTwist: 7
+  Waddle: 2
+  RunArmDown: 80
+  ArmSwing: 36
+  SprintArmSwing: 48
+  ElbowBend: 72
+  ElbowPump: 14
+  StepNod: 3
+  SpineStrength: 18
+  HeadStrength: 14
+  ArmStrength: 13
+  LegStrength: 26
+  JointDamping: 0.85
+  HipsFollow: 8
+  HipsDamping: 0.75
+  StartStopCarry: 0.65
+  UprightStrength: 20
+  RagdollGravity: 0.6
+  AirBrace: 2
+  LimpShare: 0.12
+  AirArmRaise: 66
+  AirArmForward: 28
+  AirElbowBend: 48
+  AirTuck: 0.16
+  AirLegSplit: 0.26
+  LandGive: 0.018
+  LandDip: 0.24
+  LandBounce: 2.6
+  LandFold: 35
+  ImpactSpeed: 4
+  ImpactFullSpeed: 9
+  ImpactKick: 2
+  StaggerDip: 0.08
+  StaggerRecover: 0.5
+  PoseBlendTime: 0.12
+  VelocitySmoothing: 0.05

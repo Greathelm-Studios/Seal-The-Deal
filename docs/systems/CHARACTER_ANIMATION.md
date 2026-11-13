@@ -1,0 +1,118 @@
+<!--
+  AI-GENERATED SOURCE FILE
+  Generator : Claude Fable 5.2 (Claude Code)
+  Generated : 2026-11-12
+  Prompt    : Alex: "set up a humanoid procedural animation system" (built-in, no clips), then
+              feel notes ending with the choice of a "True ragdoll body" ("look at TABS, gang
+              beast"; reference video: "Full Procedural Animations System")
+  Modified  : Claude Fable 5.2, 2026-11-13 — the ragdoll now chases animation clips; Alex chose
+              clips after the hand-written poses still read as "off" (setting off and stopping:
+              too floppy, wrong shapes, not matching the movement)
+  Reviewed  : NOT YET REVIEWED BY A HUMAN
+  Summary   : The owning doc for the player's animation (AGENTS.md §7): what the player sees,
+              who owns it, where the files are, how to tune it, what is unchecked.
+-->
+# Character animation
+
+**Status:** Current (seventh pass: the active ragdoll now chases real animation clips instead of hand-written poses; checked in frame strips from the side and the front, **not yet judged by a person and not yet seen in Play Mode**) · **Last updated:** 2026-11-13
+
+The player's body is a real ragdoll: eleven rigidbodies joined like a skeleton, the way TABS and Gang Beasts build theirs.
+It is not limp. Animation clips say what the body should be doing every frame (standing, running any way, sprinting, in the air, landing), and every joint has a motor pulling toward that. What you see is the body trying to do the clip.
+
+- **Standing:** upright, one foot a little forward, chest flat, shoulders dropped, arms hanging close at the sides, head level so the face shows in a mirror.
+- **Setting off:** the legs go from the stance straight into the first stride of the run, always the same first step. Most of the player's violent start (0 to 6 m/s in 0.13 s) now carries the whole body with it, so the top no longer bends back and the legs no longer trail.
+- **Running:** a full run with a forward lean, pumping bent arms and a heel kick. The legs turn over faster or slower to match the real speed across the floor.
+- **Strafing and back-pedalling:** the body keeps facing forward while the feet step sideways, diagonally or backwards (eight directions, blended).
+- **Sprinting:** a longer, faster stride, forward only; sprinting sideways uses the run.
+- **Stopping:** the run eases into the stance in about a quarter of a second; the arms come out for a moment.
+- **Jumping:** a held air pose with the arms out and the legs staggered, braced harder than on the floor.
+- **Landing:** a crouch whose depth grows with how fast the body came down, then it stands up into whatever it is doing next.
+- **Hits and knock-back:** running into something, or being blasted, weakens every joint for a moment, so the body goes properly limp.
+- **Collisions:** every part bumps into the level and into other players' ragdolls.
+
+It hangs from its hips, which a spring drags along after the player. **It does not balance on its feet and cannot fall over**; the player capsule still decides where you are.
+
+## Who owns what (AGENTS.md §3)
+
+| Thing | Owner | Synced | Rate |
+|---|---|---|---|
+| The clip blend and the ragdoll | Each client, for its own screen | Nothing | — |
+
+Every client works the blend out from what it already has (how its smoothed copy of the player moved this frame, and the motor's state), and runs its own ragdoll.
+Two screens will show the same player's limbs in different places. Nothing reads them back, so that cannot desync, and it costs no bandwidth.
+
+**The ragdoll lives in a physics scene of its own** ([RagdollWorld.cs](../../Assets/_Project/Scripts/Player/RagdollWorld.cs)), stepped by that class at 120 steps a second and by nothing else.
+The game's own physics scene is stepped by FishNet once a tick and re-stepped several times on every reconcile; a ragdoll in it would be simulated many times over and could shove the predicted capsule and the host's props. In its own scene it can do neither.
+The price is that the level's colliders are in the other scene, so the ragdoll scene keeps copies of the solid level geometry within 3 m of each ragdoll.
+
+## Files
+
+- [PlayerAnimator.cs](../../Assets/_Project/Scripts/Player/PlayerAnimator.cs): decides the pose. With clips in the profile it blends them onto the skeleton itself (no Animator Controller, no parameters) and sets every clip's time by hand, so the stride matches the real speed. With any clip slot empty it falls back to the older hand-written procedural pose, which is still in the file.
+- [PlayerRagdoll.cs](../../Assets/_Project/Scripts/Player/PlayerRagdoll.cs): runs straight after. Builds the bodies and joints from the T-pose at spawn; each frame it reads the pose as targets, aims the joint motors, steps the ragdoll scene, and overwrites the skeleton with where the bodies are.
+- [RagdollWorld.cs](../../Assets/_Project/Scripts/Player/RagdollWorld.cs): the separate physics scene and its copies of the level.
+- Both components sit on the `Graphics` object of [Player.prefab](../../Assets/_Project/Prefabs/Player.prefab), added by the greybox tool. Adding clips did not change the prefab: the clips are on the profile.
+- [AnimationProfile.cs](../../Assets/_Project/Scripts/Player/AnimationProfile.cs) and [DefaultAnimation.asset](../../Assets/_Project/Profiles/DefaultAnimation.asset): the clip slots and the tuning panel. Every field has a tooltip with its unit. Runtime never writes it.
+- [STDMC_Moves.fbx](../../Assets/_Project/Art/Characters/STDMC/Animations/STDMC_Moves.fbx): the clips (the twelve in use, plus the library's untouched `Idle_Loop`), skeleton only, imported as **Generic** (see below).
+- [DevMirror.cs](../../Assets/_Project/Scripts/Player/DevMirror.cs) and [DevMirror.prefab](../../Assets/_Project/Prefabs/Dev/DevMirror.prefab): a test mirror. In first person your own body is shadow-only, so the mirror shows it to its own camera alone. A true reflection that follows your eye and fits the quad at any size. It draws only the patch of glass that is on screen, at about the screen's resolution (Picture Scale on the mirror), so it stays sharp close up; seen at a steep angle along a long mirror the far end still goes soft. It costs one extra render of the scene per frame.
+
+## The clips
+
+| Slot | Clip | Source |
+|---|---|---|
+| Idle | `Idle_Relaxed_Loop` | Library 1's `Idle_Loop`, edited in Blender for Alex: lower and upper spine tipped forward 7 and 5 degrees to flatten the chest, neck and head lifted 14 and 34, both upper arms swung 16 forward, both shoulders dropped 22 with the arms let 8 closer to the body |
+| Run, forward | `Jog_Fwd_Loop` (made for 5.36 m/s) | Quaternius Universal Animation Library 1 |
+| Run, the other seven directions | `Jog_FwdR/R/BwdR/Bwd/BwdL/L/FwdL_Loop` | generated from the forward run |
+| Sprint | `Sprint_Loop` (made for 8.25 m/s) | Library 1 |
+| Air | `Jump_Loop` | Library 1 |
+| Landing | `Jump_Land` | Library 1 |
+
+- **Licence:** the library is CC0 (public domain); nothing to credit.
+- **How they were made:** retargeted onto `STDMC_Rigged.fbx`'s own skeleton in Blender with the `character-animation` skill, so each clip is plain bone animation that already fits this rig exactly.
+- **Why Generic and not Humanoid:** this model's origin is at its hips, not its feet. Unity's humanoid maths measures everything from the origin up, and with it the hips landed metres away. Generic clips are written to the bones as they are. For the same reason `PlayerAnimator` takes the humanoid avatar off the model's Animator on the first frame; the avatar is only needed at spawn, to find bones by name.
+- **Re-exporting:** the Blender armature has to have its scale applied (so `Armature` imports at scale 1, like the rig's own file) before export, or every bone is 100 times out. Import settings: Generic, no avatar, Preserve Hierarchy on, the rig's scale factor, Loop Time on every `_Loop` clip.
+
+## Tuning
+
+All in `DefaultAnimation.asset`.
+
+**Clips** header:
+
+| Inspector value | What it does |
+|---|---|
+| Run clip speed / Sprint clip speed | The speed each clip's stride was made for. The legs speed up or slow down to cover the real distance. Lower = quicker legs; raise it if the feet skate. |
+| Land full speed | How hard a landing has to be to play the whole crouch. An ordinary jump lands at about 9.7 m/s, so the default of 20 gives about half. Lower = deeper landings. |
+
+**Ragdoll** header (the feel):
+
+| Inspector value | What it does |
+|---|---|
+| Start stop carry | **The start-and-stop floppiness dial.** How much of the player's speeding up and slowing down the body simply goes along with. 0 = the old full yank (top bends back on a start, folds over on a stop); 1 = starts and stops as one piece. Default 0.65. |
+| Spine strength | The main wobble dial. Lower = the top half sways, lags and droops more. |
+| Air brace | How much harder every joint pulls in the air. 1 = a jump sprawls and tumbles; 2 = it holds its shape. |
+| Head strength | Lower = a heavier, lolling head. |
+| Arm strength | Lower = arms that trail and flail. |
+| Leg strength | Keep well above the others or the legs cannot keep up with the run. |
+| Joint damping | How long everything keeps swinging. 1 = stiff, 0.6 = swings past and settles, below 0.3 = flaps. |
+| Hips follow | How tightly the body is dragged after the player. Lower = it trails and sloshes. |
+| Upright strength | How firmly the pelvis is held level and facing forward. |
+| Ragdoll gravity | Lower = floaty limbs. |
+| Limp share | How weak the joints go when hit or knocked back. |
+
+The headers marked "procedural pose only" do nothing while the clips are assigned.
+
+## Known limitations
+
+- **Not judged by a person, and not seen in Play Mode.** It was checked by playing it on a hidden copy of the player in the Editor at 60 steps a second and reading the frames from the side and the front: standing start, steady run, stop, jump, strafe, idle. A recorded Play Mode run was attempted and did not complete (the recorder could not put the lobby into local test mode). Another player's view and frame cost with 8 players are unchecked.
+- **It follows the clips closely now.** In the preview the hips stay within about 2 degrees of the clip. If that reads as too stiff, lower Start stop carry and Spine strength before anything else.
+- **Sideways and backwards runs are generated, not captured.** Side steps read as a skip with a wide stance, and backwards is the forward run played in reverse, still leaning forward. Real strafe and back-pedal clips would be better.
+- **Feet slide when strafing.** The legs turn over at the forward run's rate in every direction, and a side step covers less ground.
+- **No turn-in-place, no crouch, no climb.** Mantling players use the air clip.
+- **It cannot fall over or lie on the floor.** The hips are always held up by their spring. A true free ragdoll on knock-out would need the motor to hand control over, which is netcode work.
+- **Joint limits are generic.** They are ordinary human ranges measured from the T-pose, not fitted to this character; the shoulders have none.
+- **Its own parts pass through each other.** With self-collision the arms caught on the ribs every stride.
+- **Level copies stand still.** Doors that move and props that are thrown are not followed, so the ragdoll does not react to a chair hitting it. Only box, sphere, capsule and mesh colliders are copied.
+- **Feet do not grip the floor.** Nothing holds a planted foot in place.
+- **The model's Animator has no avatar while playing.** Anything added later that asks it for a bone at runtime (not at spawn) will get nothing.
+- **Two pose systems in one file.** The procedural pose is kept only as the fallback for an empty clip slot; once the clips are accepted it can be deleted along with its profile fields.
+- **Cost is unmeasured.** Eleven rigidbodies, ten joints, one physics step at 120 a second and a twelve-clip blend per frame, per player, on every client.
+- **Lane clash:** Adam's movement lane regenerates `Player.prefab` from its own setup menu. If that drops `PlayerAnimator` and `PlayerRagdoll` from `Graphics`, the character goes back to a T-pose; re-run the greybox player rebuild or carry the two components across.

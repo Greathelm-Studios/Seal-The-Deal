@@ -1,5 +1,4 @@
 using CloseTheDeal.Combat;
-using CloseTheDeal.Editor.Art;
 using CloseTheDeal.Net;
 using CloseTheDeal.Player;
 using CloseTheDeal.Tower;
@@ -32,6 +31,7 @@ namespace CloseTheDeal.Editor.Greybox
         const string ProfileFolder = "Assets/_Project/Profiles";
         const string MovementProfilePath = ProfileFolder + "/DefaultMovement.asset";
         const string BlastProfilePath = ProfileFolder + "/TestBlast.asset";
+        const string AnimationProfilePath = ProfileFolder + "/DefaultAnimation.asset";
         const string PhysicsFolder = "Assets/_Project/Physics";
         const string PlayerPhysicsMaterialPath = PhysicsFolder + "/Frictionless.physicsMaterial";
         const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
@@ -45,6 +45,8 @@ namespace CloseTheDeal.Editor.Greybox
         const float BodyRadius = 0.35f;
         const float BodyMass = 80f;
         const float HipHeight = 0.9f;
+        /// <summary>The character every player wears: the toon-shaded STDMC model, scaled to 1.8 m with its feet at the origin.</summary>
+        const string CharacterModelPath = "Assets/_Project/Art/Characters/STDMC/STDMC_Toon.prefab";
 
         [MenuItem("Close the Deal/Greybox/Set Up Scene")]
         public static void SetUpScene()
@@ -186,6 +188,8 @@ namespace CloseTheDeal.Editor.Greybox
             SetReference(serializedMotor, "_leanPivot", leanPivot);
             serializedMotor.ApplyModifiedPropertiesWithoutUndo();
 
+            AddAnimator(graphics, motor);
+
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             Object.DestroyImmediate(root);
             GeneratedAssetGuard.MarkGenerated(prefab);
@@ -194,9 +198,15 @@ namespace CloseTheDeal.Editor.Greybox
         }
 
         /// <summary>
-        /// A capsule body with a small block for a nose, so facing reads in greybox. Both hang
-        /// off a pivot at hip height that the motor tilts when the player leans.
+        /// The character model, hung off a pivot at hip height that the motor tilts when the
+        /// player leans.
         /// </summary>
+        /// <remarks>
+        /// The model goes in as a nested instance of its own prefab, so a change to
+        /// <c>STDMC_Toon</c> (materials, outline mesh, a later rig) reaches the player without
+        /// rebuilding Player.prefab. The alternative, copying its mesh and materials onto a new
+        /// object here, would have to be redone by this tool after every change to the model.
+        /// </remarks>
         static Transform BuildGraphics(Transform root, out Transform leanPivot)
         {
             var graphics = new GameObject("Graphics") { layer = PlayerLayer };
@@ -207,33 +217,54 @@ namespace CloseTheDeal.Editor.Greybox
             lean.transform.localPosition = new Vector3(0f, HipHeight, 0f);
             leanPivot = lean.transform;
 
-            GameObject capsule = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            capsule.name = "Body";
-            capsule.layer = PlayerLayer;
-            Object.DestroyImmediate(capsule.GetComponent<Collider>());
-            capsule.transform.SetParent(leanPivot, false);
-            capsule.transform.localPosition = new Vector3(0f, BodyHeight * 0.5f - HipHeight, 0f);
-            capsule.transform.localScale = new Vector3(BodyRadius * 2f, BodyHeight * 0.5f, BodyRadius * 2f);
+            var modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterModelPath);
+            if (modelPrefab == null)
+            {
+                Debug.LogError("[Greybox] Character model missing at " + CharacterModelPath + "; the player has no visible body.");
+                return graphics.transform;
+            }
 
-            // The body wears the art bible's navy suit (docs/systems/CHARACTER_SHADER.md), so the
-            // character look can be judged in play before a real model exists. The nose keeps the
-            // default grey: it is a cube, and it has to stay readable against the navy.
-            CharacterToonMaterials.Build();
-            var suit = AssetDatabase.LoadAssetAtPath<Material>(CharacterToonMaterials.SuitMaterialPath);
-            if (suit != null)
-                capsule.GetComponent<MeshRenderer>().sharedMaterial = suit;
-            else
-                Debug.LogWarning("[Greybox] Suit material missing at " + CharacterToonMaterials.SuitMaterialPath + "; the player body keeps the default material.");
-
-            GameObject nose = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            nose.name = "Nose";
-            nose.layer = PlayerLayer;
-            Object.DestroyImmediate(nose.GetComponent<Collider>());
-            nose.transform.SetParent(leanPivot, false);
-            nose.transform.localPosition = new Vector3(0f, BodyHeight * 0.8f - HipHeight, BodyRadius + 0.05f);
-            nose.transform.localScale = new Vector3(0.15f, 0.15f, 0.2f);
+            var model = (GameObject)PrefabUtility.InstantiatePrefab(modelPrefab, leanPivot);
+            model.name = "Body";
+            // The model prefab stands 1.8 m tall with its feet at its own origin, so dropping it
+            // by the pivot's height puts the feet at the player's feet.
+            // No turn is needed: the model prefab already faces +Z, the way the player moves.
+            model.transform.localPosition = new Vector3(0f, -HipHeight, 0f);
+            foreach (Transform part in model.GetComponentsInChildren<Transform>(true))
+                part.gameObject.layer = PlayerLayer;
 
             return graphics.transform;
+        }
+
+        /// <summary>
+        /// Puts the procedural animation, and the ragdoll that shows it, on the smoothed visual,
+        /// pointed at the model's humanoid skeleton. Skipped, with a warning, when the model has none.
+        /// </summary>
+        static void AddAnimator(Transform graphics, PlayerMotor motor)
+        {
+            var avatar = graphics.GetComponentInChildren<Animator>();
+            if (avatar == null || avatar.avatar == null || !avatar.avatar.isHuman)
+            {
+                Debug.LogWarning("[Greybox] The character model has no humanoid Animator; the player will not be animated.");
+                return;
+            }
+
+            var animator = graphics.gameObject.AddComponent<PlayerAnimator>();
+            var serialized = new SerializedObject(animator);
+            AnimationProfile profile = EnsureAsset<AnimationProfile>(ProfileFolder, AnimationProfilePath);
+            SetReference(serialized, "_profile", profile);
+            SetReference(serialized, "_motor", motor);
+            SetReference(serialized, "_avatar", avatar);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            // The ragdoll shows a physical body chasing the animator's pose; it runs straight after it.
+            var ragdoll = graphics.gameObject.AddComponent<PlayerRagdoll>();
+            var serializedRagdoll = new SerializedObject(ragdoll);
+            SetReference(serializedRagdoll, "_profile", profile);
+            SetReference(serializedRagdoll, "_animator", animator);
+            SetReference(serializedRagdoll, "_avatar", avatar);
+            SetInt(serializedRagdoll, "_solid", ~(1 << PlayerLayer));
+            serializedRagdoll.ApplyModifiedPropertiesWithoutUndo();
         }
 
         static PhysicsMaterial EnsureFrictionlessMaterial()
