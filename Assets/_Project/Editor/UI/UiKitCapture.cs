@@ -596,12 +596,13 @@ namespace CloseTheDeal.Editor.UI
         /// Proves the hub reaches the sound lane's player: requests a few events and lists every AudioSource that
         /// starts with its clip and the mixer group it routes to.
         /// </summary>
-        static IEnumerator SoundProof()
+        static IEnumerator SoundProof() => SoundProof(UiSoundEvent.Confirm, UiSoundEvent.Back, UiSoundEvent.TabChange, UiSoundEvent.Notification, UiSoundEvent.Error);
+
+        static IEnumerator SoundProof(params UiSoundEvent[] events)
         {
             Note("sound player registered: " + (UiSound.Player != null ? UiSound.Player.GetType().Name : "none"));
             UiSoundPlayer.IgnoreFocus = true; // A batch run has no focused window; the player stays silent unfocused by design.
             int started0 = UiSoundPlayer.Started;
-            UiSoundEvent[] events = { UiSoundEvent.Confirm, UiSoundEvent.Back, UiSoundEvent.TabChange, UiSoundEvent.Notification, UiSoundEvent.Error };
             var heard = new List<string>();
             foreach (UiSoundEvent e in events)
             {

@@ -64,8 +64,15 @@ namespace CloseTheDeal.UI
         public bool AtTitle => _open && !_inGame && !_lobby.IsActive;
 
         /// <summary>
-        /// The kit's title screen calls this while it is in the scene: the card then stays hidden at the title
-        /// and the kit draws it instead. Everything else (in-game card, cursor rule, HUD) stays here.
+        /// No player of ours in the world: the title, hosting, joining, loading and any failure. The kit draws all of
+        /// it while it is in the scene; this card shows only in a game.
+        /// </summary>
+        public bool OutOfGame => !_inGame;
+
+        /// <summary>
+        /// The kit calls this while it is in the scene: the card then stays hidden whenever we are out of a game
+        /// (title, hosting, joining, loading, failures) and the kit draws those instead. The in-game card, the cursor
+        /// rule and the HUD stay here.
         /// </summary>
         public void HandTitleToKit(bool handed)
         {
@@ -204,7 +211,7 @@ namespace CloseTheDeal.UI
 
         void ShowCard()
         {
-            bool kitHasTitle = _titleHandedOff && !_inGame && !_lobby.IsActive;
+            bool kitHasTitle = _titleHandedOff && !_inGame;
             bool show = _open && !kitHasTitle;
             if (_menuRoot.activeSelf != show)
                 _menuRoot.SetActive(show);

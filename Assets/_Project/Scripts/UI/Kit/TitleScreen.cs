@@ -45,6 +45,8 @@ namespace CloseTheDeal.UI
 
         [Tooltip("The menu column's group: hidden while a dialog takes its place (the quit confirm sits where the menu was).")]
         [SerializeField] CanvasGroup _menuGroup;
+        [Tooltip("The middle column's groups (status, the focused button's explanation): hidden while a wide panel (hosting, joining, a problem) takes the middle and right columns.")]
+        [SerializeField] CanvasGroup[] _centreGroups = new CanvasGroup[0];
 
         [Header("Screens it opens")]
         [SerializeField] UiScreen _settingsScreen;
@@ -56,6 +58,9 @@ namespace CloseTheDeal.UI
         const string QuitBody = "Your settings are saved.";
 
         SteamLobby _lobby;
+        UiTween _menuShown;
+        UiTween _centreShown;
+        bool _wide;
         string _lastStatus = Starting;
         bool _refusalShown;
 
@@ -79,6 +84,8 @@ namespace CloseTheDeal.UI
 
         protected override void Awake()
         {
+            _menuShown.Snap(1f);
+            _centreShown.Snap(1f);
             base.Awake();
             string version = "v" + Application.version + " · Early Access";
             foreach (TMP_Text line in _versionLines)
@@ -131,10 +138,55 @@ namespace CloseTheDeal.UI
             Refresh();
         }
 
+        /// <summary>A dialog in the menu's place fades the menu column out; it fades back when the dialog closes.</summary>
         protected override void OnCovered(bool covered)
         {
-            if (_menuGroup != null)
-                _menuGroup.alpha = covered ? 0f : 1f;
+            Fade(ref _menuShown, !covered);
+            if (!covered && _wide)
+                MakeRoom(false);
+        }
+
+        /// <summary>
+        /// A wide panel (hosting, joining, a problem) takes the middle and right columns: true fades the status and
+        /// the button explanation out, false brings them back. The menu column follows OnCovered.
+        /// </summary>
+        public void MakeRoom(bool wide)
+        {
+            _wide = wide;
+            Fade(ref _centreShown, !wide);
+        }
+
+        void Fade(ref UiTween tween, bool show)
+        {
+            if (_tokens == null)
+                return;
+            float to = show ? 1f : 0f;
+            if (Mathf.Approximately(tween.To, to) && (tween.Running || Mathf.Approximately(tween.Value, to)))
+                return;
+            tween.Start(tween.Value, to, show ? _tokens.PanelIn : _tokens.PanelOut, show ? _tokens.EaseOut : _tokens.EaseIn);
+            WakeMotion();
+        }
+
+        protected override bool TickExtra(float dt)
+        {
+            _menuShown.Step(dt);
+            _centreShown.Step(dt);
+            return _menuShown.Running || _centreShown.Running;
+        }
+
+        protected override void AfterApply()
+        {
+            Dim(_menuGroup, _menuShown.Value);
+            foreach (CanvasGroup group in _centreGroups)
+                Dim(group, _centreShown.Value);
+        }
+
+        static void Dim(CanvasGroup group, float shown)
+        {
+            if (group == null)
+                return;
+            group.alpha *= shown;
+            group.blocksRaycasts = shown > 0.5f;
         }
 
         /// <summary>Esc / B at the title asks before quitting; Stay has focus.</summary>
@@ -163,7 +215,12 @@ namespace CloseTheDeal.UI
             _joinLocal.interactable = ready;
             _joinLocal.RefusalReason = "Join on this PC opens once the network is ready.";
             if (_joinHint != null)
-                _joinHint.gameObject.SetActive(!local);
+            {
+                _joinHint.gameObject.SetActive(!local || !SteamService.IsReady);
+                _joinHint.text = local
+                    ? "Steam is not running, so friends can't join. Start Steam, then restart Seal the Deal to play online."
+                    : "To join a friend, accept their invite or choose Join Game on their name in Steam.";
+            }
 
             if (_mode != null)
                 _mode.text = ModeLine(ready, local);
@@ -257,7 +314,8 @@ namespace CloseTheDeal.UI
             Stack.Push(_quitDialog);
         }
 
-        static void QuitToDesktop()
+        /// <summary>Closes the game (leaves Play Mode in the Editor). The one quit path every screen uses.</summary>
+        public static void QuitToDesktop()
         {
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.ExitPlaymode();

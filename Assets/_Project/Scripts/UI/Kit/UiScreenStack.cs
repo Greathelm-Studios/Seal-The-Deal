@@ -45,7 +45,7 @@ namespace CloseTheDeal.UI
             _stack.Add(screen);
             screen.Stack = this;
             screen.Show(false, wait);
-            UiSound.Play(below == null ? UiSoundEvent.None : screen.IsDialog ? UiSoundEvent.PanelOpen : UiSoundEvent.Transition);
+            UiSound.Play(below == null ? UiSoundEvent.None : screen.OpenSound);
             Changed?.Invoke();
         }
 
@@ -103,7 +103,7 @@ namespace CloseTheDeal.UI
             top.Hide(false);
             screen.Stack = this;
             screen.Show(false, top.ClearTime);
-            UiSound.Play(UiSoundEvent.Transition);
+            UiSound.Play(screen.IsDialog ? screen.OpenSound : UiSoundEvent.Transition);
             Changed?.Invoke();
         }
 
