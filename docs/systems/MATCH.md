@@ -92,7 +92,7 @@ Everything below is on `MatchDirector.Instance` (namespace `CloseTheDeal.MatchMo
 
 | Event | Args | Fires when |
 |---|---|---|
-| `OnStarted` / `OnClosed` | | The match becomes live / goes away on this machine (join, leave, host gone). |
+| `OnStarted` / `OnClosed` | | The match becomes live / goes away on this machine (join, leave, host gone). A joining client raises `OnStarted` on its first tick after the current values arrive, and is not shown phase, result or briefcase changes that happened before it joined. |
 | `OnPhaseChanged` | `MatchPhase previous, MatchPhase next` | Any phase change. |
 | `OnCountdownChanged` | `int secondsLeft` | Each whole second of the countdown (5, 4, … 0). |
 | `OnClockChanged` | `int secondsLeft` | Each whole second of the match clock. |
@@ -168,6 +168,6 @@ Outside the folder: `Tower/TeamSpawner.cs` (balanced teams, a spawn hook and ove
 - **Getting on the plaza or a bridge means climbing the 0.6 m sill** (a mantle, 0.4–1.6 m in the movement profile).
 - **Blasts don't move the briefcase.** `Knockback.Explode` only throws `Prop`s; wire `Briefcase.Throw` in when weapons land.
 - **The gap counts as outside** except the plaza and the bridges. A zipline crossing over 1.2 s would send its rider back.
-- **A briefcase wedged unreachably inside a building** has no recovery; only leaving the buildings sends it back.
+- **A briefcase wedged unreachably inside a building** has no recovery, except one lodged on a floor above the open floor (a knocked-loose case on a shut slab), which is sent back.
 - **Outside `Lane_Integration.unity` the host starts the match from the menu.** In that scene the lobby desk starts it through `HostStartRun` ([INTEGRATION.md](INTEGRATION.md)).
 - The client's player is put back by the host's correction, so a teleport shows as one corrected tick on the owner's screen.
