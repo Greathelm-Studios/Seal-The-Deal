@@ -1,6 +1,6 @@
 # Title screen backdrop and screen transitions
 
-**Status:** Current (built and captured headlessly; not yet seen in Play Mode or on a client) · **Last updated:** 2026-11-13
+**Status:** Current (seen running in a headless Play Mode check; not yet played by a person, on a gamepad or on a client) · **Last updated:** 2026-11-13
 
 The title screen looks out through a white window frame, seen from inside and a little below, at the game's own sky: deep blue, stepped flat clouds, a plane and its contrail, the towers.
 The lower third is calm and white, left clear for the title lockup and menu.
@@ -78,4 +78,12 @@ The two kinds the player starts are under 300 ms; only the game start is longer.
 - `ArtSource/UI/research/feel_wii_ds.md` had not landed when this was written, so the timings above are this lane's own and the easing is plain cubic, not the kit's motion table. Align them when it lands.
 - `FrameZoom` closes a frame over the view; the camera push is the caller's, through `ZoomProgress`. Nothing here loads the lobby.
 - The tower across the gap is painted by the sky and does not parallax.
-- Not seen in Play Mode, on a gamepad, or on a client. The transitions are checked as stills only (frame strips).
+- Not played by a person, on a gamepad, or on a client.
+
+## Checking it
+
+`-executeMethod CloseTheDeal.Editor.Lanes.TitleLanePlayCheck.RunFromCommandLine [-titleOut folder]` (batch, with graphics) enters Play Mode in `Lane_Integration.unity` and checks, writing `play_check.txt` and frame strips (default `ArtSource/UI/passes/c_sky/title/play/`):
+the live sky attaches and renders while the title shows; its view moves; each transition covers and finishes near its stated length; a call made during one waits; reduced motion turns a wipe into the fade and stills the sky; hiding the title stops the sky camera and restores the game's sky.
+Last run 2026-11-14: all pass. Measured: CloudWipe covered 0.128 s, done 0.268 s; PaneSlide 0.099 / 0.234; FrameZoom 0.518 / 0.818; Fade 0.031 / 0.093 (the capture makes frames slow, so each phase lands a frame early).
+
+Transitions advance by real time capped at a 30 fps frame and start at 0 on their first frame: before that, the slow frame a press usually lands on skipped the whole cover phase (measured: PaneSlide covered at 0.001 s), and the screen change popped.

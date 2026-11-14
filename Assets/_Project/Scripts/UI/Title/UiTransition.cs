@@ -72,7 +72,7 @@ namespace CloseTheDeal.UI.Title
     }
 
     /// <summary>The overlay canvas that draws the transitions. Built in code on first use; nothing to place in a scene.</summary>
-    sealed class UiTransitionHost : MonoBehaviour
+    public sealed class UiTransitionHost : MonoBehaviour
     {
         // Pass C palette: Paper, the milky cloud shade, the lifted haze, and Deep Navy for hairlines.
         static readonly Color Paper = new Color32(0xF3, 0xF4, 0xF4, 255);
@@ -196,14 +196,16 @@ namespace CloseTheDeal.UI.Title
                 yield return null;
             Playing = true;
             UiTransition.Timing(kind, out float cover, out float reveal);
-            for (float t = 0f; t < cover; t += Time.unscaledDeltaTime)
+            // WHY a capped step and t = 0 on the first frame: the frame a press lands on is often a slow one (a
+            // screen being built), and its whole delta would skip the cover phase: the screen change would pop.
+            for (float t = 0f; t < cover; t += Step())
             {
                 Draw(kind, true, Mathf.Clamp01(t / cover));
                 yield return null;
             }
             Draw(kind, true, 1f);
             onCovered?.Invoke();
-            for (float t = 0f; t < reveal; t += Time.unscaledDeltaTime)
+            for (float t = 0f; t < reveal; t += Step())
             {
                 Draw(kind, false, Mathf.Clamp01(t / reveal));
                 yield return null;
@@ -212,6 +214,9 @@ namespace CloseTheDeal.UI.Title
             Playing = false;
             onDone?.Invoke();
         }
+
+        /// <summary>Seconds to advance this frame: real time, but never more than a 30 fps frame.</summary>
+        static float Step() => Mathf.Min(Time.unscaledDeltaTime, 1f / 30f);
 
         /// <summary>One frame at t = 0..1 over the whole transition (capture and previews).</summary>
         public void Show(UiTransitionKind kind, float t)
