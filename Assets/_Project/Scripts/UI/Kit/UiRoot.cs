@@ -80,7 +80,13 @@ namespace CloseTheDeal.UI
                 _repeatApplied = true;
             }
 
-            if (_stack.Count > 0 && UiInput.CancelPressed)
+            // A click on empty paper drops focus; the next key or pad press puts it back on the top screen.
+            if (_stack.Count > 0 && UiInput.UsingKeysOrPad && !UiInput.Capturing
+                && UnityEngine.EventSystems.EventSystem.current != null
+                && UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject == null)
+                _stack.Top.Refocus();
+
+            if (_stack.Count > 0 && UiInput.CancelPressed && !UiInput.Capturing)
                 _stack.Cancel();
         }
 

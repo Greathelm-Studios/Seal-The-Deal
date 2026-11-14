@@ -37,6 +37,7 @@ namespace CloseTheDeal.Items
         readonly SyncVar<bool> _empty = new();
 
         float _takeAwayAt;
+        bool _sentAwayEmpty;
         AudioClip _ownLoop;
 
         /// <summary>Every machine. The pin was pulled and the smoke started.</summary>
@@ -100,13 +101,24 @@ namespace CloseTheDeal.Items
         }
 
         /// <summary>Out of play mid-vent (it fell out of the building): it stops venting and comes back full.</summary>
-        public override void ServerOnSentAway()
+        public override void ServerOnSentAway(bool usedUp)
         {
+            // An empty one lost out of the building stays empty: that is not a refill. A used-up
+            // one comes back fresh after its definition's time, as designed.
+            _sentAwayEmpty = !usedUp && _empty.Value;
             _ventUntilTick.Value = 0;
         }
 
         public override void ServerOnReturned()
         {
+            if (_sentAwayEmpty)
+            {
+                // Back where it started, still empty; it leaves play as an empty one does.
+                _sentAwayEmpty = false;
+                _takeAwayAt = Time.time + _profile.EmptyLingerSeconds;
+                return;
+            }
+
             _ventUntilTick.Value = 0;
             _empty.Value = false;
         }

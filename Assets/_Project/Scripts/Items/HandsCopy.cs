@@ -18,7 +18,7 @@ namespace CloseTheDeal.Items
             Vector3 rootScale = root.lossyScale;
             foreach (Renderer renderer in renderers)
             {
-                if (renderer is not MeshRenderer meshRenderer)
+                if (renderer is not MeshRenderer meshRenderer || !renderer.enabled || !renderer.gameObject.activeInHierarchy)
                     continue;
 
                 var filter = renderer.GetComponent<MeshFilter>();

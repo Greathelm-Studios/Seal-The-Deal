@@ -184,6 +184,7 @@ namespace CloseTheDeal.UI
         /// <summary>Opens the menu from outside (the match ending, say). The rule holds: mouse free, player idle.</summary>
         public void Open()
         {
+            _closeOnRelease = false; // A close still waiting for the confirm button is overruled (a match ending).
             if (_inGame && !_open)
                 SetOpen(true);
         }

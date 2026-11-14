@@ -2,6 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using CloseTheDeal.Editor.Greybox;
+using CloseTheDeal.Editor.UI;
+using CloseTheDeal.Player.Hud;
+using CloseTheDeal.UI;
+using TMPro;
 using CloseTheDeal.Tower;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -56,6 +60,7 @@ namespace CloseTheDeal.Editor.Lanes
             EnsureSlice(tower);
             EnsureCourse(tower);
             GreyboxSceneSetup.EnsurePlayRig(new Vector3(-2.8f, 0.1f, -2.5f), new Vector3(2.8f, 0.1f, -2.5f));
+            EnsureMovementHud();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -288,6 +293,144 @@ namespace CloseTheDeal.Editor.Lanes
             return block;
         }
 
+        // ---- Movement HUD ----------------------------------------------------------------------
+
+        const string KitFolder = "Assets/_Project/UI/Kit";
+        const float CardWidth = 560f;
+        const float CardTop = 92f;
+        const float RowHeight = 44f;
+
+        /// <summary>Line, keyboard action, pad action (empty = same), keyboard text override (empty = the binding).</summary>
+        static readonly (string Label, string Action, string PadAction, string KeyboardText)[] HelpLines =
+        {
+            ("Move", "Move", "", ""),
+            ("Look", "Look", "LookStick", "Mouse"),
+            ("Jump; hold to keep hopping", "Jump", "", ""),
+            ("Climb: jump at a ledge", "Jump", "", ""),
+            ("Sprint", "Sprint", "", ""),
+            ("Crouch; at a run, slide", "Crouch", "", ""),
+            ("Lean left and right", "Lean", "", ""),
+            ("Fire", "Attack", "", ""),
+            ("Aim or alternate fire", "AltFire", "", ""),
+            ("Use", "Interact", "", ""),
+            ("Throw or drop", "Throw", "", ""),
+            ("Reload", "Reload", "", ""),
+            ("Close this card", "Help", "", ""),
+        };
+
+        [MenuItem("Close the Deal/Lanes/Add Movement HUD To Open Scene")]
+        public static void AddMovementHudToOpenScene()
+        {
+            if (EnsureMovementHud())
+                EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+        }
+
+        /// <summary>
+        /// Adds movement's HUD (the refusal line and the controls help card, from the UI kit's
+        /// prefabs) under the game menu's HUD in the open scene. Only adds when missing; returns
+        /// whether it added. Needs the UI kit (Close the Deal > Lanes > Set Up UI) to have run.
+        /// </summary>
+        public static bool EnsureMovementHud()
+        {
+            var menu = UnityEngine.Object.FindAnyObjectByType<CloseTheDeal.UI.GameMenu>(FindObjectsInactive.Include);
+            GameObject hud = menu != null ? new SerializedObject(menu).FindProperty("_hudRoot").objectReferenceValue as GameObject : null;
+            if (hud == null)
+            {
+                Debug.LogWarning("[Movement lane] No game menu HUD in the open scene; movement's HUD was not added.");
+                return false;
+            }
+
+            if (hud.GetComponentInChildren<MovementHud>(true) != null)
+                return false;
+
+            var statusPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/StatusLine.prefab");
+            var platePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Plate.prefab");
+            var hintPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/KeyHint.prefab");
+            if (statusPrefab == null || platePrefab == null || hintPrefab == null)
+            {
+                Debug.LogWarning("[Movement lane] UI kit prefabs missing in " + KitFolder + "; run Close the Deal > Lanes > Set Up UI first.");
+                return false;
+            }
+
+            UiTokens tokens = UiKitAssets.EnsureTokens();
+            RectTransform root = UiKitAssets.Fill(hud.transform, "MovementHud");
+            var component = root.gameObject.AddComponent<MovementHud>();
+
+            // The refusal line: bottom centre, above where the combat HUD's ammo sits.
+            var status = (GameObject)PrefabUtility.InstantiatePrefab(statusPrefab, root);
+            status.name = "RefusalLine";
+            var statusRect = (RectTransform)status.transform;
+            statusRect.anchorMin = statusRect.anchorMax = new Vector2(0.5f, 0f);
+            statusRect.pivot = new Vector2(0.5f, 0f);
+            statusRect.anchoredPosition = new Vector2(0f, 190f);
+            var statusGroup = status.AddComponent<CanvasGroup>();
+            statusGroup.alpha = 0f;
+            statusGroup.blocksRaycasts = false;
+            statusGroup.interactable = false;
+
+            // The help card: a plate on the left, the keys from the player's own bindings.
+            var card = (GameObject)PrefabUtility.InstantiatePrefab(platePrefab, root);
+            card.name = "ControlsCard";
+            var cardRect = (RectTransform)card.transform;
+            cardRect.anchorMin = cardRect.anchorMax = new Vector2(0f, 0.5f);
+            cardRect.pivot = new Vector2(0f, 0.5f);
+            cardRect.anchoredPosition = new Vector2(64f, 0f);
+            cardRect.sizeDelta = new Vector2(CardWidth, CardTop + HelpLines.Length * RowHeight + 24f);
+            var cardGroup = card.AddComponent<CanvasGroup>();
+            cardGroup.alpha = 0f;
+            cardGroup.blocksRaycasts = false;
+            cardGroup.interactable = false;
+
+            UiKitAssets.Label(cardRect, "Title", 28f, 24f, CardWidth - 56f, 28f, "CONTROLS", tokens.Section, tokens.Navy);
+            TextMeshProUGUI caption = UiKitAssets.Label(cardRect, "Device", 28f, 54f, CardWidth - 56f, 20f, "KEYBOARD AND MOUSE", tokens.Caption, tokens.Ink3);
+            UiKitAssets.Box(cardRect, "Rule", 28f, 80f, CardWidth - 56f, 1f, tokens.Hair);
+
+            var rows = new MovementHud.HelpRow[HelpLines.Length];
+            for (int i = 0; i < HelpLines.Length; i++)
+            {
+                var hint = (GameObject)PrefabUtility.InstantiatePrefab(hintPrefab, cardRect);
+                hint.name = "Line " + (i + 1);
+                var hintRect = (RectTransform)hint.transform;
+                UiKitAssets.Place(hintRect, 28f, CardTop + i * RowHeight, CardWidth - 56f, 40f);
+
+                TMP_Text label = hint.transform.Find("Label").GetComponent<TMP_Text>();
+                label.text = HelpLines[i].Label;
+                label.rectTransform.sizeDelta = new Vector2(CardWidth - 56f - 60f, label.rectTransform.sizeDelta.y);
+                rows[i] = new MovementHud.HelpRow
+                {
+                    Action = HelpLines[i].Action,
+                    PadAction = HelpLines[i].PadAction,
+                    KeyboardText = HelpLines[i].KeyboardText,
+                    KeyCap = (RectTransform)hint.transform.Find("KeyCap"),
+                    Key = hint.transform.Find("Key").GetComponent<TMP_Text>(),
+                    Label = label
+                };
+            }
+
+            var so = new SerializedObject(component);
+            so.FindProperty("_tokens").objectReferenceValue = tokens;
+            so.FindProperty("_status").objectReferenceValue = status.GetComponent<UiStatusLine>();
+            so.FindProperty("_statusGroup").objectReferenceValue = statusGroup;
+            so.FindProperty("_card").objectReferenceValue = cardRect;
+            so.FindProperty("_cardGroup").objectReferenceValue = cardGroup;
+            so.FindProperty("_deviceCaption").objectReferenceValue = caption;
+            SerializedProperty list = so.FindProperty("_rows");
+            list.arraySize = rows.Length;
+            for (int i = 0; i < rows.Length; i++)
+            {
+                SerializedProperty e = list.GetArrayElementAtIndex(i);
+                e.FindPropertyRelative("Action").stringValue = rows[i].Action;
+                e.FindPropertyRelative("PadAction").stringValue = rows[i].PadAction;
+                e.FindPropertyRelative("KeyboardText").stringValue = rows[i].KeyboardText;
+                e.FindPropertyRelative("KeyCap").objectReferenceValue = rows[i].KeyCap;
+                e.FindPropertyRelative("Key").objectReferenceValue = rows[i].Key;
+                e.FindPropertyRelative("Label").objectReferenceValue = rows[i].Label;
+            }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            Debug.Log("[Movement lane] Added movement's HUD (refusal line, controls card) under " + hud.name);
+            return true;
+        }
+
         // ---- Scripted check, run from the shell ----------------------------------------------
 
         /// <summary>
@@ -298,7 +441,13 @@ namespace CloseTheDeal.Editor.Lanes
         /// </summary>
         public static void RunSession()
         {
-            EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            // -sessionScene opens another scene instead (the tower check uses the greybox tower); it is only read, never saved.
+            string[] args = Environment.GetCommandLineArgs();
+            int at = Array.IndexOf(args, "-sessionScene");
+            EditorSceneManager.OpenScene(at >= 0 && at + 1 < args.Length ? args[at + 1] : ScenePath, OpenSceneMode.Single);
+            // -sessionAddHud puts movement's HUD into that scene for the run only; the scene is never saved.
+            if (Array.IndexOf(args, "-sessionAddHud") >= 0)
+                EnsureMovementHud();
             EditorApplication.EnterPlaymode();
         }
 

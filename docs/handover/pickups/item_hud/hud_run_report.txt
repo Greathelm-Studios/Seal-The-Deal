@@ -2,7 +2,7 @@ ROLE hud: Lane_Integration hosting with its own player; the item HUD is added fo
 local port 17783
 PASS  this machine is the host (it did not join someone else's game on the same port)
 PASS  the integration scene has the kit item HUD
-PASS  the scene has a loose chair, something too heavy and a second liftable thing  — chair Chair(Clone), heavy Desk(Clone), other Pistol(Clone)
+PASS  the scene has a loose chair, something too heavy and a second liftable thing  — chair Chair(Clone), heavy Desk(Clone), other Chair(Clone)
 wrote hud_00_empty_1080p.png
 wrote hud_00_empty_720p.png
 PASS  looking at a chair shows the kit prompt  — prompt reads "F · Pick up Chair"
@@ -25,8 +25,14 @@ PASS  taking with full hands says why, in the prompt's place  — prompt reads "
 wrote hud_06_hands_full_1080p.png
 wrote hud_06_hands_full_720p.png
 PASS  the hands-full refusal asks for its sound  — HandsFull requested 1 time(s)
+PASS  a pad nudge makes the pad the device in use
+PASS  on a pad the hands-full refusal names the pad's drop button  — prompt reads "Hands full · D-pad down to drop"
+wrote hud_08_pad_hands_full_1080p.png
+wrote hud_08_pad_hands_full_720p.png
+wrote hud_09_pad_look_1080p.png
+wrote hud_09_pad_look_720p.png
 PASS  letting go empties the hands slot  — slot reads ""
 wrote hud_07_dropped_1080p.png
 wrote hud_07_dropped_720p.png
-UI sounds asked for: Focus 3, HandsFull 1, Error 0
-RESULT: 0 failed check(s), 9 passed, 51 frames.
+UI sounds asked for: Focus 4, HandsFull 2, Error 0
+RESULT: 0 failed check(s), 11 passed, 69 frames.

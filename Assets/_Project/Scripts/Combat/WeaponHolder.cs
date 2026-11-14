@@ -231,7 +231,7 @@ namespace CloseTheDeal.Combat
                 if (weapon == null)
                     return 0f;
 
-                float bloom = Mathf.Max(0f, _bloom - weapon.BloomRecovery * (Time.time - _lastShotTime));
+                float bloom = Settled(_bloom, weapon, Time.time - _lastShotTime);
                 float spread = weapon.BaseSpread + bloom;
                 byte stance = Stance();
                 if ((stance & AirborneFlag) != 0)
@@ -573,6 +573,18 @@ namespace CloseTheDeal.Combat
                 ServerFire((byte)_localActive, _seq, origin, packedAim, ticksSince, _viewTick, stance);
         }
 
+        /// <summary>
+        /// The stray left after a rest of this many seconds. It holds through a burst and only
+        /// settles once the trigger has rested as long as the recoil pattern needs to start over,
+        /// so a burst grows wilder and a pause fixes it.
+        /// </summary>
+        static float Settled(float bloom, WeaponDefinition weapon, float rested)
+        {
+            if (rested < weapon.PatternResetSeconds)
+                return bloom;
+            return Mathf.Max(0f, bloom - weapon.BloomRecovery * (rested - weapon.PatternResetSeconds));
+        }
+
         /// <summary>Whether the shooter is moving or in the air right now, as flags. Only the accuracy multipliers use it.</summary>
         byte Stance()
         {
@@ -702,11 +714,14 @@ namespace CloseTheDeal.Combat
         /// <summary>Host only. One shot the owner asks for: checked, traced, applied, and always answered.</summary>
         void HandleFireRequest(byte slot, ushort seq, Vector3 origin, uint packedAim, byte ticksSince, uint viewTick, byte stance)
         {
+            // Shots arrive in order (reliable), so an honest owner always sends the next number.
+            // Any other number is refused: the number seeds the spread and must not be chosen.
+            bool next = seq == (ushort)(_hostAckSeq + 1);
             _hostAckSeq = seq;
             WeaponDefinition weapon = slot < SlotCount ? _weapons[slot] : null;
             uint tick = TimeManager.Tick;
 
-            if (HostMayFire(slot, weapon, tick))
+            if (next && HostMayFire(slot, weapon, tick))
                 HostFire(slot, weapon, seq, origin, packedAim, ticksSince, viewTick, stance, tick);
 
             // Sent either way: a refused shot still has to be answered, or the owner's count stays one short.
@@ -745,16 +760,34 @@ namespace CloseTheDeal.Combat
             _hostLastShotTick = tick;
             float spread = NextSpread(ref _hostBloom, weapon, rested, stance);
 
-            Vector3 eye = HostEye();
-            if ((origin - eye).sqrMagnitude > _originTolerance * _originTolerance)
-                origin = eye;
+            uint seenTick = SeenTick(viewTick, tick);
+            origin = TrustedOrigin(origin, tick - seenTick);
 
             Vector3 direction = ShotResolver.SpreadDirection(ShotResolver.UnpackDirection(packedAim), spread, ShotSeed(seq));
-            ShotResult shot = ShotResolver.Trace(origin, direction, weapon.Range, _solidMask, _health, true, SeenTick(viewTick, tick), weapon.HeadFromHeight);
+            ShotResult shot = ShotResolver.Trace(origin, direction, weapon.Range, _solidMask, _health, true, seenTick, weapon.HeadFromHeight);
 
             ShotResolver.BreakCrossedPanes(shot, direction, OwnerId);
             HostApplyHit(weapon, shot, direction);
             RpcShot(shot.End, (byte)SurfaceOf(shot));
+        }
+
+        /// <summary>
+        /// Where the host lets a shot start. The shooter's own eye position is used when it is
+        /// close enough to where the host has the body, allowing for the lean and for how far a
+        /// moving body travels in the shooter's lag, and when nothing solid stands between the
+        /// host's eye and it (glass doesn't count). Otherwise the host's own eye: a shot can't
+        /// start on the far side of a wall or a locked door.
+        /// </summary>
+        Vector3 TrustedOrigin(Vector3 claimed, uint lagTicks)
+        {
+            Vector3 eye = HostEye();
+            float speed = _motor != null ? _motor.PlanarSpeed : 0f;
+            float reach = _originTolerance + speed * (float)(lagTicks * TimeManager.TickDelta);
+            Vector3 offset = claimed - eye;
+            if (offset.sqrMagnitude > reach * reach)
+                return eye;
+
+            return ShotResolver.ClearPath(eye, claimed, _solidMask) ? claimed : eye;
         }
 
         /// <summary>The tick to test targets at: the one the shooter says it was looking at, never in the future and never further back than the lag allowance.</summary>
@@ -987,7 +1020,7 @@ namespace CloseTheDeal.Combat
         float NextSpread(ref float bloom, WeaponDefinition weapon, uint ticksSince, byte stance)
         {
             float rested = ticksSince >= LongAgo ? float.MaxValue : (float)(ticksSince * TimeManager.TickDelta);
-            bloom = Mathf.Max(0f, bloom - weapon.BloomRecovery * rested);
+            bloom = Settled(bloom, weapon, rested);
             float spread = weapon.BaseSpread + bloom;
             bloom = Mathf.Min(weapon.MaxBloom, bloom + weapon.BloomPerShot);
 

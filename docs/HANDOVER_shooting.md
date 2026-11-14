@@ -43,6 +43,22 @@ Captures for review (shared notes folder of this session group, `shooting-lane-c
 - No kill hit-stop: slowing time would slow the shared networked world. No aim assist: a mouse game for now.
 - The feel numbers (snap, shake, FOV punch, gun kick) are first-pass values in the shape NorseFPS uses, not tuned by hand.
 
+## UI revamp state (2026-11-13 night)
+
+- **Ready:** the combat HUD contract and the list of gun sounds still needed are in [WEAPONS.md](systems/WEAPONS.md) ("Combat HUD contract", "Sounds the guns still need"). The hit marker, head hit and kill sounds use lane 9's `UiSoundEvent.HitMarker`, `HitMarkerHead` and `KillConfirm`. Gun, reload, impact and glass sounds are asked of lane 9's generator by the orchestrator.
+- **Agreed with lane 1:** movement owns the one crosshair; the combat HUD feeds it `CurrentSpreadDegrees`, `HitConfirmed` and `KillConfirmed`, and draws its own hit marker around the centre.
+- **Held gun:** `WeaponView`'s "Draw Held Gun" turns off the first-person gun so Alex's `PlayerViewmodel` can show it; other players still see `WeaponView`'s gun on the body. Left **on** by default until Adam decides which owns the held gun. Alex's weapons session has the event list.
+- **Not built yet:** the combat HUD itself; it waits on lane 5's UI foundation.
+- Lane 3 fixed "taking a gun fires a dropped event" in `Pickup.cs` on its branch.
+- Movement is removing `PlayerMotor`'s test blast; once merged, delete `Profiles/Weapons/NoTestBlast.asset` and its lines in `ShootingLaneSetup.PatchPlayerPrefab`.
+
+## Combat HUD (2026-11-14, not seen yet)
+
+- Built: `Scripts/Combat/CombatHud.cs`, added by Set Up Shooting / Add Shooting To Open Scene under the game menu's Hud from kit plates and tokens. It covers the host-confirmed hit marker and kill confirm (lane 9 sounds), ammo and slots, reload and draw progress, low and empty, damage direction, health while hurt, and the knocked-out card with countdown.
+- **Not seen running:** the headless HUD capture (`-laneRole hud`) shows the playtest menu over everything, because the cursor never locks headless and GameMenu reopens. Fix the capture by closing the menu after Host (`GameMenu.Resume`, then hold the cursor state), then judge the HUD frames.
+- The capture's sound check saw 0 UI sound requests: not yet explained (maybe `UiSound.Played` only fires once a player is registered). Check before claiming sounds.
+- Gun sounds drafted, not in the project yet: `CombatSoundSet` + `CombatSounds` in the session scratchpad; lane 9's clips are on claude/lane-ui-sound (259535f), not in buffer yet.
+
 ## Open questions and risks
 
 - **Feel target, for Adam to confirm** (the orchestrator's reading of "the movement needs to feel like STRAFTAT and high mobility good gun play"): first shot on the crosshair; recoil a fixed, learnable pattern rather than random bloom; running and jumping barely cost accuracy; fast time-to-kill (pistol 3 hits, AR-15 5 hits); instant feedback with a host-confirmed hit and a separate kill confirm; quick draw (0.2 / 0.3 s) and reload (1.1 / 1.7 s). Numbers are starting points on the gun assets.

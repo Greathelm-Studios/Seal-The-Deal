@@ -59,7 +59,7 @@ namespace CloseTheDeal.Items
                 -baseBelowEye - bounds.min.y,
                 rules.LooseHoldAhead + half.z - bounds.center.z);
             d.HeldEuler = Vector3.zero;
-            d.HoldClearance = Mathf.Clamp(halfFootprint, 0.08f, 0.45f);
+            d.HoldClearance = Mathf.Clamp(halfFootprint, 0.08f, 0.3f); // under the player capsule's radius
             d.CoverWhileCarried = false;
             SeatHands(d, bounds, massKg);
             d.WhatItDoes = "";

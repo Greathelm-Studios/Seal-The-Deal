@@ -5,9 +5,11 @@ using UnityEngine.UI;
 namespace CloseTheDeal.UI
 {
     /// <summary>
-    /// One screen or dialog in the kit's screen stack. Showing slides and fades it in (24 px, OUT-EXPO) with its
-    /// lines revealing one after another; hiding slides it 16 px back and fades (IN), and Reduce motion turns both
-    /// into a fade. Input works from the first frame of the show; nothing waits for the animation.
+    /// One screen or dialog in the kit's screen stack. A dialog slides and fades in over the screen below, behind a
+    /// paper veil. Full screens change through paper white, never through a muddy mix of the two: the old screen's
+    /// content fades and its sky window rolls up (its paper stays), then the new screen's paper settles over it
+    /// (paper on paper, unseen), its sky rolls down and its lines reveal one after another. Reduce motion turns the
+    /// slides and the roll into fades. Input works from the first frame of the show; only the visuals wait.
     /// Subclasses fill in what the screen says and does. Design: docs/systems/UI_KIT.md "Screens".
     /// </summary>
     [RequireComponent(typeof(CanvasGroup))]
@@ -25,6 +27,12 @@ namespace CloseTheDeal.UI
         [SerializeField] bool _isDialog;
         [Tooltip("The paper veil behind a dialog. Leave empty on a full screen.")]
         [SerializeField] Image _veil;
+        [Tooltip("Fades the content (everything but the paper field) of a full screen. On the content rect.")]
+        [SerializeField] CanvasGroup _contentGroup;
+        [Tooltip("Optional: a sky window that rolls down from the top as the screen opens and back up as it closes.")]
+        [SerializeField] RectTransform _wipe;
+        [Tooltip("Fades the sky window instead of rolling it, with Reduce motion on.")]
+        [SerializeField] CanvasGroup _wipeGroup;
 
         CanvasGroup _group;
         Vector2 _home;
@@ -32,6 +40,9 @@ namespace CloseTheDeal.UI
         UiTween _alpha;
         UiTween _slide;
         UiTween[] _revealTweens;
+        UiTween _contentAlpha;
+        UiTween _roll;
+        float _hideLeft;
         bool _hiding;
         GameObject _lastFocus;
 
@@ -66,8 +77,15 @@ namespace CloseTheDeal.UI
         /// <summary>Called as the screen starts to hide.</summary>
         protected virtual void OnHiding() { }
 
-        internal void Show(bool fromBelow)
+        /// <summary>
+        /// Opens the screen. For a full screen, delay is how long the screen below takes to clear its content: this one
+        /// waits that long before its paper settles, so the change goes through paper. Input is live at once.
+        /// </summary>
+        internal void Show(bool fromBelow, float delay = 0f)
         {
+            bool stillShowing = gameObject.activeSelf && _hiding; // Brought back mid-hide: carry on from where it is.
+            if (stillShowing)
+                delay = 0f;
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
             UiFocusFrame.BringToFront();
@@ -79,16 +97,28 @@ namespace CloseTheDeal.UI
 
             bool reduced = UiMotion.Reduced;
             float duration = reduced ? _tokens.ReducedFade : _tokens.PanelIn;
-            _alpha.Start(fromBelow ? _group.alpha : 0f, 1f, duration, _tokens.EaseOut);
+            if (_isDialog)
+            {
+                _alpha.Start(fromBelow ? _group.alpha : 0f, 1f, duration, _tokens.EaseOut);
+                _contentAlpha.Snap(1f);
+            }
+            else
+            {
+                _alpha.Start(stillShowing ? _group.alpha : 0f, 1f, _tokens.HoverOut, _tokens.EaseOut, delay); // paper over paper: unseen, never a cut
+                _contentAlpha.Start(stillShowing ? _contentAlpha.Value : 0f, 1f, duration, _tokens.EaseOut, delay);
+                _roll.Start(stillShowing ? _roll.Value : 0f, 1f, duration * 1.2f, _tokens.EaseOutExpo, delay);
+            }
+
             float from = reduced ? 0f : (fromBelow ? -_tokens.PanelSlideIn : _tokens.PanelSlideIn);
-            _slide.Start(from, 0f, duration, _tokens.EaseOutExpo);
-            StartReveal(reduced);
+            _slide.Start(from, 0f, duration, _tokens.EaseOutExpo, _isDialog ? 0f : delay);
+            StartReveal(reduced, _isDialog ? 0f : delay);
             Apply();
             UiMotion.Wake(this);
             Refocus();
         }
 
-        internal void Hide(bool toBelow)
+        /// <summary>Hides the screen. alone: nothing takes its place (the game takes over), so its paper fades too.</summary>
+        internal void Hide(bool toBelow, bool alone = false)
         {
             _hiding = true;
             // Raycasts off, but the group stays interactable: switching that off would draw every control greyed out
@@ -99,10 +129,35 @@ namespace CloseTheDeal.UI
 
             bool reduced = UiMotion.Reduced;
             float duration = reduced ? _tokens.ReducedFade : _tokens.PanelOut;
-            _alpha.Start(_group.alpha, 0f, duration, _tokens.EaseIn);
+            if (_isDialog)
+                _alpha.Start(_group.alpha, 0f, duration, _tokens.EaseIn);
+            else
+            {
+                _contentAlpha.Start(_contentAlpha.Value, 0f, duration, _tokens.EaseIn);
+                _roll.Start(_roll.Value, 0f, duration, _tokens.EaseIn);
+                if (alone)
+                    _alpha.Start(_group.alpha, 0f, duration, _tokens.EaseIn, duration * 0.5f);
+            }
+
             float to = reduced ? 0f : (toBelow ? _tokens.PanelSlideOut : -_tokens.PanelSlideOut);
             _slide.Start(_slide.Value, to, duration, _tokens.EaseIn);
+            // A full screen keeps its paper until the next screen's paper has settled over it.
+            _hideLeft = duration + (_isDialog ? 0f : _tokens.HoverOut + _tokens.HoverOut);
             UiMotion.Wake(this);
+        }
+
+        /// <summary>How long a full screen takes to clear its content when it hides: the next screen waits this long.</summary>
+        internal float ClearTime => _isDialog ? 0f : (UiMotion.Reduced ? _tokens.ReducedFade : _tokens.PanelOut);
+
+        void ApplyRoll()
+        {
+            if (_wipe == null)
+                return;
+            bool reduced = UiMotion.Reduced;
+            float t = Mathf.Clamp01(_roll.Value);
+            _wipe.localScale = new Vector3(1f, reduced ? 1f : Mathf.Max(0.0001f, t), 1f);
+            if (_wipeGroup != null)
+                _wipeGroup.alpha = reduced ? t : 1f;
         }
 
         /// <summary>A dialog went up over this screen: stop taking input, keep showing.</summary>
@@ -148,21 +203,23 @@ namespace CloseTheDeal.UI
 
         static bool IsUsable(GameObject go) => !go.TryGetComponent(out Selectable s) || s.IsInteractable();
 
-        void StartReveal(bool reduced)
+        void StartReveal(bool reduced, float delay)
         {
             int max = Mathf.Max(1, _tokens.RevealMaxLines);
             for (int i = 0; i < _reveal.Length; i++)
             {
-                float delay = reduced ? 0f : Mathf.Min(i, max - 1) * _tokens.RevealStagger;
-                _revealTweens[i].Start(0f, 1f, reduced ? _tokens.ReducedFade : _tokens.RevealDuration, _tokens.EaseOut, delay);
+                float stagger = reduced ? 0f : Mathf.Min(i, max - 1) * _tokens.RevealStagger;
+                _revealTweens[i].Start(0f, 1f, reduced ? _tokens.ReducedFade : _tokens.RevealDuration, _tokens.EaseOut, delay + stagger);
             }
         }
 
         public bool Tick(float dt)
         {
-            bool moving = _alpha.Running || _slide.Running;
+            bool moving = _alpha.Running || _slide.Running || _contentAlpha.Running || _roll.Running;
             _alpha.Step(dt);
             _slide.Step(dt);
+            _contentAlpha.Step(dt);
+            _roll.Step(dt);
             for (int i = 0; i < _revealTweens.Length; i++)
             {
                 moving |= _revealTweens[i].Running;
@@ -170,10 +227,15 @@ namespace CloseTheDeal.UI
             }
 
             Apply();
-            if (!moving && _hiding)
+            if (_hiding)
             {
-                _hiding = false;
-                gameObject.SetActive(false);
+                _hideLeft -= dt;
+                moving |= _hideLeft > 0f;
+                if (_hideLeft <= 0f && !moving)
+                {
+                    _hiding = false;
+                    gameObject.SetActive(false);
+                }
             }
 
             return moving;
@@ -182,6 +244,9 @@ namespace CloseTheDeal.UI
         void Apply()
         {
             _group.alpha = _alpha.Value;
+            if (_contentGroup != null)
+                _contentGroup.alpha = _contentAlpha.Value;
+            ApplyRoll();
             if (_content != null)
                 _content.anchoredPosition = _home + new Vector2(_slide.Value, 0f);
             if (_veil != null)

@@ -36,7 +36,7 @@ Flat dark card, amber for the one primary action per state, white text with a mu
 
 ## Known limitations
 
-- Settings has only the Accessibility tab ([UI_KIT.md](UI_KIT.md) "Settings"): mouse sensitivity, volume, resolution and key rebinding don't exist yet. Sensitivity is on the Main Camera's PlayerCamera in the Inspector.
+- Settings has Controls, Video, Audio and Accessibility ([UI_KIT.md](UI_KIT.md) "Settings"). Mouse sensitivity, invert and key rebinding show once the movement lane's camera and input reader read `InputPrefs`; field of view has no hook yet.
 - Hosting, joining, failures and the in-game menu still use the playtest card (dark, greybox look) until the next UI slices.
 - No player names over heads and no team indicator yet.
 - The playtest card fades in but has no other motion and no sounds.

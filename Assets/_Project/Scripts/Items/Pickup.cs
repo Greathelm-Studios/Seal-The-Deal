@@ -97,10 +97,18 @@ namespace CloseTheDeal.Items
         float _throwerSafeUntil;
         PlayerMotor _thrower;
         int _lastHolderClientId = -1;
-        ItemCarrier _letGoBy;
+        bool _notThrowable;
+
+        // A client, after a plain carried thing is let go: its solid part is still where it was
+        // taken until the host's new pose arrives, so the drawn item waits where it left the hands.
+        bool _awaitingPose;
+        float _awaitUntil;
+        Vector3 _rootAtRelease;
+        Vector3 _releasedAtPosition;
+        Quaternion _releasedAtRotation;
+        const float AwaitPoseSeconds = 0.4f;
         Vector3 _lastHoldPosition;
         Quaternion _lastHoldRotation = Quaternion.identity;
-        float _retakeAt;
         Vector3 _lastVelocity;
         float _returnAt;
 
@@ -156,8 +164,8 @@ namespace CloseTheDeal.Items
         public ItemCarrier Holder => _carrier;
         public PickupState State => _away.Value ? PickupState.Away : _holder.Value != null ? PickupState.Held : PickupState.InWorld;
 
-        /// <summary>Host only. True while the player who just let go of it must wait before taking it back.</summary>
-        public bool ServerTooSoonFor(ItemCarrier carrier) => carrier == _letGoBy && Time.time < _retakeAt;
+        /// <summary>False for a prop marked NotThrowable: nobody is offered it, and the host refuses it.</summary>
+        public bool Offered => !_notThrowable;
 
         /// <summary>Host only. The client id of whoever held it last, or -1 if nobody has.</summary>
         public int LastHolderClientId => _lastHolderClientId;
@@ -168,6 +176,7 @@ namespace CloseTheDeal.Items
             _body = GetComponent<Rigidbody>();
             _behaviour = GetComponent<ItemBehaviour>();
 
+            _notThrowable = GetComponent<CloseTheDeal.Props.NotThrowable>() != null;
             _colliders = GetComponentsInChildren<Collider>(true);
             _colliderLayers = new int[_colliders.Length];
             _colliderEnabled = new bool[_colliders.Length];
@@ -227,6 +236,7 @@ namespace CloseTheDeal.Items
             ItemCarrier old = _carrier;
             _carrier = null;
             _blend = 0f;
+            _awaitingPose = false;
             // A pooled item may be spawned again: it must come back drawn where it is, not in old hands.
             if (_visual != null)
             {
@@ -279,12 +289,12 @@ namespace CloseTheDeal.Items
                 return;
 
             PlayerMotor releasedBy = _carrier.Motor;
-            _letGoBy = _carrier;
-            _retakeAt = Time.time + Rules.RetakeSeconds;
+            _carrier.ServerNoteLetGo(Rules.RetakeSeconds);
+            // Moved to where it is let go before the hands empty, so the ease back onto the solid
+            // part starts from the right place (a plain carried thing was left where it was taken).
+            ServerTeleport(position, rotation);
             _holder.Value = null;
             ApplyState();
-
-            ServerTeleport(position, rotation);
             _body.linearVelocity = velocity;
             _body.angularVelocity = kind == ReleaseKind.Thrown ? rotation * Vector3.right * (Definition.ThrowTumble * TwoPi) : Vector3.zero;
             _body.WakeUp();
@@ -319,15 +329,16 @@ namespace CloseTheDeal.Items
                 return;
             }
 
-            ServerSendAway(Definition.ReturnsAfterUsedSeconds, false);
+            ServerSendAway(Definition.ReturnsAfterUsedSeconds, true);
         }
 
-        void ServerSendAway(float returnAfterSeconds, bool announce)
+        /// <summary>Out of play until returnAfterSeconds have passed. usedUp: it was spent (exploded, ran empty), not lost out of the building.</summary>
+        void ServerSendAway(float returnAfterSeconds, bool usedUp)
         {
-            ServerDropFromHands(announce);
+            ServerDropFromHands(false);
             // An armed case or a venting extinguisher stops: nothing goes on happening out of play.
             if (_behaviour != null)
-                _behaviour.ServerOnSentAway();
+                _behaviour.ServerOnSentAway(usedUp);
             _live = false;
             _away.Value = true;
             ApplyState();
@@ -574,7 +585,7 @@ namespace CloseTheDeal.Items
             RefreshShown(away);
             _prop.SetHeldStill(_carrier != null || away);
             RefreshColliders();
-            enabled = _carrier != null || _blend > 0f || _ignoring;
+            enabled = _carrier != null || _blend > 0f || _ignoring || _awaitingPose;
         }
 
         void ChangeCarrier(ItemCarrier next)
@@ -586,7 +597,10 @@ namespace CloseTheDeal.Items
             if (previous != null)
             {
                 previous.NotifyReleased(this);
-                StartReleaseBlend();
+                if (!IsServerStarted && !SolidFollowsHands && Shown != null)
+                    AwaitHostPose();
+                else
+                    StartReleaseBlend();
                 // Enabled first: turning a collider on forgets who it was told to ignore.
                 RefreshColliders();
                 StartIgnoring(previous.Capsule, Rules.ThrowerIgnoreSeconds);
@@ -595,6 +609,7 @@ namespace CloseTheDeal.Items
             if (next != null)
             {
                 _blend = 0f;
+                _awaitingPose = false;
                 next.NotifyHeld(this);
                 StartTake(next);
                 if (!_quiet)
@@ -667,6 +682,27 @@ namespace CloseTheDeal.Items
             _blend = 1f;
         }
 
+        /// <summary>Holds the drawn item where it was let go until the solid part has moved (or a moment has passed), then eases onto it.</summary>
+        bool StillAwaitingPose(Transform shown)
+        {
+            shown.SetPositionAndRotation(_releasedAtPosition, _releasedAtRotation);
+            bool arrived = (transform.position - _rootAtRelease).sqrMagnitude > 0.0001f;
+            if (!arrived && Time.time < _awaitUntil)
+                return true;
+
+            _awaitingPose = false;
+            StartReleaseBlend();
+            return false;
+        }
+
+        void AwaitHostPose()
+        {
+            Shown.GetPositionAndRotation(out _releasedAtPosition, out _releasedAtRotation);
+            _rootAtRelease = transform.position;
+            _awaitUntil = Time.time + AwaitPoseSeconds;
+            _awaitingPose = true;
+        }
+
         /// <summary>What moves into the hands: the prefab's Visual child, or the copy made for a prop without one.</summary>
         Transform Shown => _visual != null ? _visual : _handsCopy;
 
@@ -685,7 +721,7 @@ namespace CloseTheDeal.Items
             }
 
             _shownAway = away;
-            bool inHands = !away && (_carrier != null || _blend > 0f);
+            bool inHands = !away && (_carrier != null || _blend > 0f || _awaitingPose);
             if (inHands && _handsCopy == null)
                 _handsCopy = HandsCopy.Build(transform, _ownRenderers);
             if (_handsCopy != null)
@@ -803,6 +839,19 @@ namespace CloseTheDeal.Items
             rotation = lag * rotation;
         }
 
+        /// <summary>Eases the drawn item from where it was let go back onto the solid part.</summary>
+        void StepReleaseBlend(Transform shown)
+        {
+            _blend = Mathf.Max(0f, _blend - Time.deltaTime / ReleaseBlendSeconds);
+            float t = 1f - _blend;
+            if (shown != null)
+                shown.SetLocalPositionAndRotation(
+                    Vector3.Lerp(_blendFromPosition, _visualRestPosition, t),
+                    Quaternion.Slerp(_blendFromRotation, _visualRestRotation, t));
+            if (_blend <= 0f)
+                RefreshShown(_away.Value);
+        }
+
         /// <summary>
         /// Visual only, and only running while there is something to show: the item in a
         /// player's hands, the short ease from the hands back onto the solid part after
@@ -818,22 +867,22 @@ namespace CloseTheDeal.Items
                 return;
             }
 
-            if (_blend > 0f)
-            {
-                _blend = Mathf.Max(0f, _blend - Time.deltaTime / ReleaseBlendSeconds);
-                float t = 1f - _blend;
-                if (shown != null)
-                    shown.SetLocalPositionAndRotation(
-                        Vector3.Lerp(_blendFromPosition, _visualRestPosition, t),
-                        Quaternion.Slerp(_blendFromRotation, _visualRestRotation, t));
-                if (_blend <= 0f)
-                    RefreshShown(_away.Value);
-            }
+            if (_awaitingPose && StillAwaitingPose(shown))
+                return;
 
+            if (_blend > 0f)
+                StepReleaseBlend(shown);
+
+            SleepWhenDone();
+        }
+
+        /// <summary>Ends the thrower's grace once it runs out, and stops running once nothing is left to show.</summary>
+        void SleepWhenDone()
+        {
             if (_ignoring && Time.time >= _ignoreUntil)
                 StopIgnoring();
 
-            if (_blend <= 0f && !_ignoring)
+            if (_blend <= 0f && !_ignoring && !_awaitingPose)
                 enabled = false;
         }
     }

@@ -261,9 +261,9 @@ namespace CloseTheDeal.Editor.Greybox
             TMP_Text controls = Label(card.transform, "Controls",
                 "<b>WASD</b> move    <b>Shift</b> sprint    <b>Mouse</b> look    <b>Q / E</b> lean\n" +
                 "<b>Space</b> jump, hold to keep hopping    <b>Space at a ledge</b> climb\n" +
-                "<b>Ctrl or C</b> crouch; at a run, slide    <b>Left click</b> blast    <b>Esc</b> menu\n" +
+                "<b>Ctrl or C</b> crouch; at a run, slide    <b>Left click</b> fire    <b>F1</b> controls    <b>Esc</b> menu\n" +
                 "<b>Pad</b>  sticks move and look    <b>A</b> jump    <b>B</b> crouch    <b>L3</b> sprint\n" +
-                "<b>LB / RB</b> lean    <b>RT</b> blast    <b>Start</b> menu",
+                "<b>LB / RB</b> lean    <b>RT</b> fire    <b>Start</b> menu",
                 17, Muted);
             controls.lineSpacing = 12f;
             Row(controls, 140f);

@@ -81,7 +81,7 @@ namespace CloseTheDeal.Glass
                 return;
 
             _tower.OnBuilt += IndexTower;
-            _tower.OnCleared += ForgetTower;
+            _tower.OnCleared += OnTowerCleared;
             if (_tower.IsBuilt)
                 IndexTower();
         }
@@ -92,7 +92,7 @@ namespace CloseTheDeal.Glass
             if (_tower != null)
             {
                 _tower.OnBuilt -= IndexTower;
-                _tower.OnCleared -= ForgetTower;
+                _tower.OnCleared -= OnTowerCleared;
                 _tower = null;
             }
 
@@ -302,6 +302,23 @@ namespace CloseTheDeal.Glass
             if (_brokenIds.Contains(id))
                 pane.SetBroken(true, false, true, _profile);
         }
+
+        /// <summary>
+        /// The towers are being torn down for new ones (a rematch). New towers number their panes
+        /// the same way, so last match's breaks must go: the host clears the whole set (a new
+        /// match starts with every pane whole, scene glass included), and every machine drops
+        /// the old tower numbers at once so nothing re-breaks while the clear is on its way.
+        /// </summary>
+        void OnTowerCleared()
+        {
+            if (IsServerStarted)
+                _broken.Clear();
+
+            _brokenIds.RemoveWhere(IsTowerId);
+            ForgetTower();
+        }
+
+        static bool IsTowerId(uint id) => (id & TowerBit) != 0;
 
         void ForgetTower()
         {

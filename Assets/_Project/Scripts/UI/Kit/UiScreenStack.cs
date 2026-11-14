@@ -14,6 +14,7 @@ namespace CloseTheDeal.UI
     public sealed class UiScreenStack : MonoBehaviour
     {
         readonly List<UiScreen> _stack = new(8);
+        readonly List<UiScreen> _closing = new(8);
 
         /// <summary>Raised after the stack changes (push, pop, replace, clear).</summary>
         public event Action Changed;
@@ -29,17 +30,21 @@ namespace CloseTheDeal.UI
                 return;
 
             UiScreen below = Top;
+            float wait = 0f;
             if (below != null)
             {
                 if (screen.IsDialog)
                     below.Cover();
                 else
+                {
                     below.Hide(false);
+                    wait = below.ClearTime;
+                }
             }
 
             _stack.Add(screen);
             screen.Stack = this;
-            screen.Show(false);
+            screen.Show(false, wait);
             UiSound.Play(below == null ? UiSoundEvent.None : screen.IsDialog ? UiSoundEvent.PanelOpen : UiSoundEvent.Transition);
             Changed?.Invoke();
         }
@@ -55,14 +60,14 @@ namespace CloseTheDeal.UI
 
             UiScreen top = _stack[^1];
             _stack.RemoveAt(_stack.Count - 1);
-            top.Hide(true);
             UiScreen below = Top;
+            top.Hide(true, below == null);
             if (below != null)
             {
                 if (top.IsDialog)
                     below.Uncover();
                 else
-                    below.Show(true);
+                    below.Show(true, top.ClearTime);
             }
 
             if (playSound)
@@ -97,7 +102,7 @@ namespace CloseTheDeal.UI
             _stack[^1] = screen;
             top.Hide(false);
             screen.Stack = this;
-            screen.Show(false);
+            screen.Show(false, top.ClearTime);
             UiSound.Play(UiSoundEvent.Transition);
             Changed?.Invoke();
         }
@@ -107,9 +112,13 @@ namespace CloseTheDeal.UI
         {
             if (_stack.Count == 0)
                 return;
-            for (int i = _stack.Count - 1; i >= 0; i--)
-                _stack[i].Hide(true);
-            _stack.Clear();
+            var closing = _closing;
+            closing.Clear();
+            closing.AddRange(_stack);
+            _stack.Clear(); // Emptied first: a screen reacting to its hide (a dialog it owns) finds nothing to pop.
+            for (int i = closing.Count - 1; i >= 0; i--)
+                closing[i].Hide(true, true);
+            closing.Clear();
             Changed?.Invoke();
         }
 

@@ -12,7 +12,9 @@ namespace CloseTheDeal.Player
         AltFire = 2,
         Interact = 3,
         Throw = 4,
-        Reload = 5
+        Reload = 5,
+        /// <summary>Opens and closes the controls help card. Nothing consumes it; the HUD listens to <see cref="PlayerInputReader.Pressed"/>.</summary>
+        Help = 6
     }
 
     /// <summary>
@@ -28,16 +30,19 @@ namespace CloseTheDeal.Player
         [Tooltip("The Input System actions asset. Uses its Player map; the full binding table is in docs/systems/PLAYER_MOVEMENT.md.")]
         [SerializeField] InputActionAsset _actions;
 
-        [Tooltip("Smallest stick push that counts as movement, as a fraction of full tilt. 0.1 ignores stick drift; raise it if a pad creeps.")]
-        [Range(0f, 0.5f)] [SerializeField] float _deadZone = 0.1f;
+        /// <summary>Stick dead zones come from the player's movement profile; the motor hands it over on wake. Until then these defaults apply.</summary>
+        public MovementProfile Profile { get; set; }
 
-        [Tooltip("Smallest push of the look stick that turns the view, as a fraction of full tilt. 0.15 stops a worn stick drifting the aim; raise it if the view creeps on its own.")]
-        [Range(0f, 0.5f)] [SerializeField] float _lookDeadZone = 0.15f;
+        const float DefaultMoveDeadZone = 0.1f;
+        const float DefaultLookDeadZone = 0.15f;
 
-        const int PressCount = 6;
+        float MoveDeadZone => Profile != null ? Profile.MoveStickDeadZone : DefaultMoveDeadZone;
+        float LookDeadZone => Profile != null ? Profile.LookStickDeadZone : DefaultLookDeadZone;
+
+        const int PressCount = 7;
         const int SlotCount = 4;
 
-        static readonly string[] PressActionNames = { "Jump", "Attack", "AltFire", "Interact", "Throw", "Reload" };
+        static readonly string[] PressActionNames = { "Jump", "Attack", "AltFire", "Interact", "Throw", "Reload", "Help" };
 
         readonly InputAction[] _presses = new InputAction[PressCount];
         readonly bool[] _latched = new bool[PressCount];
@@ -67,14 +72,20 @@ namespace CloseTheDeal.Player
         /// <summary>Raised on the frame a weapon slot button (1–4) goes down while captured.</summary>
         public event Action<int> WeaponSlotPressed;
 
+        /// <summary>True when the last control the player used was on a gamepad, false for keyboard and mouse. Help text follows it.</summary>
+        public bool LastUsedGamepad { get; private set; }
+
+        /// <summary>Raised when the player switches between keyboard and mouse and a gamepad.</summary>
+        public event Action<bool> DeviceChanged;
+
         /// <summary>Movement stick with the dead zone removed and the rest rescaled to 0–1.</summary>
-        public Vector2 Move => Captured ? WithDeadZone(_move.ReadValue<Vector2>(), _deadZone) : Vector2.zero;
+        public Vector2 Move => Captured ? WithDeadZone(_move.ReadValue<Vector2>(), MoveDeadZone) : Vector2.zero;
 
         /// <summary>Mouse movement this frame, in mouse counts. Scale by the mouse sensitivity for degrees.</summary>
         public Vector2 LookDelta => Captured ? _look.ReadValue<Vector2>() : Vector2.zero;
 
         /// <summary>Look stick, dead zone removed and rescaled to 0–1. A rate, not a distance: scale by degrees per second and frame time.</summary>
-        public Vector2 LookStick => Captured ? WithDeadZone(_lookStick.ReadValue<Vector2>(), _lookDeadZone) : Vector2.zero;
+        public Vector2 LookStick => Captured ? WithDeadZone(_lookStick.ReadValue<Vector2>(), LookDeadZone) : Vector2.zero;
 
         public bool Sprint => Captured && _sprint.IsPressed();
         public bool Crouch => Captured && _crouch.IsPressed();
@@ -140,10 +151,15 @@ namespace CloseTheDeal.Player
                 return;
             }
 
+            NoteDevice(_move);
+            NoteDevice(_look);
+            NoteDevice(_lookStick);
             for (int i = 0; i < PressCount; i++)
             {
                 if (!_presses[i].WasPressedThisFrame())
                     continue;
+
+                NoteDevice(_presses[i]);
 
                 _latched[i] = true;
                 Pressed?.Invoke((PlayerPress)i);
@@ -179,6 +195,66 @@ namespace CloseTheDeal.Player
             int slot = _latchedSlot;
             _latchedSlot = 0;
             return slot;
+        }
+
+        /// <summary>Follows which kind of device the player is using, from whichever action they are working.</summary>
+        void NoteDevice(InputAction action)
+        {
+            InputControl control = action.activeControl;
+            if (control == null)
+                return;
+
+            bool gamepad = control.device is Gamepad;
+            if (gamepad == LastUsedGamepad)
+                return;
+
+            LastUsedGamepad = gamepad;
+            DeviceChanged?.Invoke(gamepad);
+        }
+
+        /// <summary>
+        /// How the player's own first binding of an action reads, for keyboard and mouse or for a
+        /// gamepad ("Space", "W/A/S/D", "LT"). Follows any rebinding on this player's copy of the
+        /// actions. Allocates: call it when help opens or the device changes, not per frame.
+        /// </summary>
+        public string BindingText(string actionName, bool gamepad)
+        {
+            InputAction action = _map.FindAction(actionName);
+            if (action == null)
+                return string.Empty;
+
+            string group = gamepad ? "Gamepad" : "Keyboard&Mouse";
+            var bindings = action.bindings;
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                InputBinding binding = bindings[i];
+                if (binding.isPartOfComposite)
+                    continue;
+
+                string groups = binding.isComposite && i + 1 < bindings.Count ? bindings[i + 1].groups : binding.groups;
+                if (groups == null || !groups.Contains(group))
+                    continue;
+
+                return binding.isComposite ? CompositeText(action, i) : action.GetBindingDisplayString(i);
+            }
+
+            return string.Empty;
+        }
+
+        /// <summary>A composite's keys, the first binding of each part only ("W/A/S/D", not every arrow-key alternative too).</summary>
+        static string CompositeText(InputAction action, int compositeIndex)
+        {
+            var bindings = action.bindings;
+            var parts = new System.Collections.Generic.List<string>(4);
+            var seen = new System.Collections.Generic.HashSet<string>();
+            for (int i = compositeIndex + 1; i < bindings.Count && bindings[i].isPartOfComposite; i++)
+            {
+                if (!seen.Add(bindings[i].name))
+                    continue;
+                parts.Add(InputControlPath.ToHumanReadableString(bindings[i].effectivePath, InputControlPath.HumanReadableStringOptions.OmitDevice));
+            }
+
+            return string.Join("/", parts);
         }
 
         void ClearLatches()

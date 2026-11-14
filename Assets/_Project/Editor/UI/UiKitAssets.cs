@@ -50,6 +50,7 @@ namespace CloseTheDeal.Editor.UI
             bool filled = FillFont(ref tokens.Title, font) | FillFont(ref tokens.Heading, font) | FillFont(ref tokens.Item, font)
                 | FillFont(ref tokens.Body, font) | FillFont(ref tokens.Label, font) | FillFont(ref tokens.Section, font)
                 | FillFont(ref tokens.Caption, font) | FillFont(ref tokens.Micro, font);
+            filled |= FillMaterial(ref tokens.Title, font, ThinPath, -0.18f) | FillMaterial(ref tokens.Heading, font, ThinPath, -0.18f);
             if (created || filled)
             {
                 EditorUtility.SetDirty(tokens);
@@ -58,6 +59,29 @@ namespace CloseTheDeal.Editor.UI
 
             Tokens = tokens;
             return tokens;
+        }
+
+        internal const string ThinPath = Root + "/Tokens/Type_Thin.mat";
+
+        /// <summary>
+        /// Until a thin display face is licensed and imported, the display roles thin the bundled sans by pulling its SDF
+        /// edge in (face dilate below 0). A material made once; a designer can tune or replace it.
+        /// </summary>
+        static bool FillMaterial(ref UiTypeRole role, TMP_FontAsset font, string path, float dilate)
+        {
+            if (role.Material != null || font == null || (role.Font != null && role.Font != font))
+                return false; // A material is made for one font's atlas: only for roles still on the bundled one.
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(font.material) { name = "Type_Thin" };
+                material.SetFloat("_FaceDilate", dilate);
+                AssetDatabase.CreateAsset(material, path);
+                GeneratedAssetGuard.MarkGenerated(material);
+            }
+
+            role.Material = material;
+            return true;
         }
 
         static bool FillFont(ref UiTypeRole role, TMP_FontAsset font)
@@ -144,6 +168,9 @@ namespace CloseTheDeal.Editor.UI
             text.fontSize = role.Size;
             text.characterSpacing = role.Tracking;
             text.fontStyle = role.Style;
+            // A role material is made for one font's atlas: only used while the role is still on that font.
+            if (role.Material != null && text.font != null && role.Material.mainTexture == text.font.atlasTexture)
+                text.fontSharedMaterial = role.Material;
             text.color = colour;
             text.alignment = align;
             text.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;

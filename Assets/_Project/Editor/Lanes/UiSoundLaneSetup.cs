@@ -13,7 +13,8 @@ namespace CloseTheDeal.Editor.Lanes
     /// <summary>
     /// Everything the UI sound lane adds to the project, from one menu item: import settings for the clips
     /// (Assets/_Project/Audio/UI), the AudioMixer with its buses, and the UiSoundSet that maps every event to its clip.
-    /// It only adds what is missing and re-applies import settings, so it is safe to run again after a merge.
+    /// It only adds what is missing: a clip's import settings are applied once (then marked), an existing mixer is kept, and
+    /// a sound-set entry that already exists keeps its clip, volume, variance and gap. Safe to run again after a merge.
     /// Also holds the scripted run that fires every event once and checks the mixer (RunSelfTest, batch mode).
     /// </summary>
     public static class UiSoundLaneSetup
@@ -21,6 +22,7 @@ namespace CloseTheDeal.Editor.Lanes
         public const string ClipFolder = "Assets/_Project/Audio/UI";
         public const string ItemClipFolder = "Assets/_Project/Audio/Items";   // world sounds for the pickups lane, same generator
         public const string WeaponClipFolder = "Assets/_Project/Audio/Weapons"; // gun, impact and glass sounds for the shooting lane
+        const string ImportMark = "ctd-sound-import-1";   // written to a clip's importer once its settings have been applied
         public const string MixerPath = ClipFolder + "/GameMixer.mixer";
         public const string SetPath = "Assets/_Project/Resources/UI/UiSoundSet.asset";
 
@@ -46,7 +48,8 @@ namespace CloseTheDeal.Editor.Lanes
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 var imp = AssetImporter.GetAtPath(path) as AudioImporter;
-                if (imp == null) continue;
+                if (imp == null || imp.userData == ImportMark) continue;   // already set once: hand changes since then are kept
+                imp.userData = ImportMark;
                 var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
                 bool sting = clip != null && clip.length > 0.45f && !path.Contains("Loop");   // a loop stays PCM so its seam is exact
                 imp.forceToMono = true;
@@ -140,44 +143,47 @@ namespace CloseTheDeal.Editor.Lanes
                 AssetDatabase.CreateAsset(set, SetPath);
             }
             AudioMixerGroup[] ui = mixer.FindMatchingGroups("Master/UI");
-            if (ui.Length > 0) set.output = ui[0];
+            if (set.output == null && ui.Length > 0) set.output = ui[0];
             foreach (UiSoundEvent e in Enum.GetValues(typeof(UiSoundEvent)))
             {
                 if (e == UiSoundEvent.None) continue;
                 var clip = AssetDatabase.LoadAssetAtPath<AudioClip>($"{ClipFolder}/UI_{e}.wav");
                 UiSoundSet.Entry en = set.entries.Find(x => x.evt == e);
-                if (en == null) { en = new UiSoundSet.Entry { evt = e }; set.entries.Add(en); }
-                en.clip = clip;
-                Tune(en);
+                if (en == null)
+                {
+                    en = new UiSoundSet.Entry { evt = e };   // a new event gets its starting values once
+                    Tune(en);
+                    set.entries.Add(en);
+                }
+                if (en.clip == null) en.clip = clip;         // an entry someone tuned or re-pointed by hand is left alone
             }
             EditorUtility.SetDirty(set);
         }
 
-        // Per-event volume, variance and gap. Levels are already matched in the WAVs (peak table in UI_SOUND.md);
-        // these only shape behaviour. Exact-pitch sounds (tones that form a melody) get no variance.
+        // Starting (minimum gap, pitch variance) per event; anything not listed gets Default. Levels are already matched
+        // in the WAVs (peak table in UI_SOUND.md), so volume starts at 1. Tones that form a melody get no variance.
+        static readonly (float gap, float variance) Default = (0.05f, 0.015f);
+        static readonly Dictionary<UiSoundEvent, (float gap, float variance)> Tuning = new Dictionary<UiSoundEvent, (float, float)>
+        {
+            [UiSoundEvent.HoverMove] = (0.06f, 0f), [UiSoundEvent.Focus] = (0.06f, 0.015f), [UiSoundEvent.SliderTick] = (0.035f, 0f),
+            [UiSoundEvent.HitMarker] = (0.04f, 0.02f), [UiSoundEvent.HitMarkerHead] = (0.04f, 0.02f),
+            [UiSoundEvent.KillConfirm] = (0.15f, 0f), [UiSoundEvent.CountdownTick] = (0.2f, 0f), [UiSoundEvent.Transition] = (0.3f, 0.015f),
+            [UiSoundEvent.Confirm] = (0.12f, 0f), [UiSoundEvent.Select] = (0.12f, 0f), [UiSoundEvent.Back] = (0.12f, 0f),
+            [UiSoundEvent.CountdownGo] = (0.12f, 0f), [UiSoundEvent.MatchWon] = (0.12f, 0f), [UiSoundEvent.MatchLost] = (0.12f, 0f),
+            [UiSoundEvent.FloorOpened] = (0.12f, 0f), [UiSoundEvent.KeyBindSet] = (0.12f, 0f),
+        };
+
         static void Tune(UiSoundSet.Entry en)
         {
+            (float gap, float variance) t = Tuning.TryGetValue(en.evt, out var found) ? found : Default;
             en.volume = 1f;
-            en.pitchVariance = 0.015f;
-            en.minGap = 0.05f;
-            switch (en.evt)
-            {
-                case UiSoundEvent.HoverMove: en.minGap = 0.06f; en.pitchVariance = 0f; break;
-                case UiSoundEvent.Focus: en.minGap = 0.06f; break;
-                case UiSoundEvent.SliderTick: en.minGap = 0.035f; en.pitchVariance = 0f; break;
-                case UiSoundEvent.HitMarker: case UiSoundEvent.HitMarkerHead: en.minGap = 0.04f; en.pitchVariance = 0.02f; break;
-                case UiSoundEvent.KillConfirm: en.minGap = 0.15f; en.pitchVariance = 0f; break;
-                case UiSoundEvent.CountdownTick: en.minGap = 0.2f; en.pitchVariance = 0f; break;
-                case UiSoundEvent.Confirm: case UiSoundEvent.Select: case UiSoundEvent.Back:
-                case UiSoundEvent.CountdownGo: case UiSoundEvent.MatchWon: case UiSoundEvent.MatchLost:
-                case UiSoundEvent.FloorOpened: case UiSoundEvent.KeyBindSet:
-                    en.pitchVariance = 0f; en.minGap = 0.12f; break;
-                case UiSoundEvent.Transition: en.minGap = 0.3f; break;
-            }
+            en.minGap = t.gap;
+            en.pitchVariance = t.variance;
         }
 
         // ------------------------------------------------------------------- scripted run (batch mode)
         const string FlagKey = "UiSoundSelfTest.Run";
+        const string SavedUiKey = "UiSoundSelfTest.SavedUi";
         const string ReportPath = "UiSoundSelfTest.json";
 
         /// <summary>-executeMethod CloseTheDeal.Editor.Lanes.UiSoundLaneSetup.RunSelfTest: enters play mode, fires every
@@ -185,13 +191,28 @@ namespace CloseTheDeal.Editor.Lanes
         public static void RunSelfTest()
         {
             Run();
+            // Stand in for "the player set Interface volume to 50 % and quit": the play session below starts fresh and must
+            // come up at that level from PlayerPrefs alone. The player's real value is put back at the end.
+            RestoreInterruptedTest();
+            EditorPrefs.SetFloat(SavedUiKey, UiAudio.Get(AudioBus.Ui));   // survives a crash, unlike SessionState
+            UiAudio.SetVolume(AudioBus.Ui, 0.5f);
             SessionState.SetBool(FlagKey, true);
             EditorApplication.EnterPlaymode();
+        }
+
+        // Puts back the Interface volume the self-test borrowed. Also runs when the editor next loads, so a test that was
+        // killed half way cannot leave the machine's real setting at 50 %.
+        static void RestoreInterruptedTest()
+        {
+            if (!EditorPrefs.HasKey(SavedUiKey)) return;
+            UiAudio.SetVolume(AudioBus.Ui, EditorPrefs.GetFloat(SavedUiKey, 1f));
+            EditorPrefs.DeleteKey(SavedUiKey);
         }
 
         [InitializeOnLoadMethod]
         static void HookSelfTest()
         {
+            if (!SessionState.GetBool(FlagKey, false) && !EditorApplication.isPlayingOrWillChangePlaymode) RestoreInterruptedTest();
             if (!SessionState.GetBool(FlagKey, false)) return;
             EditorApplication.playModeStateChanged += s =>
             {
@@ -206,7 +227,7 @@ namespace CloseTheDeal.Editor.Lanes
             readonly List<UiSoundEvent> queue = new List<UiSoundEvent>();
             UiSoundEvent current;
             double until;
-            int stage;               // 0 events, 1 mute test, 2 level test, 3 sfx-bus test, 4 rapid hover, 5 done
+            int stage = 10;          // 10 unfocused, 11 saved volume, then 0 events, 1 mute test, 2 level test, 3 sfx-bus test, 4 rapid hover, 5 done
             double stageStart;
             readonly List<string> lines = new List<string>();
             bool started;
@@ -219,9 +240,9 @@ namespace CloseTheDeal.Editor.Lanes
                 var go = new GameObject("SelfTestListener");
                 go.AddComponent<AudioListener>();
                 go.AddComponent<UiSoundMeter>();
-                UiSoundPlayer.IgnoreFocus = true;
                 foreach (UiSoundEvent e in Enum.GetValues(typeof(UiSoundEvent))) if (e != UiSoundEvent.None) queue.Add(e);
                 lines.Add($"audioConfig: sampleRate={AudioSettings.outputSampleRate} speakerMode={AudioSettings.speakerMode} dspTime={AudioSettings.dspTime:F3}");
+                lines.Add($"hub: UiSound.Player is {(UiSound.Player is UiSoundPlayerAdapter ? "the sound lane's adapter OK" : "not registered FAIL")}");
                 current = UiSoundEvent.None;
                 until = EditorApplication.timeSinceStartup + 0.5;   // let the audio engine warm up
                 EditorApplication.update += Tick;
@@ -233,7 +254,9 @@ namespace CloseTheDeal.Editor.Lanes
                 if (now < until) return;
                 try
                 {
-                    if (stage == 0) StageEvents();
+                    if (stage == 10) StageUnfocused(now);
+                    else if (stage == 11) StageSaved(now);
+                    else if (stage == 0) StageEvents();
                     else if (stage == 1) StageMute(now);
                     else if (stage == 2) StageLevel(now);
                     else if (stage == 3) StageSfx(now);
@@ -241,6 +264,34 @@ namespace CloseTheDeal.Editor.Lanes
                     else Finish(0);
                 }
                 catch (Exception ex) { lines.Add("EXCEPTION " + ex); Finish(2); }
+            }
+
+            // Batch mode has no focused window, so this is the real "player clicked away" state.
+            void StageUnfocused(double now)
+            {
+                if (probeStep == 0)
+                {
+                    UiSoundPlayer.IgnoreFocus = false;
+                    UiSoundMeter.Reset();
+                    bool played = UiSoundPlayer.Play(UiSoundEvent.Confirm, 0f);
+                    lines.Add($"unfocused: Application.isFocused={Application.isFocused}, Play returned {played}");
+                    probeStep = 1; until = now + 0.5; return;
+                }
+                float pk = UiSoundMeter.Peak;
+                string verdict = Application.isFocused ? "NOT TESTED (the editor reports focus)" : pk < 0.0005f ? "OK silent" : "FAIL sound played";
+                lines.Add($"unfocused: output peak={pk:F5} {verdict}");
+                UiSoundPlayer.IgnoreFocus = true;
+                probeStep = 0; stage = 11; until = now + 0.1;
+            }
+
+            // Nothing has called SetVolume in this play session: the level heard is what was restored from PlayerPrefs.
+            void StageSaved(double now)
+            {
+                if (probeStep == 0) { UiSoundMeter.Reset(); UiSoundPlayer.Play(UiSoundEvent.Confirm, 0f); probeStep = 1; until = now + 0.5; return; }
+                float pk = UiSoundMeter.Peak;
+                float db = 20f * Mathf.Log10(Mathf.Max(pk, 1e-6f) / 0.318f);
+                lines.Add($"saved volume: Interface saved at 0.5 before this session, first sound peak={pk:F3} ({db:F1} dB against full, expect about -6) {(Mathf.Abs(db + 6f) < 1.5f ? "OK restored" : "FAIL not restored")}");
+                probeStep = 0; stage = 0; until = now + 0.1;
             }
 
             void StageEvents()
@@ -253,7 +304,7 @@ namespace CloseTheDeal.Editor.Lanes
                 current = queue[0]; queue.RemoveAt(0);
                 UiAudio.SetVolume(AudioBus.Ui, 1f, false);
                 UiSoundMeter.Reset();
-                UiSoundPlayer.Play(current);
+                UiSound.Play(current);   // through the hub, as the kit does
                 UiSoundSet.Entry en = UiSoundPlayer.Set.Find(current);
                 until = EditorApplication.timeSinceStartup + (en != null ? en.clip.length : 0.2f) + 0.12;
             }
@@ -318,6 +369,7 @@ namespace CloseTheDeal.Editor.Lanes
             void Finish(int code)
             {
                 EditorApplication.update -= Tick;
+                RestoreInterruptedTest();   // the player's own value back
                 File.WriteAllText(ReportPath, string.Join("\n", lines) + "\n");
                 foreach (string l in lines) Debug.Log("UiSoundSelfTest: " + l);
                 bool fail = code != 0 || lines.Exists(l => l.Contains("FAIL") || l.Contains("SILENT"));

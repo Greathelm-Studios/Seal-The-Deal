@@ -509,6 +509,9 @@ MonoBehaviour:
   _firstFocus: {fileID: 5349268998536214370}
   _isDialog: 1
   _veil: {fileID: 2295120320667085486}
+  _contentGroup: {fileID: 0}
+  _wipe: {fileID: 0}
+  _wipeGroup: {fileID: 0}
   _title: {fileID: 8870142130957275610}
   _body: {fileID: 457576819280310913}
   _confirm: {fileID: 8253591034214021894}

@@ -11,6 +11,10 @@ using CloseTheDeal.Player;
 using CloseTheDeal.Props;
 using CloseTheDeal.Tower;
 using CloseTheDeal.UI;
+using CloseTheDeal.Editor.UI;
+using System.Linq;
+using TMPro;
+using UnityEngine.UI;
 using FishNet.Object;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -55,6 +59,204 @@ namespace CloseTheDeal.Editor.Lanes
         const int PlayerLayer = GreyboxSceneSetup.PlayerLayer;
         const int IgnoreRaycastLayer = 2;
 
+        // ---- Combat HUD ------------------------------------------------------------------------
+
+        const string CombatHudName = "CombatHud";
+        const string PlatePrefabPath = "Assets/_Project/UI/Kit/Plate.prefab";
+        const string ChevronSpritePath = "Assets/_Project/UI/Kit/Sprites/Kit_Chevron.png";
+        const string WhiteSpritePath = "Assets/_Project/UI/Kit/Sprites/Kit_White.png";
+
+        /// <summary>
+        /// Adds the combat HUD under the game menu's Hud, built from the UI kit: kit plates, the
+        /// tokens' type roles and colours, kit sprites. Only adds: a scene that already has one keeps it.
+        /// Needs the game menu (Set Up Scene) and the kit (Close the Deal > Lanes > Set Up UI).
+        /// </summary>
+        static void EnsureCombatHud()
+        {
+            GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
+            Transform hud = menu != null ? menu.transform.Find("Hud") : null;
+            var tokens = AssetDatabase.LoadAssetAtPath<UiTokens>(UiKitAssets.TokensPath);
+            var plate = AssetDatabase.LoadAssetAtPath<GameObject>(PlatePrefabPath);
+            if (hud == null || tokens == null || plate == null)
+            {
+                Debug.LogWarning("[Shooting Lane] No combat HUD added: the scene needs the game menu (Set Up Scene) and the UI kit (Close the Deal > Lanes > Set Up UI).");
+                return;
+            }
+
+            if (hud.Find(CombatHudName) != null)
+                return;
+
+            var root = (RectTransform)new GameObject(CombatHudName, typeof(RectTransform)).transform;
+            root.SetParent(hud, false);
+            UiKitAssets.Stretch(root);
+            var component = root.gameObject.AddComponent<CombatHud>();
+            var so = new SerializedObject(component);
+            so.FindProperty("_tokens").objectReferenceValue = tokens;
+
+            BuildHitMarker(root, tokens, so);
+            BuildDamageMarks(root, so);
+            BuildWeaponColumn(root, tokens, plate, so);
+            BuildDownCard(root, tokens, plate, so);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            Debug.Log("[Shooting Lane] Added the combat HUD under the game menu's Hud.");
+        }
+
+        static RectTransform Anchored(Transform parent, string name, Vector2 anchor, Vector2 pivot, Vector2 position, Vector2 size)
+        {
+            var rect = (RectTransform)new GameObject(name, typeof(RectTransform)).transform;
+            rect.SetParent(parent, false);
+            rect.anchorMin = rect.anchorMax = anchor;
+            rect.pivot = pivot;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+            return rect;
+        }
+
+        static Image Solid(RectTransform rect, Color colour, Sprite sprite = null)
+        {
+            var image = rect.gameObject.AddComponent<Image>();
+            image.sprite = sprite != null ? sprite : AssetDatabase.LoadAssetAtPath<Sprite>(WhiteSpritePath);
+            image.color = colour;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        static TMP_Text HudText(Transform parent, string name, Vector2 anchor, Vector2 pivot, Vector2 position, Vector2 size,
+            UiTypeRole role, Color colour, TextAlignmentOptions align, string content)
+        {
+            return UiKitAssets.Text(Anchored(parent, name, anchor, pivot, position, size), content, role, colour, align);
+        }
+
+        static RectTransform PlateAt(Transform parent, GameObject plate, string name, Vector2 anchor, Vector2 pivot, Vector2 position, Vector2 size)
+        {
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(plate, parent);
+            instance.name = name;
+            var rect = (RectTransform)instance.transform;
+            rect.anchorMin = rect.anchorMax = anchor;
+            rect.pivot = pivot;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+            return rect;
+        }
+
+        /// <summary>Four diagonal ticks around the centre, each a navy outline under a core.</summary>
+        static void BuildHitMarker(RectTransform root, UiTokens tokens, SerializedObject so)
+        {
+            RectTransform centre = Anchored(root, "HitMarker", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            var outlines = new Object[4];
+            var cores = new Object[4];
+            for (int i = 0; i < 4; i++)
+            {
+                RectTransform outline = Anchored(centre, "TickOutline" + i, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(10f, 4f));
+                Solid(outline, tokens.Black);
+                outlines[i] = outline;
+            }
+
+            for (int i = 0; i < 4; i++)
+            {
+                RectTransform core = Anchored(centre, "Tick" + i, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(8f, 2f));
+                Solid(core, tokens.Paper);
+                cores[i] = core;
+            }
+
+            SetObjects(so, "_tickOutlines", outlines);
+            SetObjects(so, "_ticks", cores);
+        }
+
+        /// <summary>Chevrons around the centre that point at whoever hit you.</summary>
+        static void BuildDamageMarks(RectTransform root, SerializedObject so)
+        {
+            RectTransform centre = Anchored(root, "DamageMarks", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            var chevron = AssetDatabase.LoadAssetAtPath<Sprite>(ChevronSpritePath);
+            var marks = new Object[4];
+            for (int i = 0; i < 4; i++)
+            {
+                RectTransform mark = Anchored(centre, "Mark" + i, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(56f, 22f));
+                marks[i] = Solid(mark, Color.white, chevron);
+            }
+
+            SetObjects(so, "_damageMarks", marks);
+        }
+
+        /// <summary>Bottom right, from the bottom up: the weapon plate (ammo, name, state, progress), the two slots, health while hurt.</summary>
+        static void BuildWeaponColumn(RectTransform root, UiTokens tokens, GameObject plate, SerializedObject so)
+        {
+            var corner = new Vector2(1f, 0f);
+            const float right = -32f, width = 320f;
+
+            RectTransform weapon = PlateAt(root, plate, "WeaponPlate", corner, corner, new Vector2(right, 32f), new Vector2(width, 118f));
+            TMP_Text ammo = HudText(weapon, "Ammo", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -10f), new Vector2(150f, 56f), tokens.Heading, tokens.Navy, TextAlignmentOptions.BottomLeft, "12");
+            ammo.fontSize = 52f;
+            TMP_Text magazine = HudText(weapon, "Magazine", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(150f, -38f), new Vector2(80f, 24f), tokens.Caption, tokens.Ink3, TextAlignmentOptions.BottomLeft, "/ 12");
+            TMP_Text name = HudText(weapon, "WeaponName", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -16f), new Vector2(140f, 24f), tokens.Label, tokens.Navy, TextAlignmentOptions.TopRight, "PISTOL");
+            TMP_Text state = HudText(weapon, "State", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(20f, 26f), new Vector2(width - 40f, 20f), tokens.Caption, tokens.Ink3, TextAlignmentOptions.MidlineLeft, "READY");
+            RectTransform track = Anchored(weapon, "ProgressTrack", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(20f, 14f), new Vector2(width - 40f, 3f));
+            Solid(track, tokens.Hair);
+            RectTransform fill = Anchored(track, "Fill", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(width - 40f, 3f));
+            Solid(fill, tokens.Cobalt);
+            fill.localScale = new Vector3(0f, 1f, 1f);
+
+            var slotTexts = new Object[2];
+            var slotBars = new Object[2];
+            for (int i = 0; i < 2; i++)
+            {
+                // Slot 1 above slot 2, as on the keyboard.
+                float y = 32f + 118f + 10f + (1 - i) * 30f;
+                RectTransform row = Anchored(root, "Slot" + (i + 1), corner, corner, new Vector2(right, y), new Vector2(width, 26f));
+                slotTexts[i] = HudText(row, "Text", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(14f, 0f), new Vector2(width - 14f, 26f), tokens.Label, tokens.Ink3, TextAlignmentOptions.MidlineLeft, (i + 1) + "  —");
+                RectTransform bar = Anchored(row, "Bar", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(4f, 20f));
+                slotBars[i] = Solid(bar, tokens.Cobalt);
+            }
+
+            RectTransform health = PlateAt(root, plate, "HealthPlate", corner, corner, new Vector2(right, 32f + 118f + 10f + 60f + 12f), new Vector2(width, 48f));
+            var group = health.gameObject.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            group.interactable = false;
+            HudText(health, "Label", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20f, 6f), new Vector2(120f, 20f), tokens.Caption, tokens.Ink3, TextAlignmentOptions.MidlineLeft, "HEALTH");
+            TMP_Text number = HudText(health, "Number", new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-20f, 6f), new Vector2(80f, 22f), tokens.Label, tokens.Navy, TextAlignmentOptions.MidlineRight, "100");
+            RectTransform healthTrack = Anchored(health, "Track", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(20f, 10f), new Vector2(width - 40f, 4f));
+            Solid(healthTrack, tokens.Hair);
+            RectTransform healthFill = Anchored(healthTrack, "Fill", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(width - 40f, 4f));
+            Image healthFillImage = Solid(healthFill, tokens.Cobalt);
+
+            so.FindProperty("_weaponPlate").objectReferenceValue = weapon;
+            so.FindProperty("_ammoText").objectReferenceValue = ammo;
+            so.FindProperty("_magazineText").objectReferenceValue = magazine;
+            so.FindProperty("_weaponName").objectReferenceValue = name;
+            so.FindProperty("_weaponState").objectReferenceValue = state;
+            so.FindProperty("_progressFill").objectReferenceValue = fill;
+            SetObjects(so, "_slotTexts", slotTexts);
+            SetObjects(so, "_slotBars", slotBars);
+            so.FindProperty("_healthGroup").objectReferenceValue = group;
+            so.FindProperty("_healthFill").objectReferenceValue = healthFill;
+            so.FindProperty("_healthFillImage").objectReferenceValue = healthFillImage;
+            so.FindProperty("_healthText").objectReferenceValue = number;
+        }
+
+        /// <summary>Above the crosshair while knocked out: what happened, and when you are back.</summary>
+        static void BuildDownCard(RectTransform root, UiTokens tokens, GameObject plate, SerializedObject so)
+        {
+            var mid = new Vector2(0.5f, 0.5f);
+            RectTransform card = PlateAt(root, plate, "DownCard", mid, mid, new Vector2(0f, 150f), new Vector2(460f, 150f));
+            var group = card.gameObject.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            group.interactable = false;
+            HudText(card, "Title", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -18f), new Vector2(420f, 28f), tokens.Section, tokens.Navy, TextAlignmentOptions.Center, "YOU HAVE BEEN LET GO");
+            HudText(card, "Line", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -50f), new Vector2(420f, 20f), tokens.Caption, tokens.Ink3, TextAlignmentOptions.Center, "BACK ON THIS FLOOR IN");
+            TMP_Text count = HudText(card, "Count", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 14f), new Vector2(200f, 62f), tokens.Heading, tokens.Navy, TextAlignmentOptions.Center, "5");
+            count.fontSize = 56f;
+            so.FindProperty("_downGroup").objectReferenceValue = group;
+            so.FindProperty("_downCount").objectReferenceValue = count;
+        }
+
+        static void SetObjects(SerializedObject so, string field, Object[] values)
+        {
+            SerializedProperty p = so.FindProperty(field);
+            p.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++)
+                p.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+        }
+
         // ---- Test scene measurements (metres) -------------------------------------------------
 
         const float SlabTop = 3f;
@@ -93,6 +295,7 @@ namespace CloseTheDeal.Editor.Lanes
         {
             EnsureAssets();
             EnsureSceneObjects(ReloadAssets());
+            EnsureCombatHud();
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
             Debug.Log("[Shooting Lane] The open scene now has a Glass registry and a Starting Loadout. Review and save it.");
         }
@@ -638,24 +841,17 @@ namespace CloseTheDeal.Editor.Lanes
                 // (they listen to Health.Died, which carries the throw); dummies fall over by themselves.
                 Transform hand = EnsureHandPoint(root.transform, lean);
 
+                // Each value only when it is empty or still at its default (AGENTS.md §4): a person's choice stays.
                 var serializedHolder = new SerializedObject(holder);
-                GreyboxSceneSetup.SetReference(serializedHolder, "_catalog", assets.Catalog);
-                GreyboxSceneSetup.SetInt(serializedHolder, "_solidMask", ~((1 << PlayerLayer) | (1 << IgnoreRaycastLayer)));
+                FillReference(serializedHolder, "_catalog", assets.Catalog);
+                FillMaskIfEverything(serializedHolder, "_solidMask", ~((1 << PlayerLayer) | (1 << IgnoreRaycastLayer)));
                 serializedHolder.ApplyModifiedPropertiesWithoutUndo();
 
                 var serializedView = new SerializedObject(view);
-                GreyboxSceneSetup.SetReference(serializedView, "_thirdPersonAnchor", hand);
+                FillReference(serializedView, "_thirdPersonAnchor", hand);
                 serializedView.ApplyModifiedPropertiesWithoutUndo();
 
-                var motor = root.GetComponent<PlayerMotor>();
-                if (motor != null)
-                {
-                    var serializedMotor = new SerializedObject(motor);
-                    GreyboxSceneSetup.SetReference(serializedMotor, "_blast", assets.NoBlast);
-                    GreyboxSceneSetup.SetInt(serializedMotor, "_playerMask", 0);
-                    GreyboxSceneSetup.SetInt(serializedMotor, "_propMask", 0);
-                    serializedMotor.ApplyModifiedPropertiesWithoutUndo();
-                }
+                SwitchOffTestBlast(root.GetComponent<PlayerMotor>(), assets.NoBlast);
 
                 PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             }
@@ -696,6 +892,55 @@ namespace CloseTheDeal.Editor.Lanes
             // Right side, chest height, a little ahead of the body. The lean pivot sits at the hips (0.9 m).
             hand.transform.localPosition = new Vector3(0.3f, 0.4f, 0.3f);
             return hand.transform;
+        }
+
+        /// <summary>
+        /// The motor's left-click test blast shares the fire button. While the motor still has one
+        /// and it is the greybox test blast (or none), point it at a blast that does nothing and
+        /// clear its targets. Anything else is someone's choice and is left; once the movement
+        /// lane removes the test blast this finds no field and does nothing.
+        /// </summary>
+        static void SwitchOffTestBlast(PlayerMotor motor, BlastProfile noBlast)
+        {
+            if (motor == null)
+                return;
+
+            var serialized = new SerializedObject(motor);
+            SerializedProperty blast = serialized.FindProperty("_blast");
+            if (blast == null)
+                return;
+
+            Object current = blast.objectReferenceValue;
+            bool isTestBlast = current == null || AssetDatabase.GetAssetPath(current) == TestBlastPath;
+            if (!isTestBlast)
+                return;
+
+            blast.objectReferenceValue = noBlast;
+            SetIntIfPresent(serialized, "_playerMask", 0);
+            SetIntIfPresent(serialized, "_propMask", 0);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void FillReference(SerializedObject so, string field, Object value)
+        {
+            SerializedProperty p = so.FindProperty(field);
+            if (p != null && p.objectReferenceValue == null)
+                p.objectReferenceValue = value;
+        }
+
+        /// <summary>A layer mask left at "everything" (its default) gets the tool's value; any other is someone's choice.</summary>
+        static void FillMaskIfEverything(SerializedObject so, string field, int value)
+        {
+            SerializedProperty p = so.FindProperty(field);
+            if (p != null && p.intValue == ~0)
+                p.intValue = value;
+        }
+
+        static void SetIntIfPresent(SerializedObject so, string field, int value)
+        {
+            SerializedProperty p = so.FindProperty(field);
+            if (p != null)
+                p.intValue = value;
         }
 
         /// <summary>Lets guns wear down the locked door, if the greybox tool has made one in this checkout.</summary>
@@ -781,6 +1026,12 @@ namespace CloseTheDeal.Editor.Lanes
             }
 
             EnsureFolder(Path.GetDirectoryName(ScenePath).Replace('\\', '/'));
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                Debug.Log("[Shooting Lane] Kept the open scene; the test scene was not rebuilt.");
+                return;
+            }
+
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
             // Opening a new scene unloads assets nothing references yet, which leaves the ones in hand dead; load them again.
             assets = ReloadAssets();
@@ -810,6 +1061,7 @@ namespace CloseTheDeal.Editor.Lanes
 
             GreyboxSceneSetup.EnsurePlayRig(SpawnA, SpawnB);
             EnsureSceneObjects(assets);
+            EnsureCombatHud();
 
             AssignSceneIds(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -1051,7 +1303,16 @@ namespace CloseTheDeal.Editor.Lanes
             SessionState.SetString(OutKey, output);
             SessionState.SetBool(WithClientKey, withClient);
             SessionState.SetBool(ExitKey, exitWhenDone);
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                SessionState.EraseString(RoleKey);
+                return;
+            }
+
             EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+            // A HUD capture adds the combat HUD to the opened scene for the run, unsaved, if it lacks one.
+            if (role == "hud")
+                EnsureCombatHud();
             EditorApplication.EnterPlaymode();
         }
 
@@ -1069,6 +1330,16 @@ namespace CloseTheDeal.Editor.Lanes
 
         static void OnPlayModeChanged(PlayModeStateChange change)
         {
+            // Stopped part-way through by hand: forget the run, or the next Play would pick it up.
+            if (change == PlayModeStateChange.EnteredEditMode)
+            {
+                Routines.Clear();
+                EditorApplication.update -= Step;
+                EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+                SessionState.EraseString(RoleKey);
+                return;
+            }
+
             if (change == PlayModeStateChange.EnteredPlayMode && Routines.Count == 0)
                 Begin();
         }
@@ -1081,7 +1352,7 @@ namespace CloseTheDeal.Editor.Lanes
             Application.runInBackground = true;
             Routines.Clear();
             UsePort();
-            Routines.Push(_role == "client" ? ClientRoutine() : _role == "panes" ? PaneCountRoutine() : HostRoutine(SessionState.GetBool(WithClientKey, false)));
+            Routines.Push(_role == "client" ? ClientRoutine() : _role == "panes" ? PaneCountRoutine() : _role == "hud" ? HudRoutine() : HostRoutine(SessionState.GetBool(WithClientKey, false)));
             EditorApplication.update += Step;
             Log($"=== Shooting self-check, role {_role}, Unity {Application.unityVersion} ===");
         }
@@ -1260,6 +1531,11 @@ namespace CloseTheDeal.Editor.Lanes
 
             yield return Seconds(0.3f);
             int burst = _fired - firedBefore;
+            float straight = s.Holder.CurrentSpreadDegrees;
+            yield return Seconds(1f);
+            float rested = s.Holder.CurrentSpreadDegrees;
+            Check("the AR-15's stray builds through a burst and settles after a rest", straight > s.Holder.ActiveWeapon.BaseSpread + 0.1f && Mathf.Approximately(rested, s.Holder.ActiveWeapon.BaseSpread),
+                $"stray {straight:0.00} deg straight after the burst, {rested:0.00} deg a second later (rest {s.Holder.ActiveWeapon.BaseSpread:0.00})");
             Check("AR-15 fires at its rate while held", burst >= 14 && burst <= 17, $"{burst} shots in 1.5 s (600 a minute is 15), {_hitConfirmed - hitsBefore} hit the dummy at 19 m with the aim left to climb, dummy health {target.Current}, dead {target.IsDead}");
         }
 
@@ -1311,6 +1587,7 @@ namespace CloseTheDeal.Editor.Lanes
             yield return Seconds(0.4f);
             Vector3 diedAt = s.Me.transform.position;
             s.Health.ApplyDamage(999f, diedAt, Vector3.back, -1);
+            uint diedTick = s.Me.TimeManager.Tick;
             yield return Frames(3);
             int firedBefore = _fired;
             for (int i = 0; i < 10; i++)
@@ -1340,6 +1617,12 @@ namespace CloseTheDeal.Editor.Lanes
             s.Holder.PullTrigger();
             yield return Frames(3);
             Check("can fire again after respawn", _fired == firedBefore + 1, $"shots {_fired - firedBefore}");
+
+            uint now = s.Me.TimeManager.Tick;
+            Check("a shot rewound to before the respawn can't find the new body", !s.Health.WasAliveAt(diedTick) && s.Health.WasAliveAt(now),
+                $"counts as alive at the tick it died ({diedTick}): {s.Health.WasAliveAt(diedTick)}; now ({now}): {s.Health.WasAliveAt(now)}");
+
+            yield return OriginCheck(s);
         }
 
         /// <summary>Pistol shots at the two runners, aiming at the body as it is drawn on this copy, the way a player tracks a target.</summary>
@@ -1487,6 +1770,21 @@ namespace CloseTheDeal.Editor.Lanes
 
             yield return Frames(2);
             holder.Fired -= Record;
+        }
+
+        /// <summary>A shot may start from the shooter's own eye position only when the host can see it: never through the floor or a wall.</summary>
+        static IEnumerator OriginCheck(Subject s)
+        {
+            MethodInfo trusted = typeof(WeaponHolder).GetMethod("TrustedOrigin", BindingFlags.Instance | BindingFlags.NonPublic);
+            MethodInfo eyeOf = typeof(WeaponHolder).GetMethod("HostEye", BindingFlags.Instance | BindingFlags.NonPublic);
+            var eye = (Vector3)eyeOf.Invoke(s.Holder, null);
+            Vector3 throughFloor = eye + Vector3.down * 2.2f;
+            Vector3 clear = eye + s.Me.transform.right * 0.5f;
+            var fromFloor = (Vector3)trusted.Invoke(s.Holder, new object[] { throughFloor, 0u });
+            var fromClear = (Vector3)trusted.Invoke(s.Holder, new object[] { clear, 0u });
+            Check("a shot origin behind the floor slab is refused; a clear one nearby is kept", fromFloor == eye && fromClear == clear,
+                $"through the floor -> {(fromFloor == eye ? "the host's eye" : fromFloor.ToString())}; 0.5 m to the side -> {(fromClear == clear ? "kept" : fromClear.ToString())}");
+            yield break;
         }
 
         static IEnumerator BlastCheck(Subject s)
@@ -1715,6 +2013,15 @@ namespace CloseTheDeal.Editor.Lanes
             yield return Frames(3);
             bool through = !Physics.Raycast(from, -sample.Normal, out RaycastHit after, 2.2f, ~0, QueryTriggerInteraction.Ignore) || after.collider == null || !GlassPane.TryFind(after.collider, out _);
             Check("a shot tower window breaks for the match and lets things through", sample.IsBroken && glass.BrokenCount == before + 1 && through, $"broken {sample.IsBroken}, registry {before} -> {glass.BrokenCount}");
+
+            // A rematch builds new towers that number their panes the same way: they must come up whole.
+            Vector3 where = sample.Centre;
+            TowerBuilder.Instance.Rebuild();
+            yield return Until(() => TowerBuilder.Instance.IsBuilt, 30f, "the rebuilt towers");
+            yield return Seconds(1f);
+            GlassPane again = PaneNear(where);
+            Check("a rematch's new towers start with every pane whole", glass.BrokenCount == 0 && again != null && !again.IsBroken && HiddenPanes() == 0,
+                $"registry {glass.BrokenCount} broken, the same window now broken {again?.IsBroken}, hidden panes {HiddenPanes()}");
         }
 
         // ---- The client's run ----------------------------------------------------------------
@@ -1823,6 +2130,159 @@ namespace CloseTheDeal.Editor.Lanes
             Check("late joiner sees every pane the match has broken, without shards", glass.BrokenCount == brokenAtLeave && HiddenPanes() == brokenAtLeave && _panesBroken == 0,
                 $"registry {glass.BrokenCount} (was {brokenAtLeave} when it left), hidden here {HiddenPanes()}, shatter events {_panesBroken}");
             Check("late joiner sees the dummies as the host has them", DummyStates() == dummiesAtLeave, $"{DummyStates()}");
+        }
+
+        // ---- Combat HUD: every state, captured at 1080p and 720p ----------------------------
+
+        static readonly Vector2Int[] HudSizes = { new(1920, 1080), new(1280, 720) };
+
+        /// <summary>
+        /// Hosts the open scene and walks the combat HUD through its states with real shots where the
+        /// scene has targets (Lane_Shooting) and the host's own damage path otherwise, capturing each
+        /// state at every size in HudSizes.
+        /// </summary>
+        static IEnumerator HudRoutine()
+        {
+            SteamLobby lobby = null;
+            yield return Until(() => (lobby = Object.FindAnyObjectByType<SteamLobby>()) != null && lobby.Ready, 30f, "lobby ready");
+            lobby.Host();
+            yield return Until(() => PlayerMotor.Local != null, 60f, "own player spawned");
+            yield return Seconds(2f);
+            Check("this copy is the host", PlayerMotor.Local.IsServerStarted, $"server started {PlayerMotor.Local.IsServerStarted}");
+
+            var s = new Subject { Me = PlayerMotor.Local, Glass = GlassRegistry.Instance };
+            s.Holder = s.Me.GetComponent<WeaponHolder>();
+            s.Health = s.Me.GetComponent<Health>();
+            Listen(s.Holder);
+            CombatHud hud = Object.FindAnyObjectByType<CombatHud>(FindObjectsInactive.Include);
+            Check("the scene has the combat HUD", hud != null, hud != null ? hud.transform.parent.name + "/" + hud.name : "none");
+            if (hud == null)
+                yield break;
+
+            // Hosting may leave the menu up in some scenes; the HUD shows only with it closed.
+            GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
+            if (menu != null && menu.IsOpen)
+                menu.Resume();
+            yield return Seconds(0.5f);
+            int sounds = 0;
+            UiSound.Played += e => { if (e == UiSoundEvent.HitMarker || e == UiSoundEvent.HitMarkerHead || e == UiSoundEvent.KillConfirm || e == UiSoundEvent.CountdownTick) sounds++; };
+
+            HudShot("01_idle");
+            Health target = Object.FindObjectsByType<Health>(FindObjectsSortMode.None).FirstOrDefault(h => h.GetComponent<PlayerMotor>() == null && h.GetComponent<MovingTarget>() == null);
+            if (target != null && s.Holder.WeaponInSlot(0) != null)
+                yield return HudShootingStates(s, target);
+            else
+                Log("NOTE  no target dummy in this scene: hit marker, kill, reload and empty states are captured in Lane_Shooting.");
+
+            yield return HudHurtAndDownStates(s);
+            Check("the HUD's sounds were asked for", sounds > 0, $"{sounds} hit, kill or countdown sounds requested");
+        }
+
+        static IEnumerator HudShootingStates(Subject s, Health target)
+        {
+            if (s.Holder.ActiveSlot != 0)
+                s.Holder.Switch(0);
+            yield return Seconds(0.6f);
+
+            int hits = _hitConfirmed;
+            yield return Aim(Chest(target));
+            s.Holder.PullTrigger();
+            yield return Until(() => _hitConfirmed > hits, 2f, "the host's hit confirmation");
+            yield return Frames(2);
+            HudShot("02_hit_marker");
+            Check("the hit marker shows only after the host confirms", _hitConfirmed > hits, $"confirmations {hits} -> {_hitConfirmed}");
+
+            int kills = _killsConfirmed;
+            for (int i = 0; i < 4 && !target.IsDead; i++)
+            {
+                yield return Seconds(0.3f);
+                yield return Aim(Chest(target));
+                s.Holder.PullTrigger();
+            }
+
+            yield return Until(() => _killsConfirmed > kills, 2f, "the kill confirmation");
+            yield return Frames(2);
+            HudShot("03_kill_confirm");
+
+            s.Holder.Reload();
+            yield return Seconds(s.Holder.ActiveWeapon.ReloadSeconds * 0.5f);
+            HudShot("04_reloading");
+            yield return Seconds(s.Holder.ActiveWeapon.ReloadSeconds);
+
+            float emptyBy = Time.time + 6f;
+            while (s.Holder.AmmoInMagazine > 0 && Time.time < emptyBy)
+            {
+                yield return Aim(new Vector3(-2f, SlabTop + 1.5f, 16f));
+                s.Holder.PullTrigger();
+                yield return Seconds(0.2f);
+            }
+
+            yield return Seconds(0.4f);
+            s.Holder.PullTrigger();
+            yield return Frames(3);
+            HudShot("05_empty_dry_fire");
+            s.Holder.Reload();
+            yield return Seconds(s.Holder.ActiveWeapon.ReloadSeconds + 0.5f);
+        }
+
+        static IEnumerator HudHurtAndDownStates(Subject s)
+        {
+            // A hit from the player's right, through the host's own damage path.
+            Vector3 chest = s.Me.transform.position + Vector3.up * 1.2f;
+            Vector3 fromRight = -s.Me.transform.right;
+            s.Health.ApplyHit(38f, chest, fromRight, 1, Vector3.zero, Vector3.zero, 0f);
+            yield return Seconds(0.15f);
+            HudShot("06_hurt_from_right");
+            yield return Seconds(1.5f);
+            HudShot("07_hurt_settled");
+
+            s.Health.ApplyDamage(999f, chest, Vector3.back, 1);
+            yield return Seconds(0.6f);
+            HudShot("08_down");
+            yield return Until(() => !s.Health.IsDead, 8f, "respawn");
+            yield return Seconds(_hudLinger);
+            HudShot("09_back_full_health");
+        }
+
+        const float _hudLinger = 3.5f;
+
+        /// <summary>Renders the player's view with the HUD at every capture size.</summary>
+        static void HudShot(string name)
+        {
+            Canvas canvas = Object.FindAnyObjectByType<CombatHud>(FindObjectsInactive.Include)?.GetComponentInParent<Canvas>()?.rootCanvas;
+            Camera camera = Camera.main;
+            if (canvas == null || camera == null)
+                return;
+
+            RenderMode mode = canvas.renderMode;
+            Camera previousCamera = canvas.worldCamera;
+            float plane = canvas.planeDistance;
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = camera;
+            canvas.planeDistance = camera.nearClipPlane + 0.05f;
+
+            foreach (Vector2Int size in HudSizes)
+            {
+                RenderTexture target = RenderTexture.GetTemporary(size.x, size.y, 24);
+                RenderTexture previousTarget = camera.targetTexture;
+                camera.targetTexture = target;
+                Canvas.ForceUpdateCanvases();
+                camera.Render();
+                RenderTexture previousActive = RenderTexture.active;
+                RenderTexture.active = target;
+                var image = new Texture2D(size.x, size.y, TextureFormat.RGB24, false);
+                image.ReadPixels(new Rect(0, 0, size.x, size.y), 0, 0);
+                image.Apply();
+                camera.targetTexture = previousTarget;
+                RenderTexture.active = previousActive;
+                RenderTexture.ReleaseTemporary(target);
+                File.WriteAllBytes(Path.Combine(_out, $"hud_{name}_{size.y}p.png"), image.EncodeToPNG());
+                Object.DestroyImmediate(image);
+            }
+
+            canvas.renderMode = mode;
+            canvas.worldCamera = previousCamera;
+            canvas.planeDistance = plane;
         }
 
         // ---- Self-check helpers --------------------------------------------------------------

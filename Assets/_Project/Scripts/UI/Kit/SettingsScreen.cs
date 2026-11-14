@@ -1,24 +1,25 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
     /// <summary>
-    /// Settings, Accessibility tab: Reduce motion, the crosshair's style, colour and size (with a live preview over
-    /// sun, sky and a dark room), and Show network stats. Every change is saved on this PC at once and holds after a
-    /// relaunch; Reset to defaults puts them all back. Only rows whose game-side value exists are here; the
-    /// rest wait for their systems (docs/systems/UI_KIT.md "Settings").
+    /// Settings: Controls, Video, Audio and Accessibility tabs (Q / E or the shoulder buttons switch), each a
+    /// UiSettingsPage with its rows and its right-hand preview. Every change applies at once and is written to disk when
+    /// the screen closes; Reset to defaults puts the open tab back. Only rows whose game-side value exists are shown
+    /// (docs/systems/UI_KIT.md "Settings").
     /// </summary>
     [AddComponentMenu("Close the Deal/UI/Settings Screen")]
     public sealed class SettingsScreen : UiScreen
     {
-        [Header("Rows")]
-        [SerializeField] UiToggle _reducedMotion;
-        [SerializeField] UiStepper _crosshairStyle;
-        [SerializeField] UiSwatches _crosshairColour;
-        [SerializeField] UiSlider _crosshairSize;
-        [SerializeField] UiToggle _networkStats;
+        [Header("Tabs")]
+        [SerializeField] UiTabPages _tabs;
+        [Tooltip("The breadcrumb's last part names the open tab.")]
+        [SerializeField] TMP_Text _breadcrumb;
+        [Tooltip("The section header above the rows names the open tab.")]
+        [SerializeField] TMP_Text _section;
 
         [Header("Footer")]
         [SerializeField] UiButton _reset;
@@ -28,114 +29,122 @@ namespace CloseTheDeal.UI
         [Tooltip("The focused row's one-line explanation.")]
         [SerializeField] TMP_Text _help;
 
-        [Header("Tabs")]
-        [Tooltip("The open tab's button. The other tabs join it as their settings become real.")]
-        [SerializeField] UiButton _tab;
-
-        static readonly string[] StyleNames = { "Dot", "Cross", "Cross + Dot" };
-        static readonly string[] ColourNames = { "Paper White", "Cyan", "Electric Blue" };
-
-        const string SavedLine = "Saved on this PC.";
         const string KeptLine = "Changes are saved on this PC as you make them.";
 
         protected override void Awake()
         {
             base.Awake();
-            _firstFocus = _reducedMotion;
             _back.ConfirmSound = UiSoundEvent.Back;
-            _reset.RefusalReason = "Everything is already at its default.";
-            _crosshairStyle.SetOptions(StyleNames, (int)UiSettings.CrosshairStyle);
-            _crosshairColour.SetSwatches(new[] { _tokens.Paper, _tokens.Cyan, _tokens.Electric }, ColourNames, (int)UiSettings.CrosshairColour);
-            _crosshairSize.minValue = UiSettings.CrosshairSizeMin / UiSettings.CrosshairSizeStep;
-            _crosshairSize.maxValue = UiSettings.CrosshairSizeMax / UiSettings.CrosshairSizeStep;
-            _crosshairSize.Configure(UiSettings.CrosshairSizeStep, "%");
-            if (_tab != null)
-                _tab.Fx.Active = true;
+            _reset.RefusalReason = "Everything on this tab is already at its default.";
         }
 
         void OnEnable()
         {
-            _reducedMotion.Changed += OnReducedMotion;
-            _crosshairStyle.Changed += OnStyle;
-            _crosshairColour.Changed += OnColour;
-            _crosshairSize.Changed += OnSize;
-            _networkStats.Changed += OnNetworkStats;
             _reset.Clicked += OnReset;
             _back.Clicked += OnBack;
+            _tabs.Changed += OnTab;
             UiControlEvents.Focused += OnFocused;
             UiControlEvents.Refused += OnRefused;
         }
 
         protected override void OnDisable()
         {
-            _reducedMotion.Changed -= OnReducedMotion;
-            _crosshairStyle.Changed -= OnStyle;
-            _crosshairColour.Changed -= OnColour;
-            _crosshairSize.Changed -= OnSize;
-            _networkStats.Changed -= OnNetworkStats;
             _reset.Clicked -= OnReset;
             _back.Clicked -= OnBack;
+            _tabs.Changed -= OnTab;
             UiControlEvents.Focused -= OnFocused;
             UiControlEvents.Refused -= OnRefused;
+            if (_subscribed != null)
+                _subscribed.Saved -= OnSaved;
+            _subscribed = null; // Subscribed again when the screen next shows.
             base.OnDisable();
+        }
+
+        void Update()
+        {
+            if (Stack != null && Stack.Top == this && !UiInput.Capturing)
+                _tabs.ReadShortcuts();
         }
 
         protected override void OnShowing()
         {
-            ShowSaved();
+            if (_subscribed != _tabs.CurrentPage)
+                OnTab(_tabs.Current);
+            UiSettingsPage page = _tabs.CurrentPage;
+            if (page != null)
+                page.ShowSaved();
+            Link();
+            _firstFocus = _tabs.CurrentTab;
             _status.Set(KeptLine, UiStatusKind.Info);
         }
 
-        protected override void OnHiding() => UiSettings.Flush();
-
-        /// <summary>Reads every saved value into the rows, without sounds or events.</summary>
-        void ShowSaved()
+        protected override void OnHiding()
         {
-            _reducedMotion.SetWithoutNotify(UiSettings.ReducedMotion);
-            _crosshairStyle.SetWithoutNotify((int)UiSettings.CrosshairStyle);
-            _crosshairColour.SetWithoutNotify((int)UiSettings.CrosshairColour);
-            _crosshairSize.SetDisplayWithoutNotify(UiSettings.CrosshairSize);
-            _networkStats.SetWithoutNotify(UiSettings.NetworkStats);
-            LinkFooter();
+            UiSettingsPage page = _tabs.CurrentPage;
+            if (page != null)
+                page.Hidden();
+            UiSettings.Flush();
+            PlayerPrefs.Save(); // Video, audio and controls preferences too.
         }
 
-        /// <summary>Reset is greyed out at the defaults; down from the last row then goes straight to Back.</summary>
-        void LinkFooter()
+        UiSettingsPage _subscribed;
+
+        void OnTab(int index)
         {
-            _reset.interactable = !UiSettings.AtDefaults;
-            Selectable below = _reset.interactable ? _reset : _back;
-            Navigation last = _networkStats.navigation;
-            last.selectOnDown = below;
-            _networkStats.navigation = last;
-            Navigation back = _back.navigation;
-            back.selectOnLeft = _reset.interactable ? _reset : null;
-            _back.navigation = back;
+            if (_subscribed != null)
+                _subscribed.Saved -= OnSaved;
+            _subscribed = _tabs.CurrentPage;
+            _subscribed.Saved += OnSaved;
+            string title = _subscribed.Title;
+            if (_breadcrumb != null)
+                _breadcrumb.text = "SEAL THE DEAL · SETTINGS · " + title.ToUpperInvariant();
+            if (_section != null)
+                _section.text = "§ " + (index + 1) + "  " + title.ToUpperInvariant();
+            Link();
         }
 
-        void OnReducedMotion(bool on) => Saved(() => UiSettings.ReducedMotion = on);
-
-        void OnStyle(int index) => Saved(() => UiSettings.CrosshairStyle = (CrosshairStyle)index);
-
-        void OnColour(int index) => Saved(() => UiSettings.CrosshairColour = (CrosshairColour)index);
-
-        void OnSize(int percent) => Saved(() => UiSettings.CrosshairSize = percent);
-
-        void OnNetworkStats(bool on) => Saved(() => UiSettings.NetworkStats = on);
-
-        void Saved(System.Action write)
+        void OnSaved(string line)
         {
-            write();
-            LinkFooter();
-            _status.Set(SavedLine, UiStatusKind.Info);
+            _status.Set(line, UiStatusKind.Info);
+            Link();
+        }
+
+        /// <summary>Tabs across the top, the open page's rows down the middle, Reset and Back at the bottom.</summary>
+        void Link()
+        {
+            UiSettingsPage page = _tabs.CurrentPage;
+            if (page == null)
+                return;
+            _reset.interactable = !page.AtDefaults;
+            Selectable footer = _reset.interactable ? _reset : (Selectable)_back;
+            UiButton tab = _tabs.CurrentTab;
+            page.LinkRows(tab, footer);
+            Selectable first = page.FirstRow != null ? page.FirstRow : footer;
+            Selectable last = page.LastRow != null ? page.LastRow : tab;
+
+            for (int i = 0; i < _tabs.Count; i++)
+            {
+                UiButton t = _tabs.TabAt(i);
+                Navigation nav = t.navigation;
+                nav.mode = Navigation.Mode.Explicit;
+                nav.selectOnDown = first;
+                t.navigation = nav;
+            }
+
+            _reset.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = last, selectOnRight = _back };
+            _back.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = last, selectOnLeft = _reset.interactable ? _reset : null };
         }
 
         void OnReset()
         {
-            UiSettings.ResetToDefaults();
-            ShowSaved();
-            _status.Set("Defaults restored and saved on this PC.", UiStatusKind.Info);
-            if (UnityEngine.EventSystems.EventSystem.current != null)
-                UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(_back.gameObject);
+            UiSettingsPage page = _tabs.CurrentPage;
+            if (page == null)
+                return;
+            page.ResetToDefaults();
+            Link();
+            _status.Set("Defaults restored on this tab and saved on this PC.", UiStatusKind.Info);
+            if (EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(_back.gameObject);
         }
 
         void OnBack() => Stack?.Pop(false);

@@ -45,7 +45,7 @@ namespace CloseTheDeal.Combat
         // ---- Inspector -----------------------------------------------------------------------
 
         [Header("Health")]
-        [Tooltip("Hit points at full health. The pistol takes 25 a shot by default, so 100 is four pistol hits.")]
+        [Tooltip("Hit points at full health. The pistol takes 34 a shot by default, so 100 is three pistol hits.")]
         [Min(1f)] [SerializeField] float _maxHealth = 100f;
 
         [Tooltip("How long a dead player waits before coming back on the floor they died on, in seconds. The GDD says 5.")]
@@ -133,6 +133,7 @@ namespace CloseTheDeal.Combat
         Vector3 _respawnOverride;
         float _flashLeft;
         float _respawnAt;
+        uint _aliveFromTick;
         float _tip;
         Quaternion _tipRest;
         DecayingImpulse _flinch;
@@ -194,6 +195,7 @@ namespace CloseTheDeal.Combat
             _lastAttacker.Value = -1;
             _safePosition = transform.position;
             _hasRespawnOverride = false;
+            _aliveFromTick = TimeManager.Tick;
             Array.Clear(_historyTicks, 0, HistoryLength);
             TimeManager.OnPostTick += HostPostTick;
         }
@@ -296,6 +298,8 @@ namespace CloseTheDeal.Combat
 
             _health.Value = _maxHealth;
             _dead.Value = false;
+            // Positions from before now belong to the corpse; a rewound shot must not find the new body there.
+            _aliveFromTick = TimeManager.Tick;
             if (_motor != null)
                 _motor.ApplyKnockback(Vector3.zero, RespawnControlLossSeconds);
 
@@ -343,6 +347,9 @@ namespace CloseTheDeal.Combat
             // A tick not remembered (the future, or too long ago) reads as now.
             return _historyTicks[slot] == tick ? _history[slot] : transform.position;
         }
+
+        /// <summary>Host only. Whether this body was alive at a past tick, since its last spawn. A shot rewound to before a respawn can't hit it.</summary>
+        public bool WasAliveAt(uint tick) => tick >= _aliveFromTick;
 
         /// <summary>The body's capsule as a segment and a radius, standing at the given feet position.</summary>
         public void CapsuleAt(Vector3 feet, out Vector3 bottom, out Vector3 top, out float radius)

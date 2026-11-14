@@ -13,8 +13,29 @@ namespace CloseTheDeal.UI
     /// </summary>
     public static class UiInput
     {
-        /// <summary>True when the last thing the player touched was a key or a pad, not the mouse.</summary>
-        public static bool UsingKeysOrPad { get; private set; }
+        /// <summary>True when the last thing the player touched was a key or a pad, not the mouse. Starts true, so the
+        /// first screen shows where focus is until the mouse moves.</summary>
+        public static bool UsingKeysOrPad { get; private set; } = true;
+
+        static bool _capturing;
+        static int _captureEndFrame = -10;
+
+        /// <summary>
+        /// True while a settings row is listening for a new key (and for the frame after), so Esc and the arrows reach
+        /// the rebind, not the menu.
+        /// </summary>
+        public static bool Capturing
+        {
+            get => _capturing || Time.frameCount <= _captureEndFrame + 1;
+            set => _capturing = value;
+        }
+
+        /// <summary>Ends a key capture; the menu ignores Esc and navigation for one more frame.</summary>
+        public static void ReleaseCapture()
+        {
+            _capturing = false;
+            _captureEndFrame = Time.frameCount;
+        }
 
         static int _switchFrame = -1;
 

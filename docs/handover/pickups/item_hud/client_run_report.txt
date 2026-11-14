@@ -1,0 +1,16 @@
+ROLE client: joined a host running in another copy of the game. Everything here is what the client saw.
+local port 17783
+both players in; scripted steps start at 04:53:30 UTC
+PASS  CLIENT: this machine is not the host
+PASS  CLIENT: a loose chair cannot be simulated here
+PASS  CLIENT: two players grabbing one chair gives it to exactly one  — holder: client 1; me holding: True; refusal I was sent: none
+PASS  CLIENT: the loser is told why  — refusal: none
+CLIENT: thrown chair came to rest at (-1.80, 12.25, -5.78)
+PASS  CLIENT: saw the host's grenade case armed, beeping and exploding  — armed: True, beeps heard: 13, exploded: True
+PASS  CLIENT: the blast threw this client's own player  — now at (8.55, 12.00, 0.46)
+PASS  CLIENT: the spent case is out of play here too
+PASS  CLIENT: took a chair before leaving
+PASS  CLIENT: this client's own hands slot names what the host gave it  — slot reads "Chair"
+wrote client_hud_hands_1080p.png
+wrote client_hud_hands_720p.png
+RESULT: 0 failed check(s), 9 passed, 0 frames.

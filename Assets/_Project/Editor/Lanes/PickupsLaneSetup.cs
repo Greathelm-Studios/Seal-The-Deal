@@ -1058,6 +1058,9 @@ namespace CloseTheDeal.Editor.Lanes
         /// <summary>The item HUD in the open scene (Set Up Integration calls this).</summary>
         internal static void BuildPromptCanvas() => ItemHudSetup.AddToOpenScene();
 
+        /// <summary>Shell: -executeMethod CloseTheDeal.Editor.Lanes.PickupsLaneSetup.AddItemHudToIntegrationScene</summary>
+        public static void AddItemHudToIntegrationScene() => ItemHudSetup.AddToIntegrationSceneFromShell();
+
         /// <summary>
         /// The item HUD (prompt, refusals, hands slot), built from the UI kit's Plate and
         /// KeyHint prefabs and tokens, under the game menu's Hud so it hides with the rest of the
@@ -1104,6 +1107,14 @@ namespace CloseTheDeal.Editor.Lanes
                 Build(parent, tokens, plate, keyHint);
                 EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
                 Debug.Log($"[Pickups] Added the item HUD under {parent.name}.");
+            }
+
+            /// <summary>Shell: opens Lane_Integration, puts the item HUD in (replacing the old label) and saves it.</summary>
+            public static void AddToIntegrationSceneFromShell()
+            {
+                EditorSceneManager.OpenScene(IntegrationLaneSetup.ScenePath, OpenSceneMode.Single);
+                AddToOpenScene();
+                EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
             }
 
             static Transform HudParent()
@@ -1170,8 +1181,8 @@ namespace CloseTheDeal.Editor.Lanes
                 fill.sizeDelta = new Vector2(2f, 0f);
                 CloseTheDeal.Editor.UI.UiKitAssets.Img(fill, null, t.Cobalt);
                 const float hintStep = 48f + 10f + HintLabelWidth + 12f; // key cap, gap, label, gap
-                KeyRow(keyHintPrefab, handsPlate, "Throw", "LMB", "Throw", Padding);
-                KeyRow(keyHintPrefab, handsPlate, "Drop", "G", "Drop", Padding + hintStep);
+                RectTransform throwHint = KeyRow(keyHintPrefab, handsPlate, "Throw", "LMB", "Throw", Padding);
+                RectTransform dropHint = KeyRow(keyHintPrefab, handsPlate, "Drop", "G", "Drop", Padding + hintStep);
                 RectTransform use = KeyRow(keyHintPrefab, handsPlate, "Use", "RMB", "Use", Padding + hintStep * 2f);
 
                 var hud = root.AddComponent<ItemHud>();
@@ -1190,6 +1201,9 @@ namespace CloseTheDeal.Editor.Lanes
                 GreyboxSceneSetup.SetReference(so, "_handsLoadFill", fill);
                 GreyboxSceneSetup.SetReference(so, "_useHint", use.gameObject);
                 GreyboxSceneSetup.SetReference(so, "_useLabel", use.Find("Label").GetComponent<TMP_Text>());
+                GreyboxSceneSetup.SetReference(so, "_throwKey", throwHint.Find("Key").GetComponent<TMP_Text>());
+                GreyboxSceneSetup.SetReference(so, "_dropKey", dropHint.Find("Key").GetComponent<TMP_Text>());
+                GreyboxSceneSetup.SetReference(so, "_useKey", use.Find("Key").GetComponent<TMP_Text>());
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
 
@@ -1341,6 +1355,12 @@ namespace CloseTheDeal.Editor.Lanes
                     string path = AssetDatabase.GetAssetPath(selected);
                     if (!path.EndsWith(".prefab"))
                         continue;
+                    var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                    if (prefab.GetComponentInChildren<PlayerMotor>(true) != null || prefab.GetComponent<NotThrowable>() != null)
+                    {
+                        Debug.LogWarning($"[Pickups] Left {path} alone: it is a player or marked NotThrowable.");
+                        continue;
+                    }
 
                     MakeThrowable(path);
                     made++;
@@ -1646,7 +1666,7 @@ namespace CloseTheDeal.Editor.Lanes
             EditorApplication.update -= Pump;
             SessionState.SetBool(ActiveKey, false);
             int passes = CountPasses();
-            int minimum = _role == "solo" ? 28 : _role == "host" ? 4 : _role == "hud" ? 5 : 6;
+            int minimum = _role == "solo" ? 28 : _role == "host" ? 4 : _role == "hud" ? 8 : 6;
             if (passes < minimum)
                 Check($"the run got far enough to mean something (at least {minimum} passed checks)", false, $"{passes} passed");
             if (_role != "client" && _frame == 0)
@@ -1795,6 +1815,28 @@ namespace CloseTheDeal.Editor.Lanes
                 HudShots("hud_06_hands_full");
                 Check("the hands-full refusal asks for its sound", handsFullSounds > 0, $"HandsFull requested {handsFullSounds} time(s)");
             }
+
+            // A gamepad: one nudge of the right stick makes it the device in use, and every key name follows.
+            Gamepad pad = InputSystem.AddDevice<Gamepad>("ItemHudCheckPad");
+            InputSystem.QueueStateEvent(pad, new GamepadState { rightStick = new Vector2(0.3f, 0f) });
+            yield return 0.1f;
+            InputSystem.QueueStateEvent(pad, new GamepadState());
+            yield return 0.2f;
+            Check("a pad nudge makes the pad the device in use", ItemCarrier.UsingPad);
+            if (other != null)
+            {
+                me.LocalTake(other);
+                yield return 0.35f;
+                Check("on a pad the hands-full refusal names the pad's drop button", hud.PromptReading == "Hands full · D-pad down to drop", $"prompt reads \"{hud.PromptReading}\"");
+            }
+
+            HudShots("hud_08_pad_hands_full");
+            yield return LookFromNear(me, heavy != null ? heavy : chair, chair.transform.position);
+            HudShots("hud_09_pad_look");
+            InputSystem.RemoveDevice(pad);
+            InputSystem.QueueStateEvent(Keyboard.current ?? InputSystem.AddDevice<Keyboard>(), new KeyboardState(Key.G));
+            yield return 0.1f;
+            InputSystem.QueueStateEvent(Keyboard.current, new KeyboardState());
 
             me.LocalDrop();
             yield return 0.6f;
@@ -2575,6 +2617,15 @@ namespace CloseTheDeal.Editor.Lanes
             me.LocalTake(chairB);
             yield return t0.AddSeconds(24);
             Check("CLIENT: took a chair before leaving", me.Held == chairB);
+            ItemHud hud = UnityEngine.Object.FindAnyObjectByType<ItemHud>(FindObjectsInactive.Include);
+            if (hud != null)
+            {
+                ShowHudForCapture(hud);
+                yield return 0.3f;
+                Check("CLIENT: this client's own hands slot names what the host gave it", hud.HandsReading == chairB.Definition.DisplayName, $"slot reads \"{hud.HandsReading}\"");
+                HudShots("client_hud_hands");
+            }
+
             InstanceFinder.ClientManager.StopConnection();
             yield return 1f;
         }

@@ -31,8 +31,8 @@ namespace CloseTheDeal.Items
         /// <summary>Host only. A player has just taken the item.</summary>
         public virtual void ServerOnTaken(ItemCarrier by) { }
 
-        /// <summary>Host only. The item has just left play (used up, or fallen out of the building). Stop anything still running.</summary>
-        public virtual void ServerOnSentAway() { }
+        /// <summary>Host only. The item has just left play: used up (usedUp true), or fallen out of the building. Stop anything still running.</summary>
+        public virtual void ServerOnSentAway(bool usedUp) { }
 
         /// <summary>Host only. The item is back where it started, fresh, after being used up or lost.</summary>
         public virtual void ServerOnReturned() { }
