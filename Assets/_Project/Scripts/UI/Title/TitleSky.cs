@@ -36,6 +36,7 @@ namespace CloseTheDeal.UI.Title
         Camera _camera;
         RawImage _image;
         Canvas _canvas;
+        readonly Vector3[] _corners = new Vector3[4];
         RenderTexture _texture;
         bool _showing;
         Quaternion _base;
@@ -119,14 +120,16 @@ namespace CloseTheDeal.UI.Title
         /// <summary>The render texture matches the slot's size on screen, so the sky is drawn 1:1.</summary>
         void EnsureTexture()
         {
-            Rect r = _title.BackdropSlot.rect;
-            // Canvas units times the root canvas's scale factor = screen pixels (lossyScale is world units in a
-            // camera-space canvas, so it can't be used here).
+            // Measured from the slot's corners on screen, so it is 1:1 in an overlay canvas and in a camera canvas
+            // alike (the canvas scale factor alone came out at 2/3 of the slot in a camera canvas: a soft, upscaled sky).
             if (_canvas == null)
                 _canvas = _title.BackdropSlot.GetComponentInParent<Canvas>().rootCanvas;
-            float scale = _canvas.scaleFactor;
-            int w = Mathf.Max(16, Mathf.RoundToInt(r.width * scale));
-            int h = Mathf.Max(16, Mathf.RoundToInt(r.height * scale));
+            Camera eye = _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _canvas.worldCamera;
+            _title.BackdropSlot.GetWorldCorners(_corners);
+            Vector2 a = RectTransformUtility.WorldToScreenPoint(eye, _corners[0]);
+            Vector2 b = RectTransformUtility.WorldToScreenPoint(eye, _corners[2]);
+            int w = Mathf.Max(16, Mathf.RoundToInt(Mathf.Abs(b.x - a.x)));
+            int h = Mathf.Max(16, Mathf.RoundToInt(Mathf.Abs(b.y - a.y)));
             if (_texture != null && _texture.width == w && _texture.height == h)
                 return;
             if (_texture != null)
