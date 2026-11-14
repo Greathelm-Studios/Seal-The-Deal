@@ -38,6 +38,16 @@ namespace CloseTheDeal.UI
         [Tooltip("A run ends after this long without a hover; the next hover starts on the first step again.")]
         public float hoverRunResetSeconds = 0.6f;
 
+        [Header("Ambient bed (title and lobby)")]
+        [Tooltip("The seamless bed that plays under the title, its settings and the lobby reception.")]
+        public AudioClip ambience;
+        [Tooltip("The mixer group the bed plays through (Music).")]
+        public AudioMixerGroup ambienceOutput;
+        [Tooltip("The bed's level. Ships at 0: off. Raise it (0.3 is a quiet bed) to hear it; the Music slider scales it too.")]
+        [Range(0f, 1f)] public float ambienceLevel = 0f;
+        [Tooltip("Seconds to fade the bed in or out when the player reaches or leaves the menus.")]
+        public float ambienceFade = 1.5f;
+
         [Header("Slider")]
         public float sliderMinSemitones = -5f;
         public float sliderMaxSemitones = 12f;

@@ -23,6 +23,7 @@ namespace CloseTheDeal.Editor.Lanes
         public const string ItemClipFolder = "Assets/_Project/Audio/Items";   // world sounds for the pickups lane, same generator
         public const string WeaponClipFolder = "Assets/_Project/Audio/Weapons"; // gun, impact and glass sounds for the shooting lane
         const string ImportMark = "ctd-sound-import-1";   // written to a clip's importer once its settings have been applied
+        public const string AmbienceFolder = "Assets/_Project/Audio/Ambience";      // the menu bed: long, streamed
         public const string MixerPath = ClipFolder + "/GameMixer.mixer";
         public const string SetPath = "Assets/_Project/Resources/UI/UiSoundSet.asset";
 
@@ -44,7 +45,7 @@ namespace CloseTheDeal.Editor.Lanes
         // ----------------------------------------------------------------------------------- import settings
         static void ApplyImportSettings()
         {
-            foreach (string guid in AssetDatabase.FindAssets("t:AudioClip", new[] { ClipFolder, ItemClipFolder, WeaponClipFolder }))
+            foreach (string guid in AssetDatabase.FindAssets("t:AudioClip", new[] { ClipFolder, ItemClipFolder, WeaponClipFolder, AmbienceFolder }))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 var imp = AssetImporter.GetAtPath(path) as AudioImporter;
@@ -60,6 +61,14 @@ namespace CloseTheDeal.Editor.Lanes
                 s.loadType = AudioClipLoadType.DecompressOnLoad;            // tiny clips: no decode cost when a sound fires
                 s.compressionFormat = sting ? AudioCompressionFormat.ADPCM : AudioCompressionFormat.PCM;
                 s.sampleRateSetting = AudioSampleRateSetting.PreserveSampleRate;
+                if (path.StartsWith(AmbienceFolder))
+                {   // a minute-long loop: stream it compressed instead of holding 6 MB of PCM in memory
+                    imp.loadInBackground = true;
+                    s.preloadAudioData = false;
+                    s.loadType = AudioClipLoadType.Streaming;
+                    s.compressionFormat = AudioCompressionFormat.Vorbis;
+                    s.quality = 0.6f;
+                }
                 imp.defaultSampleSettings = s;
                 imp.SaveAndReimport();
             }
@@ -144,6 +153,9 @@ namespace CloseTheDeal.Editor.Lanes
             }
             AudioMixerGroup[] ui = mixer.FindMatchingGroups("Master/UI");
             if (set.output == null && ui.Length > 0) set.output = ui[0];
+            AudioMixerGroup[] music = mixer.FindMatchingGroups("Master/Music");
+            if (set.ambienceOutput == null && music.Length > 0) set.ambienceOutput = music[0];
+            if (set.ambience == null) set.ambience = AssetDatabase.LoadAssetAtPath<AudioClip>(AmbienceFolder + "/Ambience_MenuBed.wav");
             foreach (UiSoundEvent e in Enum.GetValues(typeof(UiSoundEvent)))
             {
                 if (e == UiSoundEvent.None) continue;
@@ -171,6 +183,8 @@ namespace CloseTheDeal.Editor.Lanes
             [UiSoundEvent.Confirm] = (0.12f, 0f), [UiSoundEvent.Select] = (0.12f, 0f), [UiSoundEvent.Back] = (0.12f, 0f),
             [UiSoundEvent.CountdownGo] = (0.12f, 0f), [UiSoundEvent.MatchWon] = (0.12f, 0f), [UiSoundEvent.MatchLost] = (0.12f, 0f),
             [UiSoundEvent.FloorOpened] = (0.12f, 0f), [UiSoundEvent.KeyBindSet] = (0.12f, 0f),
+            [UiSoundEvent.TitleAppear] = (1.0f, 0f), [UiSoundEvent.TransitionFrameZoom] = (0.5f, 0f),
+            [UiSoundEvent.TransitionCloudWipe] = (0.15f, 0.015f), [UiSoundEvent.TransitionPaneSlide] = (0.15f, 0f), [UiSoundEvent.TransitionFade] = (0.1f, 0f),
         };
 
         static void Tune(UiSoundSet.Entry en)

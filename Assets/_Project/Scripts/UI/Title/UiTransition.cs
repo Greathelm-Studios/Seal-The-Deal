@@ -221,6 +221,7 @@ namespace CloseTheDeal.UI.Title
             while (Playing)
                 yield return null;
             Playing = true;
+            UiSound.Play(SoundFor(kind));   // each kind has its own sound; FrameZoom's is the game-start sting
             UiTransition.Timing(kind, out float cover, out float reveal);
             // WHY a capped step and t = 0 on the first frame: the frame a press lands on is often a slow one (a
             // screen being built), and its whole delta would skip the cover phase: the screen change would pop.
@@ -241,6 +242,17 @@ namespace CloseTheDeal.UI.Title
             if (--_pending == 0)
                 Unblock();
             onDone?.Invoke();
+        }
+
+        static UiSoundEvent SoundFor(UiTransitionKind kind)
+        {
+            switch (kind)
+            {
+                case UiTransitionKind.CloudWipe: return UiSoundEvent.TransitionCloudWipe;
+                case UiTransitionKind.PaneSlide: return UiSoundEvent.TransitionPaneSlide;
+                case UiTransitionKind.FrameZoom: return UiSoundEvent.TransitionFrameZoom;
+                default: return UiSoundEvent.TransitionFade;
+            }
         }
 
         /// <summary>Seconds to advance this frame: real time, but never more than a 30 fps frame.</summary>

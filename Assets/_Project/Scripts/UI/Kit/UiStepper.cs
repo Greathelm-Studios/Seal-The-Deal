@@ -61,7 +61,7 @@ namespace CloseTheDeal.UI
             int next = (_index + direction + _options.Length) % _options.Length;
             SetWithoutNotify(next);
             _fx.Stamp();
-            UiSound.Play(UiSoundEvent.Select);
+            UiSound.PlaySlider((float)_index / (_options.Length - 1));   // a value control: the tick, pitched by the option
             Changed?.Invoke(_index);
         }
 

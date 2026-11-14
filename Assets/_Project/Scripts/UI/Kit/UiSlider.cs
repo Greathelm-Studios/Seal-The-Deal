@@ -80,6 +80,7 @@ namespace CloseTheDeal.UI
             base.OnDisable();
         }
 
+        // A press plays no Select: this pitched tick is the slider's answer, and a Select in the same frame would mask it.
         void OnMoved(float v)
         {
             DrawField();
@@ -114,13 +115,6 @@ namespace CloseTheDeal.UI
         {
             _pointerInside = false;
             base.OnPointerExit(eventData);
-        }
-
-        public override void OnPointerDown(PointerEventData eventData)
-        {
-            if (eventData.button == PointerEventData.InputButton.Left && IsInteractable())
-                UiSound.Play(UiSoundEvent.Select);
-            base.OnPointerDown(eventData);
         }
 
         public override void OnSelect(BaseEventData eventData)

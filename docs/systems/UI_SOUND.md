@@ -12,8 +12,12 @@ UiSound (hub, Scripts/UI/Kit, lane 5) --> UiSoundPlayer --> AudioSource pool -->
                                          UiSoundSet (events -> clip, volume, pitch variance, minimum gap)
 ```
 
-- Events: [UiSoundEvent.cs](../../Assets/_Project/Scripts/UI/Sound/UiSoundEvent.cs), 31 of them, names frozen with lane 5.
+- Events: [UiSoundEvent.cs](../../Assets/_Project/Scripts/UI/Sound/UiSoundEvent.cs), 36 of them, names agreed with lane 5. New ones are only ever appended: buttons and the sound set store the number.
 - Player: [UiSoundPlayer.cs](../../Assets/_Project/Scripts/UI/Sound/UiSoundPlayer.cs). Voice cap 8 (steals the voice nearest its end), 12 ms between any two sounds, a per-event minimum gap (hover 60 ms, slider 35 ms, hit marker 40 ms), nothing plays while the game is unfocused.
+- Two layers: control sounds (hover, focus, press, toggle, tick...) keep 12 ms apart, so one action never stacks two of them; screen sounds (Transition, PanelOpen, PanelClose, TitleAppear and the four transition kinds) play on top, so a button that opens a screen is heard as its Confirm and the screen's whoosh together.
+- Title sting: `TitleAppear` plays when the player reaches the title (from boot or back from a game), not when a dialog or Settings closes back onto it.
+- Transitions: each of lane 8's overlay transitions plays its own sound when it starts (`UiTransition.cs`): cloud wipe, pane slide, frame zoom (the game starting; this is the game-start sting, so there is no separate one) and the reduced-motion fade.
+- Ambient bed: `Assets/_Project/Audio/Ambience/Ambience_MenuBed.wav`, 64 s, seamless, streamed Vorbis on the Music bus. It plays under the title and its screens and in the lobby reception, fading in and out over 1.5 s. **It ships switched off**: `UiSoundSet.ambienceLevel` is 0; raise it (0.3 is a quiet bed) to hear it. The player's Music slider scales it.
 - Hover run: each hover in a run climbs the pentatonic scale (C D E G A, via pitch); a pause of 0.6 s starts the run again.
 - Slider: one tick clip, pitch follows the value from -5 to +12 semitones.
 - Set: [UiSoundSet](../../Assets/_Project/Scripts/UI/Sound/UiSoundSet.cs) asset at `Assets/_Project/Resources/UI/UiSoundSet.asset`, built by **Close the Deal > UI > Set Up Sound**. That menu also sets the clips' import settings: mono, decompress on load, PCM under 0.45 s and ADPCM above, preloaded.
@@ -57,6 +61,11 @@ Key: C major pentatonic (C D E G A), so any run of sounds is consonant. Confirms
 | `HitMarker` | 55 ms | -0.9 dBFS | -13.6 dB | combat | G7 tick (3.1 kHz), very short (full auto: 10 per second) |
 | `HitMarkerHead` | 55 ms | -0.9 dBFS | -15.7 dB | combat | C8 tick (4.2 kHz) over G7: brighter, precision hit |
 | `KillConfirm` | 200 ms | -4.6 dBFS | -9.0 dB | combat | E7 to B7 ticks + B6 ring (2.6 to 3.9 kHz) |
+| `TitleAppear` | 1100 ms | -4.0 dBFS | -11.0 dB | sting | C5 E5 G5 bloom to D6 over C4, airy |
+| `TransitionCloudWipe` | 300 ms | -8.1 dBFS | -14.0 dB | ui | soft swish across + A5 |
+| `TransitionPaneSlide` | 280 ms | -7.7 dBFS | -14.0 dB | ui | three glass taps E6 D6 C6 + slide |
+| `TransitionFrameZoom` | 860 ms | -6.1 dBFS | -11.0 dB | sting | rising whoosh landing on C5 G5 C6 E6: the game starts |
+| `TransitionFade` | 130 ms | -7.9 dBFS | -14.0 dB | ui | small puff of air (reduced motion) |
 
 Combat sounds sit at 2.6 to 4.2 kHz so they cut through gunfire; the tick stays short because full auto fires up to 10 hits a second.
 
@@ -116,6 +125,10 @@ SFX bus at 0 while UI plays: peak=0.224 OK UI unaffected
 rapid hover: 27724 requests in 1 s, started=17 dropped=27707, output peak=0.450 OK no clipping
 ```
 
+## The sound audit
+
+[10_sound_audit.md](../../ArtSource/UI/review/10_sound_audit.md) lists what every menu interaction plays and the fixes made (key-bind listen and set, steppers, slider clicks, screen whooshes). It was read from the code, not run.
+
 ## Item sounds (world, SFX bus)
 
 The same generator writes the pickups lane's 12 world sounds to `Assets/_Project/Audio/Items/Item_<Slot>.wav` (3D, routed to `Master/SFX` by that lane's setup; slots and timing in ITEMS.md "Item sounds"). **Unheard, like the rest.**
@@ -157,7 +170,7 @@ The same generator writes the shooting lane's 15 sounds to `Assets/_Project/Audi
 | `Death` | 750 ms | -3.5 dBFS | -17.0 dB | tone falling E4 to C3 over a low drop, 2D |
 | `Respawn` | 520 ms | -11.9 dBFS | -17.0 dB | C5 to G5 rise with air, 2D |
 
-The audition page (`ArtSource/UI/review/10_sound_audition.html`) was opened in a browser from a local web server on 2026-11-14: all 58 clips loaded and a play call succeeded. It was not opened straight from disk.
+The audition page (`ArtSource/UI/review/10_sound_audition.html`) groups every clip by where it plays and has a 20 s "walk through the menu" with the ambient bed under it. Opened in a browser from a local web server on 2026-11-14: all 64 clips (and the bed) loaded, the walk started, the bed faded in to 0.3. Not opened straight from disk.
 
 ## Regenerating
 
