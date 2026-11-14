@@ -71,14 +71,20 @@ namespace CloseTheDeal.Editor.Greybox
         /// <summary>
         /// Where the right wrist sits relative to the middle of the pistol's grip, in metres
         /// (right, up, forward in the gun's space), and how the hand is turned, in degrees.
-        /// The wrist is behind the grip, a little to the right and level with its upper half,
-        /// so the index finger lies under the trigger guard; the knuckle line leans with the
-        /// grip's 14 degree rake. Found by rendering the pose from the eye and from the left.
+        /// The wrist is behind the grip, a little to the right and level with its lower half;
+        /// the hand is turned 12 degrees inward and 8 degrees up, so it rises to the grip the
+        /// way the forearm does, the palm lies against the grip's right side, and the fingers
+        /// close round the front onto the left side with the index finger in the trigger guard.
+        /// WHY these and not more inward turn: the hand has to point nearly the way the forearm
+        /// does or the wrist is bent. An earlier 35 degree turn wrapped the grip well but left
+        /// the wrist cocked; the wrap now comes from tighter finger curls instead. Found by
+        /// rendering the pose from above, both sides, behind and the eye, and measuring the
+        /// angle between forearm and hand (about 12 degrees).
         /// A starting value only: move the GripHand object in the prefab and the tool leaves
         /// the prefab alone from then on.
         /// </summary>
-        static readonly Vector3 GripWristPosition = new(0.024f, 0.036f, -0.05f);
-        static readonly Vector3 GripWristTurn = new(14f, 0f, 0f);
+        static readonly Vector3 GripWristPosition = new(0.03f, 0.005f, -0.055f);
+        static readonly Vector3 GripWristTurn = new(-8f, -12f, 0f);
 
         /// <summary>
         /// Size of the pistol in the hand, as a fraction of the model's real size. The model

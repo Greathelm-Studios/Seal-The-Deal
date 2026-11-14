@@ -93,15 +93,19 @@ namespace CloseTheDeal.Player
         [Tooltip("How the hand bone is turned relative to its own knuckles. Worked out by the greybox tool from the model; leave it alone.")]
         [SerializeField] Quaternion _knuckleFrame = Quaternion.identity;
 
+        [Header("Arm")]
+        [Tooltip("How far the elbow is swung out to the side from where the idle pose hangs it, in degrees. 0 leaves the elbow under the gun, which bends the wrist sharply; higher swings it outward so the forearm lines up behind the gun.")]
+        [Range(-120f, 120f)] [SerializeField] float _elbowSwing = 50f;
+
         [Header("Grip")]
         [Tooltip("How far the middle, ring and little fingers close round the grip, in degrees at the knuckle, the middle joint and the last joint. 0 is a flat hand; about 90 at each is a tight fist. Raise the first two for a thinner grip.")]
-        [SerializeField] Vector3 _gripCurl = new(55f, 85f, 45f);
+        [SerializeField] Vector3 _gripCurl = new(80f, 95f, 50f);
 
         [Tooltip("How far the index finger closes, in degrees at the knuckle, the middle joint and the last joint. Less than the other fingers so it rests on the trigger.")]
-        [SerializeField] Vector3 _triggerCurl = new(30f, 55f, 25f);
+        [SerializeField] Vector3 _triggerCurl = new(50f, 70f, 35f);
 
         [Tooltip("How far the thumb closes across the grip, in degrees at its three joints.")]
-        [SerializeField] Vector3 _thumbCurl = new(20f, 20f, 15f);
+        [SerializeField] Vector3 _thumbCurl = new(45f, 35f, 25f);
 
         [Tooltip("Index finger joints, knuckle first. Filled in by the greybox tool.")]
         [SerializeField] Transform[] _triggerFinger;
@@ -223,6 +227,13 @@ namespace CloseTheDeal.Player
             _lowerArm.rotation = Quaternion.AngleAxis(elbowWanted - elbowNow, bend) * _lowerArm.rotation;
 
             _upperArm.rotation = Quaternion.FromToRotation(_hand.position - a, target - a) * _upperArm.rotation;
+
+            // Swing the elbow round the line from shoulder to wrist. The wrist is on that line,
+            // so it stays on the grip; only where the elbow hangs changes.
+            // WHY: the clip hangs the elbow straight under the gun, which brings the forearm up
+            // at the hand steeply and cocks the wrist. Out to the side it comes in behind the gun.
+            if (_elbowSwing != 0f)
+                _upperArm.rotation = Quaternion.AngleAxis(_elbowSwing, (target - a).normalized) * _upperArm.rotation;
 
             _hand.rotation = targetRotation * Quaternion.Inverse(_knuckleFrame);
 

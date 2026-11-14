@@ -223,9 +223,10 @@ MonoBehaviour:
   _hand: {fileID: 3372645192027545258}
   _foldedUpperArm: {fileID: 8384019534309585257}
   _knuckleFrame: {x: 0.7052342, y: -0.1407042, z: -0.16692701, w: -0.6745242}
-  _gripCurl: {x: 55, y: 85, z: 45}
-  _triggerCurl: {x: 30, y: 55, z: 25}
-  _thumbCurl: {x: 20, y: 20, z: 15}
+  _elbowSwing: 50
+  _gripCurl: {x: 80, y: 95, z: 50}
+  _triggerCurl: {x: 50, y: 70, z: 35}
+  _thumbCurl: {x: 45, y: 35, z: 25}
   _triggerFinger:
   - {fileID: 6558440009986398708}
   - {fileID: 5211485151596029861}
@@ -641,8 +642,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1395031171265033979}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.034791913, y: -0.0784113, z: -0.002738183, w: 0.99631006}
-  m_LocalPosition: {x: 0.082, y: -0.055, z: 0.32}
+  m_LocalRotation: {x: -0.018328413, y: -0.067863435, z: 0.13822599, w: 0.98790294}
+  m_LocalPosition: {x: 0.125, y: -0.135, z: 0.33}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -914,7 +915,7 @@ Transform:
   m_GameObject: {fileID: 2228068063312921095}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.17, y: -0.2, z: -0.08}
+  m_LocalPosition: {x: 0.19, y: -0.2, z: -0.13}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2243,8 +2244,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8583029181049066790}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.12186935, y: 0, z: 0, w: 0.99254614}
-  m_LocalPosition: {x: 0.024, y: 0.036, z: -0.05}
+  m_LocalRotation: {x: -0.06937434, y: -0.10427384, z: -0.007291537, w: 0.99209934}
+  m_LocalPosition: {x: 0.03, y: 0.005, z: -0.055}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

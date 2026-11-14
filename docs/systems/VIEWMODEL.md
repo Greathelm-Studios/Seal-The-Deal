@@ -13,13 +13,17 @@
 -->
 # Viewmodel (first-person arm)
 
-**Status:** Current (slice 1 of the weapon work, second pass: the gun is placed in the view the NorseFPS way and the arm reaches to it. Compiles; checked in still frames rendered in the Editor from the eye and from both sides. **This pass has not been seen in Play Mode or judged by a person**; the first pass was played by Alex and rejected as glitchy) · **Last updated:** 2026-11-13
+**Status:** Current (slice 1 of the weapon work, third pass: the gun is carried low and canted in a loose hold, the hand wraps the grip, and the gun moves with the player's own movement. The hold and carry were checked on 2026-11-14 in Editor renders of the prefab from the eye, above, both sides and behind, not in a play session. The movement was seen running in the Editor as host on 2026-11-14 in still frames only: standing, mid-jump and after landing, with the hand staying on the grip. **How the motion feels has not been judged by a person**, and sprint, strafe, lean and climb were not looked at) · **Last updated:** 2026-11-14
 
 In first person you see your own character's right arm, in the same suit and the same toon shading, holding a pistol one-handed to the right of the crosshair.
 
-- **Standing:** the gun sits still, lower right of centre, muzzle turned slightly in and up. The fist is closed round the grip with the index finger under the trigger guard.
-- **Turning:** the gun trails slightly behind the view and catches up.
-- **Running:** the gun bobs with each step; the bob fades out in the air and when you stop.
+- **Standing:** the gun is held low in the bottom right of the view, well clear of the crosshair, tipped about 16 degrees onto its side in a loose, lazy hold, and rises and falls very slightly as you breathe. The forearm comes in nearly straight behind the gun, with the wrist bent about 12 degrees. The palm lies against the right of the grip, the fingers close round the front onto its left side and the index finger sits in the trigger guard.
+- **Turning:** the gun trails slightly behind the view, tips into the turn and catches up.
+- **Setting off, stopping and strafing:** the gun hangs back from the direction you move and tips with a strafe, then swings a little past rest when you stop.
+- **Running:** the gun sways in a smooth arc with each step; the sway fades out in the air and when you stop. Above walking speed it is carried a little lower and turned in.
+- **Jumping and landing:** the gun sinks as you go up, lifts as you fall and dips on landing, deeper after a longer fall.
+- **Leaning:** the gun trails the slide of the lean and stays a little more upright than the tilted view.
+- **Climbing a ledge:** the gun drops out of the way and comes back up when you are over.
 - **Attack button:** the muzzle jumps up, the gun punches back and twists a little, and the hand goes with it. This is only the look: the pistol does not shoot anything yet (the attack button also still fires the old test blast).
 - **R:** the gun drops, tips muzzle-up and rolls onto its side, then comes back. There is no ammunition yet.
 - **Walls:** the arm is never cut by a wall, however close you stand.
@@ -37,7 +41,7 @@ Nothing reads the arm back, so it cannot desync and costs no bandwidth. Firing, 
 
 The approach is the NorseFPS project's: **the gun is placed, and the arm follows it.**
 
-1. `PlayerViewmodel` decides where the gun is this frame: the framing from the profile, plus look lag, walk bob, fire kick and the reload dip.
+1. `PlayerViewmodel` decides where the gun is this frame: the framing from the profile, plus look lag, movement weight, walk bob, sprint carry, climb drop, breathing, fire kick and the reload dip. Movement weight is measured from how the camera itself moved since the last frame, fed through a spring, so it needs nothing from the movement code beyond the state it already publishes. It runs after `PlayerCamera` each frame so it reads this frame's view.
 2. `ViewmodelArms` then slides the skeleton so the right shoulder sits on a fixed point below and right of the eye, bends the elbow so the wrist lands on the `GripHand` target on the gun (a two-bone solve ported from NorseFPS), turns the hand to that target, and closes each finger round the grip from an open hand.
 3. The left arm is shrunk to nothing; gunplay is one-handed.
 
@@ -69,15 +73,22 @@ In `DefaultViewmodel.asset`; changes show while playing.
 | Field of view | How big the arm and gun look. Lower = bigger and closer. 62, as in NorseFPS. |
 | **Gun position** | **The main framing dial**: where the grip sits from the eye (right, up, forward, metres). Keep it within about 0.4 m of the shoulder or the arm locks straight. |
 | Gun turn | Resting pitch, yaw and roll of the gun. NorseFPS's 4 degrees up and 9 degrees in. |
-| Shoulder position | Where the arm comes from. Lower and further back shows less upper arm. |
-| Look lag seconds / limit / settle | How far the gun trails a turn, the most it may trail, and how quickly it catches up. |
-| Bob height / side / steps per metre / fade | The walk bob. |
+| Shoulder position | Where the arm comes from. Level with the gun and behind it keeps the wrist straight; lower bends it. |
+| Look lag seconds / limit / settle / roll / shift | How far the gun trails a turn, the most it may trail, how quickly it catches up, and how much it tips and slides as it trails. |
+| Move lag seconds / speed limit | How far the gun is left behind by your movement, and the fastest movement it reacts to. |
+| Move spring speed / damping | How tight and how bouncy that is. Lower damping = more overshoot on stops and landings. |
+| Land bounce | How hard a landing dips the gun. |
+| Strafe roll / air tilt / lean counter roll | How far the gun tips in a strafe, while rising or falling, and how upright it stays in a lean. |
+| Sprint shift / turn / blend | The carry the gun moves to between walking and sprint speed. |
+| Climb drop / tilt / blend | How far the gun gets out of the way on a ledge. |
+| Breath height / seconds | The idle rise and fall. |
+| Bob height / side / roll / steps per metre / fade | The walk bob. |
 | Kick pitch / back / roll / recover | The shot kick. It moves the gun only, never the aim. |
 | Reload seconds / drop / tilt / roll | The reload move. |
 
-On the arms prefab (`ViewmodelArms`, **Grip** header): how far the gripping fingers, the trigger finger and the thumb close, in degrees per joint. The hand's seat on the gun is the `GripHand` object under `GunMount`: its blue axis is where the fingers point, its green axis runs from little finger to index finger.
+On the arms prefab (`ViewmodelArms`): **Elbow swing** under the **Arm** header is how far the elbow hangs out to the side. Under the **Grip** header: how far the gripping fingers, the trigger finger and the thumb close, in degrees per joint. The hand's seat on the gun is the `GripHand` object under `GunMount`: its blue axis is where the fingers point, its green axis runs from little finger to index finger.
 
-Where the starting numbers came from: NorseFPS frames its hand cannon at (0.18, -0.12, 0.70) m. This character's arm is 0.43 m long, so the gun is pulled in to 0.32 m along the same line from the eye; it lands on the same part of the screen. Bob and look-lag sizes are NorseFPS's; the kick is about 60% of its hand cannon's.
+Where the starting numbers came from: NorseFPS frames its hand cannon at (0.18, -0.12, 0.70) m. This character's arm is 0.43 m long, so the gun was first pulled in to 0.32 m along the same line from the eye. In play that put the gun at mid-height beside the crosshair with a wide slab of sleeve under it, so on 2026-11-14 (Harvey's request, "arm lower", "a lazy-like grip") the gun moved to (0.125, -0.135, 0.33), turned (-1, -8, 16), with the shoulder at (0.19, -0.20, -0.13); before that they were (0.082, -0.055, 0.32), (-4, -9, 0) and (0.17, -0.20, -0.08). The same day the hand was reseated: `GripHand` went from (0.024, 0.036, -0.05) pointing straight along the gun to (0.03, 0.005, -0.055) turned 12 degrees inward and 8 up, with tighter finger curls (grip 80/95/50, trigger 50/70/35, thumb 45/35/25), because before that the fingers hooked out in front of the grip and held nothing. The wrist was also badly bent (about 80 degrees between forearm and hand, measured): the shoulder sat far below the gun and the idle pose hangs the elbow straight down, so the forearm came up at the hand steeply. The shoulder is now level with the gun and behind it, and the arms prefab has an **Elbow swing** value (50 degrees) that swings the elbow out to the side. Bob and look-lag sizes are NorseFPS's; the kick is about 60% of its hand cannon's. The movement-weight numbers are first guesses, not play-tuned.
 
 ## Driving it from weapon code
 
@@ -91,11 +102,14 @@ Both do nothing on players the client does not control.
 
 ## Known limitations
 
-- **This pass is not seen in Play Mode and not judged by a person.** It was checked by posing the prefab in the Editor (rest, full kick, deepest reload) and rendering it from the eye, the left and the right: the wrist is on its target, the fist is round the grip, the left arm is gone. Sway, bob, the kick's timing and the camera stack have only been compiled.
-- **What made the first pass "glitchy" was not pinned down** beyond the reversed posing described above. If this pass still glitches in Play Mode, that is new information; say what it looks like.
+- **The motion's feel is not judged by a person.** The third pass was seen in Play Mode as host in still frames (standing, mid-jump, landed). Sprint carry, strafe tilt, the lean, the climb drop, the kick and the reload were not looked at in this pass, and nothing was seen from a joining client (the arm is local-only, so it should not differ).
+- **What made the first pass "glitchy" was not pinned down** beyond the reversed posing described above. One real cause of roughness was found and fixed in the third pass: the step bob had a hard corner at the top of every step.
+- **Crouch and slide have no gun motion.** They are on Adam's movement lane's branch, not here; when they merge, the gun will still trail the camera's drop but has no pose of its own for them.
+- **The arm is close to full reach.** At rest the wrist is about 3 cm short of the arm's 0.43 m; the shoulder follows half of the movement drift to keep the grip in the hand. Moving the gun further forward in the profile will straighten the arm.
 - **Temporary stand-in input.** `PlayerViewmodel.ReadTestInput` listens to the attack button and reads the R key straight from the keyboard, because nothing fires or reloads yet and the actions asset has no reload action. Real fix: the weapon code of slice 2 calls `Fire()` and `Reload()` and that method is deleted.
 - **The finger pose is one fixed grip**, set by eye for this pistol. Another weapon or a loose prop needs its own `GripHand` and curl values; that arrives with swapping the held item (slice 3).
-- **From the eye the hand is mostly hidden** behind the gun and the jacket cuff; the framing shows the back of the gun and the sleeve.
+- **The thumb does not cross to the left of the grip.** It lies along the right side under the slide; the curl can only close it about one axis. From the eye it reads as a relaxed thumb.
+- **The hand mesh has thin black slivers at the cuff and between fingers** in close side views (outline hull on sharply bent joints). Not visible from the eye at the current framing.
 - **The reload is a gun move, not a hand animation**: no magazine leaves the gun and the left hand never appears.
 - **The pistol uses the materials Unity made from its FBX** (plain lit, not the toon shader), so it has no outline.
 - **Layer 8 is now `Viewmodel`.** A branch that names layer 8 something else will clash on `ProjectSettings/TagManager.asset`.

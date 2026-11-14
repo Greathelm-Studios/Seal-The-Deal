@@ -6,6 +6,10 @@
 //  Modified  : Claude Fable 5.2, 2026-11-13 — framing and posing taken from NorseFPS at
 //              Alex's request: this now places the gun in the view (sway, bob, kick and the
 //              reload dip all move the gun) and the arms prefab reaches the hand to it.
+//  Modified  : Claude Fable 5.2, 2026-11-14 — Harvey: the view is "super unrefined", make
+//              it "in line with the movement and more clean". The gun now carries weight from
+//              the player's own movement (starts, stops, strafes, jumps, landings, leans), the
+//              step bob is a smooth arc, and it has a sprint carry, a climb drop and breathing.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Sits on the player prefab. For the player this client controls, and nobody
 //              else, it hangs the first-person arms on the camera, draws them with a camera
@@ -50,8 +54,24 @@ namespace CloseTheDeal.Player
     /// </code>
     /// </example>
     [DisallowMultipleComponent]
+    // WHY: the gun's motion is measured from where the camera is and how it is turned this
+    // frame. PlayerCamera (default order) places the camera in its LateUpdate, so this has to
+    // run after it or every reading is a frame old; ViewmodelArms solves the arm after both.
+    [DefaultExecutionOrder(PlaceOrder)]
     public sealed class PlayerViewmodel : MonoBehaviour
     {
+        /// <summary>After PlayerCamera (0), before ViewmodelArms' solve (100).</summary>
+        const int PlaceOrder = 50;
+
+        /// <summary>Longest slice the movement spring is advanced in, in seconds. Short enough to stay stable at the stiffest setting the profile allows.</summary>
+        const float SpringStep = 1f / 120f;
+
+        /// <summary>Share of the gun's movement drift that the shoulder follows, so the arm is not stretched past its reach.</summary>
+        const float ShoulderFollow = 0.5f;
+
+        /// <summary>Most slices per frame; a frame longer than this many slices is treated as that long, so a hitch cannot fling the gun.</summary>
+        const int MaxSpringSteps = 8;
+
         /// <summary>The layer the arms are on, so their own camera can draw them and nothing else. Named by the greybox tool.</summary>
         public const string LayerName = "Viewmodel";
 
@@ -87,6 +107,18 @@ namespace CloseTheDeal.Player
         float _bobPhase;
         float _bobAmount;
         float _bobAmountVelocity;
+        Vector3 _lastCameraPosition;
+        /// <summary>The movement the gun is currently feeling, in metres per second in view space (right, up, forward). Chases the eye's real velocity on a spring.</summary>
+        Vector3 _carry;
+        Vector3 _carryVelocity;
+        /// <summary>Last frame's upward eye speed, in metres per second; the fall speed at the moment of a landing.</summary>
+        float _lastVerticalSpeed;
+        bool _wasGrounded;
+        float _sprint;
+        float _sprintVelocity;
+        float _climb;
+        float _climbVelocity;
+        float _breathPhase;
         float _kick;
         /// <summary>Signed -1 or +1, picked per shot, so the kick's twist alternates sides.</summary>
         float _kickSide = 1f;
@@ -195,6 +227,13 @@ namespace CloseTheDeal.Player
             _lag = Vector2.zero;
             _lagVelocity = Vector2.zero;
             _bobAmount = 0f;
+            _lastCameraPosition = _baseCamera.transform.position;
+            _carry = Vector3.zero;
+            _carryVelocity = Vector3.zero;
+            _lastVerticalSpeed = 0f;
+            _wasGrounded = true;
+            _sprint = 0f;
+            _climb = 0f;
             _kick = 0f;
             _reloadElapsed = -1f;
 
@@ -239,25 +278,108 @@ namespace CloseTheDeal.Player
             _armsCamera.fieldOfView = _profile.FieldOfView;
 
             UpdateLag(dt);
+            UpdateCarry(dt);
             UpdateBob(dt);
+            UpdateStance(dt);
             _kick = Mathf.MoveTowards(_kick, 0f, dt / _profile.KickRecoverSeconds);
             // Squared so the gun snaps back fast at first and eases into rest.
             float kick = _kick * _kick;
             float reload = ReloadDepth(dt);
 
+            // One swing is two steps: the gun is furthest to a side, and lowest, as each foot
+            // lands. WHY sine squared for the height and not the absolute sine: the absolute
+            // value has a corner at the top of every step, which showed as a hard bounce.
             float bobSwing = Mathf.Sin(_bobPhase);
-            Vector3 bob = new Vector3(bobSwing * _profile.BobSide, -Mathf.Abs(bobSwing) * _profile.BobHeight, 0f) * _bobAmount;
+            Vector3 bob = new Vector3(bobSwing * _profile.BobSide, -bobSwing * bobSwing * _profile.BobHeight, 0f) * _bobAmount;
+            float breath = Mathf.Sin(_breathPhase) * _profile.BreathHeight * (1f - _bobAmount);
+            Vector3 drift = -_carry * _profile.MoveLagSeconds;
 
             Vector3 position = _profile.GunPosition + bob
+                // Trailing a turn slides the gun the way it is turned, not only twists it.
+                + new Vector3(_lag.y, -_lag.x, 0f) * _profile.LookLagShift
+                + drift
+                + _profile.SprintShift * _sprint
+                + Vector3.up * breath
                 + Vector3.back * (_profile.KickBack * kick)
-                + Vector3.down * (_profile.ReloadDrop * reload);
-            Quaternion rotation = Quaternion.Euler(_lag.x, _lag.y, 0f)
+                + Vector3.down * (_profile.ReloadDrop * reload + _profile.ClimbDrop * _climb);
+
+            // Rolls in view space: into a turn, behind a strafe, with the stride, and back
+            // against a lean. The camera's own roll is the lean's tilt.
+            float leanTilt = Mathf.DeltaAngle(0f, _baseCamera.transform.eulerAngles.z);
+            float roll = _lag.y * _profile.LookLagRoll
+                + _carry.x * _profile.StrafeRoll
+                - bobSwing * _profile.BobRoll * _bobAmount
+                - leanTilt * _profile.LeanCounterRoll;
+
+            Quaternion rotation = Quaternion.Euler(_lag.x + _carry.y * _profile.AirTilt, _lag.y, roll)
                 * Quaternion.Euler(_profile.GunTurn)
+                * Quaternion.Euler(_profile.SprintTurn * _sprint)
                 * Quaternion.Euler(
-                    -_profile.KickPitch * kick - _profile.ReloadTilt * reload,
+                    -_profile.KickPitch * kick - _profile.ReloadTilt * reload + _profile.ClimbTilt * _climb,
                     0f,
                     _profile.KickRoll * kick * _kickSide + _profile.ReloadRoll * reload);
-            _arms.SetPose(position, rotation, _profile.ShoulderPosition);
+            // WHY the shoulder goes part of the way with the drift: at rest the wrist is about
+            // 3 cm short of the arm's full reach, and a gun drifting forward and up together
+            // (falling while backing away) would pull the grip out of the hand.
+            _arms.SetPose(position, rotation, _profile.ShoulderPosition + drift * ShoulderFollow);
+        }
+
+        /// <summary>
+        /// Measures how the eye moved this frame and lets the gun feel it on a spring, so it
+        /// hangs back from a start, swings on past a stop and dips after a landing.
+        /// </summary>
+        /// <remarks>
+        /// WHY from the camera's own movement and not the body's velocity: the camera rides the
+        /// smoothed visual, so this never sees a prediction replay or a tick step, and it picks
+        /// up a lean's slide and a climb without asking the motor about either.
+        /// WHY the spring is advanced in short slices: one long step at a low frame rate
+        /// overshoots and can blow up; slices keep the same feel at any frame rate.
+        /// </remarks>
+        void UpdateCarry(float dt)
+        {
+            Transform view = _baseCamera.transform;
+            Vector3 now = view.position;
+            Vector3 velocity = view.InverseTransformDirection((now - _lastCameraPosition) / dt);
+            _lastCameraPosition = now;
+            // Also what keeps a respawn's jump across the map to a single small nudge.
+            Vector3 target = Vector3.ClampMagnitude(velocity, _profile.MoveLagSpeedLimit);
+
+            bool grounded = _motor.Grounded;
+            if (grounded && !_wasGrounded && _lastVerticalSpeed < 0f)
+            {
+                // A landing: push the gun down by how fast the fall was.
+                _carryVelocity.y -= _lastVerticalSpeed * _profile.MoveSpringSpeed * Tau * _profile.LandBounce;
+            }
+            _wasGrounded = grounded;
+            _lastVerticalSpeed = target.y;
+
+            float stiffness = _profile.MoveSpringSpeed * Tau;
+            float drag = 2f * _profile.MoveSpringDamping * stiffness;
+            int steps = Mathf.Clamp(Mathf.CeilToInt(dt / SpringStep), 1, MaxSpringSteps);
+            float step = Mathf.Min(dt, MaxSpringSteps * SpringStep) / steps;
+            for (int i = 0; i < steps; i++)
+            {
+                _carryVelocity += (stiffness * stiffness * (target - _carry) - drag * _carryVelocity) * step;
+                _carry += _carryVelocity * step;
+            }
+        }
+
+        /// <summary>Blends the sprint carry in above walking speed and the climb drop in while on a ledge, and advances the breath.</summary>
+        void UpdateStance(float dt)
+        {
+            MovementProfile movement = _motor.Profile;
+            MoveState state = _motor.State;
+
+            // Only a player running on their own feet: one skidding after a blast is not sprinting.
+            float sprint = state == MoveState.Grounded && movement.SprintSpeed > movement.WalkSpeed
+                ? Mathf.InverseLerp(movement.WalkSpeed, movement.SprintSpeed, _motor.PlanarSpeed)
+                : 0f;
+            _sprint = Mathf.SmoothDamp(_sprint, sprint, ref _sprintVelocity, _profile.SprintBlendSeconds, Mathf.Infinity, dt);
+
+            float climb = state == MoveState.Mantling ? 1f : 0f;
+            _climb = Mathf.SmoothDamp(_climb, climb, ref _climbVelocity, _profile.ClimbBlendSeconds, Mathf.Infinity, dt);
+
+            _breathPhase = Mathf.Repeat(_breathPhase + dt * Tau / _profile.BreathSeconds, Tau);
         }
 
         /// <summary>Advances the reload move and returns how deep into it the gun is, 0 at rest to 1 at the deepest point.</summary>
