@@ -1,0 +1,15 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b4c680890054bb9b9f10fda51ef0ee2, type: 3}
+  m_Name: RecordsInstaller
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Records.RecordsInstaller
+  _prefab: {fileID: 5869496220714656903, guid: 1ff5eac1693ee4c3e9172b5bef2cd34f, type: 3}
