@@ -386,10 +386,23 @@ namespace CloseTheDeal.Editor.Lanes
         internal static void PatchPlayerPrefab(GameObject character)
         {
             bool toolOwned = GeneratedAssetGuard.MayOverwrite(PlayerPrefabPath);
+            bool saved = false;
             GameObject root = PrefabUtility.LoadPrefabContents(PlayerPrefabPath);
             try
             {
                 Transform lean = root.transform.Find("Graphics/Lean");
+                PlayerOutfit existing = root.GetComponent<PlayerOutfit>();
+                if (existing != null && new SerializedObject(existing).FindProperty("_view").objectReferenceValue != null)
+                {
+                    // Only adds (AGENTS.md §4): an outfit already wired is someone's setup. One case is
+                    // reported: the old greybox figure still standing beside a real character model.
+                    if (lean != null && lean.Find("Outfit") != null && FindModelBody(lean, out _))
+                        Debug.LogWarning("[Lobby] Player.prefab has the old greybox outfit figure (Graphics/Lean/Outfit) beside the character model, so players draw twice. Delete the Outfit child and point PlayerOutfit's View at the model's OutfitView by hand; this tool leaves a wired prefab alone.");
+                    else
+                        Debug.Log("[Lobby] Player.prefab already has PlayerOutfit with a view; left as it is.");
+                    return;
+                }
+
                 OutfitView view = FindModelBody(lean, out Transform model) ? AttachToModel(lean, model) : AddOutfitCharacter(lean, character);
 
                 // Explicit null checks: `??` skips Unity's destroyed-object check.
@@ -401,13 +414,14 @@ namespace CloseTheDeal.Editor.Lanes
                 so.ApplyModifiedPropertiesWithoutUndo();
 
                 PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
+                saved = true;
             }
             finally
             {
                 PrefabUtility.UnloadPrefabContents(root);
             }
 
-            if (toolOwned)
+            if (saved && toolOwned)
                 GeneratedAssetGuard.MarkGenerated(AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath));
         }
 
@@ -443,9 +457,9 @@ namespace CloseTheDeal.Editor.Lanes
         /// <summary>An existing model gets the outfit on its own object. Nothing is added to the hierarchy and nothing is hidden; a figure this tool added earlier is removed.</summary>
         static OutfitView AttachToModel(Transform lean, Transform model)
         {
-            Transform old = lean.Find("Outfit");
-            if (old != null)
-                Object.DestroyImmediate(old.gameObject);
+            // Only adds (AGENTS.md §4): a greybox figure an earlier run added stays, and is reported.
+            if (lean.Find("Outfit") != null)
+                Debug.LogWarning("[Lobby] Player.prefab has both a character model and the lobby's greybox outfit figure (Graphics/Lean/Outfit). Delete the Outfit child by hand; this tool won't remove it.");
 
             var view = model.GetComponent<OutfitView>();
             if (view == null)
@@ -959,6 +973,32 @@ namespace CloseTheDeal.Editor.Lanes
 
             UiKitAssets.Set(Object.FindAnyObjectByType<FittingRoom>(), "_screen", screen);
             UiKitAssets.Set(Object.FindAnyObjectByType<LobbyHostControls>(), "_panel", panel);
+            BuildRemovedNotice(t);
+        }
+
+        /// <summary>A small canvas above the kit's title (20): the "the host removed you" plate a removed player sees over the title.</summary>
+        static void BuildRemovedNotice(UiTokens t)
+        {
+            var go = new GameObject("LobbyNotice", typeof(RectTransform)) { layer = 5 };
+            var canvas = go.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 30;
+            var scaler = go.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
+
+            RectTransform plate = Anchored(go.transform, "Removed", new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(980f, 64f));
+            PlateUnder(plate);
+            var group = plate.gameObject.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            var line = UiKitAssets.Instance<UiStatusLine>(CloseTheDeal.Editor.UI.UiKitComponents.StatusLine, plate, "Line");
+            UiKitAssets.Place((RectTransform)line.transform, 24f, 16f, 932f, ((RectTransform)line.transform).sizeDelta.y);
+
+            var notice = go.AddComponent<LobbyRemovedNotice>();
+            UiKitAssets.Set(notice, "_tokens", t);
+            UiKitAssets.Set(notice, "_group", group);
+            UiKitAssets.Set(notice, "_line", line);
         }
 
         /// <summary>A rect anchored to a corner or edge of the screen (anchor and pivot the same point), offset in reference pixels.</summary>

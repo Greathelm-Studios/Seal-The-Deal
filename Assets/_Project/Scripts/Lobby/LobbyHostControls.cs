@@ -1,4 +1,5 @@
 using CloseTheDeal.Player;
+using CloseTheDeal.UI;
 using UnityEngine;
 
 namespace CloseTheDeal.Lobby
@@ -20,6 +21,12 @@ namespace CloseTheDeal.Lobby
         void Awake()
         {
             LobbyInput.Enable();
+            if (_panel == null)
+            {
+                Debug.LogError($"[Lobby] {name}: no host player list in this scene, so Tab does nothing. Run Close the Deal > Lanes > Set Up Lobby (or Set Up Integration) to rebuild it.", this);
+                enabled = false;
+                return;
+            }
             _panel.Closed += GiveBack;
         }
 
@@ -27,14 +34,14 @@ namespace CloseTheDeal.Lobby
         {
             if (_panel.IsOpen)
             {
-                if (PlayerMotor.Local == null || !LobbyInput.Captured)
-                    _panel.Close(); // Left the game, or the game menu opened over it.
-                else if (LobbyInput.HostPanel.WasPressedThisFrame() || LobbyInput.Cancel.WasPressedThisFrame())
-                    _panel.Close();
+                if (PlayerMotor.Local == null)
+                    _panel.Close(); // Left the game.
+                else if (!GameMenu.OpenInGame && (LobbyInput.HostPanel.WasPerformedThisFrame() || LobbyInput.Cancel.WasPressedThisFrame()))
+                    _panel.Close(); // While the Esc menu is over it, the list waits.
                 return;
             }
 
-            if (LobbyInput.HostPanel.WasPressedThisFrame() && CanOpen())
+            if (LobbyInput.HostPanel.WasPerformedThisFrame() && CanOpen())
                 Open();
         }
 
@@ -54,11 +61,13 @@ namespace CloseTheDeal.Lobby
             _input = PlayerMotor.Local.GetComponent<PlayerInputReader>();
             if (_input != null)
                 _input.enabled = false;
+            GameMenu.HoldCursor(this); // Mouse clicks the list; Esc still opens the menu over it.
             _panel.Open(LobbyRoster.Instance);
         }
 
         void GiveBack()
         {
+            GameMenu.ReleaseCursor(this);
             if (_input != null)
                 _input.enabled = true;
             _input = null;

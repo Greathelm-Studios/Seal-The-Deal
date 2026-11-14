@@ -106,9 +106,9 @@ Ready / take back: `OnReadyChanged` (UI sound `LobbyReady` / `LobbyUnready`). Si
 
 ## Host controls
 
-The host presses **Tab** (pad: **View**) in reception to open **Players**, a kit screen listing everyone else with their firm. Choosing a player asks **Remove {name}?** (kit confirm dialog, **Keep them** focused first); **Remove** asks the roster, which checks again on the host that the asker is the host, that the player is not the host and is in the lobby, then disconnects them. Everyone hears the removal (`OnKicked`), the roster drops them as with any leave, and their game shows its usual lost-connection line.
+The host presses **Tab** (pad: **View**) in reception to open **Players**, a kit screen listing everyone else with their firm. Choosing a player asks **Remove {name}?** (kit confirm dialog, **Keep them** focused first); **Remove** asks the roster, which checks again on the host that the asker is the host, that the player is not the host and is in the lobby, then disconnects them. Everyone hears the removal (`OnKicked`) and the board drops them at once. The removed player is told first (`LocalRemovedByHost`, a kit plate over their title: "The host removed you from the lobby. You can join again from their Steam profile or an invite."), and the host disconnects them 0.3 s later so that message arrives.
 
-- **Proposal / known gaps:** a removed player can join again (a ban needs a lasting identity such as the Steam id, which is the netcode side's); the removed player's message is SteamLobby's generic "lost the connection" (a "removed by the host" line needs that script); no lock-the-lobby or move-between-firms yet.
+- **Proposal / known gaps:** a removed player can join again (a ban needs a lasting identity such as the Steam id, which is the netcode side's); no lock-the-lobby or move-between-firms yet.
 - The list closes on Tab, Backspace / B, Close, the game menu opening, or the host leaving.
 
 ## Look and sound
