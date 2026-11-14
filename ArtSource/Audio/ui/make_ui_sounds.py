@@ -781,20 +781,160 @@ def render_bed():
     return [v * (0.5 / pk) for v in out]
 
 
+# ------------------------------------------------------------------------------------------ recorded sounds
+# Any slot can take a recorded sound instead of the synthesised one. Put the original (16- or 24-bit PCM WAV, any
+# sample rate, mono or stereo) at ArtSource/Audio/recorded/<UI|Items|Weapons|Movement|Ambience>/<file name>, the
+# same file name the game uses (UI_Confirm.wav, Weapon_PistolShot.wav, Move_Footstep_Walk_01.wav ...), add its row
+# to ArtSource/Audio/LICENCES.md, and re-run this script. It is cut, faded, made mono 48 kHz and levelled to the
+# slot's loudness target like the synthesised sound it replaces, then written over the slot's file in Assets/, so the
+# game, its .meta and every event keep working with no other change. A recorded file with no licence row is refused.
+# Trims and fades per file: ArtSource/Audio/recorded/edits.json, e.g.
+#   {"Weapon_PistolShot.wav": {"start": 0.012, "end": 0.42, "fade_in_ms": 1, "fade_out_ms": 60, "gain_db": 0, "level": true}}
+# "level": false keeps the file's own loudness (only the gain_db and the peak ceiling apply).
+AUDIO_ART = os.path.normpath(os.path.join(HERE, ".."))
+REC_ROOT = os.path.join(AUDIO_ART, "recorded")
+REC_EDITS = os.path.join(REC_ROOT, "edits.json")
+LICENCES = os.path.join(AUDIO_ART, "LICENCES.md")
+MOVE_OUT = os.path.normpath(os.path.join(OUT, "..", "Movement"))
+
+# Lane 1's movement slots (no synthesised version: they stay empty until a recording is cleared).
+# name: (variations, loops, loudness target dB, what it is)
+MOVEMENT = {
+    "Move_Footstep_Walk": (4, False, -20.0, "one step, walking"),
+    "Move_Footstep_Run": (4, False, -17.0, "one step, running"),
+    "Move_Jump": (2, False, -18.0, "push-off and cloth"),
+    "Move_Land_Light": (2, False, -17.0, "landing from a hop"),
+    "Move_Land_Heavy": (2, False, -13.0, "landing from a fall"),
+    "Move_Slide_Start": (1, False, -16.0, "dropping into a slide"),
+    "Move_Slide_Loop": (1, True, -20.0, "sliding on a floor, seamless"),
+    "Move_Slide_Stop": (1, False, -17.0, "coming out of a slide"),
+    "Move_Mantle": (2, False, -17.0, "hands on a ledge, pulling up"),
+    "Move_Vault": (2, False, -17.0, "hand plant and swing over"),
+    "Move_Wind_Loop": (1, True, -24.0, "wind past the ears at speed, seamless"),
+}
+
+SOURCE = {}   # output file name -> "recorded" | "synthesised" | "missing", for the audition page and the print-out
+_EDITS = None
+
+
+def _edits():
+    global _EDITS
+    if _EDITS is None:
+        import json
+        _EDITS = json.load(open(REC_EDITS)) if os.path.exists(REC_EDITS) else {}
+    return _EDITS
+
+
+def licensed(file_name):
+    """True if LICENCES.md has a row for this file with its source, licence and URL filled in."""
+    if not os.path.exists(LICENCES):
+        return False
+    for line in open(LICENCES, encoding="utf-8"):
+        cells = [c.strip().strip("`") for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 7 and cells[0] == file_name:
+            source, licence, url = cells[2], cells[4], cells[5]
+            return bool(source and licence and url)
+    return False
+
+
+def read_wav_any(path):
+    """A PCM WAV of any width, rate and channel count as mono floats at 48 kHz (linear resampling)."""
+    with wave.open(path, "rb") as w:
+        ch, width, rate, n = w.getnchannels(), w.getsampwidth(), w.getframerate(), w.getnframes()
+        raw = w.readframes(n)
+    full = float(1 << (8 * width - 1))
+    vals = []
+    for i in range(0, len(raw), width):
+        b = raw[i:i + width]
+        if width == 1:
+            vals.append((b[0] - 128) / 128.0)
+        else:
+            v = int.from_bytes(b, "little", signed=True)
+            vals.append(v / full)
+    mono = [sum(vals[i:i + ch]) / ch for i in range(0, len(vals) - ch + 1, ch)]
+    if rate == SR:
+        return mono
+    out, step = [], rate / SR
+    t = 0.0
+    while t < len(mono) - 1:
+        k = int(t)
+        f = t - k
+        out.append(mono[k] * (1 - f) + mono[k + 1] * f)
+        t += step
+    return out
+
+
+def recorded(folder, file_name, target_db, ceiling, loops=False):
+    """The cleared recording for a slot, trimmed, faded and levelled, or None if there is none (or it is refused)."""
+    src = os.path.join(REC_ROOT, folder, file_name)
+    if not os.path.exists(src):
+        return None
+    if not licensed(file_name):
+        print(f"  << REFUSED {folder}/{file_name}: no complete row in ArtSource/Audio/LICENCES.md (source, licence, URL)")
+        SOURCE[file_name] = "refused"
+        return None
+    e = _edits().get(file_name, {})
+    buf = read_wav_any(src)
+    a = int(float(e.get("start", 0.0)) * SR)
+    b = int(float(e["end"]) * SR) if e.get("end") is not None else len(buf)
+    buf = buf[a:b]
+    if len(buf) < SR // 100:
+        print(f"  << REFUSED {folder}/{file_name}: under 10 ms left after the trim in edits.json (start {e.get('start')}, end {e.get('end')})")
+        SOURCE[file_name] = "refused"
+        return None
+    m = sum(buf) / max(1, len(buf))
+    buf = [x - m for x in buf]
+    if not loops:   # a loop keeps its own ends so its seam stays where the recording put it
+        fi = max(1, int(float(e.get("fade_in_ms", 2)) * SR / 1000))
+        fo = max(1, int(float(e.get("fade_out_ms", 20)) * SR / 1000))
+        for i in range(min(fi, len(buf))):
+            buf[i] *= i / fi
+        for i in range(min(fo, len(buf))):
+            buf[-1 - i] *= i / fo
+    gain = 10 ** (float(e.get("gain_db", 0.0)) / 20)
+    if e.get("level", True):
+        out = level(buf, target_db + float(e.get("gain_db", 0.0)), ceiling)
+    else:
+        pk = max(abs(x) for x in buf) or 1.0
+        out = [x * min(gain, ceiling / pk) for x in buf]
+    SOURCE[file_name] = "recorded"
+    return out
+
+
+def render_movement():
+    """Writes every movement slot that has a cleared recording; the rest stay missing (there is no synthesised set)."""
+    print(f"\n{'movement slot':24s} {'len ms':>7s} {'peak dBFS':>10s}  source")
+    for name, (variations, loops, target, _) in MOVEMENT.items():
+        for v in range(1, variations + 1):
+            fname = f"{name}_{v:02d}.wav" if variations > 1 else f"{name}.wav"
+            smp = recorded("Movement", fname, target, 0.9, loops)
+            if smp is None:
+                SOURCE.setdefault(fname, "missing")
+                print(f"{fname[:-4]:24s} {'':>7s} {'':>10s}  {SOURCE[fname]}")
+                continue
+            os.makedirs(MOVE_OUT, exist_ok=True)   # made only once a recording arrives: no empty folder in Assets
+            write_wav(os.path.join(MOVE_OUT, fname), smp)
+            print(f"{fname[:-4]:24s} {len(smp) / SR * 1000:7.0f} {20 * math.log10(max(abs(x) for x in smp)):10.1f}  recorded")
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     print(f"{'event':18s} {'len ms':>7s} {'peak dBFS':>10s} {'rms dBFS':>9s}  class  relation")
     bad = False
     for name, spec in EVENTS.items():
-        s = render(name, spec)
-        write_wav(os.path.join(OUT, f"UI_{name}.wav"), s)
+        fname = f"UI_{name}.wav"
+        s = recorded("UI", fname, LOUD_EVENT.get(name, LOUD[spec["cls"]]), PEAK[spec["cls"]])
+        if s is None:
+            s = render(name, spec)
+            SOURCE.setdefault(fname, "synthesised")   # a refused recording stays marked refused
+        write_wav(os.path.join(OUT, fname), s)
         pk = max(abs(x) for x in s)
         rms = math.sqrt(sum(x * x for x in s) / len(s))
         end = abs(s[-1])
         ok = pk <= 0.91 and end < 0.01 and len(s) / SR <= 1.2
         bad |= not ok
-        print(f"{name:18s} {len(s) / SR * 1000:7.0f} {20 * math.log10(pk):10.1f} {20 * math.log10(rms):9.1f}  {spec['cls']:6s} {spec['rel']}"
-              + ("" if ok else "  << CHECK"))
+        print(f"{name:18s} {len(s) / SR * 1000:7.0f} {20 * math.log10(pk):10.1f} {20 * math.log10(rms):9.1f}  {spec['cls']:6s} "
+              f"{SOURCE[fname].upper() + ' ' if SOURCE[fname] != 'synthesised' else ''}{spec['rel']}" + ("" if ok else "  << CHECK"))
     if "--table" in sys.argv:   # markdown for docs/systems/UI_SOUND.md
         rows = ["| Event | Length | Peak | RMS | Class | Pitch and relation |", "|---|---|---|---|---|---|"]
         for name, spec in EVENTS.items():
@@ -806,6 +946,13 @@ def main():
     print(f"\n{len(EVENTS)} files in {os.path.relpath(OUT)}")
     print(f"\n{'item slot':18s} {'len ms':>7s} {'peak dBFS':>10s} {'rms dBFS':>9s}")
     items = render_items()
+    for name in list(items):
+        fname = f"Item_{name}.wav"
+        target = -17.0 if name == "VentLoop" else ITEM_LOUD.get(name, -14.0)
+        rec = recorded("Items", fname, target, ITEMS[name][1] if name in ITEMS else 0.9, loops=name.endswith("Loop"))
+        SOURCE.setdefault(fname, "synthesised")
+        if rec is not None:
+            items[name] = rec
     for name, smp in items.items():
         write_wav(os.path.join(ITEM_OUT, f"Item_{name}.wav"), smp)
         pk = max(abs(x) for x in smp)
@@ -819,6 +966,12 @@ def main():
     print(f"\n{'weapon sound':18s} {'len ms':>7s} {'peak dBFS':>10s} {'rms dBFS':>9s}")
     os.makedirs(WEAPON_OUT, exist_ok=True)
     weapons = render_table(WEAPONS)
+    for name in list(weapons):
+        fname = f"Weapon_{name}.wav"
+        rec = recorded("Weapons", fname, WEAPON_LOUD.get(name, -14.0), WEAPONS[name][1])
+        SOURCE.setdefault(fname, "synthesised")
+        if rec is not None:
+            weapons[name] = rec
     for name, smp in weapons.items():
         write_wav(os.path.join(WEAPON_OUT, f"Weapon_{name}.wav"), smp)
         pk = max(abs(x) for x in smp)
@@ -827,7 +980,13 @@ def main():
         bad |= not ok
         print(f"{name:18s} {len(smp) / SR * 1000:7.0f} {20 * math.log10(pk):10.1f} {20 * math.log10(rms):9.1f}" + ("" if ok else "  << CHECK"))
     print(f"{len(weapons)} files in {os.path.relpath(WEAPON_OUT)}")
-    if "--bed" in sys.argv or not os.path.exists(BED_OUT):
+    render_movement()
+    bed_rec = recorded("Ambience", os.path.basename(BED_OUT), -26.0, 0.5, loops=True)
+    if bed_rec is not None:
+        write_wav(BED_OUT, bed_rec)
+    else:
+        SOURCE[os.path.basename(BED_OUT)] = "synthesised"
+    if bed_rec is None and ("--bed" in sys.argv or not os.path.exists(BED_OUT)):
         os.makedirs(os.path.dirname(BED_OUT), exist_ok=True)
         bed = render_bed()
         write_wav(BED_OUT, bed)
@@ -837,6 +996,10 @@ def main():
         print(f"ambient bed: {BED_SECONDS} s, peak -6.0 dBFS, rms {20 * math.log10(rms):.1f} dBFS, seam step {seam:.4f} vs largest step near it {typical:.4f}"
               + ("" if seam <= typical else "  << CHECK"))
         bad |= seam > typical
+    refused = [f for f, v in SOURCE.items() if v == "refused"]
+    bad |= bool(refused)
+    counts = {k: sum(1 for v in SOURCE.values() if v == k) for k in ("recorded", "synthesised", "missing", "refused")}
+    print(f"\nslots: {counts['recorded']} recorded, {counts['synthesised']} synthesised, {counts['missing']} missing, {counts['refused']} refused")
     print("audition page:", os.path.relpath(write_audition()))
     if "--analyse" in sys.argv:
         analysis_report()
@@ -954,11 +1117,15 @@ def write_audition():
     def esc(t):
         return t.replace("&", "&amp;").replace("<", "&lt;").replace('"', "&quot;")
 
+    def badge(file_name):
+        kind = SOURCE.get(file_name, "synthesised")
+        return f'<span class="b {kind}">{kind}</span>'
+
     def section(title, rows, extra=""):
         out = f"<h2>{esc(title)}</h2>{extra}<table>"
         for prefix, name, what in rows:
             out += (f'<tr><td><button class="p" data-src="{src(prefix, name)}">Play</button></td>'
-                    f"<td><b>{name}</b></td><td>{esc(what)}</td></tr>\n")
+                    f"<td><b>{name}</b></td><td>{badge(f'{prefix}_{name}.wav')}</td><td>{esc(what)}</td></tr>\n")
         return out + "</table>"
 
     bed = os.path.relpath(BED_OUT, os.path.dirname(page)).replace(os.sep, "/")
@@ -967,20 +1134,34 @@ def write_audition():
         body += section(title, rows)
     body += ('<h2>Ambient bed (title and lobby)</h2><p>64 s, seamless, on the Music bus. <b>It ships switched off</b> '
              '(level 0 in UiSoundSet); this is how it would sound raised to a quiet level.</p>'
-             f'<p><button id="bed" data-src="{bed}">Play the bed (loops)</button></p>')
+             f'<p><button id="bed" data-src="{bed}">Play the bed (loops)</button> {badge(os.path.basename(BED_OUT))}</p>')
     item_desc = dict({k: v[2] for k, v in ITEMS.items()}, VentLoop="gas hiss, seamless loop")
     body += section("Items in the world", [("Item", n, d) for n, d in item_desc.items()])
     body += section("Weapons in the world", [("Weapon", n, f"{WEAPONS[n][0] * 1000:.0f} ms · {WEAPONS[n][2]}") for n in WEAPONS],
                     '<p><button id="burst">Play AR-15 at 10 a second</button></p>')
+    body += "<h2>Movement (lane 1)</h2><p>No synthesised versions: these slots stay silent until recordings are cleared and dropped in.</p><table>"
+    for name, (variations, loops, _, what) in MOVEMENT.items():
+        for v in range(1, variations + 1):
+            fname = f"{name}_{v:02d}.wav" if variations > 1 else f"{name}.wav"
+            path = os.path.relpath(os.path.join(MOVE_OUT, fname), os.path.dirname(page)).replace(os.sep, "/")
+            play = (f'<button class="p" data-src="{path}">Play</button>' if SOURCE.get(fname) == "recorded"
+                    else '<button disabled>Play</button>')
+            body += f"<tr><td>{play}</td><td><b>{fname[:-4]}</b></td><td>{badge(fname)}</td><td>{esc(what)}{' (loops)' if loops else ''}</td></tr>\n"
+    body += "</table>"
     walk = ",".join(f'[{t:.2f},"{src(p, n)}",{semi:.2f},"{esc(note)}"]' for t, p, n, semi, note in WALK)
     burst = src("Weapon", "AR15Shot")
     html = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Seal the Deal: sound audition</title>
 <style>body{{font:16px/1.5 -apple-system,sans-serif;color:#111B38;background:#F3F4F4;max-width:920px;margin:32px auto;padding:0 16px}}
 h1{{font-weight:300;letter-spacing:.06em}}h2{{margin-top:32px;border-bottom:1px solid #C9CED3}}table{{border-collapse:collapse;width:100%}}
 td{{padding:4px 12px 4px 0;vertical-align:middle}}button{{font:inherit;padding:4px 14px;border:1px solid #111B38;background:#fff;color:#111B38;border-radius:4px;cursor:pointer}}
-button:hover{{background:#244FB9;color:#F3F4F4}}p{{max-width:70ch}}#now{{min-height:1.5em;font-weight:600;color:#244FB9}}</style></head><body>
+button:hover{{background:#244FB9;color:#F3F4F4}}button[disabled]{{opacity:.35;cursor:default}}
+.b{{font-size:13px;padding:1px 8px;border-radius:10px;border:1px solid #C9CED3;white-space:nowrap}}.b.recorded{{background:#244FB9;color:#F3F4F4;border-color:#244FB9}}
+.b.synthesised{{background:#fff;color:#111B38}}.b.missing,.b.refused{{background:#FF9E1B;color:#111B38;border-color:#FF9E1B}}p{{max-width:70ch}}#now{{min-height:1.5em;font-weight:600;color:#244FB9}}</style></head><body>
 <h1>SEAL THE DEAL · sound audition</h1>
-<p><b>Nobody has listened to these yet</b>: they were synthesised and measured only. Start with the walk: it plays the menu
+<p>Each slot says where its sound came from: <span class="b synthesised">synthesised</span> (made by the generator),
+<span class="b recorded">recorded</span> (a cleared library recording, levelled to the same loudness) or
+<span class="b missing">missing</span>. As recordings arrive, the same buttons play them, so the two can be compared.</p>
+<p>The synthesised set was judged too artificial; recordings are being sourced. Start with the walk: it plays the menu
 the way a player meets it in their first minute, with the ambient bed under the title. Then play any group on its own.
 Note any that are harsh, too long, too alike, or wrong for what the player just did.</p>
 <p><button id="walk">Walk through the menu (25 s)</button> <button id="stop">Stop</button></p><p id="now"></p>
