@@ -69,6 +69,12 @@ namespace CloseTheDeal.Editor.Lanes
                 parts.Add("ProfileKeeper");
             }
 
+            if (Object.FindAnyObjectByType<LocalDeath>(FindObjectsInactive.Include) == null)
+            {
+                Undo.AddComponent<LocalDeath>(host);
+                parts.Add("LocalDeath");
+            }
+
             EnsureContent(parts);
             AddWithAsset<MatchSecretary>(host, "_lines", AssetDatabase.LoadAssetAtPath<MatchSecretaryLines>(LinesPath), parts);
             AddWithAsset<FirstRunHints>(host, "_hints", AssetDatabase.LoadAssetAtPath<OnboardingHints>(HintsPath), parts);
@@ -234,6 +240,7 @@ namespace CloseTheDeal.Editor.Lanes
         static MatchPhase? _phaseAtJoin;
         static readonly List<string> Said = new();
         static readonly List<string> Hinted = new();
+        static readonly List<DeathReport> Downs = new();
 
         [MenuItem("Close the Deal/Lanes/Gaps/Run Records Check (solo)")]
         static void RunFromMenu() => Begin("solo", "Temp/GapsRun");
@@ -315,6 +322,7 @@ namespace CloseTheDeal.Editor.Lanes
             Application.targetFrameRate = 60;
             Application.logMessageReceived += CountProfileErrors;
             Subtitles.Shown += line => { Said.Add(line.Moment); Note($"said ({line.Speaker}, {line.Moment}): {line.Text}"); };
+            LocalDeath.Down += report => { Downs.Add(report); Note($"down: {report.Kind} by {report.KillerClientId}, back in {report.RespawnSeconds:0.#} s on {report.ComesBackOn}"); };
             FirstRunHints.HintShown += hint => { Hinted.Add(hint.Id); Note($"hint ({hint.Id}): {hint.Text}"); };
             Steps.Push(_role == "client" ? ClientScript() : _role == "host" ? HostScript() : SoloScript());
         }
@@ -682,6 +690,9 @@ namespace CloseTheDeal.Editor.Lanes
             Check("CLIENT: the host left mid-match: nothing written, lines cleared", P(ProfileStat.MatchesPlayed) == matches && Records.Lines.Count == 0 && !File.Exists(ProfileStore.FilePath + ".tmp"), ShowProfile());
             Check("CLIENT: no profile or records errors in the log", _profileErrors == 0, _profileErrors.ToString());
             Check("CLIENT: the secretary called the window kill and the loss", Said.Contains("WindowKill") && Said.Contains("Lost"), string.Join(", ", Said));
+            Check("CLIENT: the death report named the host as killer with a 5 s wait, then the window kill with none",
+                Downs.Count >= 2 && Downs[0].Kind == KillKind.Killed && Downs[0].KillerClientId == 0 && Downs[0].RespawnSeconds > 0f && Downs[1].Kind == KillKind.KnockedOut && Downs[1].RespawnSeconds == 0f,
+                Downs.Count + " reports");
             Check("CLIENT: the death and fall hints showed once each", Hinted.FindAll(h => h == "died").Count == 1 && Hinted.FindAll(h => h == "fell-out").Count == 1, string.Join(", ", Hinted));
         }
 

@@ -24,7 +24,8 @@ namespace CloseTheDeal.Profile
         BestFloor,
         MostKillsInMatch,
         WinStreak,
-        BestWinStreak
+        BestWinStreak,
+        ThrowHits
     }
 
     /// <summary>How one finished match went for this player, newest first in the profile's history.</summary>

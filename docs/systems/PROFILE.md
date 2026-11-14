@@ -4,7 +4,7 @@
 
 ## What the player sees
 
-Nothing drawn yet. Every finished match is kept on this PC: matches, wins, losses, kills, deaths, falls, window kills, briefcase pick-ups and steals, floors opened, throws, time with the briefcase, time played, best floor, most kills in a match, current and best win streak, and the last 20 matches. Quit and relaunch: it is all still there. It also remembers which first-run hints a player has seen.
+Nothing drawn yet. Every finished match is kept on this PC: matches, wins, losses, kills, deaths, falls, window kills, briefcase pick-ups and steals, floors opened, throws and throws that hit, time with the briefcase, time played, best floor, most kills in a match, current and best win streak, and the last 20 matches. Quit and relaunch: it is all still there. It also remembers which first-run hints a player has seen.
 
 ## Rules
 

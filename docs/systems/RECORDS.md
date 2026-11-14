@@ -34,7 +34,7 @@ FishNet broadcasts, not a NetworkObject: `MatchRecords` is a plain scene object,
 - Carry time ends when the briefcase leaves the carrier's hands, the carrier leaves, or the match ends.
 - Best floor is sampled by the host every **Floor Check Seconds** (default 0.5 s) and also rises when the carrier opens a floor.
 - **Only a finished match is recorded.** The host leaving, the client leaving or the match closing sends no final record.
-- Throws count items thrown (`ReleaseKind.Thrown`), not throws that hit: nothing reports a landed throw yet.
+- Throws count items thrown (`ReleaseKind.Thrown`); `ThrowHits` counts those that hit a player of the other firm.
 
 ## Designer values
 
@@ -56,22 +56,25 @@ On `MatchRecords.Instance` (namespace `CloseTheDeal.Records`), every machine. Re
 | `Kill` | `Action<KillEntry>` | `VictimClientId`, `KillerClientId` (-1 = nobody), `Kind`: `Killed`, `KnockedOut` (window kill), `Fell`, `Died`. |
 | `FinalRecord` | `Action<MatchFinal>` | This player's own record: `Winner`, `Reason` (`MatchEndReason` as byte), `EndSeconds`, `Players`, `Line`. Once per match. |
 
-`MatchLine`: `ClientId`, `Firm`, `Kills`, `Deaths`, `Falls`, `WindowKills`, `Pickups`, `Steals`, `FloorsOpened`, `Throws`, `CarrySeconds`, `SecondsPlayed` (set at the end), `BestFloor`.
+`MatchLine`: `ClientId`, `Firm`, `Kills`, `Deaths`, `Falls`, `WindowKills`, `Pickups`, `Steals`, `FloorsOpened`, `Throws`, `ThrowHits` (thrown items that hit a rival, from the pickups lane's `Pickup.ServerThrowLanded`), `CarrySeconds`, `SecondsPlayed` (set at the end), `BestFloor`.
+
+### Death report (for the combat HUD's death card)
+
+`LocalDeath` (same object, this machine's player only): `Down(DeathReport)` with `Kind`, `KillerClientId` (-1 = nobody), `RespawnSeconds` (the body's respawn time; 0 for a fall, which puts you back at once) and `ComesBackOn` ("Floor 4", or the checkpoint's name for a fall); `Back` when they are up again. Built from the host's kill-feed line, so it fires only while a match runs. A death card gives way to the result when `MatchDirector.OnMatchEnded` fires. Lane 2 draws it (agreed).
 
 Firm colour and name: `MatchDirector.Instance.ColourFor(line.Firm)`, `FirmName(line.Firm)`.
 
 ## Scripts
 
-[Assets/_Project/Scripts/Records/](../../Assets/_Project/Scripts/Records/): `MatchLine.cs` (data and wire messages), `MatchRecords.cs` (every machine), `MatchRecords.Host.cs` (counting).
+[Assets/_Project/Scripts/Records/](../../Assets/_Project/Scripts/Records/): `MatchLine.cs` (data and wire messages), `MatchRecords.cs` (every machine), `MatchRecords.Host.cs` (counting), `LocalDeath.cs` (death report).
 
 ## Setup
 
-**Close the Deal > Lanes > Gaps > Add Records And Profile To Open Scene** adds a **Records** object with `MatchRecords` and `ProfileKeeper` if missing. From the shell, `-executeMethod CloseTheDeal.Editor.Lanes.GapsLaneSetup.AddToIntegrationFromCommandLine` adds them to `Lane_Integration.unity` and saves it. **Run Records Check (solo)** on the same menu plays the scene by script; host and client runs are in [GapsLaneSetup.cs](../../Assets/_Project/Editor/Lanes/GapsLaneSetup.cs).
+**Close the Deal > Lanes > Gaps > Add Records And Profile To Open Scene** adds a **Records** object with `MatchRecords`, `ProfileKeeper`, `LocalDeath`, `MatchSecretary` and `FirstRunHints` if missing, and creates the secretary's lines and the hints assets if missing. From the shell, `-executeMethod CloseTheDeal.Editor.Lanes.GapsLaneSetup.AddToIntegrationFromCommandLine` adds them to `Lane_Integration.unity` and saves it. **Run Records Check (solo)** on the same menu plays the scene by script; host and client runs are in [GapsLaneSetup.cs](../../Assets/_Project/Editor/Lanes/GapsLaneSetup.cs).
 
 ## Known limitations
 
 - **Names:** without Steam every player's name is "(no Steam)" (the reception board's own fallback), so a local test's feed reads oddly.
 - **A dropped client who rejoins starts a new line**: identity is the connection, not the Steam id.
-- **Throws landed** isn't counted; it needs a host-side hit report from the pickups lane.
 - **Fall-outs are heard from `FirmMember.OnFellOut`**, an observers message the host also receives as its own client. A dedicated server with no local player would miss falls; the game has none.
 - Nothing here is seen over Steam, on two computers, or with more than one client.

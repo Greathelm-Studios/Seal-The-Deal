@@ -28,6 +28,8 @@ namespace CloseTheDeal.Records
         public ushort FloorsOpened;
         /// <summary>Items this player threw.</summary>
         public ushort Throws;
+        /// <summary>Thrown items that hit a rival player.</summary>
+        public ushort ThrowHits;
         /// <summary>Whole seconds this player held the briefcase.</summary>
         public ushort CarrySeconds;
         /// <summary>Whole seconds this player was in the match (from the start, or from joining late).</summary>

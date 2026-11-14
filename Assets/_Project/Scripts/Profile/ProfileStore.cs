@@ -132,6 +132,7 @@ namespace CloseTheDeal.Profile
             profile.Add(ProfileStat.Steals, line.Steals);
             profile.Add(ProfileStat.FloorsOpened, line.FloorsOpened);
             profile.Add(ProfileStat.Throws, line.Throws);
+            profile.Add(ProfileStat.ThrowHits, line.ThrowHits);
             profile.Add(ProfileStat.CarrySeconds, line.CarrySeconds);
             profile.Add(ProfileStat.SecondsPlayed, line.SecondsPlayed);
             profile.Best(ProfileStat.BestFloor, line.BestFloor);

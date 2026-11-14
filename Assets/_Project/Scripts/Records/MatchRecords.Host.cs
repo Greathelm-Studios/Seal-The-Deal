@@ -47,6 +47,7 @@ namespace CloseTheDeal.Records
             FirmMember.OnFellOut += HostFellOut;
             FirmMember.OnRosterChanged += HostRosterChanged;
             ItemCarrier.ServerItemTaken += HostItemTaken;
+            Pickup.ServerThrowLanded += HostThrowLanded;
         }
 
         void HostUnhookNetwork(NetworkManager net)
@@ -58,6 +59,7 @@ namespace CloseTheDeal.Records
             FirmMember.OnFellOut -= HostFellOut;
             FirmMember.OnRosterChanged -= HostRosterChanged;
             ItemCarrier.ServerItemTaken -= HostItemTaken;
+            Pickup.ServerThrowLanded -= HostThrowLanded;
             foreach (Pickup pickup in _watchedThrows)
             {
                 if (pickup != null)
@@ -394,6 +396,20 @@ namespace CloseTheDeal.Records
 
             MatchLine line = HostLine(thrower);
             line.Throws = Add(line.Throws);
+            HostPut(line);
+        }
+
+        void HostThrowLanded(Pickup item, int throwerClientId, GameObject hit, float damage)
+        {
+            FirmMember thrower = MemberOf(throwerClientId);
+            if (!IsHostCounting || thrower == null || hit == null)
+                return;
+            FirmMember struck = hit.GetComponentInParent<FirmMember>();
+            if (struck == null || struck.Owner == null || Rival(struck, throwerClientId) == null)
+                return;
+
+            MatchLine line = HostLine(thrower);
+            line.ThrowHits = Add(line.ThrowHits);
             HostPut(line);
         }
 
