@@ -985,13 +985,13 @@ namespace CloseTheDeal.Editor.Lanes
             yield return new Until(() => roster.ReadyCount == 1, 5f, "ready again");
 
             var panel = Object.FindAnyObjectByType<MatchMenuPanel>(FindObjectsInactive.Include);
-            var button = (UnityEngine.UI.Button)typeof(MatchMenuPanel).GetField("_actionButton", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(panel);
+            var button = (CloseTheDeal.UI.UiButton)typeof(MatchMenuPanel).GetField("_action", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(panel);
             int countdowns = _countdowns, builds = _builds, requested = Flow.StartsRequested, taken = Flow.StartsTaken;
             roster.RequestStart();
-            button.onClick.Invoke();
+            button.Activate();
             yield return 1.5f;
             roster.RequestStart();
-            button.onClick.Invoke();
+            button.Activate();
             yield return 2f;
             Check("both start paths: exactly one match started", _countdowns - countdowns == 1 && _builds - builds == 1, $"countdowns {_countdowns - countdowns}, builds {_builds - builds}");
             Check("both start paths: the desk's start was refused and the desk reopened", Flow.StartsRequested - requested == 1 && Flow.StartsTaken == taken && !roster.RunInProgress,
