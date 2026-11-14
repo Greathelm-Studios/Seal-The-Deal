@@ -6,7 +6,7 @@
   Reviewed  : NOT YET REVIEWED BY A HUMAN
   Summary   : Owns the eye-card art contract, setup, tuning and validation.
   Modified  : Claude Opus 5.5 (Claude Code), 2026-11-13 — Alex's eye sheet replaces the
-              placeholders; cards 1.4x larger and lower, per Alex's concept; green irises.
+              placeholders; cards 1.75x the first pass, tilted and set like Alex's references; green irises.
 -->
 # Character eyes
 
@@ -15,6 +15,7 @@
 STDMC has two large angular eyes with heavy upper lids, green irises and a bored resting look.
 They sit right at the fringe's lower edge with strands of hair across them, as in Alex's concept sheet.
 The eyes blink at uneven intervals, glance toward travel and aim, and lag behind head turns.
+Every few seconds they also glance somewhere at random (further sideways than up or down), hold it briefly, and come back to centre.
 Hit or knockback wins over the airborne look, followed by the focused sprint look and the bored default.
 Expressions change in hard cuts.
 
@@ -72,7 +73,7 @@ Assign replacements to the three texture slots on [STDMC_Eyes.mat](../../Assets/
 - [STDMC_Toon.prefab](../../Assets/_Project/Art/Characters/STDMC/STDMC_Toon.prefab) carries the cards and driver into the player through its existing nested prefab.
 - [CharacterEyeSetup.cs](../../Assets/_Project/Editor/Art/CharacterEyeSetup.cs) provides `Close the Deal > Art > Add STDMC Eye Cards` in STDMC_Toon’s Prefab Mode. It adds missing setup to a bare prefab after confirmation and leaves existing cards alone. Save the prefab in Prefab Mode to keep the addition.
 
-The tool resolves the head through the humanoid avatar and samples the baked skin mesh in the bind pose, across both 73 × 56 mm footprints (16 × 16 segments), centred 1.605 m up and 64 mm apart.
+The tool resolves the head through the humanoid avatar and samples the baked skin mesh in the bind pose, across both 91 × 70 mm footprints (16 × 16 segments), centred 1.607 m up and 62.5 mm apart, each turned 7° in the face plane so its outer corner rises (Alex's placement reference, compared in [14](../../ArtSource/Toon/review/14_stdmc_eyes_vs_placement_ref.png)). The cards overlap in the middle; only their transparent margins do.
 The mesh vertices sit 3 mm forward of the sampled skin, with a small raster depth bias to keep the eye art clear of the face; at 1.5 mm and 8 segments the larger cards let the cheek show through.
 The tool only adds cards to a prefab that has none. To refit after changing its size constants, delete the two cards, the `CharacterEyes` component on the prefab root and the two `STDMC_Eye*.asset` meshes, then run it again.
 Hair still participates in the ordinary depth test.
@@ -85,6 +86,9 @@ Hair still participates in the ordinary depth test.
 | Blink duration | 0.16 s | Total time through half, closed and half. |
 | Glance range | 0.16 eye widths | Maximum horizontal or vertical pupil displacement, expressed in eye widths. |
 | Glance speed | 1.6 eye widths/s | How quickly the pupil reaches the new direction. |
+| Look around interval | 3–7 s | Random rest between idle glances. |
+| Look around hold | 0.4–1.2 s | How long an idle glance is held before returning to centre. |
+| Look around reach | 0.6 | Share of the glance range an idle glance uses. 0 turns them off. Running and turning still win. |
 | Wince threshold | 0.35 | Fraction of the stagger signal that switches to the wince. Knockback always wins. |
 | Wide threshold | 0.5 | Fraction of the airborne pose that switches to wide eyes. |
 | Focus threshold | 0.5 | Fraction of the speed gap between a walk and full sprint where eyes narrow. |

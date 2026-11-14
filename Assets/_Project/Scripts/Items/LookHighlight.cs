@@ -21,7 +21,9 @@ namespace CloseTheDeal.Items
         {
             foreach (Renderer renderer in renderers)
             {
-                if (renderer == null || !renderer.enabled)
+                // Cleared even while hidden (a carried prop hides its own meshes), so nothing stays
+                // brightened once it is shown again; only turned on where it can be seen.
+                if (renderer == null || (on && !renderer.enabled))
                     continue;
 
                 Material material = renderer.sharedMaterial;

@@ -274,6 +274,36 @@ namespace CloseTheDeal.Player.Dev
             Note($"pose {who}: crouch {a.Crouch:0.00} lean {a.Lean:0.00} slide {a.Sliding} sprint {a.Sprinting} grounded {a.Grounded} climbing {a.Mantling} speed {a.PlanarSpeed:0.0}");
         }
 
+        struct SavedPrefs
+        {
+            public float Sensitivity;
+            public bool Invert;
+            public string Bindings;
+        }
+
+        SavedPrefs? _prefsToRestore;
+
+        /// <summary>Puts back the player's saved look settings and rebinding if a check changed them.</summary>
+        void RestorePrefs()
+        {
+            if (!_prefsToRestore.HasValue)
+                return;
+
+            SavedPrefs saved = _prefsToRestore.Value;
+            _prefsToRestore = null;
+            CloseTheDeal.UI.InputPrefs.LookSensitivity = saved.Sensitivity;
+            CloseTheDeal.UI.InputPrefs.InvertY = saved.Invert;
+            CloseTheDeal.UI.InputPrefs.BindingOverridesJson = saved.Bindings;
+        }
+
+        /// <summary>Play mode stopped or the run ended: nothing a check wrote to the shared preferences may stay behind.</summary>
+        void OnDestroy()
+        {
+            RestorePrefs();
+            PlayerInputReader.IgnoreSavedBindings = false;
+            PlayerInputReader.ScriptedCapture = false;
+        }
+
         void Finish()
         {
             if (_logPath == null)
@@ -351,7 +381,8 @@ namespace CloseTheDeal.Player.Dev
             float speed = Me.PlanarSpeed;
             float y = Feet.y;
             _trace?.Append((Time.time - _traceStart).ToString("0.000", CultureInfo.InvariantCulture)).Append(',')
-                .Append(speed.ToString("0.00", CultureInfo.InvariantCulture)).Append(',').Append(Me.State).Append('\n');
+                .Append(speed.ToString("0.00", CultureInfo.InvariantCulture)).Append(',').Append(Me.State)
+                .Append(',').Append(y.ToString("0.000", CultureInfo.InvariantCulture)).Append('\n');
             _ticks++;
             if (Me.State == MoveState.Airborne)
                 _airTicks++;
@@ -971,6 +1002,9 @@ namespace CloseTheDeal.Player.Dev
             float sens = CloseTheDeal.UI.InputPrefs.LookSensitivity;
             bool invert = CloseTheDeal.UI.InputPrefs.InvertY;
             string binds = CloseTheDeal.UI.InputPrefs.BindingOverridesJson;
+            // The saved file is shared by every copy of the project: if the run is stopped mid-check,
+            // OnDestroy puts these back.
+            _prefsToRestore = new SavedPrefs { Sensitivity = sens, Invert = invert, Bindings = binds };
             yield return Face(0f);
 
             CloseTheDeal.UI.InputPrefs.LookSensitivity = 2f;
@@ -1003,7 +1037,7 @@ namespace CloseTheDeal.Player.Dev
             yield return Tap(Key.J);
             yield return Until(() => _localLands > lands, 2f, "lands after the rebound jump");
             Check("a rebind of Jump to J takes effect at once", spaceIgnored && _localJumps == jumps + 1, $"space ignored {spaceIgnored}, jumps +{_localJumps - jumps}; help card reads {reader.BindingText("Jump", false)}");
-            CloseTheDeal.UI.InputPrefs.BindingOverridesJson = binds;
+            RestorePrefs();
             PlayerInputReader.IgnoreSavedBindings = true;
             yield return Wait(0.2f);
         }
@@ -1317,6 +1351,7 @@ namespace CloseTheDeal.Player.Dev
                 yield return null;
             }
             OpenWindow();
+            StartTrace("stairs_up");
             bool captured = false;
             while (Feet.y < centre.y + rise - 0.1f && Time.time - started < 12f)
             {
@@ -1329,6 +1364,7 @@ namespace CloseTheDeal.Player.Dev
                 yield return null;
             }
             float took = Time.time - started;
+            StopTrace();
             string up = CloseWindow();
             int upAir = _airTicks;
             float upSlowest = _minSpeed;
@@ -1559,7 +1595,7 @@ namespace CloseTheDeal.Player.Dev
 
         void StartTrace(string name)
         {
-            _trace = new System.Text.StringBuilder("seconds,speed,state\n");
+            _trace = new System.Text.StringBuilder("seconds,speed,state,feet_y\n");
             _traceName = name;
             _traceStart = Time.time;
         }

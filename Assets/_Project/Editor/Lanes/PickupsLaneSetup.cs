@@ -1845,6 +1845,33 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 0.6f;
             Check("letting go empties the hands slot", hud.HandsReading == "", $"slot reads \"{hud.HandsReading}\"");
             HudShots("hud_07_dropped");
+
+            // A loose prop with no Visual child: looked at (brightened), carried, dropped, and
+            // drawn at its own colour again (review ITM-16).
+            // The biggest one, so the look lands on it and not on the desk under a flat tablet.
+            Pickup loose = null;
+            foreach (Pickup p in UnityEngine.Object.FindObjectsByType<Pickup>())
+            {
+                if (p.IsDerived && p.State == PickupState.InWorld && p.Definition.WeightKg <= me.Profile.MaxCarryWeight
+                    && (loose == null || p.Definition.WeightKg > loose.Definition.WeightKg))
+                    loose = p;
+            }
+            if (loose == null)
+            {
+                Note("NOT CHECKED  a definition-free prop's highlight: this scene has none loose");
+            }
+            else
+            {
+                yield return LookFromNear(me, loose);
+                Renderer looseLook = loose.GetComponentInChildren<Renderer>();
+                Check($"looking at {loose.name} brightens it", looseLook != null && looseLook.HasPropertyBlock());
+                me.LocalTake(loose);
+                yield return new Until(() => me.Held == loose, 3f, "the loose prop to reach the hands");
+                yield return 0.3f;
+                me.LocalDrop();
+                yield return 1f;
+                Check($"after carrying and dropping {loose.name}, it is drawn at its own colour", looseLook == null || !looseLook.HasPropertyBlock());
+            }
             Note($"UI sounds asked for: Focus {focusSounds}, HandsFull {handsFullSounds}, Error {errorSounds}");
             CloseTheDeal.UI.UiSound.Played -= onSound;
         }
@@ -2460,6 +2487,7 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 1.6f;
             Check("a thrown loose prop damages what it hits", dummy.Health < healthBefore, $"dummy {healthBefore:0} -> {dummy.Health:0}");
             Check("once it lands, the loose prop is drawn where it is again", own.enabled && (copy == null || !copy.gameObject.activeSelf));
+            Check("and at its own colour, not still brightened from being looked at", !own.HasPropertyBlock());
             Check("it stays in the room", pot.State == PickupState.InWorld && pot.transform.position.y > FloorY - 0.5f, $"at {V(pot.transform.position)}");
 
             yield return TakeWhereItIs(me, tablet);

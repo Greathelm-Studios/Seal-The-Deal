@@ -1,6 +1,6 @@
 # NARRATION
 
-**Status:** Current (branch `claude/lane-gaps-5e5605`, not merged) · **Last updated:** 2026-11-14
+**Status:** Current (in `buffer`; built by the gaps lane) · **Last updated:** 2026-11-14
 
 ## What the player sees
 
@@ -37,7 +37,7 @@ The lobby's `Secretary.LineSpoken` stays for anything already using it.
 
 ## Scripts
 
-[Assets/_Project/Scripts/Narration/](../../Assets/_Project/Scripts/Narration/): `Subtitles.cs`, `MatchSecretaryLines.cs`, `MatchSecretary.cs` (on the **Records** object).
+[Assets/_Project/Scripts/Narration/](../../Assets/_Project/Scripts/Narration/): `Subtitles.cs`, `MatchSecretaryLines.cs`, `MatchSecretary.cs` (on the Records prefab (`Prefabs/Gaps/Records.prefab`)).
 
 ## Known limitations
 

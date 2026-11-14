@@ -26,77 +26,83 @@ using Object = UnityEngine.Object;
 namespace CloseTheDeal.Editor.Lanes
 {
     /// <summary>
-    /// The gaps lane's setup: adds the match records and the profile keeper to the open scene
-    /// (only what is missing), and a scripted check of both in Lane_Integration.unity.
-    /// Menu: Close the Deal > Lanes > Gaps. Design: docs/systems/RECORDS.md, docs/systems/PROFILE.md.
+    /// The gaps lane's setup: builds the Records prefab (match records, profile keeper, death
+    /// report, match secretary, first-run hints and the names-over-heads canvas) and the
+    /// installer that adds it at run time to every scene with a match, so no scene is edited.
+    /// Also a scripted check in Lane_Integration.unity. Only creates what is missing; a prefab or
+    /// asset a person edited is left alone (GeneratedAssetGuard).
+    /// Menu: Close the Deal > Lanes > Gaps. Design: docs/systems/RECORDS.md.
     /// </summary>
     public static class GapsLaneSetup
     {
         internal const string ObjectName = "Records";
+        internal const string PrefabPath = "Assets/_Project/Prefabs/Gaps/Records.prefab";
+        internal const string InstallerPath = "Assets/_Project/Resources/Gaps/RecordsInstaller.asset";
+        const string KitFolder = "Assets/_Project/UI/Kit";
 
-        [MenuItem("Close the Deal/Lanes/Gaps/Add Records And Profile To Open Scene")]
-        static void AddFromMenu()
+        [MenuItem("Close the Deal/Lanes/Gaps/Build Records Prefab")]
+        static void BuildFromMenu()
         {
-            string added = AddToOpenScene();
-            EditorUtility.DisplayDialog("Records and profile", added.Length > 0 ? "Added: " + added + ". Save the scene to keep it." : "Already in the scene; nothing changed.", "OK");
+            string done = Build();
+            EditorUtility.DisplayDialog("Records", done.Length > 0 ? "Made: " + done + "." : "Everything was already there; nothing changed.", "OK");
         }
 
-        /// <summary>Shell: adds the records to Lane_Integration.unity and saves it.</summary>
-        public static void AddToIntegrationFromCommandLine()
+        /// <summary>Shell: builds the prefab, the installer and the content assets if missing.</summary>
+        public static void BuildFromCommandLine()
         {
-            EditorSceneManager.OpenScene(GapsLaneRun.ScenePath, OpenSceneMode.Single);
-            string added = AddToOpenScene();
-            if (added.Length > 0)
-                EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
-            Debug.Log("[Gaps] " + (added.Length > 0 ? "Added " + added + " to Lane_Integration.unity." : "Lane_Integration.unity already had the records."));
+            string done = Build();
+            Debug.Log("[Gaps] " + (done.Length > 0 ? "Made " + done + "." : "Records prefab and installer already there."));
         }
 
-        /// <summary>Adds what is missing; never changes what is there. Returns what was added, or "".</summary>
-        internal static string AddToOpenScene()
+        /// <summary>The name the orchestrator has on file; it now builds the prefab instead of editing the scene.</summary>
+        public static void AddToIntegrationFromCommandLine() => BuildFromCommandLine();
+
+        /// <summary>Makes what is missing. Returns what was made, or "".</summary>
+        internal static string Build()
         {
             var parts = new List<string>();
-            MatchRecords records = Object.FindAnyObjectByType<MatchRecords>(FindObjectsInactive.Include);
-            GameObject host = records != null ? records.gameObject : null;
-            if (host == null)
-            {
-                host = new GameObject(ObjectName);
-                Undo.RegisterCreatedObjectUndo(host, "Add records");
-                host.AddComponent<MatchRecords>();
-                parts.Add("MatchRecords");
-            }
-
-            if (Object.FindAnyObjectByType<ProfileKeeper>(FindObjectsInactive.Include) == null)
-            {
-                Undo.AddComponent<ProfileKeeper>(host);
-                parts.Add("ProfileKeeper");
-            }
-
-            if (Object.FindAnyObjectByType<LocalDeath>(FindObjectsInactive.Include) == null)
-            {
-                Undo.AddComponent<LocalDeath>(host);
-                parts.Add("LocalDeath");
-            }
-
-            AddNameplates(parts);
             EnsureContent(parts);
-            AddWithAsset<MatchSecretary>(host, "_lines", AssetDatabase.LoadAssetAtPath<MatchSecretaryLines>(LinesPath), parts);
-            AddWithAsset<FirstRunHints>(host, "_hints", AssetDatabase.LoadAssetAtPath<OnboardingHints>(HintsPath), parts);
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+            if (prefab == null)
+            {
+                prefab = BuildPrefab();
+                parts.Add("Records.prefab");
+            }
 
-            if (parts.Count > 0)
-                EditorSceneManager.MarkSceneDirty(host.scene);
+            var installer = AssetDatabase.LoadAssetAtPath<RecordsInstaller>(InstallerPath);
+            if (installer == null)
+            {
+                installer = ScriptableObject.CreateInstance<RecordsInstaller>();
+                installer.EditorInit(prefab);
+                Create(installer, InstallerPath);
+                parts.Add("RecordsInstaller.asset");
+            }
+
             return string.Join(", ", parts);
         }
 
-        const string KitFolder = "Assets/_Project/UI/Kit";
+        static GameObject BuildPrefab()
+        {
+            var root = new GameObject(ObjectName);
+            root.AddComponent<MatchRecords>();
+            root.AddComponent<ProfileKeeper>();
+            root.AddComponent<LocalDeath>();
+            SetRef(root.AddComponent<MatchSecretary>(), "_lines", AssetDatabase.LoadAssetAtPath<MatchSecretaryLines>(LinesPath));
+            SetRef(root.AddComponent<FirstRunHints>(), "_hints", AssetDatabase.LoadAssetAtPath<OnboardingHints>(HintsPath));
+            BuildNameplates(root.transform);
+            EnsureFolder(Path.GetDirectoryName(PrefabPath).Replace('\\', '/'));
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+            Object.DestroyImmediate(root);
+            GeneratedAssetGuard.MarkGenerated(prefab);
+            AssetDatabase.SaveAssets();
+            return prefab;
+        }
 
         /// <summary>Its own overlay canvas under the kit's menus (KitUI sorts at 20), built to the kit's 1920 x 1080 Expand scaling.</summary>
-        static void AddNameplates(List<string> parts)
+        static void BuildNameplates(Transform parent)
         {
-            if (Object.FindAnyObjectByType<Nameplates.Nameplates>(FindObjectsInactive.Include) != null)
-                return;
-
             var go = new GameObject("Nameplates", typeof(RectTransform)) { layer = 5 };
-            Undo.RegisterCreatedObjectUndo(go, "Add nameplates");
+            go.transform.SetParent(parent, false);
             var canvas = go.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 5;
@@ -105,32 +111,33 @@ namespace CloseTheDeal.Editor.Lanes
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
             var plates = go.AddComponent<Nameplates.Nameplates>();
-            var so = new SerializedObject(plates);
-            so.FindProperty("_tokens").objectReferenceValue = AssetDatabase.LoadAssetAtPath<CloseTheDeal.UI.UiTokens>("Assets/_Project/UI/Tokens/UiTokens.asset");
-            so.FindProperty("_platePrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Plate.prefab");
-            so.FindProperty("_diamondSprite").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Sprite>(KitFolder + "/Sprites/Kit_White.png");
-            so.FindProperty("_markerSprite").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Sprite>(KitFolder + "/Sprites/Kit_Chevron.png");
-            so.ApplyModifiedPropertiesWithoutUndo();
-            parts.Add("Nameplates");
+            SetRef(plates, "_tokens", AssetDatabase.LoadAssetAtPath<CloseTheDeal.UI.UiTokens>("Assets/_Project/UI/Tokens/UiTokens.asset"));
+            SetRef(plates, "_platePrefab", AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Plate.prefab"));
+            SetRef(plates, "_diamondSprite", AssetDatabase.LoadAssetAtPath<Sprite>(KitFolder + "/Sprites/Kit_White.png"));
+            SetRef(plates, "_markerSprite", AssetDatabase.LoadAssetAtPath<Sprite>(KitFolder + "/Sprites/Kit_Chevron.png"));
         }
 
-        /// <summary>Adds the component if the scene has none, and fills its asset slot only while it is empty.</summary>
-        static void AddWithAsset<T>(GameObject host, string field, Object asset, List<string> parts) where T : Component
+        static void SetRef(Object target, string field, Object value)
         {
-            T component = Object.FindAnyObjectByType<T>(FindObjectsInactive.Include);
-            if (component == null)
+            var so = new SerializedObject(target);
+            SerializedProperty slot = so.FindProperty(field);
+            if (slot == null)
             {
-                component = Undo.AddComponent<T>(host);
-                parts.Add(typeof(T).Name);
+                Debug.LogError($"[Gaps] {target.GetType().Name} has no field {field}.");
+                return;
             }
 
-            var serialized = new SerializedObject(component);
-            SerializedProperty slot = serialized.FindProperty(field);
-            if (slot == null || slot.objectReferenceValue != null || asset == null)
+            slot.objectReferenceValue = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void EnsureFolder(string folder)
+        {
+            if (AssetDatabase.IsValidFolder(folder))
                 return;
-            slot.objectReferenceValue = asset;
-            serialized.ApplyModifiedProperties();
-            parts.Add(typeof(T).Name + " asset");
+            string parent = Path.GetDirectoryName(folder).Replace('\\', '/');
+            EnsureFolder(parent);
+            AssetDatabase.CreateFolder(parent, Path.GetFileName(folder));
         }
 
         // ---- Content assets (created once; a person's edits are never overwritten) ----------------
@@ -161,9 +168,7 @@ namespace CloseTheDeal.Editor.Lanes
 
         static void Create(ScriptableObject asset, string path)
         {
-            string folder = Path.GetDirectoryName(path).Replace('\\', '/');
-            if (!AssetDatabase.IsValidFolder(folder))
-                AssetDatabase.CreateFolder(Path.GetDirectoryName(folder).Replace('\\', '/'), Path.GetFileName(folder));
+            EnsureFolder(Path.GetDirectoryName(path).Replace('\\', '/'));
             AssetDatabase.CreateAsset(asset, path);
             GeneratedAssetGuard.MarkGenerated(asset);
             AssetDatabase.SaveAssets();
@@ -251,6 +256,7 @@ namespace CloseTheDeal.Editor.Lanes
     {
         internal const string ScenePath = "Assets/_Project/Scenes/Lanes/Lane_Integration.unity";
         const string ActiveKey = "GapsLaneRun.Active";
+        const string SceneHadRecordsKey = "GapsLaneRun.SceneHadRecords";
         const string RoleKey = "GapsLaneRun.Role";
         const string OutKey = "GapsLaneRun.Out";
         const ushort DefaultPort = 17795;
@@ -273,7 +279,13 @@ namespace CloseTheDeal.Editor.Lanes
         static readonly List<DeathReport> Downs = new();
 
         [MenuItem("Close the Deal/Lanes/Gaps/Run Records Check (solo)")]
-        static void RunFromMenu() => Begin("solo", "Temp/GapsRun");
+        static void RunFromMenu()
+        {
+            // A menu run has no -profileSave: give it a throwaway profile so it never writes into the real one.
+            Directory.CreateDirectory("Temp/GapsRun");
+            SessionState.SetString(ProfileStore.EditorPathKey, Path.GetFullPath("Temp/GapsRun/profile.json"));
+            Begin("solo", "Temp/GapsRun");
+        }
 
         public static void RunFromShell() => Begin(Arg("-gapsRole") ?? "solo", Arg("-gapsOut") ?? "Temp/GapsRun");
 
@@ -289,10 +301,13 @@ namespace CloseTheDeal.Editor.Lanes
         static void Begin(string role, string outFolder)
         {
             EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-            GapsLaneSetup.AddToOpenScene();
+            GapsLaneSetup.Build();
+            SessionState.SetBool(SceneHadRecordsKey, Object.FindAnyObjectByType<MatchRecords>(FindObjectsInactive.Include) != null);
             SetPort(ushort.TryParse(Arg("-gapsPort"), out ushort port) ? port : DefaultPort);
-            if (Flag("-gapsCorrupt"))
+            if (Flag("-gapsCorrupt") && Arg("-profileSave") != null)
                 SpoilProfile();
+            else if (Flag("-gapsCorrupt"))
+                Debug.LogError("[GapsRun] -gapsCorrupt needs -profileSave <scratch file>; the real profile is never spoiled.");
             SessionState.SetBool(ActiveKey, true);
             SessionState.SetString(RoleKey, role);
             SessionState.SetString(OutKey, outFolder);
@@ -321,8 +336,20 @@ namespace CloseTheDeal.Editor.Lanes
         [InitializeOnLoadMethod]
         static void Resume()
         {
+            EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeChanged;
             if (SessionState.GetBool(ActiveKey, false))
                 EditorApplication.update += Pump;
+        }
+
+        /// <summary>Back in edit mode, however the run ended (finished or stopped by hand): the next Play is an ordinary one.</summary>
+        static void OnPlayModeChanged(PlayModeStateChange change)
+        {
+            if (change != PlayModeStateChange.EnteredEditMode)
+                return;
+            EditorApplication.update -= Pump;
+            SessionState.SetBool(ActiveKey, false);
+            SessionState.EraseString(ProfileStore.EditorPathKey);
         }
 
         // ---- The stepper ---------------------------------------------------------------------
@@ -573,6 +600,7 @@ namespace CloseTheDeal.Editor.Lanes
             CheckLaunch(state, before);
 
             yield return Host();
+            Check("installer: the scene file has no records, and the prefab put them in at play", !SessionState.GetBool(SceneHadRecordsKey, true) && Records != null && Object.FindAnyObjectByType<Nameplates.Nameplates>() != null);
             yield return StartMatch(false);
             yield return 2f;
             yield return TakeBriefcase();
@@ -769,6 +797,11 @@ namespace CloseTheDeal.Editor.Lanes
             them.GetComponent<Health>().ApplyDamage(1000f, them.Chest, Vector3.forward, MyId);
             yield return 0.5f;
             Check("HOST: a kill counts for the killer and a death for the victim", LineOf(them).Deaths == theirDeaths + 1 && LineOf(Me).Kills == myKills + 1, $"them {Show(LineOf(them))} · me {Show(LineOf(Me))}");
+            int theirFalls = LineOf(them).Falls;
+            them.ServerTeleport(them.Position + Vector3.down * 60f);
+            yield return 2f;
+            Check("HOST: the dead body carried out of the building is not a second loss or a window kill", LineOf(them).Falls == theirFalls && LineOf(them).Deaths == theirDeaths + 1 && LineOf(Me).Kills == myKills + 1 && LineOf(Me).WindowKills == 0,
+                $"them {Show(LineOf(them))} · me {Show(LineOf(Me))}");
             yield return new Until(() => !them.GetComponent<Health>().IsDead, 10f, "the client to respawn");
             yield return 1f;
         }

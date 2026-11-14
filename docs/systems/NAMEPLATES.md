@@ -1,6 +1,6 @@
 # NAMEPLATES
 
-**Status:** Current (branch `claude/lane-gaps-5e5605`, not merged) · **Last updated:** 2026-11-14
+**Status:** Current (in `buffer`; built by the gaps lane) · **Last updated:** 2026-11-14
 
 ## What the player sees
 
@@ -16,7 +16,7 @@ Local only, nothing sent. It reads the synced firm and position of every player,
 
 ## Designer values
 
-On the scene's **Nameplates** object: **Range** (40 m), **Headroom** (0.35 m above the head), **Raider Seconds** (2), **Name Size** (18 px at 1080p), and the kit references (tokens, Plate prefab, square and chevron sprites). Every value has a tooltip.
+On the **Nameplates** child of `Prefabs/Gaps/Records.prefab`: **Range** (40 m), **Headroom** (0.35 m above the head), **Raider Seconds** (2), **Name Size** (18 px at 1080p), and the kit references (tokens, Plate prefab, square and chevron sprites). Every value has a tooltip.
 
 ## Cost
 
@@ -30,7 +30,7 @@ One chip and one marker per other player, made when they join and destroyed when
 
 ## Setup
 
-Added by **Close the Deal > Lanes > Gaps > Add Records And Profile To Open Scene**: a **Nameplates** overlay canvas (sorting 5, under the kit's KitUI at 20; 1920 × 1080 Expand like the kit).
+A **Nameplates** overlay canvas (sorting 5, under the kit's KitUI at 20; 1920 × 1080 Expand like the kit) inside `Prefabs/Gaps/Records.prefab`, which `RecordsInstaller` adds to every scene with a match ([RECORDS.md](RECORDS.md) Setup). Tune it on the prefab.
 
 ## Known limitations
 

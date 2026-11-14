@@ -237,6 +237,17 @@ namespace CloseTheDeal.Player
         /// <summary>0 standing to 1 fully crouched. Moves once per tick.</summary>
         public float Crouch => _crouch;
 
+        /// <summary>
+        /// Where this player is aiming, as a world direction from their eye; zero until their first
+        /// input arrives. For showing the aim (the body's gun arm), never for deciding a hit.
+        /// </summary>
+        /// <remarks>
+        /// Taken from the input each tick runs on, so it is there on every machine: the owner's own
+        /// input, the input the host receives, and the input other clients are forwarded. Nothing
+        /// extra is sent for it.
+        /// </remarks>
+        public Vector3 AimDirection { get; private set; }
+
         /// <summary>Height of the eye above the feet when standing, in metres.</summary>
         public float StandingEyeHeight => _profile.EyeHeight;
 
@@ -384,7 +395,15 @@ namespace CloseTheDeal.Player
         {
             input = FillMissingInput(input, state);
             if (!state.ContainsReplayed())
+            {
                 _currentTick = input.GetTick();
+                // Merge bridge (2026-11-14): Harvey's body gun arm reads AimDirection, which came from
+                // MoveInput.Aim. The movement rework took Aim out of the input (shots carry their own
+                // aim now), so only the facing is known here: the arm follows left and right but not
+                // up and down on other machines. Real fix: send look pitch with the input and build
+                // the direction from yaw and pitch. Listed in VIEWMODEL.md's known limitations.
+                AimDirection = Quaternion.Euler(0f, input.Yaw, 0f) * Vector3.forward;
+            }
 
             float dt = (float)TimeManager.TickDelta;
             BeginTick(input);

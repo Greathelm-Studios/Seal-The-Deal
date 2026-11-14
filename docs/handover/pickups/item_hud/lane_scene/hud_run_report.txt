@@ -1,7 +1,7 @@
 ROLE hud: Lane_Pickups hosting with its own player; the item HUD is added for this run only.
 local port 17783
 PASS  this machine is the host (it did not join someone else's game on the same port)
-PASS  the integration scene has the kit item HUD
+PASS  the scene has the kit item HUD
 PASS  the scene has a loose chair, something too heavy and a second liftable thing  — chair Chair B, heavy Desk cases, other Cubicle Panel A
 wrote hud_00_empty_1080p.png
 wrote hud_00_empty_720p.png
@@ -36,5 +36,7 @@ wrote hud_09_pad_look_720p.png
 PASS  letting go empties the hands slot  — slot reads ""
 wrote hud_07_dropped_1080p.png
 wrote hud_07_dropped_720p.png
-UI sounds asked for: Focus 3, HandsFull 2, Error 0
-RESULT: 0 failed check(s), 13 passed, 70 frames.
+PASS  looking at Plant Pot brightens it
+PASS  after carrying and dropping Plant Pot, it is drawn at its own colour
+UI sounds asked for: Focus 5, HandsFull 2, Error 0
+RESULT: 0 failed check(s), 15 passed, 94 frames.

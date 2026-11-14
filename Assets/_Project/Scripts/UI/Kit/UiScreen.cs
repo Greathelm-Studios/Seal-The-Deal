@@ -48,6 +48,18 @@ namespace CloseTheDeal.UI
 
         public bool IsDialog => _isDialog;
 
+        /// <summary>The sound the stack plays as this screen opens: PanelOpen for a dialog, Transition for a screen.</summary>
+        public virtual UiSoundEvent OpenSound => _isDialog ? UiSoundEvent.PanelOpen : UiSoundEvent.Transition;
+
+        /// <summary>A subclass's own motion, stepped with the screen's: return true while it is still moving.</summary>
+        protected virtual bool TickExtra(float dt) => false;
+
+        /// <summary>Runs after the screen has applied its motion each step: a subclass layers its own on top.</summary>
+        protected virtual void AfterApply() { }
+
+        /// <summary>Asks for the screen's motion to be stepped (a subclass started its own tween).</summary>
+        protected void WakeMotion() => UiMotion.Wake(this);
+
         /// <summary>The stack this screen is on, set when pushed.</summary>
         public UiScreenStack Stack { get; internal set; }
 
@@ -217,6 +229,7 @@ namespace CloseTheDeal.UI
         public bool Tick(float dt)
         {
             bool moving = _alpha.Running || _slide.Running || _contentAlpha.Running || _roll.Running;
+            moving |= TickExtra(dt);
             _alpha.Step(dt);
             _slide.Step(dt);
             _contentAlpha.Step(dt);
@@ -266,6 +279,8 @@ namespace CloseTheDeal.UI
                 p.y = _revealHome[i] - (reduced ? 0f : (1f - t) * _tokens.RevealRise);
                 rect.anchoredPosition = p;
             }
+
+            AfterApply();
         }
     }
 }

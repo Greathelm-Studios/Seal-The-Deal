@@ -4,6 +4,7 @@
 // Prompt    : Give the STDMC player character animated 2D eye cards.
 // Reviewed  : NOT YET REVIEWED BY A HUMAN
 // Summary   : Client-local blinking, glancing and expressions for the two fitted eye cards.
+// Modified  : Claude Opus 5.5 (Claude Code), 2026-11-13 — occasional idle look-around.
 using UnityEngine;
 
 namespace CloseTheDeal.Player
@@ -23,6 +24,9 @@ namespace CloseTheDeal.Player
         private const float MaxVisualSprintMultiple = 3f;
         // WHY: a turn at roughly half a revolution per second uses the full counter-glance.
         private const float FullTurnRadiansPerSecond = Mathf.PI;
+        // WHY: the eye opening is far wider than tall, so an idle look up or down travels less
+        // than one to the side or it disappears under the lid.
+        private const float LookVerticalShare = 0.6f;
 
         private static readonly int EyePose = Shader.PropertyToID("_EyePose");
 
@@ -48,6 +52,12 @@ namespace CloseTheDeal.Player
         private Vector3 _travel;
         private Vector2 _glance;
         private Vector4 _lastPose;
+        /// <summary>Time the next idle glance starts.</summary>
+        private float _nextLook;
+        /// <summary>Time the current idle glance ends.</summary>
+        private float _lookUntil;
+        /// <summary>Current idle glance direction, unit length or zero.</summary>
+        private Vector2 _lookAt;
 
         private void Awake()
         {
@@ -75,6 +85,9 @@ namespace CloseTheDeal.Player
             _glance = Vector2.zero;
             _lastPose = new Vector4(-1f, -1f, 0f, 0f);
             _nextBlink = Time.time + BlinkWait();
+            _lookAt = Vector2.zero;
+            _lookUntil = 0f;
+            _nextLook = Time.time + RandomIn(_profile.LookAroundInterval);
             ApplyPose(Mood.Bored, Lid.Rest);
         }
 
@@ -111,8 +124,11 @@ namespace CloseTheDeal.Player
             _lastForward = _face.forward;
             Vector2 turn = Vector2.ClampMagnitude(new Vector2(counterTurn.x, counterTurn.y) /
                 (dt * FullTurnRadiansPerSecond), 1f);
+            // WHY: idle glances add to, rather than replace, travel and turning; the clamp below
+            // lets those win when they are strong.
             Vector2 target = new Vector2(localAim.x, localAim.y) +
-                new Vector2(localTravel.x, 0f) * TravelWeight + turn * TurnWeight;
+                new Vector2(localTravel.x, 0f) * TravelWeight + turn * TurnWeight +
+                LookAround(Time.time) * _profile.LookAroundReach;
             // WHY: texture U increases to the viewer's right, opposite the character's right.
             target.x = -target.x;
             _glance = Vector2.MoveTowards(_glance, Vector2.ClampMagnitude(target, 1f) * _profile.GlanceRange,
@@ -136,10 +152,26 @@ namespace CloseTheDeal.Player
             return sprint > 0f && sprint >= _profile.FocusThreshold ? Mood.Focused : Mood.Bored;
         }
 
-        private float BlinkWait()
+        private float BlinkWait() => RandomIn(_profile.BlinkInterval);
+
+        /// <summary>A random value between range.x and range.y.</summary>
+        private float RandomIn(Vector2 range) => Mathf.Lerp(range.x, range.y, (float)_blinkRandom.NextDouble());
+
+        /// <summary>The idle glance direction for this moment: zero while resting, otherwise a held random direction.</summary>
+        private Vector2 LookAround(float now)
         {
-            Vector2 interval = _profile.BlinkInterval;
-            return Mathf.Lerp(interval.x, interval.y, (float)_blinkRandom.NextDouble());
+            if (now >= _nextLook)
+            {
+                float angle = (float)_blinkRandom.NextDouble() * 2f * Mathf.PI;
+                _lookAt = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle) * LookVerticalShare);
+                _lookUntil = now + RandomIn(_profile.LookAroundHold);
+                _nextLook = _lookUntil + RandomIn(_profile.LookAroundInterval);
+            }
+
+            if (now >= _lookUntil)
+                _lookAt = Vector2.zero;
+
+            return _lookAt;
         }
 
         private Lid BlinkFrame(float now)

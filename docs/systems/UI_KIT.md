@@ -1,17 +1,17 @@
 # UI KIT
 
-**Status:** Current (slice 2: title window, every settings tab, sound through lane 9's player) · **Last updated:** 2026-11-14
+**Status:** Current (wide pass slices 1–3: edge marker, device key hints, live-sky title, settings fixes, hosting / joining / problem panels) · **Last updated:** 2026-11-14
 
 ## What the player sees
 
-The game opens on the title: a white window frame with depth (lit mullion faces, silver reveals, a transom shadow, a black-edged sill) over lane 8's live sky (the game's own sky, its traced clouds and the towers; a flat gradient where a scene has no sky material), sun falling through it in two hard slabs across the paper below, behind the text. Low on paper: **SEAL THE DEAL**, the status and connection lines, the focused button's explanation, the keys row (Enter / A select, Esc / B back, arrows / stick move), a microtype strip, the build line, barcode and corner ticks, and the menu: **Host game**, **Join on this PC** (local test mode only), **Settings**, **Quit to desktop**.
+The game opens on the title: a slim white window frame with depth (20 px mullion and transom faces at 1080p with a 4 px silver reveal or shadow, lit edges, a black-edged sill) over lane 8's live sky (the game's own sky, its traced clouds and the towers; a flat gradient where a scene has no sky material), sun falling through it in two hard slabs across the paper below, behind the text. Low on paper: **SEAL THE DEAL**, the status and connection lines, the focused button's explanation, the keys row (Enter / A select, Esc / B back, arrows / stick move), a microtype strip, the build line, barcode and corner ticks, and the menu: **Host game**, **Join on this PC** (local test mode only), **Settings**, **Quit to desktop**.
 Every control answers: hovering lifts it and closes its corner brackets, pressing stamps it down, letting go confirms with a small cyan tick, and each of those asks for a sound.
 Keys and the pad show a focus ring with snapped brackets and a chevron that glide to the next control; with the mouse those marks stay hidden.
 A greyed-out control says why when pressed (amber plate, a shake, the reason in the status line).
 Esc / the pad's B goes back; at the title it asks **Quit to desktop?** with **Stay** focused.
 **Settings** has four tabs (Q / E or the shoulder buttons switch; the cobalt rule glides to the open tab and the page slides 12 px): Controls (look rows and the key list; rebinding asks before taking a key another listed action uses, and refuses a key kept for an unlisted one such as moving or Help), Video (display mode, resolution with a 10-second revert to the size the screen really had, a saved size clamped to the monitor, vertical sync, frame rate limit, quality), Audio (five volumes, a test sound and a live output meter) and Accessibility (as before). The right column always shows the focused row's explanation above the tab's live preview; under the rows, **Changed on this tab** lists each value that differs from how the game shipped (or says nothing has), except on Controls, whose key list fills the page. Changes apply at once and come back after a relaunch.
 Full screens change through paper white: the old screen's content fades and its sky rolls up, then the new one's sky rolls down and its lines reveal. No mixed mid-tone.
-Once you host or join, the kit's screens fade out and the playtest card (MENU_AND_HUD.md) takes over until the in-game menu slice lands.
+Hosting, joining and loading stay on the title: a **session panel** takes its middle and right columns (the window and lockup stay) and says what is happening in the lobby's own words, with three chevrons stepping while it waits, a track that fills over the 15 s a join waits before giving up (nothing else gets a bar, because nothing else is measurable) and **Cancel** (Esc / B). When a player of ours is in the world, the window closes over the view (lane 8's frame zoom) and the screens clear under it. Anything that goes wrong (every SteamLobby problem: no lobby, closed, friends-only, full, refused, wrong version, unreachable, host closed, host dropped, connection lost, network broken) opens the **problem panel**: an amber plate with the problem and how to fix it, the button that fixes it (Host again, Try again, Open Steam friends, Quit to desktop; greyed with its reason when it can't run) and **Back**. In local mode without Steam the title says friends can't join and how to fix it. In a game the playtest card (MENU_AND_HUD.md) is still the in-game menu until the in-game menu slice.
 
 ## uGUI, not UI Toolkit
 
@@ -25,13 +25,15 @@ The kit is uGUI + TextMeshPro + CanvasScaler.
 ```
 UiTokens.asset ──► every component (colours, type, sizes, motion, repeat timing)
 UiSettings (PlayerPrefs) ──Changed──► UiCrosshair, PredictionDebugHud, UiMotion.Reduced
-GameMenu ──StateChanged / AtTitle──► UiRoot ──► UiScreenStack ──► TitleScreen ⇄ SettingsScreen, QuitDialog
+GameMenu ──StateChanged / OutOfGame──► UiRoot ──► UiScreenStack ──► TitleScreen ⇄ SettingsScreen, QuitDialog
+SteamLobby ──Stage / Problem (kept until acted on)──► UiRoot ──► SessionPanel ⇄ ProblemPanel (over the title)
 controls ──► UiControlFx ──► UiMotion (one driver, unscaled time)
 controls ──► UiSound.Play(event) ──► Player (lane 9's UiSoundPlayer, once registered)
 controls ──OnSelect──► UiFocusFrame (ring + brackets + chevron)
 ```
 
-- **GameMenu still owns the rule** menu open ⇔ mouse free ⇔ player idle. The kit only takes the "not in a game" state (`HandTitleToKit`).
+- **GameMenu still owns the rule** menu open ⇔ mouse free ⇔ player idle. The kit takes every out-of-game state (`HandTitleToKit`, `OutOfGame`): the title, hosting, joining, loading and problems.
+- **UiRoot decides the panels from state, not events**: the lobby keeps `Problem` until the player acts on it, so Title → Problem comes out the same whatever order the events arrive in; it reruns on the menu's and the stack's events, never per frame.
 - **Closing waits for Submit to be let go.** The pad's A is both UI Submit and Jump (and Enter was Attack until the movement lane's rework), so `GameMenu` keeps the menu open until UI Submit reads released (`UiInput.SubmitHeld`), for Back to game, Esc / Start and a player spawning alike. The actions asset is unchanged.
 
 ## Tokens
@@ -84,7 +86,7 @@ Events (frozen with lane 9; append only): None, HoverMove, Focus, Select, Confir
 `UiEdgeMarker` (prefab `Kit/EdgeMarker.prefab`) points at something in the world: in view, the mark sits over it; out of view or behind you it waits at the nearest screen edge, 48 px in (Safe Edge), with a chevron toward the target and the distance in metres on the side away from the chevron.
 Shape and colour say whose it is, never colour alone: `Ours` cyan diamond, `Rival` amber triangle, `Loose` paper square, each with a navy keyline.
 - **Use:** put the prefab under the HUD canvas so its rectangle stretches over the whole canvas (it measures in that canvas's units from the bottom-left), set `Kind`, then once a frame in LateUpdate call `Track(camera, worldPoint)`; it projects with lane 11's `Nameplates.WorldToCanvas.TryProject`. A HUD that projects for itself calls `Place(canvasPoint, inFront, metres)` with TryProject's output (metres < 0 hides the tag). `Hide()` fades it out; `Flash()` pops it once (the rival took it).
-- Behind you, the mark always goes to an edge on the side the target is (never into view); dead behind goes to the bottom edge.
+- Behind you, the mark always goes to an edge on the side the target is (never into view); dead behind goes to the bottom edge. When a target crosses behind you and its side flips, the mark slides round the bottom edge to the new side in 140 ms instead of jumping (no slide with Reduce motion).
 - Placing it each frame allocates nothing; the distance text changes only when the whole metre does. Fades: 120 ms in OUT, 80 ms out IN; flash 320 ms (a dip in opacity with Reduce motion).
 
 ## Key hints
@@ -135,7 +137,7 @@ Changes apply at once (no Apply step; the mockup's Apply / unsaved-changes flow 
 ## Known limitations
 
 - Final typeface: every role is TMP's Liberation Sans (the only font in the repo, origin/main and origin/Alex_Env); the display roles thin it with an SDF material (`Tokens/Type_Thin.mat`).
-- Status strings are SteamLobby's current wording, not the inventory's rewrite (§5.2–5.3).
 - No hardware cursor yet (feel table §2.4), no rumble.
 - The frozen sound list has no edge-bump or "focus stops after a held repeat" event: both are silent.
-- Hosting, joining and failure states still use the playtest card.
+- The in-game menu is still the playtest card (next slice). Host closed, host dropped and connection lost are drawn and wired but were only checked as stills: they need a second instance.
+- On this PC a failed join gives up after LiteNetLib's own ~5 s; the panel still says "Gives up after 15 s" (the lobby's backstop, Steam's timing).

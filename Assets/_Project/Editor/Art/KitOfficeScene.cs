@@ -11,6 +11,12 @@
 //  Modified  : Claude Opus 5.5 (Claude Code), 2026-11-13 — Alex: turn KitOffice into the labyrinth.
 //              The tower floor (façade floor plate, spiral stair, locked door, spine, massing) is replaced
 //              by a two-level office labyrinth from the round-5 pieces (ArtSource/Kit/README.md).
+//  Modified  : Claude Opus 5.5 (Claude Code), 2026-11-13 — detail pass after Alex's reference plates: curved
+//              header-glass meeting room, graphic columns, reception, workstation benches, carpet, tile ceilings,
+//              pendants, planters, posted balustrade; DevMirror and the floor bakes kept on rebuild.
+//  Modified  : Claude Opus 5.5 (Claude Code), 2026-11-13 — the Japanese corporate mix (concepts/Japanese_Aero):
+//              AONAGI logo, LED reception sign, water server, umbrella stand, water wall, vending machine, slipper
+//              cabinet, phones and document trays on the benches.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Lays out an office labyrinth from the kit prefabs, so the approved round-5 kit can be walked
 //              and lit in Unity as a space. Its own file because KitImport proves the pieces snap (a small
@@ -47,6 +53,21 @@ namespace CloseTheDeal.Editor.Art
         const string PaperWhitePath = "Assets/_Project/Art/Kit/Materials/Wall_PaperWhite.mat";
         const string NavyPath = "Assets/_Project/Art/Kit/Materials/Trim_Navy.mat";
         const string VolumeProfilePath = "Assets/_Project/Art/Look/OfficeLook_Volume.asset";
+        const string DevMirrorPath = "Assets/_Project/Prefabs/Dev/DevMirror.prefab";
+        /// <summary>DevMirror placement, world metres and degrees: as placed by hand in KitOffice (d4cce74).</summary>
+        static readonly Vector3 DevMirrorPosition = new Vector3(30.44f, 6.34f, -12.21f);
+        const float DevMirrorYaw = 90f;
+        static readonly Vector3 DevMirrorScale = new Vector3(21.18f, 3.45f, 1f);
+        const string HitDummyPath = "Assets/_Project/Prefabs/Dev/HitDummy.prefab";
+        /// <summary>
+        /// HitDummy spot, world metres: the upper floor's east side, in view of the DevMirror (x 30.44) with about
+        /// 3 m of clear floor round it (benches from z -10.95, the atrium rail at x 20, the windows at z 0).
+        /// Requested by the hit-reaction session (AgentHub kr0meee-4553), 2026-11-13.
+        /// Only a starting spot since 2026-11-13: KitOfficeRoof.AddTo, run later in Build, moves it to the rooftop range.
+        /// </summary>
+        static readonly Vector3 HitDummyPosition = new Vector3(27.5f, FloorHeight, -7f);
+        /// <summary>The dummy faces -Z (toward the work area) rather than the mirror, so it shows side-on in it.</summary>
+        const float HitDummyYaw = 180f;
 
         // ---- Labyrinth layout, Unity metres. Zones and sizes: ArtSource/Kit/concepts/Kit_Detail/README_r5.md ----
         /// <summary>Floor plate: 8 × 6 cells of 4 m, so 32 × 24 m, x east from 0, z south from 0.</summary>
@@ -61,6 +82,11 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>Straight stair pivot, its foot's front-left corner: it rises 7.2 m south and lands on the upper
         /// floor at the atrium's south edge (z −16), 0.2 m clear of the void's west guard.</summary>
         static readonly Vector3 StairPivot = new Vector3(AtriumX0 + 0.2f, 0f, AtriumZ1 + 7.2f);
+        /// <summary>Desk-top height of the kit's workstation bench, metres (kit_pieces DESK_H).</summary>
+        const float DeskTop = 0.74f;
+        /// <summary>Half the depth of the vending machine and the slipper cabinet, metres (kit_pieces VEND_D, SLIPPER_D):
+        /// their backs sit on the wall face.</summary>
+        const float VendHalfDepth = 0.325f, SlipperHalfDepth = 0.175f;
         /// <summary>Kit door: the leaf's hinge in a door wall, local metres (kit README).</summary>
         const float LeafX = 1.41f, LeafZ = -0.1f;
         /// <summary>White block under the floor plate, metres: the window corridor looks down at it, not into nothing.</summary>
@@ -102,6 +128,11 @@ namespace CloseTheDeal.Editor.Art
             GreyboxSceneSetup.EnsurePlayRig(SpawnA, SpawnB);
             EditorSceneManager.SaveScene(scene, ScenePath);
             OfficeLook.Apply(askFirst: false);
+            // WHY here: bounce light and floor reflections are baked into the scene, so a rebuild without them
+            // loses the polished floor's mirror (Alex, 2026-11-13: "the mirror is missing"). Order as BounceLight's
+            // own report asks: bounce first, then the reflections, so they include the lifted ceiling.
+            Debug.Log(BounceLight.Add(askFirst: false));
+            Debug.Log(FloorReflections.Bake(askFirst: false));
             EditorSceneManager.SaveScene(scene);
         }
 
@@ -166,7 +197,9 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>Places every piece into <paramref name="scene"/> (which must be the active scene). Returns the count.</summary>
         static int Build(Scene scene)
         {
-            var root = new GameObject("Kit Office (labyrinth)").transform;
+            // WHY these names: BounceLight and FloorReflections find the building by a "Kit Office" root and its
+            // storeys by "Floor N" children, so the root keeps that name and each storey gets a marker.
+            var root = new GameObject("Kit Office").transform;
             int count = 0;
             Transform G(string name, float y = 0f)
             {
@@ -193,10 +226,12 @@ namespace CloseTheDeal.Editor.Art
                     P(t, k == cobaltCorner ? "Wall_Return_2x2_Cobalt" : "Wall_Return_2x2", corners[k].Item1, corners[k].Item2, corners[k].Item3);
             }
 
+            for (int level = 0; level < Levels; level++) G($"Floor {level}", level * FloorHeight);
+
             // Slabs: the ground floor, the upper floor (open over the atrium), and the roof.
             for (int level = 0; level <= Levels; level++)
             {
-                var slabs = G(level == 0 ? "Floor slabs" : level == Levels ? "Roof slabs" : $"Level {level} slabs", level * FloorHeight);
+                var slabs = G(level == 0 ? "Ground slabs" : level == Levels ? "Roof slabs" : $"Level {level} slabs", level * FloorHeight);
                 for (int i = 0; i < Cols; i++)
                     for (int j = 0; j < Rows; j++)
                     {
@@ -230,16 +265,16 @@ namespace CloseTheDeal.Editor.Art
             // Zone L (legal): a corridor loop round an island with a cobalt corner; cobalt and frost toward the atrium.
             var zoneL = G("Zone L - corridor loop");
             Island(zoneL, 4f, -8f, 0);
-            P(zoneL, "Wall_Solid_4m_Cobalt", AtriumX0, -4f, 90f);   // cobalt face toward the atrium,
+            P(zoneL, "Wall_Solid_4m", AtriumX0, -4f, 90f);          // white: the water wall on its atrium face,
             P(zoneL, "Partition_Frost_4m", AtriumX0, -12f, 90f);     // a 4 m open mouth between them
-            P(zoneL, "Wall_Solid_4m", 0f, -16f);                      // L / C boundary: solid, the room's door, open
-            P(zoneL, "Wall_Door_4m", 4f, -16f);
-            P(zoneL, "Door_Leaf", 4f + LeafX, -16f + LeafZ);
+            P(zoneL, "Wall_Solid_4m", 0f, -16f);                      // L / C boundary: solid, then the room's glass
 
-            // Zone C (claims): an 8 × 8 m meeting room behind frosted glass, one capsule counter.
+            // Zone C (claims): the curved header-band glass meeting room of Alex's concept (version A): straight glass
+            // on the north, a curved corner at the NE, a 2 m open doorway on the east, then straight glass again.
             var zoneC = G("Zone C - meeting room");
-            P(zoneC, "Partition_Frost_4m", 8f, -16f, 90f);
-            P(zoneC, "Partition_Frost_4m", 8f, -20f, 90f);
+            P(zoneC, "Partition_Header_2m", 4f, -16f);
+            P(zoneC, "Partition_Header_Curve_2x2", 8f, -16f, 90f);   // yaw 90: convex toward the NE corridor
+            P(zoneC, "Partition_Header_4m", 8f, -20f, 90f);
             P(zoneC, "Counter_Capsule_2m", 4f, -20.5f);
 
             // Zone A (archive): transparency cuts, 2 m cells of solid, clear, open and frosted.
@@ -255,13 +290,32 @@ namespace CloseTheDeal.Editor.Art
             var guards = G("Zone H - void guards", FloorHeight);
             for (float z = AtriumZ0; z > AtriumZ1; z -= Cell)
             {
-                P(guards, "Guard_Glass_4m", AtriumX0, z, 90f);           // west edge: glass on the deck side
-                P(guards, "Guard_Glass_4m", AtriumX1, z - Cell, -90f);   // east edge
+                P(guards, "Guard_Rail_4m", AtriumX0, z, 90f);            // west edge: on the deck side
+                P(guards, "Guard_Rail_4m", AtriumX1, z - Cell, -90f);    // east edge
             }
             for (float x = AtriumX0; x < AtriumX1; x += Cell)
-                P(guards, "Guard_Glass_4m", x + Cell, AtriumZ0, 180f);  // north edge
-            P(guards, "Guard_Glass_2m", StairPivot.x + 2f, AtriumZ1);       // south edge, beside the stair's landing
-            P(guards, "Guard_Glass_4m", AtriumX1 - Cell, AtriumZ1);
+                P(guards, "Guard_Rail_4m", x + Cell, AtriumZ0, 180f);   // north edge
+            P(guards, "Guard_Rail_2m", StairPivot.x + 2f, AtriumZ1);        // south edge, beside the stair's landing
+            P(guards, "Guard_Rail_4m", AtriumX1 - Cell, AtriumZ1);
+            // Monumental graphic columns at three atrium corners (the SW corner is the stair's landing), and the
+            // reception desk facing the window corridor, as in Alex's atrium plate.
+            // Each turned so its graphic faces (its +Z and +X) look into the atrium.
+            foreach (var (cx, cz, yaw) in new[] { (AtriumX0, AtriumZ0, 90f), (AtriumX1, AtriumZ0, 180f), (AtriumX1, AtriumZ1, -90f) })
+                P(zoneH, "Column_Graphic_Tall", cx, cz, yaw);
+            P(zoneH, "Desk_Reception", 17.5f, -6.2f);
+            P(zoneH, "Planter_Box", 15.2f, -5.2f);
+
+            // The Japanese corporate mix (ArtSource/Kit/concepts/Japanese_Aero/DECISION.md). The x 12 wall between L and
+            // H carries the AONAGI logo and the dot-matrix reception sign on its west face (seen down the window
+            // corridor), with the water server and umbrella stand below; its atrium face carries the water wall and
+            // a planter. Wall-hung pieces: pivot at the low-X edge on the face; yaw -90 faces -X, yaw 90 faces +X.
+            var aonagi = G("AONAGI identity");
+            P(aonagi, "Logo_Aonagi", AtriumX0 - 0.2f, -7.6f, -90f);
+            P(aonagi, "Sign_LED_Reception", AtriumX0 - 0.2f, -7.0f, -90f);
+            P(aonagi, "Water_Server", AtriumX0 - 0.6f, -4.7f, -90f);
+            P(aonagi, "Umbrella_Stand", AtriumX0 - 0.45f, -5.3f);
+            P(aonagi, "Water_Wall", AtriumX0, -5.1f, 90f);
+            P(aonagi, "Planter_Box", AtriumX0 + 1.0f, -6.0f, 90f);
 
             // Zone R (review): a split X, two offset islands and block cover; cobalt and a door toward H and A.
             var zoneR = G("Zone R - split junction");
@@ -277,14 +331,121 @@ namespace CloseTheDeal.Editor.Art
 
             // Upper floor: open, with cover over the rooms below.
             var upper = G("Upper floor cover", FloorHeight);
-            P(upper, "Cover_Block_2m", 6f, -10f);
             P(upper, "Counter_Capsule_2m", 26f, -18f, 90f);
             P(upper, "Cover_Block_2m", 16f, -20f, 90f);
 
+            // Zone supergraphics: painted straight onto a white wall that zone's players face (pivot = the graphic's
+            // low-X edge on the wall face; yaw turns its readable +Z side away from the wall). 3.2 m wide since
+            // 2026-11-13 (Alex: "think Mirror's Edge"), so each sits 0.4 m further toward its low end than the
+            // 2.4 m panels did, keeping the same centre.
+            var signs = G("Zone signs");
+            P(signs, "Sign_Zone_L", 0.4f, -16f);                    // L / C wall, north face, seen down the loop
+            P(signs, "Sign_Zone_C", 2.4f, -Depth + 0.2f);            // C room's south wall, inside face
+            P(signs, "Sign_Zone_A", 14.4f, -Depth + 0.2f);           // A bay's south wall, inside face
+            P(signs, "Sign_Zone_H", AtriumX1 - 0.2f, -15.6f, -90f);  // atrium's east wall, the white face toward H
+            P(signs, "Sign_Zone_R", Width - 0.2f, -7.6f, -90f);      // east wall, inside face, at the junction
+
+            // Furniture for scale: sculptural desks with pod chairs (chairs face the desk, -Z, so yaw 180) and a
+            // second counter in the junction.
+            var furniture = G("Furniture");
+            P(furniture, "Desk_Sculpt", 2f, -18f);
+            P(furniture, "Chair_Pod", 2f, -17.2f, 180f);
+            P(furniture, "Counter_Capsule_2m", 30f, -6.5f, 90f);
+            var upperFurniture = G("Upper floor furniture", FloorHeight);
+            foreach (float x in new[] { 3f, 6.5f })
+            {
+                P(upperFurniture, "Desk_Sculpt", x, -19f);
+                P(upperFurniture, "Chair_Pod", x, -18.2f, 180f);
+            }
+
+            // Work areas, after Alex's office-floor plate: workstation benches with task chairs, low storage and a
+            // copier, on dark carpet under a tiled ceiling with linear pendants. Upstairs west and east, and the
+            // ground-floor meeting room; the corridors, atrium and junctions keep the polished floor.
+            var work = G("Work areas - furniture", FloorHeight);
+            foreach (var (bx, bz) in new[] { (3.5f, -9f), (8.5f, -9f), (3.5f, -13f), (8.5f, -13f), (24f, -12f), (28.5f, -12f) })
+                Bench(work, bx, bz);
+            P(work, "Storage_Low", Width - 0.45f, -21f, -90f);
+            P(work, "Copier", Width - 0.6f, -23.2f, -90f);
+            P(work, "Storage_Low", 0.45f, -6f, 90f);
+            P(work, "Planter_Box", 10.5f, -16.5f);
+            P(work, "Planter_Box", 22f, -4.8f);
+            // The office's daily life against the upper floor's solid south wall: a vending machine and the
+            // slipper cabinet (tall props only against opaque walls, so they make no new cover in a route).
+            P(work, "Vending_Machine", 10.4f, -Depth + 0.2f + VendHalfDepth);
+            P(work, "Slipper_Cabinet", 8.6f, -Depth + 0.2f + SlipperHalfDepth);
+            var groundWork = G("Work areas - ground");
+            Bench(groundWork, 23.5f, -21f);
+            P(groundWork, "Copier", 13f, -23.3f);
+            foreach (float px in new[] { 10.5f, 26.5f }) P(groundWork, "Planter_Box", px, -3.3f);
+            // Turned 180 so the graphic faces (-Z, -X) meet players coming out of the zones and along the corridor.
+            P(groundWork, "Column_Graphic", 6f, -2.2f, 180f);
+            P(groundWork, "Column_Graphic", 18f, -2.2f, 180f);
+
+            void Bench(Transform t, float x, float z)
+            {
+                P(t, "Workstation_Bench", x, z);
+                foreach (float dx in new[] { -0.6f, 0.6f })
+                {
+                    P(t, "Chair_Task", x + dx, z + 1.05f, 180f);   // the +Z side's chairs face the desk, -Z
+                    P(t, "Chair_Task", x + dx, z - 1.05f);         // the -Z side's face +Z
+                }
+                // A Japanese desk island's head end: a phone and a document tray on each side's end desk, clear of
+                // the monitors and keyboards (they stop at 0.82 m from the bench centre).
+                OnDesk(t, "Phone_Desk", x + 0.98f, z + 0.42f, 180f);
+                OnDesk(t, "Doc_Tray", x - 0.98f, z + 0.45f, 180f);
+                OnDesk(t, "Phone_Desk", x - 0.98f, z - 0.42f);
+                OnDesk(t, "Doc_Tray", x + 0.98f, z - 0.45f);
+            }
+            void OnDesk(Transform t, string piece, float x, float z, float yaw = 0f)
+            {
+                var go = P(t, piece, x, z, yaw);
+                go.transform.localPosition = new Vector3(x, DeskTop, z);
+            }
+            var carpets = G("Work areas - carpet and ceilings");
+            foreach (var (level, x0, x1, z0, z1) in new[] { (1, 0f, 12f, -4f, -24f), (1, 20f, 32f, -4f, -24f), (0, 0f, 8f, -16f, -24f) })
+                for (float x = x0; x < x1; x += Cell)
+                    for (float z = z0; z > z1; z -= Cell)
+                    {
+                        float floorY = level * FloorHeight, soffit = floorY + FloorHeight - 0.2f;
+                        P(carpets, "Carpet_Overlay_4x4", x, z).transform.localPosition = new Vector3(x, floorY, z);
+                        P(carpets, "Ceiling_Grid_4x4", x, z).transform.localPosition = new Vector3(x, soffit, z);
+                        P(carpets, "Light_Pendant_Linear", x, z).transform.localPosition =
+                            new Vector3(x + Cell * 0.5f, soffit, z - Cell * 0.5f);
+                    }
+
             Figures(root);
             Massing(root);
+            DevMirror();
+            HitDummy();
+            // The rooftop range (the elevator session's KitOfficeRoof.cs): roof guard rails, the dummy pad, the
+            // arsenal bay and the pool; it also moves the HitDummy up there and wires the lift if one is built.
+            Debug.Log(KitOfficeRoof.AddTo(root));
             AddCamera();
             return count;
+        }
+
+        /// <summary>
+        /// Puts the animation work's DevMirror back where it stood in the labyrinth: a mirror wall along the
+        /// upper floor's east side, so a player can watch their own character. Skipped if the prefab is gone.
+        /// </summary>
+        /// <remarks>Position, turn and size copied from the scene it was placed in (KitOffice at d4cce74).</remarks>
+        /// <summary>Places the hit-reaction session's HitDummy where it can be shot and seen in the DevMirror.
+        /// Skipped if the prefab is gone.</summary>
+        static void HitDummy()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HitDummyPath);
+            if (prefab == null) return;
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            go.transform.SetPositionAndRotation(HitDummyPosition, Quaternion.Euler(0f, HitDummyYaw, 0f));
+        }
+
+        static void DevMirror()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(DevMirrorPath);
+            if (prefab == null) return;
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            go.transform.SetPositionAndRotation(DevMirrorPosition, Quaternion.Euler(0f, DevMirrorYaw, 0f));
+            go.transform.localScale = DevMirrorScale;
         }
 
         /// <summary>True for a 4 m cell (NW corner at x, z) inside the atrium void.</summary>

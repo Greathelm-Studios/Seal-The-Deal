@@ -17,16 +17,24 @@ namespace CloseTheDeal.Editor.UI
     /// </summary>
     internal static class UiKitScreens
     {
-        internal static GameObject Title, Settings, Confirm, Canvas;
+        internal static GameObject Title, Settings, Confirm, Session, Problem, Canvas;
 
         /// <summary>The title lane's band for the title lockup and menu starts at 64% of the frame; the sill sits above it.</summary>
         const float SillY = 664f;
+
+        /// <summary>
+        /// The window bars at 1080p: a 20 px paper face plus a 4 px silver reveal (mullions) or shadow (transom), 24 px
+        /// in all. The owner found the first 44 + 10 px bars too heavy; the panes read as panes at 720p (16 px) too.
+        /// </summary>
+        const float BarFace = 20f, BarShade = 4f;
 
         internal static void Build(bool rebuild)
         {
             Title = Ensure(ScreenFolder + "/TitleScreen.prefab", BuildTitle, rebuild);
             Settings = Ensure(ScreenFolder + "/SettingsScreen.prefab", UiKitSettingsBuilder.Build, rebuild);
             Confirm = Ensure(ScreenFolder + "/ConfirmDialog.prefab", BuildConfirm, rebuild);
+            Session = Ensure(ScreenFolder + "/SessionPanel.prefab", UiKitSessionBuilder.BuildSession, rebuild);
+            Problem = Ensure(ScreenFolder + "/ProblemPanel.prefab", UiKitSessionBuilder.BuildProblem, rebuild);
             Canvas = Ensure(ScreenFolder + "/KitCanvas.prefab", BuildCanvas, rebuild);
         }
 
@@ -57,6 +65,10 @@ namespace CloseTheDeal.Editor.UI
             var title = Instance<TitleScreen>(Title, go.transform, "TitleScreen");
             var settings = Instance<SettingsScreen>(Settings, go.transform, "SettingsScreen");
             var quit = Instance<UiConfirmDialog>(Confirm, go.transform, "QuitDialog");
+            var session = Instance<SessionPanel>(Session, go.transform, "SessionPanel");
+            var problem = Instance<ProblemPanel>(Problem, go.transform, "ProblemPanel");
+            session.gameObject.SetActive(false);
+            problem.gameObject.SetActive(false);
             Instance<UiFocusFrame>(UiKitComponents.FocusFrame, go.transform, "FocusFrame");
             title.gameObject.SetActive(false);
             settings.gameObject.SetActive(false);
@@ -70,6 +82,8 @@ namespace CloseTheDeal.Editor.UI
             Set(root, "_tokens", Tokens);
             Set(root, "_stack", stack);
             Set(root, "_title", title);
+            Set(root, "_session", session);
+            Set(root, "_problem", problem);
             return go;
         }
 
@@ -217,6 +231,7 @@ namespace CloseTheDeal.Editor.UI
             Set(screen, "_build", build);
             SetArray(screen, "_versionLines", new Object[] { version });
             Set(screen, "_menuGroup", menuLine.GetComponent<CanvasGroup>());
+            SetArray(screen, "_centreGroups", new Object[] { statusGroup.GetComponent<CanvasGroup>(), info.GetComponent<CanvasGroup>() });
             return root.gameObject;
         }
 
@@ -316,14 +331,14 @@ namespace CloseTheDeal.Editor.UI
             transom.anchorMin = new Vector2(0f, 1f);
             transom.anchorMax = new Vector2(1f, 1f);
             transom.pivot = new Vector2(0.5f, 1f);
-            transom.sizeDelta = new Vector2(0f, 40f);
-            transom.anchoredPosition = new Vector2(0f, -292f);
+            transom.sizeDelta = new Vector2(0f, BarFace);
+            transom.anchoredPosition = new Vector2(0f, -302f); // centred where the 40 px bar was
             Img(transom, UiKitArt.White, t.Paper);
             RectTransform transomShade = Node(transom, "Shadow");
             transomShade.anchorMin = new Vector2(0f, 0f);
             transomShade.anchorMax = new Vector2(1f, 0f);
             transomShade.pivot = new Vector2(0.5f, 1f);
-            transomShade.sizeDelta = new Vector2(0f, 8f);
+            transomShade.sizeDelta = new Vector2(0f, BarShade);
             Img(transomShade, UiKitArt.White, t.Silver);
 
             RectTransform mullions = DesignFrame(frame, "Mullions");
@@ -355,14 +370,14 @@ namespace CloseTheDeal.Editor.UI
             post.anchorMin = new Vector2(0f, 0f);
             post.anchorMax = new Vector2(0f, 1f);
             post.pivot = new Vector2(0.5f, 0.5f);
-            post.sizeDelta = new Vector2(44f, 0f);
+            post.sizeDelta = new Vector2(BarFace, 0f);
             post.anchoredPosition = new Vector2(centreX, 0f);
             Img(post, UiKitArt.White, Tokens.Paper);
             RectTransform reveal = Node(post, "Reveal");
             reveal.anchorMin = new Vector2(1f, 0f);
             reveal.anchorMax = new Vector2(1f, 1f);
             reveal.pivot = new Vector2(0f, 0.5f);
-            reveal.sizeDelta = new Vector2(10f, 0f);
+            reveal.sizeDelta = new Vector2(BarShade, 0f);
             Img(reveal, UiKitArt.White, Tokens.Silver);
             RectTransform lit = Node(post, "LitEdge");
             lit.anchorMin = new Vector2(0f, 0f);
