@@ -1,15 +1,16 @@
 # UI KIT
 
-**Status:** Current (slice 1: foundation, title, quit confirm, Settings › Accessibility) · **Last updated:** 2026-11-13
+**Status:** Current (slice 2: title window, every settings tab, sound through lane 9's player) · **Last updated:** 2026-11-14
 
 ## What the player sees
 
-The game opens on the title: sky in a white window frame across the top, **SEAL THE DEAL** low on paper, what the game is doing in a status line, and a menu on the right: **Host game**, **Join on this PC** (local test mode only), **Settings**, **Quit to desktop**.
+The game opens on the title: a white window frame with depth (lit mullion faces, silver reveals, a transom shadow, a black-edged sill) over a drawn sky with stepped cel cumulus and the rival firm's tower under trace brackets, sun falling through it in two hard slabs across the paper below. Low on paper: **SEAL THE DEAL**, the status and connection lines, the focused button's explanation, the keys row (Enter / A select, Esc / B back, arrows / stick move), a microtype strip, the build line, barcode and corner ticks, and the menu: **Host game**, **Join on this PC** (local test mode only), **Settings**, **Quit to desktop**.
 Every control answers: hovering lifts it and closes its corner brackets, pressing stamps it down, letting go confirms with a small cyan tick, and each of those asks for a sound.
 Keys and the pad show a focus ring with snapped brackets and a chevron that glide to the next control; with the mouse those marks stay hidden.
 A greyed-out control says why when pressed (amber plate, a shake, the reason in the status line).
 Esc / the pad's B goes back; at the title it asks **Quit to desktop?** with **Stay** focused.
-**Settings** has one tab, Accessibility: Reduce motion, crosshair style, colour and size (live preview over sun, sky and a dark room) and Show network stats. Changes are saved on this PC at once and come back after a relaunch.
+**Settings** has four tabs (Q / E or the shoulder buttons switch; the cobalt rule glides to the open tab and the page slides 12 px): Controls (look rows and the key list; rebinding asks before taking a key another action uses), Video (display mode, resolution with a 10-second revert, vertical sync, frame rate limit, quality), Audio (five volumes, a test sound and a live output meter) and Accessibility (as before). The right column always shows the focused row's explanation above the tab's live preview. Changes apply at once and come back after a relaunch.
+Full screens change through paper white: the old screen's content fades and its sky rolls up, then the new one's sky rolls down and its lines reveal. No mixed mid-tone.
 Once you host or join, the kit's screens fade out and the playtest card (MENU_AND_HUD.md) takes over until the in-game menu slice lands.
 
 ## uGUI, not UI Toolkit
@@ -50,6 +51,8 @@ One asset, [UiTokens.asset](../../Assets/_Project/UI/Tokens/UiTokens.asset), des
 **Reduce motion** (Settings) is the PlayerPrefs key `ui.reducedMotion`, shared with the title lane's `UiTransition`: slides and zooms become fades, the shake and breathing stop, the press stops moving the plate.
 
 ## Sound
+
+Lane 9's `UiSoundPlayerAdapter` registers itself as `UiSound.Player` before the first scene loads; the capture run logs each clip played and the mixer group it routes to.
 
 Call `UiSound.Play(UiSoundEvent.X)`; never load a clip. `UiSound.PlayHover()` and `UiSound.PlaySlider(value01)` for the two pitched ones. `UiSound.Played` sees every request (logs, checks).
 The sound lane registers `UiSound.Player` (its `UiSoundPlayer` through `IUiSoundPlayer`); until that is on the branch every call is silent.
@@ -95,7 +98,17 @@ Events (frozen with lane 9; append only): None, HoverMove, Focus, Select, Confir
 | Crosshair size 50–200% | `ui.crosshair.size` | UiCrosshair, whole pixels |
 | Show network stats | `ui.networkStats` | PredictionDebugHud (default **on** while netcode is tested; the inventory's release default is off) |
 
-Left out until their game-side value exists: audio volumes (lane 9's buses, next slice), Interface size (no scaler hook yet), secretary subtitles (no subtitle system), the crosshair editor, every Controls and Video row, key rebinding.
+Controls, Video and Audio:
+
+| Row | Saved as | Notes |
+|---|---|---|
+| Mouse sensitivity, invert, controller look speed | `input.*` (InputPrefs) | Multipliers of the designer's MovementProfile (never written). Shown only when `InputPrefs.LookHooked` (set by lane 1's PlayerCamera) |
+| Key bindings | `input.bindings` (binding-override JSON) | Rebinding cells show only when `InputPrefs.BindingsHooked` (lane 1's PlayerInputReader applies the JSON); until then the list is read-only |
+| Display mode, resolution | `video.*` | Applied in a build; the Editor's window is the Editor's |
+| Vertical sync, frame rate limit, quality | `video.*` | Applied at launch (UiVideo) |
+| Master, Music, Effects, Voice, Interface | `ctd.audio.*` | Lane 9's `UiAudio.SetVolume` |
+
+Left out until their game-side value exists: field of view (the camera keeps its own rest FOV; needs a hook from lane 1), stick dead zone (needs the profile value to show), lean / sprint / crouch toggle (hold only), screen shake (lane 2's shake has no player scale), secretary subtitles (LobbyHud draws them with no switch), play audio in the background, Interface size (no scaler hook), the crosshair editor, pad rebinding.
 Changes apply at once (no Apply step; the mockup's Apply / unsaved-changes flow is not used) and are written to disk when Settings closes and when the game quits, so dragging a slider doesn't write the disk on every step.
 
 ## Tools
@@ -107,9 +120,8 @@ Changes apply at once (no Apply step; the mockup's Apply / unsaved-changes flow 
 
 ## Known limitations
 
-- No sound until lane 9's branch is merged with this one; every event is requested and logged.
-- Fonts are TMP's Liberation Sans in every role; the thin wide title needs Saira Expanded.
 - The sky is a static gradient until lane 8's live backdrop fills the slot; panes use the no-blur fallback until lane 7's material.
+- Final typeface: every role is TMP's Liberation Sans (the only font in the repo, origin/main and origin/Alex_Env); the display roles thin it with an SDF material (`Tokens/Type_Thin.mat`).
 - Status strings are SteamLobby's current wording, not the inventory's rewrite (§5.2–5.3).
 - No hardware cursor yet (feel table §2.4), no pad glyph switching, no rumble.
 - The frozen sound list has no edge-bump or "focus stops after a held repeat" event: both are silent.

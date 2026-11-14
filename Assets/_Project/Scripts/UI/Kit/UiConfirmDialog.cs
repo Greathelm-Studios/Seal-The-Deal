@@ -24,9 +24,12 @@ namespace CloseTheDeal.UI
         [SerializeField] TMP_Text _cancelHint;
 
         Action _onConfirm;
+        Action _onStay;
 
-        public void Configure(string title, string body, string confirmLabel, string stayLabel, Action onConfirm)
+        /// <summary>Sets the words and actions. onStay (optional) runs when the player keeps things as they were (Stay, Esc).</summary>
+        public void Configure(string title, string body, string confirmLabel, string stayLabel, Action onConfirm, Action onStay = null)
         {
+            _onStay = onStay;
             if (_title != null) _title.text = title;
             if (_body != null) _body.text = body;
             if (_confirm != null && _confirm.Fx.Label != null) _confirm.Fx.Label.text = confirmLabel;
@@ -56,14 +59,27 @@ namespace CloseTheDeal.UI
             base.OnDisable();
         }
 
+        /// <summary>Changes the body while the dialog is open (a countdown).</summary>
+        public void SetBody(string body)
+        {
+            if (_body != null && _body.text != body)
+                _body.text = body;
+        }
+
         /// <summary>Esc / B is Stay.</summary>
         public override void OnCancel()
         {
             UiSound.Play(UiSoundEvent.Back);
-            Stack?.Pop(false);
+            OnStay();
         }
 
-        void OnStay() => Stack?.Pop(false);
+        void OnStay()
+        {
+            Action stay = _onStay;
+            _onStay = null;
+            Stack?.Pop(false);
+            stay?.Invoke();
+        }
 
         void OnConfirm() => _onConfirm?.Invoke();
     }

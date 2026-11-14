@@ -40,6 +40,8 @@ namespace CloseTheDeal.UI
         [SerializeField] TMP_Text _focusBody;
         [Tooltip("Version line under the title, and the footer's version.")]
         [SerializeField] TMP_Text[] _versionLines = new TMP_Text[0];
+        [Tooltip("The build line in the footer: version and build id.")]
+        [SerializeField] TMP_Text _build;
 
         [Tooltip("The menu column's group: hidden while a dialog takes its place (the quit confirm sits where the menu was).")]
         [SerializeField] CanvasGroup _menuGroup;
@@ -81,6 +83,9 @@ namespace CloseTheDeal.UI
                 if (line != null)
                     line.text = version;
             }
+
+            if (_build != null)
+                _build.text = BuildLine();
         }
 
         void OnEnable()
@@ -162,6 +167,15 @@ namespace CloseTheDeal.UI
             if (_status != null && !_refusalShown)
                 _status.Set(_lastStatus, ready ? UiStatusKind.Info : UiStatusKind.Busy);
             LinkNavigation(local);
+        }
+
+        /// <summary>Version and where this copy came from: the build's id in a build, EDITOR in the Editor.</summary>
+        static string BuildLine()
+        {
+            string id = Application.isEditor ? "EDITOR" : Application.buildGUID;
+            if (!string.IsNullOrEmpty(id) && id.Length > 8)
+                id = id.Substring(0, 8).ToUpperInvariant();
+            return "BUILD " + Application.version + (string.IsNullOrEmpty(id) ? string.Empty : " · " + id);
         }
 
         static string ModeLine(bool ready, bool local)

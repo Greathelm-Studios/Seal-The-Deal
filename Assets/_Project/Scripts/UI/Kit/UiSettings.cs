@@ -27,7 +27,7 @@ namespace CloseTheDeal.UI
     /// </summary>
     public static class UiSettings
     {
-        /// <summary>Shared with the title lane's transitions (UiTransition.ReducedMotion): one switch for every animation.</summary>
+        /// <summary>The key the title lane's transitions read too (its UiTransition, on that lane's branch): one switch for every animation.</summary>
         public const string ReducedMotionKey = "ui.reducedMotion";
         public const string CrosshairStyleKey = "ui.crosshair.style";
         public const string CrosshairColourKey = "ui.crosshair.colour";

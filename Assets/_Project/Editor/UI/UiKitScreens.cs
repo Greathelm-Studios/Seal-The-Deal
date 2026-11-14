@@ -25,7 +25,7 @@ namespace CloseTheDeal.Editor.UI
         internal static void Build(bool rebuild)
         {
             Title = Ensure(ScreenFolder + "/TitleScreen.prefab", BuildTitle, rebuild);
-            Settings = Ensure(ScreenFolder + "/SettingsScreen.prefab", BuildSettings, rebuild);
+            Settings = Ensure(ScreenFolder + "/SettingsScreen.prefab", UiKitSettingsBuilder.Build, rebuild);
             Confirm = Ensure(ScreenFolder + "/ConfirmDialog.prefab", BuildConfirm, rebuild);
             Canvas = Ensure(ScreenFolder + "/KitCanvas.prefab", BuildCanvas, rebuild);
         }
@@ -63,6 +63,8 @@ namespace CloseTheDeal.Editor.UI
             quit.gameObject.SetActive(false);
             Set(title, "_settingsScreen", settings);
             Set(title, "_quitDialog", quit);
+            Set(settings.GetComponentInChildren<VideoPage>(true), "_dialog", quit);
+            Set(settings.GetComponentInChildren<ControlsPage>(true), "_dialog", quit);
 
             var root = go.AddComponent<UiRoot>();
             Set(root, "_tokens", Tokens);
@@ -71,7 +73,7 @@ namespace CloseTheDeal.Editor.UI
             return go;
         }
 
-        static RectTransform ScreenRoot(string name)
+        internal static RectTransform ScreenRoot(string name)
         {
             var go = new GameObject(name, typeof(RectTransform)) { layer = 5 };
             var root = (RectTransform)go.transform;
@@ -81,21 +83,23 @@ namespace CloseTheDeal.Editor.UI
         }
 
         /// <summary>Paper with the faint hairline grid: the field every screen sits on.</summary>
-        static void PaperField(RectTransform root)
+        internal static void PaperField(RectTransform root)
         {
             Img(Fill(root, "Paper"), UiKitArt.White, Tokens.Paper, raycast: true);
             Img(Fill(root, "Grid"), UiKitArt.Grid, Tokens.Grid, Image.Type.Tiled);
         }
 
-        static void WireScreen(UiScreen screen, RectTransform content, List<CanvasGroup> reveal, Selectable first)
+        internal static void WireScreen(UiScreen screen, RectTransform content, List<CanvasGroup> reveal, Selectable first)
         {
             Set(screen, "_tokens", Tokens);
             Set(screen, "_content", content);
             SetArray(screen, "_reveal", reveal.ToArray());
             Set(screen, "_firstFocus", first);
+            if (content.TryGetComponent(out CanvasGroup group))
+                Set(screen, "_contentGroup", group);
         }
 
-        static T Place<T>(GameObject prefab, Transform parent, string name, float x, float y) where T : Component
+        internal static T Place<T>(GameObject prefab, Transform parent, string name, float x, float y) where T : Component
         {
             var c = Instance<T>(prefab, parent, name);
             var rect = (RectTransform)c.transform;
@@ -104,14 +108,14 @@ namespace CloseTheDeal.Editor.UI
             return c;
         }
 
-        static void SetLabel(Component control, string text)
+        internal static void SetLabel(Component control, string text)
         {
             TMP_Text label = control.transform.Find("Plate/Label")?.GetComponent<TMP_Text>();
             if (label != null)
                 label.text = text;
         }
 
-        static void SetText(Component part, string child, string text)
+        internal static void SetText(Component part, string child, string text)
         {
             TMP_Text label = part.transform.Find(child)?.GetComponent<TMP_Text>();
             if (label != null)
@@ -125,30 +129,38 @@ namespace CloseTheDeal.Editor.UI
             UiTokens t = Tokens;
             RectTransform root = ScreenRoot("TitleScreen");
             PaperField(root);
+            SunOnPaper(root);
             RectTransform sky = SkyWindow(root, out RectTransform slot, out GameObject staticSky);
             RectTransform frame = DesignFrame(root, "Content");
+            frame.gameObject.AddComponent<CanvasGroup>();
             var reveal = new List<CanvasGroup>();
 
             RectTransform lockup = RevealLine(frame, "Lockup");
             reveal.Add(lockup.GetComponent<CanvasGroup>());
+            Label(lockup, "Strip", 112f, 684f, 1000f, 20f, "SEAL THE DEAL · MAIN MENU · EARLY ACCESS", t.Micro, t.Ink3);
+            Label(lockup, "StripRight", 1208f, 684f, 600f, 20f, "TERMS AND CONDITIONS APPLY", t.Micro, t.Ink3, TextAlignmentOptions.MidlineRight);
             Box(lockup, "Rule", 112f, 712f, 1696f, 1f, t.Black);
+            Ticks(lockup, 112f, 706f, 1808f);
             Label(lockup, "Title", 112f, 736f, 700f, 72f, "SEAL THE DEAL", t.Title, t.Navy);
             Box(lockup, "TitleRule", 112f, 810f, 640f, 1f, t.Hair);
             Box(lockup, "TermsBullet", 112f, 828f, 8f, 8f, t.Black);
             Label(lockup, "Terms", 128f, 818f, 380f, 28f, "Terms and Conditions Apply.", t.Body, t.Ink2);
-            TextMeshProUGUI version = Label(lockup, "Version", 552f, 818f, 200f, 28f, "v0.1.0 · Early Access", t.Micro, t.Ink3, TextAlignmentOptions.MidlineRight);
+            TextMeshProUGUI version = Label(lockup, "Version", 552f, 818f, 200f, 28f, "v0.1.0 · Early Access", t.Caption, t.Ink3, TextAlignmentOptions.MidlineRight);
 
             RectTransform modeLine = RevealLine(frame, "Mode");
             reveal.Add(modeLine.GetComponent<CanvasGroup>());
+            Label(modeLine, "ModeCaption", 112f, 868f, 300f, 18f, "§ 0.2  CONNECTION", t.Section, t.Ink3).fontSize = 12f;
             Box(modeLine, "ModeBullet", 112f, 898f, 8f, 8f, t.Cobalt);
             TextMeshProUGUI mode = Label(modeLine, "ModeText", 132f, 888f, 640f, 28f, "Starting...", t.Body, t.Navy);
+            KeyHints(modeLine, 112f, 944f);
 
             RectTransform statusGroup = RevealLine(frame, "Status");
             reveal.Add(statusGroup.GetComponent<CanvasGroup>());
-            var status = Place<UiStatusLine>(UiKitComponents.StatusLine, statusGroup, "StatusLine", 832f, 760f);
+            Label(statusGroup, "StatusCaption", 832f, 722f, 440f, 18f, "§ 0.1  STATUS", t.Section, t.Ink3).fontSize = 12f;
+            var status = Place<UiStatusLine>(UiKitComponents.StatusLine, statusGroup, "StatusLine", 832f, 752f);
             ((RectTransform)status.transform).sizeDelta = new Vector2(440f, 52f);
             ((RectTransform)status.transform.Find("Text")).sizeDelta = new Vector2(418f, 52f);
-            TextMeshProUGUI hint = Label(statusGroup, "JoinHint", 854f, 812f, 420f, 56f,
+            TextMeshProUGUI hint = Label(statusGroup, "JoinHint", 854f, 806f, 420f, 56f,
                 "To join a friend, accept their invite or choose Join Game on their name in Steam.", t.Body, t.Ink2, TextAlignmentOptions.TopLeft, true);
 
             RectTransform info = RevealLine(frame, "FocusInfo");
@@ -159,6 +171,7 @@ namespace CloseTheDeal.Editor.UI
 
             RectTransform menuLine = RevealLine(frame, "Menu");
             reveal.Add(menuLine.GetComponent<CanvasGroup>());
+            Label(menuLine, "MenuCaption", 1388f, 722f, 420f, 18f, "§ 1  MAIN MENU", t.Section, t.Ink3).fontSize = 12f;
             RectTransform column = At(menuLine, "Column", 1388f, 744f, 420f, 256f);
             var layout = column.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.spacing = t.SpaceS;
@@ -175,19 +188,21 @@ namespace CloseTheDeal.Editor.UI
             SetLabel(settings, "Settings");
             SetLabel(quit, "Quit to desktop");
             join.Description = "Join a game hosted by another copy of Seal the Deal running on this PC.";
-            settings.Description = "Crosshair, motion and the network readout. Kept on this PC.";
+            settings.Description = "Controls, video, audio and accessibility. Kept on this PC.";
             quit.Description = "Close Seal the Deal. Your settings are already saved.";
 
             RectTransform footer = RevealLine(frame, "Footer");
             reveal.Add(footer.GetComponent<CanvasGroup>());
             CropMarks(footer);
-            TextMeshProUGUI footerText = Label(footer, "Microtype", 112f, 1008f, 1200f, 24f,
-                "Terms and Conditions Apply.", t.Micro, t.Ink3);
+            Label(footer, "Microtype", 112f, 1036f, 1100f, 20f,
+                "SEAL THE DEAL · TERMS AND CONDITIONS APPLY · KEPT ON THIS PC", t.Micro, t.Ink3);
+            TextMeshProUGUI build = Label(footer, "Build", 1208f, 1036f, 420f, 20f, string.Empty, t.Micro, t.Ink3, TextAlignmentOptions.MidlineRight);
             Box(footer, "Barcode", 1648f, 1012f, 160f, 20f, t.Navy, UiKitArt.Barcode);
-            _ = footerText;
 
             var screen = root.gameObject.AddComponent<TitleScreen>();
             WireScreen(screen, frame, reveal, host);
+            Set(screen, "_wipe", sky);
+            Set(screen, "_wipeGroup", sky.GetComponent<CanvasGroup>());
             Set(screen, "_backdropSlot", slot);
             Set(screen, "_staticSky", staticSky);
             Set(screen, "_host", host);
@@ -199,15 +214,77 @@ namespace CloseTheDeal.Editor.UI
             Set(screen, "_joinHint", hint);
             Set(screen, "_focusHeading", heading);
             Set(screen, "_focusBody", body);
+            Set(screen, "_build", build);
             SetArray(screen, "_versionLines", new Object[] { version });
             Set(screen, "_menuGroup", menuLine.GetComponent<CanvasGroup>());
-            _ = sky;
             return root.gameObject;
         }
 
+        /// <summary>Small tick marks along a rule: the survey's measuring marks.</summary>
+        static void Ticks(Transform parent, float x0, float y, float x1)
+        {
+            for (float x = x0; x <= x1; x += 96f)
+                Box(parent, "Tick", x, y, 1f, 6f, Tokens.Black);
+        }
+
+        /// <summary>The keys row: Enter / A select, Esc / B back, arrows / stick move.</summary>
+        static void KeyHints(Transform parent, float x, float y)
+        {
+            UiTokens t = Tokens;
+            (string a, string b, string label)[] hints = { ("Enter", "A", "Select"), ("Esc", "B", "Back"), ("\u2191\u2193", "LS", "Move") };
+            foreach (var (a, b, label) in hints)
+            {
+                x = Cap(parent, x, y, a);
+                x = Cap(parent, x + 4f, y, b);
+                Label(parent, "Hint" + label, x + 8f, y, 70f, 32f, label, t.Label, t.Ink2);
+                x += 92f;
+            }
+        }
+
+        internal static float Cap(Transform parent, float x, float y, string key)
+        {
+            float w = key.Length > 2 ? 56f : 36f;
+            Box(parent, "Cap" + key, x, y, w, 32f, Tokens.Navy, UiKitArt.Outline1);
+            Label(parent, "Key" + key, x, y, w, 32f, key, Tokens.Caption, Tokens.Navy, TextAlignmentOptions.Center).characterSpacing = 0f;
+            return x + w;
+        }
+
         /// <summary>
-        /// The window frame: sky above the sill, divided by paper mullions into panes (mockup 00a). The sky is a static
-        /// gradient until the title lane's live backdrop goes into BackdropSlot, which sits behind the mullions.
+        /// Sun through the window falling across the paper below: the lower band sits in soft shade, with two hard slabs
+        /// of light (paper again) cutting across it at the sun's angle. Light stays behind text, never over it.
+        /// </summary>
+        static void SunOnPaper(RectTransform root)
+        {
+            UiTokens t = Tokens;
+            RectTransform band = Node(root, "SunOnPaper");
+            band.anchorMin = new Vector2(0f, 0f);
+            band.anchorMax = new Vector2(1f, 0.5f);
+            band.pivot = new Vector2(0.5f, 0f);
+            band.offsetMin = Vector2.zero;
+            band.offsetMax = new Vector2(0f, 540f - SillY);
+            band.gameObject.AddComponent<RectMask2D>();
+            Img(Fill(band, "Shade"), UiKitArt.White, UiTokens.WithAlpha(t.Silver, 0.22f));
+            Slab(band, "SlabA", -520f, 380f);
+            Slab(band, "SlabB", 260f, 300f);
+            Img(Fill(band, "Grid"), UiKitArt.Grid, UiTokens.WithAlpha(t.Grid, 0.8f), Image.Type.Tiled);
+        }
+
+        static void Slab(RectTransform band, string name, float x, float width)
+        {
+            RectTransform slab = Node(band, name);
+            slab.anchorMin = slab.anchorMax = new Vector2(0.5f, 1f);
+            slab.pivot = new Vector2(0.5f, 1f);
+            slab.sizeDelta = new Vector2(width, 900f);
+            slab.anchoredPosition = new Vector2(x, 40f);
+            slab.localRotation = Quaternion.Euler(0f, 0f, 32f);
+            Img(slab, UiKitArt.White, Tokens.Paper);
+        }
+
+        /// <summary>
+        /// The window frame: sky above the sill, divided into panes by paper mullions with depth (a lit face, a silver
+        /// reveal on the shadow side), a transom with its shadow, a sill with a black edge, a halftone screen and the
+        /// trace brackets on the rival tower. The sky is drawn (Kit_TitleSky) until the title lane's live backdrop goes
+        /// into BackdropSlot, which sits behind the frame. The window rolls down as the title opens.
         /// </summary>
         static RectTransform SkyWindow(RectTransform root, out RectTransform slot, out GameObject staticSky)
         {
@@ -215,40 +292,63 @@ namespace CloseTheDeal.Editor.UI
             RectTransform sky = Node(root, "SkyWindow");
             sky.anchorMin = new Vector2(0f, 0.5f);
             sky.anchorMax = new Vector2(1f, 1f);
-            sky.pivot = new Vector2(0.5f, 0f);
+            sky.pivot = new Vector2(0.5f, 1f);
             sky.offsetMin = new Vector2(0f, 540f - SillY);
             sky.offsetMax = Vector2.zero;
+            sky.gameObject.AddComponent<CanvasGroup>();
 
             slot = Fill(sky, "BackdropSlot");
             RectTransform fallback = Fill(sky, "StaticSky");
             Img(fallback, UiKitArt.Sky, Color.white);
+            RectTransform drawn = DesignFrame(fallback, "Drawn");
+            drawn.anchorMin = new Vector2(0.5f, 0f);
+            drawn.anchorMax = new Vector2(0.5f, 0f);
+            drawn.pivot = new Vector2(0.5f, 0f);
+            drawn.sizeDelta = new Vector2(1920f, SillY);
+            Img(drawn, UiKitArt.TitleSky, Color.white);
+            Img(At(drawn, "Halftone", 150f, 0f, 460f, 150f), UiKitArt.Dots, UiTokens.WithAlpha(t.Paper, 0.55f), Image.Type.Tiled);
+            TowerTrace(drawn);
             staticSky = fallback.gameObject;
 
-            RectTransform mullions = DesignFrame(sky, "Mullions");
-            mullions.anchorMin = new Vector2(0.5f, 0f);
-            mullions.anchorMax = new Vector2(0.5f, 1f);
-            mullions.pivot = new Vector2(0.5f, 0.5f);
-            mullions.sizeDelta = new Vector2(1920f, 0f);
-            Post(mullions, "MullionLeft", 640f);
-            Post(mullions, "MullionRight", 1280f);
-
-            RectTransform transom = Node(sky, "Transom");
+            RectTransform frame = Node(sky, "Frame");
+            Stretch(frame);
+            RectTransform transom = Node(frame, "Transom");
             transom.anchorMin = new Vector2(0f, 1f);
             transom.anchorMax = new Vector2(1f, 1f);
             transom.pivot = new Vector2(0.5f, 1f);
             transom.sizeDelta = new Vector2(0f, 40f);
             transom.anchoredPosition = new Vector2(0f, -292f);
             Img(transom, UiKitArt.White, t.Paper);
+            RectTransform transomShade = Node(transom, "Shadow");
+            transomShade.anchorMin = new Vector2(0f, 0f);
+            transomShade.anchorMax = new Vector2(1f, 0f);
+            transomShade.pivot = new Vector2(0.5f, 1f);
+            transomShade.sizeDelta = new Vector2(0f, 8f);
+            Img(transomShade, UiKitArt.White, t.Silver);
 
-            RectTransform sill = Node(sky, "Sill");
+            RectTransform mullions = DesignFrame(frame, "Mullions");
+            mullions.anchorMin = new Vector2(0.5f, 0f);
+            mullions.anchorMax = new Vector2(0.5f, 1f);
+            mullions.sizeDelta = new Vector2(1920f, 0f);
+            Post(mullions, "MullionLeft", 640f);
+            Post(mullions, "MullionRight", 1280f);
+
+            RectTransform sill = Node(frame, "Sill");
             sill.anchorMin = new Vector2(0f, 0f);
             sill.anchorMax = new Vector2(1f, 0f);
             sill.pivot = new Vector2(0.5f, 1f);
             sill.sizeDelta = new Vector2(0f, 12f);
             Img(sill, UiKitArt.White, t.Silver);
+            RectTransform edge = Node(sill, "Edge");
+            edge.anchorMin = new Vector2(0f, 0f);
+            edge.anchorMax = new Vector2(1f, 0f);
+            edge.pivot = new Vector2(0.5f, 1f);
+            edge.sizeDelta = new Vector2(0f, 1f);
+            Img(edge, UiKitArt.White, t.Black);
             return sky;
         }
 
+        /// <summary>A mullion with depth: a paper face, a hairline on its lit edge and a silver reveal on its shadow side.</summary>
         static void Post(RectTransform parent, string name, float centreX)
         {
             RectTransform post = Node(parent, name);
@@ -258,6 +358,29 @@ namespace CloseTheDeal.Editor.UI
             post.sizeDelta = new Vector2(44f, 0f);
             post.anchoredPosition = new Vector2(centreX, 0f);
             Img(post, UiKitArt.White, Tokens.Paper);
+            RectTransform reveal = Node(post, "Reveal");
+            reveal.anchorMin = new Vector2(1f, 0f);
+            reveal.anchorMax = new Vector2(1f, 1f);
+            reveal.pivot = new Vector2(0f, 0.5f);
+            reveal.sizeDelta = new Vector2(10f, 0f);
+            Img(reveal, UiKitArt.White, Tokens.Silver);
+            RectTransform lit = Node(post, "LitEdge");
+            lit.anchorMin = new Vector2(0f, 0f);
+            lit.anchorMax = new Vector2(0f, 1f);
+            lit.pivot = new Vector2(1f, 0.5f);
+            lit.sizeDelta = new Vector2(1f, 0f);
+            Img(lit, UiKitArt.White, Tokens.Hair);
+        }
+
+        /// <summary>Trace brackets and tracking squares on the rival tower, the guide's survey marks.</summary>
+        static void TowerTrace(RectTransform drawn)
+        {
+            UiTokens t = Tokens;
+            RectTransform trace = At(drawn, "TowerTrace", 1470f, 360f, 248f, 250f);
+            UiKitComponents.Brackets(trace, 0f, 18f, t.Navy);
+            float[] squares = { 1480, 370, 20, 1640, 366, 24, 1700, 440, 18, 1470, 500, 16, 1690, 570, 22, 1560, 600, 18 };
+            for (int i = 0; i < squares.Length; i += 3)
+                Box(drawn, "TraceSquare", squares[i], squares[i + 1], squares[i + 2], squares[i + 2], UiTokens.WithAlpha(t.Navy, 0.75f), UiKitArt.Outline1);
         }
 
         static void CropMarks(Transform parent)
@@ -270,153 +393,6 @@ namespace CloseTheDeal.Editor.UI
             right.localScale = new Vector3(-1f, -1f, 1f);
             right.pivot = new Vector2(1f, 0f);
             Img(right, UiKitArt.Bracket, Tokens.Navy);
-        }
-
-        // ---- Settings -----------------------------------------------------------------------------------
-
-        static GameObject BuildSettings()
-        {
-            UiTokens t = Tokens;
-            RectTransform root = ScreenRoot("SettingsScreen");
-            PaperField(root);
-            RectTransform frame = DesignFrame(root, "Content");
-            var reveal = new List<CanvasGroup>();
-
-            RectTransform head = RevealLine(frame, "Heading");
-            reveal.Add(head.GetComponent<CanvasGroup>());
-            Box(head, "CrumbBullet", 96f, 34f, 8f, 8f, t.Black);
-            Label(head, "Breadcrumb", 116f, 26f, 900f, 24f, "SEAL THE DEAL · SETTINGS · ACCESSIBILITY", t.Micro, t.Ink3);
-            Label(head, "Heading", 96f, 78f, 900f, 56f, "SETTINGS", t.Heading, t.Navy);
-            Label(head, "Subline", 96f, 134f, 900f, 20f, "PLAYER PREFERENCES · KEPT ON THIS PC", t.Micro, t.Ink3);
-
-            RectTransform tabs = RevealLine(frame, "Tabs");
-            reveal.Add(tabs.GetComponent<CanvasGroup>());
-            Box(tabs, "TabRule", 96f, 220f, 1120f, 1f, t.Hair);
-            var tab = Place<UiButton>(UiKitComponents.Tab, tabs, "AccessibilityTab", 96f, 164f);
-            SetLabel(tab, "Accessibility");
-            tab.Description = "Crosshair, motion and the network readout. Controls, video and audio follow once their settings exist in the game.";
-
-            RectTransform section = RevealLine(frame, "Section");
-            reveal.Add(section.GetComponent<CanvasGroup>());
-            var header = Place<RectTransform>(UiKitComponents.SectionHeader, section, "SectionHeader", 96f, 252f);
-            SetText(header, "Text", "§ 1  ACCESSIBILITY");
-
-            RectTransform rows = RevealLine(frame, "Rows");
-            reveal.Add(rows.GetComponent<CanvasGroup>());
-            float y = 300f;
-            UiToggle motion = Row<UiToggle>(rows, UiKitComponents.Toggle, "ReduceMotion", "Reduce motion", ref y,
-                "Screens fade instead of sliding, nothing shakes and idle motion stops. Sounds still answer.");
-            UiStepper style = Row<UiStepper>(rows, UiKitComponents.Stepper, "CrosshairStyle", "Crosshair style", ref y,
-                "The crosshair's shape. Left and right change it.");
-            UiSwatches colour = Row<UiSwatches>(rows, UiKitComponents.Swatches, "CrosshairColour", "Crosshair colour", ref y,
-                "The crosshair's colour. Every choice keeps a dark outline so it reads on white walls and sky.");
-            UiSlider size = Row<UiSlider>(rows, UiKitComponents.Slider, "CrosshairSize", "Crosshair size", ref y,
-                "From 50% to 200%, in whole pixels so it stays sharp.");
-            UiToggle stats = Row<UiToggle>(rows, UiKitComponents.Toggle, "NetworkStats", "Show network stats", ref y,
-                "Ping, speed and host corrections in the bottom-left corner during a game.");
-            TextMeshProUGUI help = Label(rows, "Help", 112f, y + 12f, 1100f, 52f, string.Empty, t.Body, t.Ink2, TextAlignmentOptions.TopLeft, true);
-
-            RectTransform preview = RevealLine(frame, "Preview");
-            reveal.Add(preview.GetComponent<CanvasGroup>());
-            PreviewTiles(preview);
-
-            RectTransform footer = RevealLine(frame, "Footer");
-            reveal.Add(footer.GetComponent<CanvasGroup>());
-            var reset = Place<UiButton>(UiKitComponents.Secondary, footer, "ResetToDefaults", 96f, 964f);
-            ((RectTransform)reset.transform).sizeDelta = new Vector2(232f, t.SecondaryHeight);
-            SetLabel(reset, "Reset to defaults");
-            reset.Description = "Puts every setting on this tab back to how the game shipped.";
-            var back = Place<UiButton>(UiKitComponents.Secondary, footer, "Back", 344f, 964f);
-            ((RectTransform)back.transform).sizeDelta = new Vector2(140f, t.SecondaryHeight);
-            SetLabel(back, "Back");
-            back.Description = "Back to the title. Everything here is already saved.";
-            var status = Place<UiStatusLine>(UiKitComponents.StatusLine, footer, "StatusLine", 512f, 966f);
-            var hint = Place<RectTransform>(UiKitComponents.KeyHint, footer, "EscHint", 1660f, 972f);
-            SetText(hint, "Key", "Esc");
-            SetText(hint, "Label", "Back");
-            Label(footer, "Microtype", 96f, 1040f, 1400f, 20f,
-                "Settings are kept on this PC as soon as you change them.", t.Micro, t.Ink3);
-
-            LinkSettingsNavigation(tab, new Selectable[] { motion, style, colour, size, stats }, reset, back);
-
-            var screen = root.gameObject.AddComponent<SettingsScreen>();
-            WireScreen(screen, frame, reveal, motion);
-            Set(screen, "_reducedMotion", motion);
-            Set(screen, "_crosshairStyle", style);
-            Set(screen, "_crosshairColour", colour);
-            Set(screen, "_crosshairSize", size);
-            Set(screen, "_networkStats", stats);
-            Set(screen, "_reset", reset);
-            Set(screen, "_back", back);
-            Set(screen, "_status", status);
-            Set(screen, "_help", help);
-            Set(screen, "_tab", tab);
-            return root.gameObject;
-        }
-
-        /// <summary>One 64 px settings row: highlight, cobalt rule, name on the left, its control on the right.</summary>
-        static T Row<T>(Transform parent, GameObject controlPrefab, string name, string label, ref float y, string description) where T : Component
-        {
-            UiTokens t = Tokens;
-            RectTransform row = At(parent, name + "Row", 96f, y, 1120f, t.RowHeight);
-            Image highlight = Img(Fill(row, "Highlight"), UiKitArt.White, UiTokens.WithAlpha(t.HoverTint, 0f));
-            RectTransform ruleRect = At(row, "Rule", 0f, 0f, 4f, t.RowHeight);
-            Image rule = Img(ruleRect, UiKitArt.White, UiTokens.WithAlpha(t.Cobalt, 0f));
-            Label(row, "Name", 16f, 0f, 520f, t.RowHeight, label, t.Item, t.Navy);
-            Box(row, "Hairline", 0f, t.RowHeight - 1f, 1120f, 1f, t.Hair);
-
-            var control = Instance<T>(controlPrefab, row, name);
-            var rect = (RectTransform)control.transform;
-            rect.anchorMin = rect.anchorMax = new Vector2(1f, 0.5f);
-            rect.pivot = new Vector2(1f, 0.5f);
-            rect.anchoredPosition = new Vector2(-12f, 0f);
-
-            UiControlFx fx = control is UiControl c ? c.Fx : ((UiSlider)(Component)control).Fx;
-            fx.RowHighlight = highlight;
-            fx.RowRule = rule;
-            if (control is UiControl uc)
-                uc.Description = description;
-            else if (control is UiSlider slider)
-                slider.Description = description;
-            EditorUtility.SetDirty(control);
-            y += t.RowHeight;
-            return control;
-        }
-
-        static void LinkSettingsNavigation(Selectable tab, Selectable[] rows, Selectable reset, Selectable back)
-        {
-            tab.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnDown = rows[0] };
-            for (int i = 0; i < rows.Length; i++)
-            {
-                rows[i].navigation = new Navigation
-                {
-                    mode = Navigation.Mode.Explicit,
-                    selectOnUp = i == 0 ? tab : rows[i - 1],
-                    selectOnDown = i == rows.Length - 1 ? reset : rows[i + 1]
-                };
-            }
-
-            reset.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = rows[^1], selectOnRight = back };
-            back.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = rows[^1], selectOnLeft = reset };
-        }
-
-        /// <summary>The live crosshair over three world-like grounds: sunlit white, sky and a dark room.</summary>
-        static void PreviewTiles(Transform parent)
-        {
-            UiTokens t = Tokens;
-            Box(parent, "PreviewBullet", 1296f, 308f, 8f, 8f, t.Black);
-            Label(parent, "PreviewCaption", 1312f, 300f, 400f, 24f, "CURRENT CROSSHAIR · 1:1", t.Caption, t.Navy);
-            string[] names = { "Sun", "Sky", "Dark" };
-            Color[] grounds = { Color.white, Color.Lerp(t.Cobalt, t.Electric, 0.5f), t.Navy };
-            for (int i = 0; i < 3; i++)
-            {
-                float x = 1296f + i * 128f;
-                Box(parent, names[i] + "Tile", x, 336f, 112f, 96f, grounds[i]);
-                Box(parent, names[i] + "Keyline", x, 336f, 112f, 96f, t.Hair, UiKitArt.Outline1);
-                var crosshair = Instance<RectTransform>(UiKitComponents.Crosshair, parent, names[i] + "Crosshair");
-                UiKitAssets.Place(crosshair, x + 16f, 344f, 80f, 80f);
-                Label(parent, names[i] + "Label", x, 440f, 112f, 24f, names[i], t.Label, t.Navy);
-            }
         }
 
         // ---- Confirm dialog ---------------------------------------------------------------------------------
