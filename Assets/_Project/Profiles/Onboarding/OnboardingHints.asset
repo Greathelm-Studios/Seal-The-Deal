@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86bcab0a19174e4fbf1b542f70d91c70, type: 3}
+  m_Name: OnboardingHints
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Onboarding.OnboardingHints
+  _hints:
+  - Id: reception
+    When: 0
+    Text: Sign in with a firm at one of the stands, then ready up at the desk. Press
+      {interact} at either.
+    Seconds: 8
+  - Id: briefcase-rule
+    When: 1
+    Text: One briefcase decides the match. Carry it onto either roof and your firm
+      wins.
+    Seconds: 8
+  - Id: carrying
+    When: 2
+    Text: You have the briefcase. Every floor you carry it onto opens for both towers.
+      Press {drop} to hand it to a teammate.
+    Seconds: 7
+  - Id: rival-carrying
+    When: 3
+    Text: The rival firm has the briefcase. Knock the carrier down and it drops.
+      Skybridges on checkpoint floors cross to their tower.
+    Seconds: 7
+  - Id: died
+    When: 4
+    Text: You'll be back on this floor in a few seconds. You keep your guns. Anything
+      you carried was dropped.
+    Seconds: 6
+  - Id: fell-out
+    When: 5
+    Text: Leaving through a window sends you back to your firm's last checkpoint,
+      without the briefcase.
+    Seconds: 6
+  - Id: kept
+    When: 6
+    Text: Every finished match is kept. Your wins, kills and time with the briefcase
+      carry over.
+    Seconds: 6
+  _gapSeconds: 1

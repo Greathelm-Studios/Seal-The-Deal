@@ -139,6 +139,7 @@ namespace CloseTheDeal.Lobby
             string text = options[pick].Replace("{name}", name).Replace("{firm}", _rules.FirmName(firm));
             LookAtLocalPlayer();
             LineSpoken?.Invoke(moment, text, ReadingSeconds(text));
+            CloseTheDeal.Narration.Subtitles.Show(new CloseTheDeal.Narration.SubtitleLine("Reception", text, ReadingSeconds(text), 10, moment.ToString()));
         }
 
         float ReadingSeconds(string text)
