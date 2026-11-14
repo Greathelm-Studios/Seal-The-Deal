@@ -13,10 +13,13 @@
 //  Modified  : Claude Fable 5.2, 2026-11-14 — wires the left arm too and adds a GripSupport
 //              seat for a two-handed hold (Harvey: "add a left and right hand system and a
 //              two handed system").
+//  Modified  : Claude Fable 5.2, 2026-11-14 — "Rebuild Viewmodel" no longer rebuilds the
+//              player prefab, which dropped other people's components from it (found by
+//              Adam's review; Harvey, asked whether to remove the call: "Yes").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Builds the first-person arms prefab from the character's own model (same
 //              skeleton, same toon materials, arm geometry only) with a gun mount holding the pistol,
-//              and puts PlayerViewmodel on the player prefab. Kept apart from
+//              and wires PlayerViewmodel when the player prefab is built. Kept apart from
 //              GreyboxSceneSetup so the viewmodel can be rebuilt without that file growing.
 // -----------------------------------------------------------------------------
 using System.Collections.Generic;
@@ -29,8 +32,9 @@ using UnityEngine.Rendering;
 namespace CloseTheDeal.Editor.Greybox
 {
     /// <summary>
-    /// Writes <c>ViewmodelArms.prefab</c> and the arm-only meshes it uses, and wires the
-    /// viewmodel onto the player prefab. Menu-invoked only (AGENTS.md §4).
+    /// Writes <c>ViewmodelArms.prefab</c> and the arm-only meshes it uses. The viewmodel is
+    /// wired onto the player prefab only when that prefab is built. Menu-invoked only
+    /// (AGENTS.md §4).
     /// </summary>
     /// <remarks>
     /// WHY the arms are cut out here and not in Blender: the cut meshes keep the model's own
@@ -118,8 +122,11 @@ namespace CloseTheDeal.Editor.Greybox
             }
 
             GreyboxSceneSetup.EnsureLayers();
+            // The player prefab is left alone. WHY: it carries components from other people's
+            // work that the greybox tool knows nothing about, and rebuilding it here dropped
+            // them. It points at the arms prefab by asset, so it picks up the new arms anyway.
+            // "Rebuild Player Prefab" is the deliberate overwrite.
             Ensure(true);
-            GreyboxSceneSetup.RebuildPlayerPrefabIfOwned();
             AssetDatabase.SaveAssets();
         }
 

@@ -54,8 +54,8 @@ namespace CloseTheDeal.Player
     /// The view's sway, bob, kick and reload are not shown; they are a few centimetres of
     /// motion nobody reads at a distance.</para>
     /// <para>WHY it is added at spawn (<see cref="Attach"/>) and is not on Player.prefab: that
-    /// prefab has been edited by hand, so the greybox tool no longer rebuilds it (§4), and it
-    /// is claimed on the workboard. Reading the arms prefab at spawn also means there is no
+    /// prefab is edited by hand and by other people's work, so nothing here writes to it (§4),
+    /// and it is claimed on the workboard. Reading the arms prefab at spawn also means there is no
     /// second copy of the grip numbers to keep in step.</para>
     /// <para>WHY the weapon is a child of the hand bone and not placed in the world each frame:
     /// the ragdoll moves the arm after this runs, and a child goes with it.</para>
