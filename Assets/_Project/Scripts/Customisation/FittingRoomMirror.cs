@@ -12,7 +12,7 @@ namespace CloseTheDeal.Customisation
         public override string Prompt(bool gamepad)
         {
             LobbyRoster roster = LobbyRoster.Instance;
-            if (FittingRoom.Instance == null || PlayerOutfit.Local == null || (roster != null && roster.RunInProgress))
+            if (FittingRoom.Instance == null || !FittingRoom.Instance.IsUsable || PlayerOutfit.Local == null || (roster != null && roster.RunInProgress))
                 return null;
             return gamepad ? PadPrompt : KeyPrompt;
         }

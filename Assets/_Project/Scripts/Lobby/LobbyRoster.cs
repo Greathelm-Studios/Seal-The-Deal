@@ -372,12 +372,27 @@ namespace CloseTheDeal.Lobby
             string name = _members[index].Name;
             Debug.Log($"[Lobby] The host removed {name} (client {clientId}).");
             RpcKicked(name);
+            TargetYouWereRemoved(target);
             // Off the board at once: the transport's own "stopped" can lag behind a host-side disconnect.
             _members.RemoveAt(index);
-            // Disconnecting drops them from the roster through OnRemoteConnectionState. Their game
-            // shows its usual lost-connection message: a "removed by the host" line needs SteamLobby.
-            target.Disconnect(false);
+            // A moment's grace so the "you were removed" message reaches them before the line drops.
+            StartCoroutine(DisconnectSoon(target));
         }
+
+        System.Collections.IEnumerator DisconnectSoon(NetworkConnection target)
+        {
+            yield return new WaitForSecondsRealtime(KickGraceSeconds);
+            if (target != null && target.IsActive)
+                target.Disconnect(false);
+        }
+
+        const float KickGraceSeconds = 0.3f;
+
+        /// <summary>This machine only, raised just before the host disconnects it: the host removed this player.</summary>
+        public static event Action LocalRemovedByHost;
+
+        [TargetRpc]
+        void TargetYouWereRemoved(NetworkConnection target) => LocalRemovedByHost?.Invoke();
 
         [ObserversRpc]
         void RpcKicked(string name) => OnKicked?.Invoke(name);
