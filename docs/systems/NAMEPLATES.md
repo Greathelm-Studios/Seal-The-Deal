@@ -6,9 +6,9 @@
 
 A teammate within 40 m has their name over their head on the kit's white plate, navy 18 px type, with a small cyan diamond: shape and colour, never colour alone. It shows through glass and walls, fades in and out with the kit's panel timing (instantly with Reduce motion) and hides while they are dead.
 
-Rivals get no name, so sightlines across the gap stay clean. A rival who walks into your tower gets an amber chevron over their head for 2 s from the moment they step in, then nothing.
+Rivals get no name, so sightlines across the gap stay clean. A rival who walks into your tower gets an amber ▲ over their head for 2 s from the moment they step in, then nothing.
 
-Rules from `ArtSource/UI/research/ux_research.md` ("Name tags"). The research note's ◆ / ▲ glyphs are drawn with the kit's square and chevron sprites, since the kit's font has no glyphs for them.
+Rules from `ArtSource/UI/research/ux_research.md` ("Name tags"). The ◆ and ▲ are the kit's own diamond and triangle sprites; the amber triangle has a navy edge so it reads on white walls and on sky.
 
 ## Who owns what
 
@@ -16,7 +16,7 @@ Local only, nothing sent. It reads the synced firm and position of every player,
 
 ## Designer values
 
-On the **Nameplates** child of `Prefabs/Gaps/Records.prefab`: **Range** (40 m), **Headroom** (0.35 m above the head), **Raider Seconds** (2), **Name Size** (18 px at 1080p), and the kit references (tokens, Plate prefab, square and chevron sprites). Every value has a tooltip.
+On the **Nameplates** child of `Prefabs/Gaps/Records.prefab`: **Range** (40 m), **Headroom** (0.35 m above the head), **Raider Seconds** (2), **Name Size** (18 px at 1080p), and the kit references (tokens, Plate prefab, diamond and triangle sprites). Every value has a tooltip.
 
 ## Cost
 
@@ -38,5 +38,5 @@ A **Nameplates** overlay canvas (sorting 5, under the kit's KitUI at 20; 1920 ×
 - **The raider marker starts when they enter your tower, not when you first see them.**
 - No name in reception for the other firm: the same rule applies there. Say if reception should show everyone.
 - Without Steam, names read "Associate 1", "Associate 2".
-- **Seen only in two headless stills** (host view, 1280 × 720): the team chip reads as specified; the raider marker read too small at 22 px and was raised to 32 px after the capture, not re-captured. Not seen in motion or in a real window.
+- **Seen in headless stills only**, host and client, at 1920 × 1080 and 1280 × 720, in `Lane_Integration`: [docs/handover/gaps/nameplates/](../handover/gaps/nameplates/) (a teammate up close, a teammate across the street at 24 m, a rival in your tower, and the host as seen by the client). Not seen in motion or in a real window. The other player T-poses in these headless frames (animation, not this system).
 - Fonts are the kit's stand-in (Liberation Sans) until the shipping faces land.

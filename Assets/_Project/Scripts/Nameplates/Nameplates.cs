@@ -29,10 +29,10 @@ namespace CloseTheDeal.Nameplates
         [Tooltip("The kit's Plate prefab, used as each name's background.")]
         [SerializeField] GameObject _platePrefab;
 
-        [Tooltip("The kit's square sprite, turned into the own-firm diamond.")]
+        [Tooltip("The kit's diamond sprite: the own-firm mark before a name.")]
         [SerializeField] Sprite _diamondSprite;
 
-        [Tooltip("The kit's chevron sprite, used for the rival marker.")]
+        [Tooltip("The kit's triangle sprite: the rival marker, amber with a navy edge so it reads on white walls and on sky.")]
         [SerializeField] Sprite _markerSprite;
 
         [Header("Rules")]
@@ -63,9 +63,10 @@ namespace CloseTheDeal.Nameplates
         }
 
         const float Padding = 10f;
-        const float DiamondSize = 8f;
+        const float DiamondSize = 10f;
         const float ChipHeight = 30f;
-        const float MarkerSize = 32f;
+        const float MarkerSize = 28f;
+        const float MarkerEdge = 3f;
 
         readonly List<Tag> _tags = new();
         Canvas _canvas;
@@ -212,7 +213,6 @@ namespace CloseTheDeal.Nameplates
             diamond.anchorMin = diamond.anchorMax = new Vector2(0f, 0.5f);
             diamond.anchoredPosition = new Vector2(Padding + DiamondSize * 0.5f, 0f);
             diamond.sizeDelta = new Vector2(DiamondSize, DiamondSize);
-            diamond.localRotation = Quaternion.Euler(0f, 0f, 45f);
             Image glyph = diamond.gameObject.AddComponent<Image>();
             glyph.sprite = _diamondSprite;
             glyph.color = _tokens != null ? _tokens.Cyan : Color.cyan;
@@ -239,10 +239,17 @@ namespace CloseTheDeal.Nameplates
         {
             RectTransform marker = Node("Rival marker", transform);
             marker.pivot = new Vector2(0.5f, 0f);
-            marker.sizeDelta = new Vector2(MarkerSize, MarkerSize);
-            // The chevron points right as drawn; turned to point down at the rival.
-            marker.localRotation = Quaternion.Euler(0f, 0f, -90f);
-            Image image = marker.gameObject.AddComponent<Image>();
+            marker.sizeDelta = new Vector2(MarkerSize + MarkerEdge * 2f, MarkerSize + MarkerEdge * 2f);
+            Image edge = marker.gameObject.AddComponent<Image>();
+            edge.sprite = _markerSprite;
+            edge.color = _tokens != null ? _tokens.Navy : Color.black;
+            edge.raycastTarget = false;
+
+            RectTransform fill = Node("Fill", marker);
+            fill.anchorMin = fill.anchorMax = new Vector2(0.5f, 0.5f);
+            fill.sizeDelta = new Vector2(MarkerSize - MarkerEdge, MarkerSize - MarkerEdge);
+            fill.anchoredPosition = new Vector2(0f, -MarkerEdge * 0.25f);
+            Image image = fill.gameObject.AddComponent<Image>();
             image.sprite = _markerSprite;
             image.color = _tokens != null ? _tokens.Amber : new Color(1f, 0.62f, 0.1f);
             image.raycastTarget = false;
