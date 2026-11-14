@@ -18,6 +18,15 @@ namespace CloseTheDeal.Items
         TooHeavy = 2
     }
 
+    /// <summary>This lane's four inputs, for naming their keys.</summary>
+    public enum ItemAction : byte
+    {
+        Interact = 0,
+        Throw = 1,
+        Drop = 2,
+        Use = 3
+    }
+
     /// <summary>Why the host refused a request, so the UI can say so.</summary>
     public enum DenyReason : byte
     {
@@ -85,6 +94,17 @@ namespace CloseTheDeal.Items
         /// </summary>
         public static Func<ItemCarrier, bool> InteractClaimedElsewhere;
 
+        /// <summary>This machine. True when the last game input came from a gamepad, so prompts name pad buttons.</summary>
+        public static bool UsingPad { get; private set; }
+
+        /// <summary>This machine. The player switched between keyboard and mouse (false) and a gamepad (true).</summary>
+        public static event Action<bool> UsingPadChanged;
+
+        /// <summary>The key or button for each of this lane's actions, as the HUD should print it.</summary>
+        public static string KeyName(ItemAction action) => UsingPad
+            ? action switch { ItemAction.Interact => "Y", ItemAction.Throw => "RT", ItemAction.Drop => "DOWN", _ => "LT" }
+            : action switch { ItemAction.Interact => "F", ItemAction.Throw => "LMB", ItemAction.Drop => "G", _ => "RMB" };
+
         /// <summary>Owner only. What the crosshair is on changed. The item is null when the kind is None.</summary>
         public event Action<PromptKind, ItemDefinition> PromptChanged;
         /// <summary>Every machine. What this player carries changed; null means empty hands.</summary>
@@ -98,6 +118,7 @@ namespace CloseTheDeal.Items
         Transform _viewBody;
         MotorSpeedOverride _speed;
         Pickup _held;
+        float _canTakeAt;
 
         // Owner only.
         InputAction _interact;
@@ -164,6 +185,8 @@ namespace CloseTheDeal.Items
                 return;
 
             Local = this;
+            InputSystem.onActionChange -= NoteDevice;
+            InputSystem.onActionChange += NoteDevice;
             CreateInput();
             enabled = true;
             LocalChanged?.Invoke(this);
@@ -176,6 +199,7 @@ namespace CloseTheDeal.Items
                 return;
 
             enabled = false;
+            InputSystem.onActionChange -= NoteDevice;
             DisposeInput();
             SetPrompt(PromptKind.None, null);
             if (Local == this)
@@ -201,6 +225,20 @@ namespace CloseTheDeal.Items
 
             if (_sharedActions != null)
                 _sharedAttack = _sharedActions.FindActionMap(SharedMapName)?.FindAction(SharedAttackName);
+        }
+
+        /// <summary>Any game action performed: note whether a pad or the keyboard and mouse did it. No allocation.</summary>
+        static void NoteDevice(object source, InputActionChange change)
+        {
+            if (change != InputActionChange.ActionPerformed || source is not InputAction action || action.activeControl == null)
+                return;
+
+            bool pad = action.activeControl.device is Gamepad;
+            if (pad == UsingPad)
+                return;
+
+            UsingPad = pad;
+            UsingPadChanged?.Invoke(pad);
         }
 
         static InputAction Button(string name, string binding, string padBinding)
@@ -299,7 +337,7 @@ namespace CloseTheDeal.Items
                 _lookPickup = hit.collider.GetComponentInParent<Pickup>();
             }
 
-            return _lookPickup != null && _lookPickup.State == PickupState.InWorld ? _lookPickup : null;
+            return _lookPickup != null && _lookPickup.State == PickupState.InWorld && _lookPickup.Offered ? _lookPickup : null;
         }
 
         void UpdatePrompt(Pickup target)
@@ -391,8 +429,10 @@ namespace CloseTheDeal.Items
                 return DenyReason.KnockedAbout;
             if (pickup.Definition.WeightKg > _profile.MaxCarryWeight)
                 return DenyReason.TooHeavy;
-            if (pickup.ServerTooSoonFor(this))
+            if (Time.time < _canTakeAt)
                 return DenyReason.TooSoon;
+            if (pickup.GetComponent<CloseTheDeal.Props.NotThrowable>() != null)
+                return DenyReason.Gone;
 
             return InReach(pickup) ? null : DenyReason.TooFar;
         }
@@ -410,8 +450,10 @@ namespace CloseTheDeal.Items
             if ((nearest - eye).sqrMagnitude > reach * reach)
                 return false;
 
+            // The first thing in the way must be the item itself: another loose prop in front of a
+            // wall does not let a grab reach through the wall behind it.
             return !Physics.Linecast(eye, nearest, out RaycastHit blocker, ItemLayers.LookMask, QueryTriggerInteraction.Ignore)
-                || blocker.collider.GetComponentInParent<Pickup>() != null;
+                || blocker.collider.GetComponentInParent<Pickup>() == pickup;
         }
 
         /// <summary>An item already in the hands, or the hands shared with something else that holds them.</summary>
@@ -522,7 +564,16 @@ namespace CloseTheDeal.Items
             rotation = frame * Quaternion.Euler(item.HeldEuler);
         }
 
-        static readonly RaycastHit[] HoldHits = new RaycastHit[16];
+        static readonly RaycastHit[] HoldHits = new RaycastHit[32];
+
+        /// <summary>
+        /// Host only. Something just left these hands: this player takes nothing for a moment,
+        /// whatever it is, so cycling two items cannot throw faster than the cooldown.
+        /// </summary>
+        internal void ServerNoteLetGo(float seconds)
+        {
+            _canTakeAt = Time.time + seconds;
+        }
 
         /// <summary>
         /// How far the hands can reach before something solid that is not a loose item: the

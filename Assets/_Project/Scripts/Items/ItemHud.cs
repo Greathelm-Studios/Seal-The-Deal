@@ -34,6 +34,10 @@ namespace CloseTheDeal.Items
         [SerializeField] RectTransform _handsLoadFill;
         [SerializeField] GameObject _useHint;
         [SerializeField] TMP_Text _useLabel;
+        [Tooltip("The key caps' letters in the hands slot, relabelled for a gamepad.")]
+        [SerializeField] TMP_Text _throwKey;
+        [SerializeField] TMP_Text _dropKey;
+        [SerializeField] TMP_Text _useKey;
 
         [Tooltip("How long a refusal stays in the prompt's place, in seconds.")]
         [Min(0.3f)] [SerializeField] float _refusalSeconds = 1.6f;
@@ -41,12 +45,11 @@ namespace CloseTheDeal.Items
         [Tooltip("Room left and right of the prompt's words inside its plate, in pixels.")]
         [Min(0f)] [SerializeField] float _promptPadding = 16f;
 
-        const string InteractKey = "F";
-
         ItemCarrier _carrier;
         PromptKind _lookKind;
         string _lookText = "";
         float _refusalLeft;
+        DenyReason _refusal;
         bool _shown;
 
         UiTween _promptFade;
@@ -81,12 +84,15 @@ namespace CloseTheDeal.Items
         void OnEnable()
         {
             ItemCarrier.LocalChanged += Bind;
+            ItemCarrier.UsingPadChanged += OnDeviceChanged;
             Bind(ItemCarrier.Local);
+            LabelKeys();
         }
 
         void OnDisable()
         {
             ItemCarrier.LocalChanged -= Bind;
+            ItemCarrier.UsingPadChanged -= OnDeviceChanged;
             Bind(null);
             UiMotion.Sleep(this);
         }
@@ -149,8 +155,52 @@ namespace CloseTheDeal.Items
             ShowPrompt(true);
         }
 
+        /// <summary>Keyboard to pad or back: every key name on screen changes with it, at once.</summary>
+        void OnDeviceChanged(bool pad)
+        {
+            LabelKeys();
+            if (_refusalLeft > 0f)
+                DrawPrompt(RefusalText(_refusal), false, _tokens.Amber, _tokens.Navy);
+            else if (_shown)
+                ShowLook();
+        }
+
+        void LabelKeys()
+        {
+            SetKey(_throwKey, ItemAction.Throw);
+            SetKey(_dropKey, ItemAction.Drop);
+            SetKey(_useKey, ItemAction.Use);
+        }
+
+        const float KeyCapMinWidth = 48f;
+        const float KeyCapPadding = 12f;
+        const float KeyLabelGap = 10f;
+
+        /// <summary>Names the key and fits its cap to the name ("DOWN" needs more room than "G"), keeping the label just after it.</summary>
+        static void SetKey(TMP_Text text, ItemAction action)
+        {
+            if (text == null)
+                return;
+
+            string name = ItemCarrier.KeyName(action);
+            text.text = name;
+            float width = Mathf.Max(KeyCapMinWidth, text.GetPreferredValues(name).x + KeyCapPadding);
+            Transform hint = text.transform.parent;
+            Resize(text.rectTransform, width);
+            Resize(hint.Find("KeyCap") as RectTransform, width);
+            if (hint.Find("Label") is RectTransform label)
+                label.anchoredPosition = new Vector2(width + KeyLabelGap, label.anchoredPosition.y);
+        }
+
+        static void Resize(RectTransform rect, float width)
+        {
+            if (rect != null)
+                rect.sizeDelta = new Vector2(width, rect.sizeDelta.y);
+        }
+
         void OnDenied(DenyReason reason)
         {
+            _refusal = reason;
             string text = RefusalText(reason);
             if (text.Length == 0)
                 return;
@@ -173,7 +223,7 @@ namespace CloseTheDeal.Items
         public static string RefusalText(DenyReason reason) => reason switch
         {
             DenyReason.Gone => "Someone else got it",
-            DenyReason.HandsFull => "Hands full · G to drop",
+            DenyReason.HandsFull => ItemCarrier.UsingPad ? "Hands full · D-pad down to drop" : "Hands full · G to drop",
             DenyReason.TooHeavy => "Too heavy to lift",
             DenyReason.TooFar => "Too far away",
             DenyReason.CannotUseHere => "No room to put it down here",
@@ -210,7 +260,7 @@ namespace CloseTheDeal.Items
         {
             _promptKeyCap.SetActive(showKey);
             _promptKey.gameObject.SetActive(showKey);
-            _promptKey.text = InteractKey;
+            _promptKey.text = ItemCarrier.KeyName(ItemAction.Interact);
             _promptLabel.text = text;
             _promptLabel.color = textColour;
             _promptEdge.color = edge;
