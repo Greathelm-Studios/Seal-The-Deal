@@ -48,6 +48,12 @@ namespace CloseTheDeal.UI
 
         public bool IsDialog => _isDialog;
 
+        /// <summary>
+        /// Lane 8's transition the stack plays when this screen is opened over another or closed back to it (the change
+        /// happens while the view is covered). Null: the screen's own slide and fade only (dialogs, the quit question).
+        /// </summary>
+        public virtual CloseTheDeal.UI.Title.UiTransitionKind? Through => null;
+
         /// <summary>The sound the stack plays as this screen opens: PanelOpen for a dialog, Transition for a screen.</summary>
         public virtual UiSoundEvent OpenSound => _isDialog ? UiSoundEvent.PanelOpen : UiSoundEvent.Transition;
 
@@ -156,6 +162,27 @@ namespace CloseTheDeal.UI
             // A full screen keeps its paper until the next screen's paper has settled over it.
             _hideLeft = duration + (_isDialog ? 0f : _tokens.HoverOut + _tokens.HoverOut);
             UiMotion.Wake(this);
+        }
+
+        /// <summary>
+        /// Ends the screen's show or hide motion at once (a hiding screen switches off). The stack calls it for a change
+        /// made under one of lane 8's transitions, so the reveal shows the new screen finished, not still sliding in.
+        /// </summary>
+        internal void Settle()
+        {
+            _alpha.Snap(_alpha.To);
+            _slide.Snap(_slide.To);
+            _contentAlpha.Snap(_contentAlpha.To);
+            _roll.Snap(_roll.To);
+            for (int i = 0; i < _revealTweens.Length; i++)
+                _revealTweens[i].Snap(_revealTweens[i].To);
+            Apply();
+            if (_hiding)
+            {
+                _hiding = false;
+                _hideLeft = 0f;
+                gameObject.SetActive(false);
+            }
         }
 
         /// <summary>How long a full screen takes to clear its content when it hides: the next screen waits this long.</summary>

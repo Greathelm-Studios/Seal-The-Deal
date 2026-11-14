@@ -98,7 +98,8 @@ namespace CloseTheDeal.UI
             }
 
             // A click on empty paper drops focus; the next key or pad press puts it back on the top screen.
-            bool ours = _menu == null || (_menu.OutOfGame && !_enteringGame); // during the zoom into a game, input is the game's
+            // During the zoom into a game input is the game's; while a change waits for its cover, Esc does nothing.
+            bool ours = (_menu == null || (_menu.OutOfGame && !_enteringGame)) && !_stack.Busy;
             if (ours && _stack.Count > 0 && UiInput.UsingKeysOrPad && !UiInput.Capturing
                 && UnityEngine.EventSystems.EventSystem.current != null
                 && UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject == null)
@@ -127,7 +128,15 @@ namespace CloseTheDeal.UI
                 return;
             }
 
+            bool fromGame = _enteringGame;
             _enteringGame = false;
+            if (_stack.Busy)
+                return; // a change is waiting for its transition's cover; it calls back here when it lands
+            // Back from a game: the title (and any problem panel over it) comes in under one cloud wipe.
+            if (fromGame && _stack.Count == 0 && _started
+                && _stack.RunCovered(CloseTheDeal.UI.Title.UiTransitionKind.CloudWipe, () => { if (isActiveAndEnabled) Sync(); }))
+                return;
+
             if (_stack.Count == 0)
                 _stack.Push(_title);
             UiScreen want = Wanted();

@@ -14,6 +14,9 @@ namespace CloseTheDeal.UI
     [AddComponentMenu("Close the Deal/UI/Settings Screen")]
     public sealed class SettingsScreen : UiScreen
     {
+        /// <summary>Opens and closes under lane 8's PaneSlide (docs/systems/UI_KIT.md "Screens").</summary>
+        public override CloseTheDeal.UI.Title.UiTransitionKind? Through => CloseTheDeal.UI.Title.UiTransitionKind.PaneSlide;
+
         [Header("Tabs")]
         [SerializeField] UiTabPages _tabs;
         [Tooltip("The breadcrumb's last part names the open tab.")]

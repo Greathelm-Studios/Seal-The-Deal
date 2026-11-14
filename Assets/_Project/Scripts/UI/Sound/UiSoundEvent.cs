@@ -12,6 +12,8 @@ namespace CloseTheDeal.UI
         KeyBindListen, KeyBindSet, PanelOpen, PanelClose, Transition, Notification,
         LobbyReady, LobbyUnready, CountdownTick, CountdownGo, MatchWon, MatchLost,
         FloorOpened, BriefcaseTaken, BriefcaseDropped, HandsFull, HitMarker, HitMarkerHead, KillConfirm,
+        // Appended 2026-11-14 (never insert above: buttons and the sound set store the number).
+        TitleAppear, TransitionCloudWipe, TransitionPaneSlide, TransitionFrameZoom, TransitionFade,
     }
 
     /// <summary>The mixer buses the settings screen controls. Each has an exposed volume parameter on the mixer.</summary>
