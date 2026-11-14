@@ -1519,7 +1519,7 @@ namespace CloseTheDeal.Editor.Lanes
             {
                 // The item HUD as players will see it: in the integration scene, put in for this run
                 // only (the scene file is not saved).
-                EditorSceneManager.OpenScene(IntegrationLaneSetup.ScenePath, OpenSceneMode.Single);
+                EditorSceneManager.OpenScene(Arg("-pickupsScene") ?? IntegrationLaneSetup.ScenePath, OpenSceneMode.Single);
                 PickupsLaneSetup.ItemHudSetup.AddToOpenScene();
             }
             else
@@ -1751,13 +1751,13 @@ namespace CloseTheDeal.Editor.Lanes
         /// </summary>
         static IEnumerator HudScript()
         {
-            Note("ROLE hud: Lane_Integration hosting with its own player; the item HUD is added for this run only.");
+            Note($"ROLE hud: {SceneManager.GetActiveScene().name} hosting with its own player; the item HUD is added for this run only.");
             yield return StartGame(true);
             StartRecording();
             PlayerInputReader.ScriptedCapture = true;
             ItemCarrier me = Me;
             ItemHud hud = UnityEngine.Object.FindAnyObjectByType<ItemHud>(FindObjectsInactive.Include);
-            Check("the integration scene has the kit item HUD", me != null && hud != null);
+            Check("the scene has the kit item HUD", me != null && hud != null);
             if (me == null || hud == null)
                 yield break;
 
@@ -1782,6 +1782,8 @@ namespace CloseTheDeal.Editor.Lanes
             HudShots("hud_00_empty");
             yield return LookFromNear(me, chair);
             Check("looking at a chair shows the kit prompt", hud.PromptReading == "F · Pick up Chair", $"prompt reads \"{hud.PromptReading}\"");
+            Renderer chairLook = chair.GetComponentInChildren<Renderer>();
+            Check("the chair the prompt is about is brightened on this screen", chairLook != null && chairLook.HasPropertyBlock());
             HudShots("hud_01_prompt_chair");
 
             if (heavy != null)
@@ -1802,6 +1804,7 @@ namespace CloseTheDeal.Editor.Lanes
 
             yield return 0.3f;
             Check("the hands slot names what is carried", hud.HandsReading == "Chair", $"slot reads \"{hud.HandsReading}\"");
+            Check("once carried, the chair is drawn at its own colour again", chairLook == null || !chairLook.HasPropertyBlock());
             HudShots("hud_04_hands_chair");
 
             if (other != null)

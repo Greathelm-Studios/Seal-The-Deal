@@ -1,0 +1,40 @@
+ROLE hud: Lane_Pickups hosting with its own player; the item HUD is added for this run only.
+local port 17783
+PASS  this machine is the host (it did not join someone else's game on the same port)
+PASS  the integration scene has the kit item HUD
+PASS  the scene has a loose chair, something too heavy and a second liftable thing  — chair Chair B, heavy Desk cases, other Cubicle Panel A
+wrote hud_00_empty_1080p.png
+wrote hud_00_empty_720p.png
+PASS  looking at a chair shows the kit prompt  — prompt reads "F · Pick up Chair"
+PASS  the chair the prompt is about is brightened on this screen
+wrote hud_01_prompt_chair_1080p.png
+wrote hud_01_prompt_chair_720p.png
+PASS  looking at something too heavy says so, with no key  — prompt reads "Desk · Too heavy"
+wrote hud_02_too_heavy_1080p.png
+wrote hud_02_too_heavy_720p.png
+wrote hud_03_hands_in_000ms.png
+wrote hud_03_hands_in_050ms.png
+wrote hud_03_hands_in_100ms.png
+wrote hud_03_hands_in_150ms.png
+wrote hud_03_hands_in_200ms.png
+wrote hud_03_hands_in_250ms.png
+PASS  the hands slot names what is carried  — slot reads "Chair"
+PASS  once carried, the chair is drawn at its own colour again
+wrote hud_04_hands_chair_1080p.png
+wrote hud_04_hands_chair_720p.png
+wrote hud_05_hands_full_shake.png
+PASS  taking with full hands says why, in the prompt's place  — prompt reads "Hands full · G to drop"
+wrote hud_06_hands_full_1080p.png
+wrote hud_06_hands_full_720p.png
+PASS  the hands-full refusal asks for its sound  — HandsFull requested 1 time(s)
+PASS  a pad nudge makes the pad the device in use
+PASS  on a pad the hands-full refusal names the pad's drop button  — prompt reads "Hands full · D-pad down to drop"
+wrote hud_08_pad_hands_full_1080p.png
+wrote hud_08_pad_hands_full_720p.png
+wrote hud_09_pad_look_1080p.png
+wrote hud_09_pad_look_720p.png
+PASS  letting go empties the hands slot  — slot reads ""
+wrote hud_07_dropped_1080p.png
+wrote hud_07_dropped_720p.png
+UI sounds asked for: Focus 3, HandsFull 2, Error 0
+RESULT: 0 failed check(s), 13 passed, 70 frames.
