@@ -35,7 +35,7 @@ namespace CloseTheDeal.Combat
         const int RewindSlackTicks = 1;
 
         /// <summary>Step past a pane's surface before looking further, in metres. Under any pane's thickness.</summary>
-        const float PaneSkin = 0.01f;
+        const float PaneSkin = 0.002f;
         const float TwoPi = Mathf.PI * 2f;
 
         static readonly GlassPane[] Panes = new GlassPane[MaxPanesPerShot];
@@ -50,11 +50,15 @@ namespace CloseTheDeal.Combat
             float limit = NearestBody(origin, direction, range, shooter, rewind, rewindTick, out Health body, out float bodyFeetY);
 
             float travelled = 0f;
+            bool clear = false;
             for (int i = 0; i <= MaxPanesPerShot && travelled < limit; i++)
             {
                 Vector3 from = origin + direction * travelled;
                 if (!Physics.Raycast(from, direction, out RaycastHit hit, limit - travelled, solidMask, QueryTriggerInteraction.Ignore))
+                {
+                    clear = true;
                     break;
+                }
 
                 if (!GlassPane.TryFind(hit.collider, out GlassPane pane))
                 {
@@ -67,6 +71,15 @@ namespace CloseTheDeal.Combat
 
                 Remember(pane, ref result);
                 travelled += hit.distance + PaneSkin;
+            }
+
+            // More glass than one shot can cross: it stops in the glass rather than flying on unchecked.
+            if (!clear && travelled < limit)
+            {
+                result.Stopped = true;
+                result.Distance = travelled;
+                result.End = origin + direction * travelled;
+                return result;
             }
 
             result.Body = body;
@@ -97,7 +110,8 @@ namespace CloseTheDeal.Combat
                 travelled += hit.distance + PaneSkin;
             }
 
-            return true;
+            // Out of glass budget before the end: not proven clear.
+            return travelled >= length;
         }
 
         /// <summary>Host only. Breaks the panes the last traced shot crossed. Call straight after Trace.</summary>

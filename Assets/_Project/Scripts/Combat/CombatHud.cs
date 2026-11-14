@@ -1,4 +1,5 @@
 using CloseTheDeal.Player;
+using CloseTheDeal.Records;
 using CloseTheDeal.UI;
 using TMPro;
 using UnityEngine;
@@ -71,6 +72,12 @@ namespace CloseTheDeal.Combat
         [Header("Knocked out")]
         [SerializeField] CanvasGroup _downGroup;
         [SerializeField] TMP_Text _downCount;
+        [Tooltip("The card's heading and its line: who and how, then where you come back.")]
+        [SerializeField] TMP_Text _downTitle;
+        [SerializeField] TMP_Text _downLine;
+
+        const string DefaultDownTitle = "YOU HAVE BEEN LET GO";
+        const string DefaultDownLine = "BACK ON THIS FLOOR IN";
 
         // ---- Runtime -------------------------------------------------------------------------
 
@@ -126,6 +133,31 @@ namespace CloseTheDeal.Combat
                 _downGroup.alpha = 0f;
             _healthFade.Snap(0f);
             _downFade.Snap(0f);
+            // Here, not in OnEnable: the HUD is hidden while the menu is open, and a death then still needs its line.
+            LocalDeath.Down += OnLocalDeath;
+        }
+
+        void OnDestroy()
+        {
+            LocalDeath.Down -= OnLocalDeath;
+        }
+
+        /// <summary>The match records' word on how this player went down: who, how, and where they come back.</summary>
+        void OnLocalDeath(DeathReport report)
+        {
+            if (_downTitle == null || _downLine == null)
+                return;
+
+            string who = MatchRecords.NameOf(report.KillerClientId).ToUpperInvariant();
+            switch (report.Kind)
+            {
+                case KillKind.Killed: _downTitle.text = "LET GO BY " + who; break;
+                case KillKind.KnockedOut: _downTitle.text = "SHOWN THE WINDOW BY " + who; break;
+                case KillKind.Fell: _downTitle.text = "LEFT THE BUILDING"; break;
+                default: _downTitle.text = DefaultDownTitle; break;
+            }
+
+            _downLine.text = string.IsNullOrEmpty(report.ComesBackOn) ? DefaultDownLine : "BACK ON " + report.ComesBackOn.ToUpperInvariant() + " IN";
         }
 
         void OnDisable()
@@ -361,13 +393,22 @@ namespace CloseTheDeal.Combat
             {
                 case WeaponState.Reloading: _weaponState.text = "RELOADING"; break;
                 case WeaponState.Equipping: _weaponState.text = "DRAWING"; break;
-                default: _weaponState.text = _empty ? "EMPTY · R TO RELOAD" : _holder.ActiveWeapon == null ? string.Empty : "READY"; break;
+                default: _weaponState.text = _empty ? EmptyText() : _holder.ActiveWeapon == null ? string.Empty : "READY"; break;
             }
 
             _weaponState.color = _empty && _holder.State == WeaponState.Ready ? _tokens.Amber : _tokens.Ink3;
         }
 
         WeaponState _lastState;
+        float _shownProgress = -1f;
+
+        /// <summary>The empty hint names the button the player last used: R on a keyboard, Y on a pad.</summary>
+        static string EmptyText()
+        {
+            var pad = UnityEngine.InputSystem.Gamepad.current;
+            bool onPad = pad != null && pad.lastUpdateTime > (UnityEngine.InputSystem.Keyboard.current?.lastUpdateTime ?? 0d);
+            return onPad ? "EMPTY · Y TO RELOAD" : "EMPTY · R TO RELOAD";
+        }
 
         void ShowProgress()
         {
@@ -379,7 +420,11 @@ namespace CloseTheDeal.Combat
             }
 
             float progress = state == WeaponState.Ready ? 0f : _holder.StateProgress;
-            _progressFill.localScale = new Vector3(progress, 1f, 1f);
+            if (!Mathf.Approximately(progress, _shownProgress))
+            {
+                _shownProgress = progress;
+                _progressFill.localScale = new Vector3(progress, 1f, 1f);
+            }
         }
 
         // ---- Health, shown while hurt --------------------------------------------------------
@@ -400,13 +445,16 @@ namespace CloseTheDeal.Combat
 
         void ShowHealthFade(float dt)
         {
-            bool hurt = _health.Current < _health.Max && !_health.IsDead;
-            bool show = hurt || Time.unscaledTime - _lastHurtTime < _healthLinger;
+            // Never while knocked out: the card says it all then.
+            bool hurt = _health.Current < _health.Max;
+            bool show = !_health.IsDead && (hurt || Time.unscaledTime - _lastHurtTime < _healthLinger);
             float target = show ? 1f : 0f;
             if (!Mathf.Approximately(_healthFade.To, target))
                 _healthFade.Start(_healthGroup.alpha, target, show ? _tokens.PanelIn : _tokens.PanelOut, show ? _tokens.EaseOut : _tokens.EaseIn);
 
-            _healthGroup.alpha = _healthFade.Step(dt);
+            float alpha = _healthFade.Step(dt);
+            if (!Mathf.Approximately(alpha, _healthGroup.alpha))
+                _healthGroup.alpha = alpha;
         }
 
         // ---- Where damage came from ----------------------------------------------------------
@@ -465,7 +513,9 @@ namespace CloseTheDeal.Combat
             if (!Mathf.Approximately(_downFade.To, target))
                 _downFade.Start(_downGroup.alpha, target, down ? _tokens.PanelIn : _tokens.PanelOut, down ? _tokens.EaseOut : _tokens.EaseIn);
 
-            _downGroup.alpha = _downFade.Step(dt);
+            float downAlpha = _downFade.Step(dt);
+            if (!Mathf.Approximately(downAlpha, _downGroup.alpha))
+                _downGroup.alpha = downAlpha;
             if (!down)
                 return;
 
@@ -482,6 +532,10 @@ namespace CloseTheDeal.Combat
         void OnRespawned(Health health)
         {
             _shownCount = -1;
+            if (_downTitle != null)
+                _downTitle.text = DefaultDownTitle;
+            if (_downLine != null)
+                _downLine.text = DefaultDownLine;
             UiSound.Play(UiSoundEvent.CountdownGo);
             for (int i = 0; i < _damageAges.Length; i++)
                 _damageAges[i] = float.MaxValue;
