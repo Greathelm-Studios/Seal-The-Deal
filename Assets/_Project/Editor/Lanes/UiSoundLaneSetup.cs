@@ -285,12 +285,11 @@ namespace CloseTheDeal.Editor.Lanes
             }
 
             // Nothing has called SetVolume in this play session: the level heard is what was restored from PlayerPrefs.
+            float savedPeak;
             void StageSaved(double now)
             {
                 if (probeStep == 0) { UiSoundMeter.Reset(); UiSoundPlayer.Play(UiSoundEvent.Confirm, 0f); probeStep = 1; until = now + 0.5; return; }
-                float pk = UiSoundMeter.Peak;
-                float db = 20f * Mathf.Log10(Mathf.Max(pk, 1e-6f) / 0.318f);
-                lines.Add($"saved volume: Interface saved at 0.5 before this session, first sound peak={pk:F3} ({db:F1} dB against full, expect about -6) {(Mathf.Abs(db + 6f) < 1.5f ? "OK restored" : "FAIL not restored")}");
+                savedPeak = UiSoundMeter.Peak;   // judged in StageLevel, against the same clip at full volume
                 probeStep = 0; stage = 0; until = now + 0.1;
             }
 
@@ -333,6 +332,8 @@ namespace CloseTheDeal.Editor.Lanes
                 if (probeStep == 0) { Probe(UiSoundEvent.Confirm, 1f, 1f); probeStep = 1; until = now + 0.5; return; }
                 if (probeStep == 1) { probeA = UiSoundMeter.Peak; Probe(UiSoundEvent.Confirm, 0.5f, 1f); probeStep = 2; until = now + 0.5; return; }
                 probeB = UiSoundMeter.Peak;
+                float sdb = 20f * Mathf.Log10(Mathf.Max(savedPeak, 1e-6f) / Mathf.Max(probeA, 1e-6f));
+                lines.Add($"saved volume: Interface saved at 0.5 before this session, first sound peak={savedPeak:F3} against {probeA:F3} at full: {sdb:F1} dB (expect about -6) {(Mathf.Abs(sdb + 6f) < 1.5f ? "OK restored" : "FAIL not restored")}");
                 float db = 20f * Mathf.Log10(Mathf.Max(probeB, 1e-6f) / Mathf.Max(probeA, 1e-6f));
                 lines.Add($"UI slider 1.0 peak={probeA:F3}, 0.5 peak={probeB:F3}: {db:F1} dB (expect about -6) {(Mathf.Abs(db + 6f) < 1.5f ? "OK" : "FAIL")}");
                 probeStep = 0; stage = 3; until = now + 0.1;

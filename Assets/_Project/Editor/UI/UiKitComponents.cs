@@ -9,13 +9,13 @@ namespace CloseTheDeal.Editor.UI
 {
     /// <summary>
     /// Builds the kit's component prefabs in Assets/_Project/UI/Kit: buttons (primary, secondary, quiet, tab),
-    /// toggle, stepper, swatches, slider, status line, key hint, section header, plate, glass pane, focus frame
-    /// and crosshair. A prefab a designer edited is left alone (GeneratedAssetGuard): edit the prefab to take it over.
+    /// toggle, stepper, swatches, slider, status line, key hint, section header, plate, glass pane, focus frame,
+    /// crosshair and edge marker. A prefab a designer edited is left alone (GeneratedAssetGuard): edit the prefab to take it over.
     /// </summary>
     internal static class UiKitComponents
     {
         internal static GameObject Primary, Secondary, Quiet, Tab, Toggle, Stepper, Swatches, Slider;
-        internal static GameObject StatusLine, KeyHint, SectionHeader, Plate, GlassPane, FocusFrame, Crosshair;
+        internal static GameObject StatusLine, KeyHint, SectionHeader, Plate, GlassPane, FocusFrame, Crosshair, EdgeMarker;
 
         internal static void Build()
         {
@@ -35,6 +35,7 @@ namespace CloseTheDeal.Editor.UI
             GlassPane = SavePrefab(BuildPane("GlassPane", true), KitFolder + "/GlassPane.prefab");
             FocusFrame = SavePrefab(BuildFocusFrame(), KitFolder + "/FocusFrame.prefab");
             Crosshair = SavePrefab(BuildCrosshair(), KitFolder + "/Crosshair.prefab");
+            EdgeMarker = SavePrefab(BuildEdgeMarker(), KitFolder + "/EdgeMarker.prefab");
         }
 
         // ---- The shared control frame -----------------------------------------------------------
@@ -227,7 +228,9 @@ namespace CloseTheDeal.Editor.UI
             Img(fill, UiKitArt.White, t.Cobalt);
             RectTransform handleArea = At(fx.Plate, "HandleArea", 16f, 0f, 260f, 48f);
             RectTransform handle = Node(handleArea, "Handle");
-            handle.sizeDelta = new Vector2(8f, 22f);
+            // The slider stretches its handle over the handle area's height (48): -26 leaves it 22 tall, so thumbs on
+            // neighbouring rows never meet into one bar.
+            handle.sizeDelta = new Vector2(8f, -26f);
             Image handleImage = Img(handle, UiKitArt.White, t.Navy, raycast: true);
 
             Box(fx.Plate, "FieldBox", 300f, 2f, 104f, 44f, t.Navy, UiKitArt.Outline1);
@@ -268,9 +271,13 @@ namespace CloseTheDeal.Editor.UI
         static GameObject BuildKeyHint()
         {
             RectTransform root = NewRoot("KeyHint", 160f, 40f);
-            Box(root, "KeyCap", 0f, 2f, 48f, 36f, Tokens.Navy, UiKitArt.Outline1);
-            Label(root, "Key", 0f, 2f, 48f, 36f, "Esc", Tokens.Label, Tokens.Navy, TextAlignmentOptions.Center);
-            Label(root, "Label", 58f, 0f, 102f, 40f, "Back", Tokens.Label, Tokens.Ink2);
+            Image cap = Box(root, "KeyCap", 0f, 2f, 48f, 36f, Tokens.Navy, UiKitArt.Outline1);
+            TextMeshProUGUI key = Label(root, "Key", 0f, 2f, 48f, 36f, "Esc", Tokens.Label, Tokens.Navy, TextAlignmentOptions.Center);
+            TextMeshProUGUI label = Label(root, "Label", 58f, 0f, 102f, 40f, "Back", Tokens.Label, Tokens.Ink2);
+            var hint = root.gameObject.AddComponent<UiKeyHint>();
+            Set(hint, "_cap", cap.rectTransform);
+            Set(hint, "_key", key);
+            Set(hint, "_label", label);
             return root.gameObject;
         }
 
@@ -368,6 +375,62 @@ namespace CloseTheDeal.Editor.UI
             SetArray(crosshair, "_arms", cores);
             crosshair.Draw();
             return go;
+        }
+
+        /// <summary>
+        /// The off-screen marker. Its root stretches over the whole canvas (the frame WorldToCanvas.TryProject measures
+        /// in); the body is anchored at the bottom-left corner and moved in canvas units: a navy keyline, the mark,
+        /// the chevron and a paper tag with the distance under it.
+        /// </summary>
+        static GameObject BuildEdgeMarker()
+        {
+            UiTokens t = Tokens;
+            var go = new GameObject("EdgeMarker", typeof(RectTransform)) { layer = 5 };
+            var root = (RectTransform)go.transform;
+            Stretch(root);
+            go.AddComponent<CanvasGroup>();
+
+            RectTransform body = Node(root, "Body");
+            body.anchorMin = body.anchorMax = Vector2.zero;
+            body.pivot = new Vector2(0.5f, 0.5f);
+            body.sizeDelta = new Vector2(32f, 32f);
+            Image keyline = Img(Centred(body, "Keyline", 38f, 38f), UiKitArt.Diamond, t.Navy);
+            Image shape = Img(Centred(body, "Shape", 30f, 30f), UiKitArt.Diamond, t.Cyan);
+            shape.preserveAspect = keyline.preserveAspect = true;
+
+            RectTransform pointer = Centred(body, "Pointer", 16f, 20f);
+            Image pointerImage = Img(pointer, UiKitArt.Pointer, t.Cyan);
+
+            RectTransform tag = Node(body, "Tag");
+            tag.anchorMin = tag.anchorMax = tag.pivot = new Vector2(0.5f, 0.5f);
+            tag.sizeDelta = new Vector2(64f, 22f);
+            tag.anchoredPosition = new Vector2(0f, -32f);
+            Img(tag, UiKitArt.White, UiTokens.WithAlpha(t.Paper, t.PlateAlpha));
+            Img(Fill(tag, "Edge"), UiKitArt.Outline1, t.Hair);
+            TextMeshProUGUI distance = Text(Fill(tag, "Distance"), "24 m", t.Caption, t.Navy, TextAlignmentOptions.Center);
+            distance.characterSpacing = 2f;
+
+            var marker = go.AddComponent<UiEdgeMarker>();
+            Set(marker, "_tokens", t);
+            Set(marker, "_body", body);
+            Set(marker, "_shape", shape);
+            Set(marker, "_keyline", keyline);
+            Set(marker, "_pointer", pointer);
+            Set(marker, "_pointerImage", pointerImage);
+            Set(marker, "_distance", distance);
+            Set(marker, "_tag", tag);
+            Set(marker, "_diamond", UiKitArt.Diamond);
+            Set(marker, "_triangle", UiKitArt.Triangle);
+            Set(marker, "_square", UiKitArt.White);
+            return go;
+        }
+
+        static RectTransform Centred(Transform parent, string name, float w, float h)
+        {
+            RectTransform rect = Node(parent, name);
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(w, h);
+            return rect;
         }
 
         static Image CentreBlock(Transform parent, string name, Color colour)

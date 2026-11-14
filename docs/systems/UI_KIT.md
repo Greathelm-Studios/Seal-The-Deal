@@ -4,12 +4,12 @@
 
 ## What the player sees
 
-The game opens on the title: a white window frame with depth (lit mullion faces, silver reveals, a transom shadow, a black-edged sill) over a drawn sky with stepped cel cumulus and the rival firm's tower under trace brackets, sun falling through it in two hard slabs across the paper below. Low on paper: **SEAL THE DEAL**, the status and connection lines, the focused button's explanation, the keys row (Enter / A select, Esc / B back, arrows / stick move), a microtype strip, the build line, barcode and corner ticks, and the menu: **Host game**, **Join on this PC** (local test mode only), **Settings**, **Quit to desktop**.
+The game opens on the title: a white window frame with depth (lit mullion faces, silver reveals, a transom shadow, a black-edged sill) over lane 8's live sky (the game's own sky, its traced clouds and the towers; a flat gradient where a scene has no sky material), sun falling through it in two hard slabs across the paper below, behind the text. Low on paper: **SEAL THE DEAL**, the status and connection lines, the focused button's explanation, the keys row (Enter / A select, Esc / B back, arrows / stick move), a microtype strip, the build line, barcode and corner ticks, and the menu: **Host game**, **Join on this PC** (local test mode only), **Settings**, **Quit to desktop**.
 Every control answers: hovering lifts it and closes its corner brackets, pressing stamps it down, letting go confirms with a small cyan tick, and each of those asks for a sound.
 Keys and the pad show a focus ring with snapped brackets and a chevron that glide to the next control; with the mouse those marks stay hidden.
 A greyed-out control says why when pressed (amber plate, a shake, the reason in the status line).
 Esc / the pad's B goes back; at the title it asks **Quit to desktop?** with **Stay** focused.
-**Settings** has four tabs (Q / E or the shoulder buttons switch; the cobalt rule glides to the open tab and the page slides 12 px): Controls (look rows and the key list; rebinding asks before taking a key another action uses), Video (display mode, resolution with a 10-second revert, vertical sync, frame rate limit, quality), Audio (five volumes, a test sound and a live output meter) and Accessibility (as before). The right column always shows the focused row's explanation above the tab's live preview. Changes apply at once and come back after a relaunch.
+**Settings** has four tabs (Q / E or the shoulder buttons switch; the cobalt rule glides to the open tab and the page slides 12 px): Controls (look rows and the key list; rebinding asks before taking a key another listed action uses, and refuses a key kept for an unlisted one such as moving or Help), Video (display mode, resolution with a 10-second revert to the size the screen really had, a saved size clamped to the monitor, vertical sync, frame rate limit, quality), Audio (five volumes, a test sound and a live output meter) and Accessibility (as before). The right column always shows the focused row's explanation above the tab's live preview; under the rows, **Changed on this tab** lists each value that differs from how the game shipped (or says nothing has), except on Controls, whose key list fills the page. Changes apply at once and come back after a relaunch.
 Full screens change through paper white: the old screen's content fades and its sky rolls up, then the new one's sky rolls down and its lines reveal. No mixed mid-tone.
 Once you host or join, the kit's screens fade out and the playtest card (MENU_AND_HUD.md) takes over until the in-game menu slice lands.
 
@@ -79,13 +79,27 @@ Events (frozen with lane 9; append only): None, HoverMove, Focus, Select, Confir
 - The end of a list nudges the marks (edge bump). Held directions repeat at the token timing.
 - Left / right on a stepper, swatch row or slider changes the value instead of moving focus.
 
+## Edge marker
+
+`UiEdgeMarker` (prefab `Kit/EdgeMarker.prefab`) points at something in the world: in view, the mark sits over it; out of view or behind you it waits at the nearest screen edge, 48 px in (Safe Edge), with a chevron toward the target and the distance in metres on the side away from the chevron.
+Shape and colour say whose it is, never colour alone: `Ours` cyan diamond, `Rival` amber triangle, `Loose` paper square, each with a navy keyline.
+- **Use:** put the prefab under the HUD canvas so its rectangle stretches over the whole canvas (it measures in that canvas's units from the bottom-left), set `Kind`, then once a frame in LateUpdate call `Track(camera, worldPoint)`; it projects with lane 11's `Nameplates.WorldToCanvas.TryProject`. A HUD that projects for itself calls `Place(canvasPoint, inFront, metres)` with TryProject's output (metres < 0 hides the tag). `Hide()` fades it out; `Flash()` pops it once (the rival took it).
+- Behind you, the mark always goes to an edge on the side the target is (never into view); dead behind goes to the bottom edge.
+- Placing it each frame allocates nothing; the distance text changes only when the whole metre does. Fades: 120 ms in OUT, 80 ms out IN; flash 320 ms (a dip in opacity with Reduce motion).
+
+## Key hints
+
+`UiGlyphs` is the one table of key and button names. It tracks the device the player used last (`UiInput.Poll`; `Changed` fires only when the kind changes: keyboard and mouse, Xbox, PlayStation, other pad with Xbox names) and turns a binding into the label for it: `F`, `Esc`, `A` / `Cross`, `LB` / `L1`, `Menu` / `Options`. Player-map hints read the player's custom keys (`UiGlyphs.WithRebinds`, a read-only copy; the actions asset is never changed).
+`UiKeyHint` on the `KeyHint` prefab is live once it has an action (`Player/Interact`, `UI/Cancel`) or fixed names (keyboard text, a pad control such as `leftShoulder`): the cap shows the key for the device in use, widens to fit and the words move with it; an action with nothing bound on that device shows a dash. Without either it shows its text unchanged, as before. From code: `hint.Bind("Player/Interact", "Pick up", actions)`.
+The title's keys row, the settings tab caps and footer, the confirm dialog and the Controls page's pad column all switch with the device.
+
 ## How a lane builds UI with the kit
 
 **A HUD piece:** put it on the game menu's `Hud`; use the `Plate` prefab (white plate, navy text), the type roles and colours from `UiTokens` (reference the asset in a serialized field); redraw on your system's events, never per frame. Need a new component? Ask lane 5 on AgentHub; don't add colours, fonts or panel styles.
 **A button or setting:** drop in a prefab from [Assets/_Project/UI/Kit/](../../Assets/_Project/UI/Kit/) and subscribe to its event (`UiButton.Clicked`, `UiToggle.Changed`, `UiStepper.Changed`, `UiSwatches.Changed`, `UiSlider.Changed`). Set `Description` (shown on focus) and `RefusalReason` (shown when pressed greyed out).
 **A sound:** `UiSound.Play(UiSoundEvent.FloorOpened)`.
 **A screen:** subclass `UiScreen` (override `OnShowing`, `OnCancel`, `OnCovered`), give it a Canvas Group, a content rect and its reveal lines, put it under KitUI and `Push` it on `UiRoot.Stack` (`Pop` goes back, `Replace` swaps the top for one of the same kind). Set `_isDialog` for a dialog over the current screen. `UiConfirmDialog.Configure(title, body, confirm, stay, action)` covers yes / no questions.
-**The title's sky:** put the live backdrop under `TitleScreen.BackdropSlot` and call `SetLiveBackdrop(true)` to hide the static sky. Keep the lockup and menu band (y 0.64–0.94 of the centred 16:9 frame) clear.
+**The title's sky:** lane 8's `TitleSky` puts the live sky under `TitleScreen.BackdropSlot` by itself and calls `SetLiveBackdrop(true)`; the flat fallback stays only when the scene has no sky material (Set Up UI says which). Keep the lockup and menu band (y 0.64–0.94 of the centred 16:9 frame) clear.
 **Glass:** assign the material on `UiGlassPane` (prefab `GlassPane`); without one it draws the no-blur fallback (paper 86%, hairline edge, offset shadow).
 
 ## Settings
@@ -120,9 +134,8 @@ Changes apply at once (no Apply step; the mockup's Apply / unsaved-changes flow 
 
 ## Known limitations
 
-- The sky is a static gradient until lane 8's live backdrop fills the slot; panes use the no-blur fallback until lane 7's material.
 - Final typeface: every role is TMP's Liberation Sans (the only font in the repo, origin/main and origin/Alex_Env); the display roles thin it with an SDF material (`Tokens/Type_Thin.mat`).
 - Status strings are SteamLobby's current wording, not the inventory's rewrite (§5.2–5.3).
-- No hardware cursor yet (feel table §2.4), no pad glyph switching, no rumble.
+- No hardware cursor yet (feel table §2.4), no rumble.
 - The frozen sound list has no edge-bump or "focus stops after a held repeat" event: both are silent.
 - Hosting, joining and failure states still use the playtest card.

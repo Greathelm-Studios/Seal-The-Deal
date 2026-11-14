@@ -14,7 +14,7 @@ Commits on the lane branch, all merged into `buffer` by the orchestrator except 
 - "Add movement's HUD: refusal line and controls card from the UI kit": `Player/Hud/MovementHud.cs` and its setup menu, `Ground Turn Rate`, the Help action, private session ports and a server assertion.
 - The settings hooks (this turn): `InputPrefs` look sensitivity, invert, stick speed, stick dead zone and key rebinding are applied in `PlayerCamera` and `PlayerInputReader`, which set `LookHooked` / `BindingsHooked` so lane 5's settings screen shows those rows.
 
-Not built: the crosshair opening with speed and air time. Lane 5 owns `UiCrosshair` and said it would add `OpenPixels` and `Pulse`; they are not in `buffer` yet, so movement does not feed it.
+- "Feed the crosshair from speed, air time and spread": `Player/Hud/CrosshairFeed.cs` on the kit's crosshair opens it by speed (3.6 px at a sprint) and in the air (9.6 px in a sprint jump), or by the gun's spread when wider, and pulses it on hard landings, hits and kills.
 
 ## What was checked
 
@@ -34,6 +34,8 @@ All by the scripted session (`Scripts/Player/Dev/PlayerMovementSession.cs`), whi
 - Ledge checks include the Prop layer, so climbing a moving prop could make host and client disagree (review PM-7, suspected, not seen).
 - Bandwidth at 8 players is about 3.1 Mbit/s up from the host before packing.
 - The committed floor templates were stale against TOWER.md; the orchestrator rebuilt them on `buffer`, but movement has not measured those stairs.
+- In about half the solo runs, the first Space press after the menu-opened-mid-jump check doesn't start a climb (the check right before it passes; cause not found). Not seen outside the scripted session.
+- PlayerPrefs are one file shared by every checkout on this Mac; the scripted session now ignores saved rebinds without writing the file.
 - The scripted session holds the game menu closed while it runs, because a headless editor cannot lock the cursor; a real player never sees that.
 
 ## Assumptions made while Adam was away (confirm or change)
@@ -54,8 +56,8 @@ All by the scripted session (`Scripts/Player/Dev/PlayerMovementSession.cs`), whi
 
 ## One thing that still makes movement feel like a demo
 
-The crosshair doesn't react to how fast you're going or to being in the air, so the speed you feel isn't echoed where your eyes are. It waits on lane 5's `OpenPixels`.
+Other players are still capsules with a procedural pose: their crouch, lean and slide now arrive, but nothing on their body animates a slide or a vault, so the speed you feel isn't shown on anyone else.
 
 ## Next steps
 
-Feed `UiCrosshair.OpenPixels` from speed, air time and shooting's spread once lane 5's hook is in `buffer`; then keep a slide on the spiral treads (or accept and document it as a level rule).
+Keep a slide on the spiral treads (or accept and document it as a level rule).

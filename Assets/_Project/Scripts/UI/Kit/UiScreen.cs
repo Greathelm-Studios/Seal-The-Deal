@@ -199,6 +199,7 @@ namespace CloseTheDeal.UI
                 target = _firstFocus.gameObject;
             if (target != null)
                 EventSystem.current.SetSelectedGameObject(target);
+            UiFocusFrame.WakeUp();
         }
 
         static bool IsUsable(GameObject go) => !go.TryGetComponent(out Selectable s) || s.IsInteractable();

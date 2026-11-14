@@ -47,6 +47,7 @@ namespace CloseTheDeal.Editor.Lanes
         const string ItemFolder = "Assets/_Project/Profiles/Items/";
         const string ItemPrefabs = "Assets/_Project/Prefabs/Items/";
         const string PropPrefabs = "Assets/_Project/Prefabs/Props/";
+        const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player.prefab";
 
         /// <summary>
         /// The reception stands at street level past the towers' +X end, its glass front looking
@@ -100,8 +101,8 @@ namespace CloseTheDeal.Editor.Lanes
             EnsureFolder("Assets/_Project/Profiles", "Integration");
             EnsureGunMap();
             EnsureLootTable();
-            EnsureLobbyAssets();
-            PickupsLaneSetup.SetUpPrefabsOnly();
+            Watching("lobby assets", EnsureLobbyAssets);
+            Watching("pickups prefabs", PickupsLaneSetup.SetUpPrefabsOnly);
             TowerProfile tower = GameModeLaneSetup.EnsureLaneTower();
             if (tower == null)
                 return false;
@@ -113,13 +114,13 @@ namespace CloseTheDeal.Editor.Lanes
 
             GameModeLaneSetup.FrameStreet(tower);
             // Street-level spawns are only the fallback when no tower stands; arrivals go to the lobby.
-            GreyboxSceneSetup.EnsurePlayRig(new Vector3(-3f, 0.1f, 0f), new Vector3(3f, 0.1f, 0f));
+            Watching("greybox play rig", () => GreyboxSceneSetup.EnsurePlayRig(new Vector3(-3f, 0.1f, 0f), new Vector3(3f, 0.1f, 0f)));
             GameModeLaneSetup.EnsureTower(tower);
             EditorSceneManager.SaveScene(scene, ScenePath);
 
-            GameModeLaneSetup.AddToOpenScene();
+            Watching("game mode", GameModeLaneSetup.AddToOpenScene);
             AddStartingLoadout();
-            ShootingLaneSetup.AddToOpenScene();
+            Watching("shooting", ShootingLaneSetup.AddToOpenScene);
             PickupsLaneSetup.BuildPromptCanvas();
             LowerItemPrompt();
             Transform[] lobbySpawns = BuildReception(LoadLobbyAssets());
@@ -203,7 +204,43 @@ namespace CloseTheDeal.Editor.Lanes
             LobbyLaneSetup.EnsureRules();
             LobbyLaneSetup.EnsureAsset<SecretaryLines>(LobbyLaneSetup.LinesPath, LobbyLaneSetup.FillLines);
             GameObject character = LobbyLaneSetup.EnsureCharacterPrefab(catalog);
-            LobbyLaneSetup.PatchPlayerPrefab(character);
+            AddOutfitIfMissing(character);
+        }
+
+        /// <summary>
+        /// The player prefab is add-only here (AGENTS.md §4): the outfit goes on only when the
+        /// player has none. The lobby's patch re-seats an existing outfit (it removes an earlier
+        /// figure and re-points the view), which would undo what a person or another tool set,
+        /// so a player that already wears an outfit is reported and left alone.
+        /// </summary>
+        static void AddOutfitIfMissing(GameObject character)
+        {
+            var player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
+            PlayerOutfit outfit = player != null ? player.GetComponent<PlayerOutfit>() : null;
+            if (outfit == null)
+            {
+                LobbyLaneSetup.PatchPlayerPrefab(character);
+                return;
+            }
+
+            Object view = new SerializedObject(outfit).FindProperty("_view").objectReferenceValue;
+            Debug.Log(view != null
+                ? "[Integration] Player.prefab already wears an outfit (PlayerOutfit, view " + view.name + "); left as it is."
+                : "[Integration] Player.prefab has PlayerOutfit with no view. Left as it is: set its view on the prefab, or run the lobby lane's own setup to seat one.");
+        }
+
+        /// <summary>
+        /// Runs one lane's step and says if it changed Player.prefab. This tool never rewrites the
+        /// player; a lane step that does is named here so its owner can make it add-only.
+        /// </summary>
+        static void Watching(string step, Action run)
+        {
+            string before = File.Exists(PlayerPrefabPath) ? File.ReadAllText(PlayerPrefabPath) : null;
+            run();
+            AssetDatabase.SaveAssets();
+            string after = File.Exists(PlayerPrefabPath) ? File.ReadAllText(PlayerPrefabPath) : null;
+            if (before != null && before != after)
+                Debug.LogWarning($"[Integration] The {step} step changed {PlayerPrefabPath}. Check the diff before committing it: lane tools must only add to the player (AGENTS.md §4).");
         }
 
         static LobbyAssets LoadLobbyAssets()

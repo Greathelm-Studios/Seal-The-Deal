@@ -127,6 +127,7 @@ namespace CloseTheDeal.Editor.UI
             }
 
             LoadPrefabsIfNeeded();
+            ReportTitleSky();
             bool added = EnsureEventSystem();
             added |= EnsureCrosshair(menu);
             added |= EnsureMenuFade(menu);
@@ -138,6 +139,18 @@ namespace CloseTheDeal.Editor.UI
             BuildCanvas(menu);
             Debug.Log("[UI] Added the UI kit (title, settings, quit confirm, focus marks) to the scene.");
             return true;
+        }
+
+        /// <summary>
+        /// The title shows lane 8's live sky by default (TitleSky adds itself at run time and draws the scene's own sky
+        /// material). A scene with no sky material gets the flat fallback instead; say so, with the fix.
+        /// </summary>
+        static void ReportTitleSky()
+        {
+            if (RenderSettings.skybox == null)
+                Debug.LogWarning("[UI] This scene has no sky material, so the title shows the flat fallback sky instead of the live one. Close the Deal > Art > Apply Office Look gives it the game's sky.");
+            else
+                Debug.Log("[UI] The title will show this scene's sky (" + RenderSettings.skybox.name + ") live behind its window frame.");
         }
 
         /// <summary>Loads what earlier runs built. Unity's null (a deleted asset) counts as missing, so it reloads.</summary>
