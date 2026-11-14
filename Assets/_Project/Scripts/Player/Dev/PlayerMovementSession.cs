@@ -172,10 +172,18 @@ namespace CloseTheDeal.Player.Dev
             _mouse = InputSystem.AddDevice<Mouse>("Session mouse");
             _pad = InputSystem.AddDevice<Gamepad>("Session pad");
             PlayerInputReader.ScriptedCapture = true;
+
+            // Saved preferences are one file shared by every copy of the project on this machine,
+            // so another test's rebinding could leave Space not jumping. Ignore them for the run,
+            // without writing the file.
+            PlayerInputReader.IgnoreSavedBindings = true;
+            if (!string.IsNullOrEmpty(CloseTheDeal.UI.InputPrefs.BindingOverridesJson))
+                Note("a saved key rebinding exists on this machine; this run ignores it and leaves it alone");
         }
 
         void RestoreSettings()
         {
+            PlayerInputReader.IgnoreSavedBindings = false;
             InputSystem.settings.backgroundBehavior = _authoredBackground;
 #if UNITY_EDITOR
             InputSystem.settings.editorInputBehaviorInPlayMode = _authoredEditorInput;
@@ -736,6 +744,7 @@ namespace CloseTheDeal.Player.Dev
 
             yield return Wait(1.5f);
             CaptureWithUi("hud_default");
+            yield return CrosshairChecks();
 
             // The refusal: for real at the lane scene's 2.4 m wall; elsewhere shown straight from the HUD, and said so.
             if (GameObject.Find("Wall 2.4 m") != null)
@@ -785,6 +794,34 @@ namespace CloseTheDeal.Player.Dev
             yield return Tap(Key.F1);
             yield return Wait(0.4f);
             Check("Help closes the card again", !hud.HelpOpen, "F1 twice");
+        }
+
+        /// <summary>The crosshair opens with speed and more in the air, and closes again at rest.</summary>
+        IEnumerator CrosshairChecks()
+        {
+            var feed = FindAnyObjectByType<CloseTheDeal.Player.Hud.CrosshairFeed>();
+            Check("the crosshair feed is on the HUD's crosshair", feed != null, "Add Movement HUD To Open Scene adds it");
+            if (feed == null)
+                yield break;
+
+            // Room to run: the lane scene's open floor; elsewhere wherever the player stands.
+            if (GameObject.Find("Course") != null)
+                yield return Place(new Vector3(-12f, 0.05f, -3.5f), 90f);
+            float rest = feed.Open;
+            Press(Key.W, Key.LeftShift);
+            yield return Wait(0.8f);
+            float sprint = feed.Open;
+            Press(Key.Space);
+            yield return Wait(0.35f);
+            float air = feed.Open;
+            CaptureWithUi("crosshair_sprint_jump");
+            ReleaseAll();
+            yield return Until(() => Me.Grounded && Me.PlanarSpeed < 0.1f, 3f, null);
+            yield return Wait(0.5f);
+            float after = feed.Open;
+            Note($"MEASURE crosshair gap: {rest:0.0} px at rest, {sprint:0.0} px sprinting, {air:0.0} px in a sprint jump, {after:0.0} px stopped again (100% size, 1080p)");
+            Check("the crosshair opens with speed, more in the air, and closes at rest", rest < 0.5f && sprint > 2f && air > sprint + 3f && after < 0.5f,
+                $"{rest:0.0} / {sprint:0.0} / {air:0.0} / {after:0.0} px");
         }
 
         /// <summary>A second camera looking at a body from outside, since the owner never sees their own.</summary>
@@ -951,6 +988,7 @@ namespace CloseTheDeal.Player.Dev
             yield return Face(0f);
 
             var reader = Me.GetComponent<PlayerInputReader>();
+            PlayerInputReader.IgnoreSavedBindings = false;
             var scratch = Instantiate(reader.Actions);
             scratch.RemoveAllBindingOverrides();
             scratch.FindAction("Player/Jump").ApplyBindingOverride(0, "<Keyboard>/j");
@@ -966,6 +1004,7 @@ namespace CloseTheDeal.Player.Dev
             yield return Until(() => _localLands > lands, 2f, "lands after the rebound jump");
             Check("a rebind of Jump to J takes effect at once", spaceIgnored && _localJumps == jumps + 1, $"space ignored {spaceIgnored}, jumps +{_localJumps - jumps}; help card reads {reader.BindingText("Jump", false)}");
             CloseTheDeal.UI.InputPrefs.BindingOverridesJson = binds;
+            PlayerInputReader.IgnoreSavedBindings = true;
             yield return Wait(0.2f);
         }
 

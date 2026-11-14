@@ -69,3 +69,8 @@ MonoBehaviour:
   StickTurnBoost: 160
   StickTurnBoostDelay: 0.15
   StickTurnBoostRamp: 0.25
+  CrosshairOpenPerSpeed: 1.2
+  CrosshairOpenInAir: 6
+  CrosshairOpenMax: 16
+  CrosshairOpenRate: 80
+  CrosshairLandingPulseSpeed: 8
