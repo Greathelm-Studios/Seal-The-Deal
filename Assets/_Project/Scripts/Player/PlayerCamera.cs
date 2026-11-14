@@ -1,3 +1,4 @@
+using CloseTheDeal.UI;
 using UnityEngine;
 
 namespace CloseTheDeal.Player
@@ -147,16 +148,27 @@ namespace CloseTheDeal.Player
         /// The mouse turns the view by how far it moved; the stick turns it at a speed, with
         /// small pushes kept slow for fine aim. Both read as nothing while the menu is open.
         /// </summary>
+        /// <summary>Tells the settings screen that look sensitivity, invert and stick speed are applied here, so it shows those rows.</summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void HookPrefs() => InputPrefs.LookHooked = true;
+
         void Look(MovementProfile profile, float dt)
         {
-            Vector2 mouse = _input.LookDelta * profile.MouseSensitivity;
+            // The player's own preferences multiply the designer's values; the profile is never written.
+            Vector2 mouse = _input.LookDelta * (profile.MouseSensitivity * InputPrefs.LookSensitivity);
             Vector2 stick = _input.LookStick;
+            if (InputPrefs.InvertY)
+            {
+                mouse.y = -mouse.y;
+                stick.y = -stick.y;
+            }
+            float stickSpeed = InputPrefs.StickLookSpeed;
             float tilt = stick.magnitude;
             if (tilt > 0f)
                 stick *= Mathf.Pow(tilt, profile.StickLookCurve - 1f);
 
-            _yaw += mouse.x + stick.x * (profile.StickYawSpeed + TurnBoost(profile, stick.x, dt)) * dt;
-            float pitch = _pitch - mouse.y - stick.y * profile.StickPitchSpeed * dt;
+            _yaw += mouse.x + stick.x * (profile.StickYawSpeed + TurnBoost(profile, stick.x, dt)) * stickSpeed * dt;
+            float pitch = _pitch - mouse.y - stick.y * profile.StickPitchSpeed * stickSpeed * dt;
             _pitch = Mathf.Clamp(pitch, -profile.LookUpLimit, profile.LookDownLimit);
         }
 

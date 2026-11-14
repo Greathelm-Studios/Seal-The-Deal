@@ -1,4 +1,5 @@
 using System;
+using CloseTheDeal.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -37,7 +38,20 @@ namespace CloseTheDeal.Player
         const float DefaultLookDeadZone = 0.15f;
 
         float MoveDeadZone => Profile != null ? Profile.MoveStickDeadZone : DefaultMoveDeadZone;
-        float LookDeadZone => Profile != null ? Profile.LookStickDeadZone : DefaultLookDeadZone;
+        float LookDeadZone => InputPrefs.StickDeadZone ?? (Profile != null ? Profile.LookStickDeadZone : DefaultLookDeadZone);
+
+        /// <summary>Tells the settings screen that key rebinding and the stick dead zone are applied here.</summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void HookPrefs() => InputPrefs.BindingsHooked = true;
+
+        /// <summary>The player's saved rebinding, put on this reader's own copy of the actions (overrides are not copied by Instantiate).</summary>
+        void ApplyBindingOverrides()
+        {
+            _own.RemoveAllBindingOverrides();
+            string json = InputPrefs.BindingOverridesJson;
+            if (!string.IsNullOrEmpty(json))
+                _own.LoadBindingOverridesFromJson(json);
+        }
 
         const int PressCount = 7;
         const int SlotCount = 4;
@@ -71,6 +85,9 @@ namespace CloseTheDeal.Player
 
         /// <summary>Raised on the frame a weapon slot button (1–4) goes down while captured.</summary>
         public event Action<int> WeaponSlotPressed;
+
+        /// <summary>This player's own copy of the actions, with their rebinding applied. Read it to list or show bindings; rebinding goes through InputPrefs.BindingOverridesJson.</summary>
+        public InputActionAsset Actions => _own;
 
         /// <summary>True when the last control the player used was on a gamepad, false for keyboard and mouse. Help text follows it.</summary>
         public bool LastUsedGamepad { get; private set; }
@@ -112,6 +129,7 @@ namespace CloseTheDeal.Player
             // reader takes its own copy: otherwise a remote player's body spawning (whose reader
             // is switched off) would disable the actions the local player is reading.
             _own = Instantiate(_actions);
+            ApplyBindingOverrides();
             _map = _own.FindActionMap("Player", true);
             _move = _map.FindAction("Move", true);
             _look = _map.FindAction("Look", true);
@@ -134,11 +152,13 @@ namespace CloseTheDeal.Player
         void OnEnable()
         {
             _map.Enable();
+            InputPrefs.Changed += ApplyBindingOverrides;
         }
 
         void OnDisable()
         {
             _map.Disable();
+            InputPrefs.Changed -= ApplyBindingOverrides;
             ClearLatches();
         }
 
