@@ -1,0 +1,252 @@
+using CloseTheDeal.Net;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace CloseTheDeal.UI
+{
+    /// <summary>
+    /// The title and main menu in the window-frame "Survey" layout: sky inside the window frame above, the title,
+    /// status and menu low on paper. Host game / Join on this PC (local only) / Settings / Quit to desktop call the
+    /// same SteamLobby actions the playtest card did. Host stays greyed out with its reason until the network is
+    /// ready. Esc asks before quitting. The sky is a static fallback until the title lane's live backdrop goes
+    /// into BackdropSlot (SetLiveBackdrop hides the fallback). Text changes only on lobby events.
+    /// </summary>
+    [AddComponentMenu("Close the Deal/UI/Title Screen")]
+    public sealed class TitleScreen : UiScreen
+    {
+        [Header("Backdrop")]
+        [Tooltip("Where the title lane's live sky goes. Anything placed here draws behind the window frame's mullions.")]
+        [SerializeField] RectTransform _backdropSlot;
+        [Tooltip("The static sky drawn until a live backdrop is in the slot.")]
+        [SerializeField] GameObject _staticSky;
+
+        [Header("Menu")]
+        [SerializeField] UiButton _host;
+        [SerializeField] UiButton _joinLocal;
+        [SerializeField] UiButton _settings;
+        [SerializeField] UiButton _quit;
+
+        [Header("Text")]
+        [Tooltip("Steam or local mode, under the title.")]
+        [SerializeField] TMP_Text _mode;
+        [Tooltip("What is happening now.")]
+        [SerializeField] UiStatusLine _status;
+        [Tooltip("How to join a friend (Steam only).")]
+        [SerializeField] TMP_Text _joinHint;
+        [Tooltip("Heading of the focused button's description.")]
+        [SerializeField] TMP_Text _focusHeading;
+        [Tooltip("The focused button's description.")]
+        [SerializeField] TMP_Text _focusBody;
+        [Tooltip("Version line under the title, and the footer's version.")]
+        [SerializeField] TMP_Text[] _versionLines = new TMP_Text[0];
+
+        [Tooltip("The menu column's group: hidden while a dialog takes its place (the quit confirm sits where the menu was).")]
+        [SerializeField] CanvasGroup _menuGroup;
+
+        [Header("Screens it opens")]
+        [SerializeField] UiScreen _settingsScreen;
+        [SerializeField] UiConfirmDialog _quitDialog;
+
+        const string Starting = "Starting...";
+        const string HostRefusal = "Host game opens once the network is ready.";
+        const string QuitTitle = "Quit to desktop?";
+        const string QuitBody = "Your settings are saved.";
+
+        SteamLobby _lobby;
+        string _lastStatus = Starting;
+        bool _refusalShown;
+
+        public RectTransform BackdropSlot => _backdropSlot;
+
+        /// <summary>The title lane calls this with true once its live sky is in BackdropSlot.</summary>
+        public void SetLiveBackdrop(bool live)
+        {
+            if (_staticSky != null)
+                _staticSky.SetActive(!live);
+        }
+
+        /// <summary>Given by the UI root before the title first shows: the game menu whose lobby this screen drives.</summary>
+        internal void Bind(GameMenu menu)
+        {
+            _lobby = menu != null ? menu.Lobby : null;
+        }
+
+        protected override void Awake()
+        {
+            base.Awake();
+            string version = "v" + Application.version + " · Early Access";
+            foreach (TMP_Text line in _versionLines)
+            {
+                if (line != null)
+                    line.text = version;
+            }
+        }
+
+        void OnEnable()
+        {
+            if (_lobby != null)
+            {
+                _lobby.OnStatus += OnStatus;
+                _lobby.OnChanged += Refresh;
+            }
+
+            _host.Clicked += OnHost;
+            _joinLocal.Clicked += OnJoinLocal;
+            _settings.Clicked += OnSettings;
+            _quit.Clicked += OnQuit;
+            UiControlEvents.Focused += OnFocused;
+            UiControlEvents.Refused += OnRefused;
+            Refresh();
+        }
+
+        protected override void OnDisable()
+        {
+            if (_lobby != null)
+            {
+                _lobby.OnStatus -= OnStatus;
+                _lobby.OnChanged -= Refresh;
+            }
+
+            _host.Clicked -= OnHost;
+            _joinLocal.Clicked -= OnJoinLocal;
+            _settings.Clicked -= OnSettings;
+            _quit.Clicked -= OnQuit;
+            UiControlEvents.Focused -= OnFocused;
+            UiControlEvents.Refused -= OnRefused;
+            base.OnDisable();
+        }
+
+        protected override void OnShowing()
+        {
+            _firstFocus = _lobby != null && _lobby.Ready ? _host : _settings;
+            Refresh();
+        }
+
+        protected override void OnCovered(bool covered)
+        {
+            if (_menuGroup != null)
+                _menuGroup.alpha = covered ? 0f : 1f;
+        }
+
+        /// <summary>Esc / B at the title asks before quitting; Stay has focus.</summary>
+        public override void OnCancel() => OnQuit();
+
+        void OnStatus(string text)
+        {
+            _lastStatus = text;
+            _refusalShown = false;
+            Refresh();
+        }
+
+        void Refresh()
+        {
+            if (_lobby == null)
+                return;
+
+            bool ready = _lobby.Ready;
+            bool local = _lobby.LocalMode;
+            _host.interactable = ready;
+            _host.RefusalReason = HostRefusal;
+            _host.Description = local
+                ? "Host a game on this PC. Start a second copy and choose Join on this PC."
+                : "Open a lobby on Steam. Friends join from your name in Steam, up to " + _lobby.MaxPlayers + " players.";
+            _joinLocal.gameObject.SetActive(local);
+            _joinLocal.interactable = ready;
+            _joinLocal.RefusalReason = "Join on this PC opens once the network is ready.";
+            if (_joinHint != null)
+                _joinHint.gameObject.SetActive(!local);
+
+            if (_mode != null)
+                _mode.text = ModeLine(ready, local);
+            if (_status != null && !_refusalShown)
+                _status.Set(_lastStatus, ready ? UiStatusKind.Info : UiStatusKind.Busy);
+            LinkNavigation(local);
+        }
+
+        static string ModeLine(bool ready, bool local)
+        {
+            if (!ready)
+                return Starting;
+            if (local)
+                return SteamService.IsReady ? "Local test mode" : "Local test mode. Steam is not running.";
+            return "Signed in to Steam as " + SteamService.LocalName;
+        }
+
+        /// <summary>Top to bottom, the order the menu reads; a greyed-out Host is skipped by keys and pad.</summary>
+        void LinkNavigation(bool local)
+        {
+            Selectable[] order = local
+                ? new Selectable[] { _host, _joinLocal, _settings, _quit }
+                : new Selectable[] { _host, _settings, _quit };
+            Selectable previous = null;
+            for (int i = 0; i < order.Length; i++)
+            {
+                Selectable current = order[i];
+                if (!current.IsInteractable())
+                    continue;
+                var nav = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = previous };
+                current.navigation = nav;
+                if (previous != null)
+                {
+                    Navigation prevNav = previous.navigation;
+                    prevNav.selectOnDown = current;
+                    previous.navigation = prevNav;
+                }
+
+                previous = current;
+            }
+        }
+
+        void OnFocused(Selectable control, string description)
+        {
+            if (control == null || !control.transform.IsChildOf(transform))
+                return;
+            if (_refusalShown)
+            {
+                _refusalShown = false; // Moving on clears a refusal; the lobby's own status comes back.
+                Refresh();
+            }
+
+            if (_focusHeading != null && control is UiButton button && button.Fx.Label != null)
+                _focusHeading.text = "§ " + button.Fx.Label.text.ToUpperInvariant();
+            if (_focusBody != null)
+                _focusBody.text = description;
+        }
+
+        void OnRefused(Selectable control, string reason)
+        {
+            if (control == null || !control.transform.IsChildOf(transform) || string.IsNullOrEmpty(reason) || _status == null)
+                return;
+            _refusalShown = true;
+            _status.Set(reason, UiStatusKind.Refusal);
+        }
+
+        void OnHost() => _lobby.Host();
+
+        void OnJoinLocal() => _lobby.JoinLocal();
+
+        void OnSettings()
+        {
+            if (Stack != null && _settingsScreen != null)
+                Stack.Push(_settingsScreen);
+        }
+
+        void OnQuit()
+        {
+            if (Stack == null || _quitDialog == null || Stack.Top != this)
+                return;
+            _quitDialog.Configure(QuitTitle, QuitBody, "Quit to desktop", "Stay", QuitToDesktop);
+            Stack.Push(_quitDialog);
+        }
+
+        static void QuitToDesktop()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.ExitPlaymode();
+#else
+            Application.Quit();
+#endif
+        }
+    }
+}
