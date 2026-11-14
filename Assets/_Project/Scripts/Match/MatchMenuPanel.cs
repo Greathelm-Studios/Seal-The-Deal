@@ -36,10 +36,20 @@ namespace CloseTheDeal.MatchMode
         [SerializeField] string _waitingForRematch = "The host can start a rematch.";
 
         // An empty slot means the scene's menu section predates this script: say so once and stand down.
-        void Awake() => MatchWiring.Complete(this);
+        // Switching off from Awake runs OnDisable at once, before anything was subscribed.
+        void Awake() => _wired = MatchWiring.Complete(this);
+
+        bool _wired;
 
         void OnEnable()
         {
+            // Switched back on by something else while still unwired: stay off.
+            if (!_wired)
+            {
+                enabled = false;
+                return;
+            }
+
             _match.OnStarted += OnStarted;
             _match.OnClosed += Refresh;
             _match.OnPhaseChanged += OnPhaseChanged;
@@ -54,6 +64,9 @@ namespace CloseTheDeal.MatchMode
 
         void OnDisable()
         {
+            if (!_wired)
+                return;
+
             _match.OnStarted -= OnStarted;
             _match.OnClosed -= Refresh;
             _match.OnPhaseChanged -= OnPhaseChanged;

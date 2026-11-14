@@ -99,13 +99,16 @@ namespace CloseTheDeal.MatchMode
         bool _awake;
         RectTransform _canvasRect;
         Camera _uiCamera;
+        bool _wired;
 
         // ---- Lifecycle ---------------------------------------------------------------------------
 
         void Awake()
         {
             // An empty slot means the scene's HUD predates this script: say so once and stand down.
-            if (!MatchWiring.Complete(this, nameof(_clockWarning), nameof(_markerEdgeImage), nameof(_openSprite), nameof(_shutSprite)))
+            // Switching off from here runs OnDisable at once, before anything was subscribed.
+            _wired = MatchWiring.Complete(this, nameof(_clockWarning), nameof(_markerEdgeImage), nameof(_openSprite), nameof(_shutSprite));
+            if (!_wired)
                 return;
 
             _bannerHome = _banner.anchoredPosition;
@@ -118,6 +121,13 @@ namespace CloseTheDeal.MatchMode
 
         void OnEnable()
         {
+            // Switched back on by something else while still unwired: stay off.
+            if (!_wired)
+            {
+                enabled = false;
+                return;
+            }
+
             _match.OnStarted += RefreshAll;
             _match.OnClosed += Hide;
             _match.OnPhaseChanged += OnPhaseChanged;
@@ -143,6 +153,9 @@ namespace CloseTheDeal.MatchMode
 
         void OnDisable()
         {
+            if (!_wired)
+                return;
+
             _match.OnStarted -= RefreshAll;
             _match.OnClosed -= Hide;
             _match.OnPhaseChanged -= OnPhaseChanged;
