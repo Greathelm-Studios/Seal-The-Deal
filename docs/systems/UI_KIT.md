@@ -79,6 +79,20 @@ Events (frozen with lane 9; append only): None, HoverMove, Focus, Select, Confir
 - The end of a list nudges the marks (edge bump). Held directions repeat at the token timing.
 - Left / right on a stepper, swatch row or slider changes the value instead of moving focus.
 
+## Edge marker
+
+`UiEdgeMarker` (prefab `Kit/EdgeMarker.prefab`) points at something in the world: in view, the mark sits over it; out of view or behind you it waits at the nearest screen edge, 48 px in (Safe Edge), with a chevron toward the target and the distance in metres on the side away from the chevron.
+Shape and colour say whose it is, never colour alone: `Ours` cyan diamond, `Rival` amber triangle, `Loose` paper square, each with a navy keyline.
+- **Use:** put the prefab under the HUD canvas so its rectangle stretches over the whole canvas (it measures in that canvas's units from the bottom-left), set `Kind`, then once a frame in LateUpdate call `Track(camera, worldPoint)`; it projects with lane 11's `Nameplates.WorldToCanvas.TryProject`. A HUD that projects for itself calls `Place(canvasPoint, inFront, metres)` with TryProject's output (metres < 0 hides the tag). `Hide()` fades it out; `Flash()` pops it once (the rival took it).
+- Behind you, the mark always goes to an edge on the side the target is (never into view); dead behind goes to the bottom edge.
+- Placing it each frame allocates nothing; the distance text changes only when the whole metre does. Fades: 120 ms in OUT, 80 ms out IN; flash 320 ms (a dip in opacity with Reduce motion).
+
+## Key hints
+
+`UiGlyphs` is the one table of key and button names. It tracks the device the player used last (`UiInput.Poll`; `Changed` fires only when the kind changes: keyboard and mouse, Xbox, PlayStation, other pad with Xbox names) and turns a binding into the label for it: `F`, `Esc`, `A` / `Cross`, `LB` / `L1`, `Menu` / `Options`. Player-map hints read the player's custom keys (`UiGlyphs.WithRebinds`, a read-only copy; the actions asset is never changed).
+`UiKeyHint` on the `KeyHint` prefab is live once it has an action (`Player/Interact`, `UI/Cancel`) or fixed names (keyboard text, a pad control such as `leftShoulder`): the cap shows the key for the device in use, widens to fit and the words move with it; an action with nothing bound on that device shows a dash. Without either it shows its text unchanged, as before. From code: `hint.Bind("Player/Interact", "Pick up", actions)`.
+The title's keys row, the settings tab caps and footer, the confirm dialog and the Controls page's pad column all switch with the device.
+
 ## How a lane builds UI with the kit
 
 **A HUD piece:** put it on the game menu's `Hud`; use the `Plate` prefab (white plate, navy text), the type roles and colours from `UiTokens` (reference the asset in a serialized field); redraw on your system's events, never per frame. Need a new component? Ask lane 5 on AgentHub; don't add colours, fonts or panel styles.
@@ -123,6 +137,6 @@ Changes apply at once (no Apply step; the mockup's Apply / unsaved-changes flow 
 - The sky is a static gradient until lane 8's live backdrop fills the slot; panes use the no-blur fallback until lane 7's material.
 - Final typeface: every role is TMP's Liberation Sans (the only font in the repo, origin/main and origin/Alex_Env); the display roles thin it with an SDF material (`Tokens/Type_Thin.mat`).
 - Status strings are SteamLobby's current wording, not the inventory's rewrite (§5.2–5.3).
-- No hardware cursor yet (feel table §2.4), no pad glyph switching, no rumble.
+- No hardware cursor yet (feel table §2.4), no rumble.
 - The frozen sound list has no edge-bump or "focus stops after a held repeat" event: both are silent.
 - Hosting, joining and failure states still use the playtest card.

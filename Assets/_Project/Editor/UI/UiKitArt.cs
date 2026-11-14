@@ -8,14 +8,15 @@ namespace CloseTheDeal.Editor.UI
 {
     /// <summary>
     /// The kit's small sprites, drawn by code into PNGs under Assets/_Project/UI/Kit/Sprites: keylines, the dashed
-    /// disabled outline, corner brackets, the chevron cue, the background grid, the fallback sky and a barcode.
+    /// disabled outline, corner brackets, the chevron cue, the background grid, the fallback sky, a barcode, and the
+    /// edge marker's diamond, triangle and pointer.
     /// White where they are tinted by tokens. A PNG someone edited is left alone (GeneratedAssetGuard).
     /// </summary>
     internal static class UiKitArt
     {
         internal const string Folder = "Assets/_Project/UI/Kit/Sprites";
 
-        internal static Sprite White, Outline1, Outline2, Dashed, Bracket, Chevron, Grid, Sky, Barcode, Dots, TitleSky;
+        internal static Sprite White, Outline1, Outline2, Dashed, Bracket, Chevron, Grid, Sky, Barcode, Dots, TitleSky, Diamond, Triangle, Pointer;
 
         internal static void Ensure(CloseTheDeal.UI.UiTokens tokens)
         {
@@ -31,6 +32,28 @@ namespace CloseTheDeal.Editor.UI
             Sky = MakeSky(tokens);
             Dots = Make("Kit_Dots", 12, 12, 0, true, (x, y) => (x >= 5 && x <= 6 && y >= 5 && y <= 6) ? 1f : 0f, wrap: true);
             TitleSky = MakeTitleSky(tokens);
+            Diamond = Make("Kit_Diamond", 64, 64, 0, false, (x, y) => Mathf.Clamp01(32.5f - (Mathf.Abs(x + 0.5f - 32f) + Mathf.Abs(y + 0.5f - 32f))));
+            Triangle = Make("Kit_Triangle", 64, 64, 0, false, TriangleAlpha);
+            Pointer = Make("Kit_Pointer", 20, 24, 0, false, PointerAlpha);
+        }
+
+        /// <summary>An upright triangle filling the square (apex at the top centre), anti-aliased.</summary>
+        static float TriangleAlpha(int x, int y)
+        {
+            float px = x + 0.5f, py = y + 0.5f;
+            const float top = 62f, bottom = 4f;
+            if (py < bottom - 1f || py > top + 1f)
+                return 0f;
+            float half = 30f * (top - py) / (top - bottom); // half width at this height
+            float side = half - Mathf.Abs(px - 32f);
+            return Mathf.Clamp01(Mathf.Min(side * 0.9f + 0.5f, py - bottom + 0.5f));
+        }
+
+        /// <summary>One bold chevron pointing right: the edge marker's direction cue.</summary>
+        static float PointerAlpha(int x, int y)
+        {
+            float d = Mathf.Min(Segment(x + 0.5f, y + 0.5f, 5f, 3f, 15f, 12f), Segment(x + 0.5f, y + 0.5f, 15f, 12f, 5f, 21f));
+            return Mathf.Clamp01(3.2f - d);
         }
 
         static float Edge(int x, int y, int size, int width)

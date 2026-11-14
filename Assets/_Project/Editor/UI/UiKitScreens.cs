@@ -227,26 +227,32 @@ namespace CloseTheDeal.Editor.UI
                 Box(parent, "Tick", x, y, 1f, 6f, Tokens.Black);
         }
 
-        /// <summary>The keys row: Enter / A select, Esc / B back, arrows / stick move.</summary>
+        /// <summary>The keys row: select, back and move, named for the device the player is on (Enter or A or Cross).</summary>
         static void KeyHints(Transform parent, float x, float y)
         {
-            UiTokens t = Tokens;
-            (string a, string b, string label)[] hints = { ("Enter", "A", "Select"), ("Esc", "B", "Back"), ("\u2191\u2193", "LS", "Move") };
-            foreach (var (a, b, label) in hints)
-            {
-                x = Cap(parent, x, y, a);
-                x = Cap(parent, x + 4f, y, b);
-                Label(parent, "Hint" + label, x + 8f, y, 70f, 32f, label, t.Label, t.Ink2);
-                x += 92f;
-            }
+            Hint(parent, "SelectHint", x, y, "Select", "UI/Submit");
+            Hint(parent, "BackHint", x + 150f, y, "Back", "UI/Cancel");
+            Hint(parent, "MoveHint", x + 300f, y, "Move", keyboard: "\u2191\u2193", padControl: "leftStick");
         }
 
-        internal static float Cap(Transform parent, float x, float y, string key)
+        /// <summary>
+        /// A live key hint at x, y: the key for the player's device, read from action (Map/Action), or the fixed keyboard
+        /// text and pad control given. Its cap widens to fit.
+        /// </summary>
+        internal static UiKeyHint Hint(Transform parent, string name, float x, float y, string label, string action = "",
+            string keyboard = "", string padControl = "", float width = 160f)
         {
-            float w = key.Length > 2 ? 56f : 36f;
-            Box(parent, "Cap" + key, x, y, w, 32f, Tokens.Navy, UiKitArt.Outline1);
-            Label(parent, "Key" + key, x, y, w, 32f, key, Tokens.Caption, Tokens.Navy, TextAlignmentOptions.Center).characterSpacing = 0f;
-            return x + w;
+            var hint = Place<UiKeyHint>(UiKitComponents.KeyHint, parent, name, x, y);
+            ((RectTransform)hint.transform).sizeDelta = new Vector2(width, 40f);
+            SetText(hint, "Label", label);
+            var labelRect = (RectTransform)hint.transform.Find("Label");
+            labelRect.sizeDelta = new Vector2(Mathf.Max(40f, width - 58f), labelRect.sizeDelta.y);
+            string usage = action == "UI/Cancel" ? "*/{Cancel}" : action == "UI/Submit" ? "*/{Submit}" : string.Empty;
+            SetText(hint, "Key", keyboard.Length > 0 ? keyboard : UiGlyphs.Name(usage, UiDeviceKind.KeyboardMouse));
+            SetString(hint, "_action", action);
+            SetString(hint, "_keyboardText", keyboard);
+            SetString(hint, "_padControl", padControl);
+            return hint;
         }
 
         /// <summary>
@@ -416,9 +422,7 @@ namespace CloseTheDeal.Editor.UI
 
             RectTransform actions = RevealLine(frame, "Actions");
             reveal.Add(actions.GetComponent<CanvasGroup>());
-            var hint = Place<RectTransform>(UiKitComponents.KeyHint, actions, "EscHint", 1200f, 876f);
-            SetText(hint, "Key", "Esc");
-            SetText(hint, "Label", "Stay");
+            RectTransform hint = (RectTransform)Hint(actions, "EscHint", 1200f, 876f, "Stay", "UI/Cancel").transform;
             var confirm = Place<UiButton>(UiKitComponents.Secondary, actions, "Confirm", 1328f, 868f);
             ((RectTransform)confirm.transform).sizeDelta = new Vector2(188f, t.SecondaryHeight);
             SetLabel(confirm, "Quit to desktop");

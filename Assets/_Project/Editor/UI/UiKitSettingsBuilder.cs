@@ -73,11 +73,9 @@ namespace CloseTheDeal.Editor.UI
             ((RectTransform)back.transform).sizeDelta = new Vector2(140f, t.SecondaryHeight);
             SetLabel(back, "Back");
             back.Description = "Back to the title. Everything here is already saved.";
-            float x = Cap(footer, 1484f, 976f, "Q");
-            x = Cap(footer, x + 4f, 976f, "E");
-            Label(footer, "SwitchTab", x + 8f, 976f, 110f, 32f, "Switch tab", t.Label, t.Ink2);
-            x = Cap(footer, x + 128f, 976f, "Esc");
-            Label(footer, "BackHint", x + 8f, 976f, 60f, 32f, "Back", t.Label, t.Ink2);
+            UiKitScreens.Hint(footer, "PreviousTabHint", 1424f, 972f, string.Empty, keyboard: "Q", padControl: "leftShoulder", width: 60f);
+            UiKitScreens.Hint(footer, "NextTabHint", 1484f, 972f, "Switch tab", keyboard: "E", padControl: "rightShoulder", width: 180f);
+            UiKitScreens.Hint(footer, "BackHint", 1688f, 972f, "Back", "UI/Cancel", width: 120f);
             Label(footer, "Microtype", 96f, 1040f, 1400f, 20f, "SETTINGS ARE KEPT ON THIS PC AS SOON AS YOU CHANGE THEM.", t.Micro, t.Ink3);
 
             var tabPages = frame.gameObject.AddComponent<UiTabPages>();
@@ -106,12 +104,12 @@ namespace CloseTheDeal.Editor.UI
             string[] names = { "Controls", "Video", "Audio", "Accessibility" };
             string[] about =
             {
-                "Look and the keys. Pad buttons are shown as on an Xbox pad.",
+                "Look and the keys. Pad buttons are named as on the pad you last used.",
                 "Display mode, resolution, vertical sync, frame rate and quality.",
                 "Volume for each part of the game's sound.",
                 "Motion, the crosshair and the network readout.",
             };
-            Cap(parent, 96f, 176f, "Q");
+            UiKitScreens.Hint(parent, "PreviousTab", 96f, 172f, string.Empty, keyboard: "Q", padControl: "leftShoulder", width: 48f);
             RectTransform bar = At(parent, "TabBar", 144f, 164f, 4 * 236f, t.SecondaryHeight);
             var tabs = new UiButton[names.Length];
             for (int i = 0; i < names.Length; i++)
@@ -132,7 +130,7 @@ namespace CloseTheDeal.Editor.UI
                 };
             }
 
-            Cap(parent, 144f + 4 * 236f + 8f, 176f, "E");
+            UiKitScreens.Hint(parent, "NextTab", 144f + 4 * 236f + 8f, 172f, string.Empty, keyboard: "E", padControl: "rightShoulder", width: 64f);
             Box(parent, "TabHairline", 96f, 220f, 1120f, 1f, t.Hair);
             rule = Node(bar, "Rule");
             rule.anchorMin = rule.anchorMax = new Vector2(0f, 1f);
@@ -248,7 +246,7 @@ namespace CloseTheDeal.Editor.UI
 
             PreviewCaption(page, pageRoot, "PAD BUTTONS");
             Label(pageRoot, "PadNote", RightX, 480f, 528f, 120f,
-                "Shown as on an Xbox pad. On a PlayStation pad, A is Cross, B is Circle, X is Square and Y is Triangle. Esc or B goes back from any menu.",
+                "Named as on the pad you last used: Xbox names on an Xbox pad, PlayStation names (Cross, Circle, L1) on a PlayStation pad. Esc, B or Circle goes back from any menu.",
                 t.Body, t.Ink2, TextAlignmentOptions.TopLeft, true);
             return page;
         }

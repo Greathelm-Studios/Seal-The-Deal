@@ -736,6 +736,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EscHint
       objectReference: {fileID: 0}
+    - target: {fileID: 721628622342318447, guid: bb09e536824d34c65b6b85dcb8bdb301, type: 3}
+      propertyPath: _action
+      value: UI/Cancel
+      objectReference: {fileID: 0}
     - target: {fileID: 3757942128814623771, guid: bb09e536824d34c65b6b85dcb8bdb301, type: 3}
       propertyPath: m_Pivot.x
       value: 0

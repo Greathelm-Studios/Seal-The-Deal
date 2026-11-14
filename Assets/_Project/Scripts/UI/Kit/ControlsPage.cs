@@ -79,6 +79,7 @@ namespace CloseTheDeal.UI
             _sensitivity.Changed += OnSensitivity;
             _invert.Changed += OnInvert;
             _stickSpeed.Changed += OnStickSpeed;
+            UiGlyphs.Changed += OnDeviceChanged;
             foreach (BindingRow row in _bindings)
             {
                 if (row.Button != null)
@@ -91,6 +92,7 @@ namespace CloseTheDeal.UI
             _sensitivity.Changed -= OnSensitivity;
             _invert.Changed -= OnInvert;
             _stickSpeed.Changed -= OnStickSpeed;
+            UiGlyphs.Changed -= OnDeviceChanged;
             foreach (BindingRow row in _bindings)
             {
                 if (row.Button != null && row.Listen != null)
@@ -142,6 +144,13 @@ namespace CloseTheDeal.UI
         void OnStickSpeed(int percent) { InputPrefs.StickLookSpeed = percent / 100f; RaiseSaved(); }
 
         // ---- The key list ---------------------------------------------------------------------
+
+        /// <summary>Pad names follow the pad in use; not while a row is listening, which would wipe its prompt.</summary>
+        void OnDeviceChanged()
+        {
+            if (_operation == null)
+                DrawBindings();
+        }
 
         void LoadWorking()
         {
@@ -211,33 +220,16 @@ namespace CloseTheDeal.UI
             if (index < 0)
                 return "—";
             string path = action.bindings[index].effectivePath;
-            if (string.IsNullOrEmpty(path))
-                return "—";
-            return InputControlPath.ToHumanReadableString(path, InputControlPath.HumanReadableStringOptions.OmitDevice);
+            return string.IsNullOrEmpty(path) ? "—" : UiGlyphs.Name(path, UiDeviceKind.KeyboardMouse);
         }
 
+        /// <summary>The pad button as printed on the player's pad: PlayStation names on a PlayStation pad, Xbox names otherwise.</summary>
         static string PadName(InputAction action, int index)
         {
             if (index < 0)
                 return "—";
-            string path = action.bindings[index].effectivePath ?? string.Empty;
-            int slash = path.IndexOf('/');
-            string control = slash >= 0 ? path.Substring(slash + 1) : path;
-            switch (control)
-            {
-                case "buttonSouth": return "A";
-                case "buttonEast": return "B";
-                case "buttonWest": return "X";
-                case "buttonNorth": return "Y";
-                case "leftShoulder": return "LB";
-                case "rightShoulder": return "RB";
-                case "leftTrigger": return "LT";
-                case "rightTrigger": return "RT";
-                case "leftStickPress": return "L3";
-                case "rightStickPress": return "R3";
-                case "start": return "Menu";
-                default: return InputControlPath.ToHumanReadableString(path, InputControlPath.HumanReadableStringOptions.OmitDevice);
-            }
+            UiDeviceKind kind = UiGlyphs.Current == UiDeviceKind.PlayStation ? UiDeviceKind.PlayStation : UiDeviceKind.Xbox;
+            return UiGlyphs.Name(action.bindings[index].effectivePath, kind);
         }
 
         // ---- Rebinding ------------------------------------------------------------------------

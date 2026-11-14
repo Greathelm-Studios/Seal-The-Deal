@@ -106,6 +106,7 @@ namespace CloseTheDeal.UI
 
             if (keysOrPad)
             {
+                UiGlyphs.Note(keyboard != null && keyboard.anyKey.wasPressedThisFrame ? keyboard : pad);
                 if (!UsingKeysOrPad)
                     _switchFrame = Time.frameCount;
                 UsingKeysOrPad = true;
@@ -113,6 +114,7 @@ namespace CloseTheDeal.UI
             }
             else if (pointer)
             {
+                UiGlyphs.Note(mouse);
                 UsingKeysOrPad = false;
                 UiMotion.NoteInput();
             }
