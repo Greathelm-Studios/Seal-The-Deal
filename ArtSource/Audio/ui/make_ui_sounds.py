@@ -9,8 +9,9 @@ Voice: a clean 2001 corporate future. Glassy ticks, soft tones, sparse. Pitches 
 pentatonic: C D E G A) so any run of sounds is consonant: hover steps climb the scale, confirm resolves
 upward, back and error resolve downward, nothing is harsh or long.
 
-Levels: every clip is scaled to a peak target by class (UI 0.45, sting 0.55, combat 0.70, in linear
-full scale), so no UI sound is louder than another by ear or by number; RMS is printed for review.
+Levels: every clip is levelled to a perceived target (LOUD, LOUD_EVENT, ITEM_LOUD, WEAPON_LOUD: the A-weighted level
+of its loudest 46 ms), under a peak ceiling (PEAK and the tables' second column). To make a sound louder or quieter,
+change its target, not the ceiling. --analyse prints every clip's level and the UI pairs that sound alike.
 Tuning: edit the EVENTS table (notes, durations, timbre) and re-run; the output is deterministic
 (noise uses a fixed seed).
 """
@@ -146,8 +147,8 @@ def b_error(b):   # two soft low tones, down a third-ish; dull, not buzzy
     note(b, 0.10, hz("C4"), 0.17, 0.95, 0.07, "tri")
 
 
-def b_tab(b):     # glass tick + a breath of air
-    note(b, 0, hz("E5"), 0.06, 0.8, 0.018, "tri", glass=0.35)
+def b_tab(b):     # glass tick + a breath of air (A5: its own pitch, apart from focus on E5)
+    note(b, 0, hz("A5"), 0.06, 0.8, 0.018, "tri", glass=0.35)
     air(b, 0, 0.09, 0.22, 2500, 7000, sweep=(2500, 6000, 3500, 8000), decay=0.03, seed=4)
 
 
@@ -156,9 +157,9 @@ def b_toggle_on(b):
     note(b, 0.045, hz("G5"), 0.08, 1.0, 0.025, "sine", glass=0.25)
 
 
-def b_toggle_off(b):
-    note(b, 0, hz("G5"), 0.05, 0.7, 0.018, "tri", glass=0.1)
-    note(b, 0.045, hz("C5"), 0.08, 0.8, 0.025, "sine", glass=0.1)
+def b_toggle_off(b):   # A5 to E5: a lighter fall than Back's G5 to C5, so the two never read as the same answer
+    note(b, 0, hz("A5"), 0.05, 0.7, 0.018, "tri", glass=0.1)
+    note(b, 0.045, hz("E5"), 0.08, 0.8, 0.025, "tri", glass=0.25)
 
 
 def b_slider(b):  # a tiny tick; pitch follows the value at run time
@@ -172,7 +173,8 @@ def b_dd_open(b):  # air swishes up, a tone lands on top
 
 def b_dd_close(b):
     air(b, 0, 0.11, 0.22, 1800, 5000, sweep=(2500, 7000, 1500, 4000), decay=0.045, seed=6)
-    note(b, 0.0, hz("E5"), 0.09, 0.7, 0.03, "sine", glass=0.1)
+    note(b, 0.0, hz("A5"), 0.05, 0.6, 0.02, "sine", glass=0.1)
+    note(b, 0.045, hz("D5"), 0.09, 0.7, 0.03, "sine", glass=0.1)
 
 
 def b_kb_listen(b):  # two soft pulses: waiting for a key
@@ -207,18 +209,21 @@ def b_notify(b):   # two-note bell, up a fifth
     note(b, 0.12, hz("D6") if False else hz("G5") * 1.5, 0.34, 0.9, 0.11, "sine", glass=0.35)
 
 
-def b_ready(b):
-    note(b, 0, hz("E5"), 0.08, 0.8, 0.03, "sine", glass=0.15)
-    note(b, 0.075, hz("B5"), 0.13, 0.95, 0.045, "sine", glass=0.25)
+def b_ready(b):    # three quick steps up, D5 G5 D6: longer and higher than a dropdown opening
+    note(b, 0, hz("D5"), 0.07, 0.8, 0.03, "sine", glass=0.15)
+    note(b, 0.06, hz("G5"), 0.08, 0.9, 0.03, "sine", glass=0.2)
+    note(b, 0.12, hz("D6"), 0.10, 0.95, 0.04, "sine", glass=0.3)
 
 
-def b_unready(b):
-    note(b, 0, hz("B5"), 0.08, 0.7, 0.03, "sine", glass=0.1)
-    note(b, 0.075, hz("E5"), 0.12, 0.8, 0.04, "sine")
+def b_unready(b):  # the same steps back down, D6 G5 D5
+    note(b, 0, hz("D6"), 0.06, 0.7, 0.025, "sine", glass=0.15)
+    note(b, 0.055, hz("G5"), 0.07, 0.75, 0.03, "sine", glass=0.1)
+    note(b, 0.11, hz("D5"), 0.09, 0.8, 0.035, "sine")
 
 
-def b_count_tick(b):  # a clear, short tick, one pitch
-    note(b, 0, hz("E5"), 0.05, 0.9, 0.012, "tri", glass=0.4)
+def b_count_tick(b):  # a clear, short tick an octave above the menu's ticks (C6), with a woody knock under it
+    note(b, 0, hz("C6"), 0.05, 0.9, 0.012, "tri", glass=0.4)
+    note(b, 0, hz("C4"), 0.03, 0.5, 0.008, "sine")
     air(b, 0, 0.012, 0.15, 3000, 8000, decay=0.004, seed=10)
 
 
@@ -285,21 +290,21 @@ EVENTS = {
     "Confirm": E(0.26, "ui", "C5 G5 C6, rises (resolves up)", b_confirm),
     "Back": E(0.20, "ui", "G5 to C5, falls", b_back),
     "Error": E(0.30, "ui", "E4 to C4, falls (dull, soft)", b_error),
-    "TabChange": E(0.12, "ui", "E5 glass tick + air", b_tab),
+    "TabChange": E(0.12, "ui", "A5 glass tick + air", b_tab),
     "ToggleOn": E(0.14, "ui", "C5 to G5, quick rise", b_toggle_on),
-    "ToggleOff": E(0.14, "ui", "G5 to C5, quick fall", b_toggle_off),
+    "ToggleOff": E(0.14, "ui", "A5 to E5, light fall", b_toggle_off),
     "SliderTick": E(0.05, "ui", "C6 tick; runtime pitch follows value", b_slider),
     "DropdownOpen": E(0.16, "ui", "air swish up + A5", b_dd_open),
-    "DropdownClose": E(0.14, "ui", "air swish down + E5", b_dd_close),
+    "DropdownClose": E(0.14, "ui", "air swish down + A5 to D5", b_dd_close),
     "KeyBindListen": E(0.20, "ui", "E5 double pulse (waiting)", b_kb_listen),
     "KeyBindSet": E(0.30, "ui", "C6 ding over G5", b_kb_set),
     "PanelOpen": E(0.30, "ui", "C5 + G5 rising sweep", b_panel_open),
     "PanelClose": E(0.26, "ui", "G5 + C5 falling sweep", b_panel_close),
     "Transition": E(0.48, "ui", "noise whoosh up; C5 under", b_transition),
     "Notification": E(0.46, "ui", "G5 then D6, rises a fifth", b_notify),
-    "LobbyReady": E(0.22, "ui", "E5 to B5, rises", b_ready),
-    "LobbyUnready": E(0.20, "ui", "B5 to E5, falls", b_unready),
-    "CountdownTick": E(0.07, "ui", "E5 tick, one pitch", b_count_tick),
+    "LobbyReady": E(0.24, "ui", "D5 G5 D6, three steps up", b_ready),
+    "LobbyUnready": E(0.22, "ui", "D6 G5 D5, three steps down", b_unready),
+    "CountdownTick": E(0.07, "ui", "C6 tick over a C4 knock", b_count_tick),
     "CountdownGo": E(0.50, "sting", "C5 E5 G5 C6 flourish, up", b_count_go),
     "MatchWon": E(1.10, "sting", "C5 E5 G5 C6 E6 arpeggio, up", b_won),
     "MatchLost": E(1.00, "sting", "G4 E4 C4, slow fall", b_lost),
@@ -311,7 +316,10 @@ EVENTS = {
     "HitMarkerHead": E(0.055, "combat", "C8 tick (4.2 kHz) over G7: brighter, precision hit", b_hit_head),
     "KillConfirm": E(0.20, "combat", "E7 to B7 ticks + B6 ring (2.6 to 3.9 kHz)", b_kill),
 }
-PEAK = {"ui": 0.45, "sting": 0.55, "combat": 0.70}
+PEAK = {"ui": 0.70, "sting": 0.80, "combat": 0.90}      # peak ceiling per class (linear full scale)
+LOUD = {"ui": -14.0, "sting": -11.0, "combat": -11.0}    # target perceived level per class, dB (A-weighted, loudest 46 ms)
+LOUD_EVENT = {"KillConfirm": -9.0,                        # the kill sits above the hit ticks it plays over
+              "SliderTick": -18.0, "CountdownTick": -15.0, "HitMarkerHead": -11.0}  # repeated ticks sit a little under the menu
 
 # ------------------------------------------------------------------------------------------ item sounds
 # World sounds for the pickups lane (3D, SFX bus): Assets/_Project/Audio/Items/Item_<Slot>.wav. Full strength:
@@ -322,7 +330,7 @@ def i_pickup(b):   # cloth-and-plastic grab: short low-mid noise + a soft knock
 
 
 def i_drop(b):     # let go: a duller knock, then a small second bounce
-    air(b, 0, 0.07, 0.6, 300, 2000, decay=0.018, seed=22)
+    air(b, 0, 0.08, 1.0, 300, 2500, decay=0.022, seed=22)
     note(b, 0, 130.0, 0.12, 0.8, 0.035, "sine", glide=(190.0, 120.0))
     air(b, 0.11, 0.05, 0.25, 300, 1800, decay=0.012, seed=23)
 
@@ -337,7 +345,7 @@ def i_impact_light(b):  # thin clack
 
 
 def i_impact_heavy(b):  # thud with weight: low sine drop + broad noise
-    air(b, 0, 0.12, 0.8, 120, 2500, decay=0.03, seed=26, attack=0.0005)
+    air(b, 0, 0.14, 1.2, 200, 3000, decay=0.035, seed=26, attack=0.0005)
     note(b, 0, 70.0, 0.32, 1.0, 0.09, "sine", glide=(140.0, 55.0), attack=0.0005)
     air(b, 0.06, 0.2, 0.2, 200, 1200, decay=0.07, seed=27)
 
@@ -356,7 +364,7 @@ def i_explosion(b):  # crack, low boom falling in pitch, long filtered rumble ta
     air(b, 0, 0.06, 1.0, 800, 9000, decay=0.012, seed=30, attack=0.0003)
     note(b, 0, 50.0, 0.9, 1.2, 0.22, "sine", glide=(120.0, 32.0), attack=0.001)
     air(b, 0, 1.05, 0.9, 60, 900, sweep=(80, 2500, 40, 300), decay=0.28, seed=31, attack=0.002)
-    air(b, 0.05, 0.6, 0.35, 1500, 6000, sweep=(1500, 7000, 600, 2000), decay=0.12, seed=32)
+    air(b, 0.0, 0.7, 0.9, 500, 5000, sweep=(800, 7000, 300, 1500), decay=0.16, seed=32, attack=0.0005)   # the roar
 
 
 def i_vent_end(b):   # last gasp: hiss whose band and level fall away
@@ -395,17 +403,17 @@ def vent_loop(seconds=2.0):
 
 
 ITEMS = {  # slot: (length s, peak, description, builder)
-    "PickUp": (0.15, 0.6, "grab: soft noise + knock", i_pickup),
-    "Drop": (0.20, 0.6, "dull knock + small bounce", i_drop),
-    "Throw": (0.20, 0.6, "whoosh, band falling", i_throw),
-    "ImpactLight": (0.12, 0.8, "thin clack, full strength", i_impact_light),
-    "ImpactHeavy": (0.35, 0.8, "low thud 140 to 55 Hz, full strength", i_impact_heavy),
-    "Arm": (0.10, 0.6, "two-part click", i_arm),
-    "Beep": (0.05, 0.6, "2.1 kHz, 50 ms", i_beep),
-    "Explosion": (1.10, 0.9, "crack + boom 120 to 32 Hz + rumble tail", i_explosion),
-    "VentEnd": (0.40, 0.6, "hiss falling away", i_vent_end),
-    "WetFloorDown": (0.32, 0.6, "plastic clack + splash", i_wet_floor),
-    "Slip": (0.30, 0.6, "squeak 700 to 1900 Hz + scuff", i_slip),
+    "PickUp": (0.15, 0.90, "grab: soft noise + knock", i_pickup),
+    "Drop": (0.20, 0.90, "dull knock + small bounce", i_drop),
+    "Throw": (0.20, 0.90, "whoosh, band falling", i_throw),
+    "ImpactLight": (0.12, 0.90, "thin clack, full strength", i_impact_light),
+    "ImpactHeavy": (0.35, 0.90, "low thud 140 to 55 Hz, full strength", i_impact_heavy),
+    "Arm": (0.10, 0.90, "two-part click", i_arm),
+    "Beep": (0.05, 0.90, "2.1 kHz, 50 ms", i_beep),
+    "Explosion": (1.10, 0.97, "crack + boom 120 to 32 Hz + rumble tail", i_explosion),
+    "VentEnd": (0.40, 0.90, "hiss falling away", i_vent_end),
+    "WetFloorDown": (0.32, 0.90, "plastic clack + splash", i_wet_floor),
+    "Slip": (0.30, 0.90, "squeak 700 to 1900 Hz + scuff", i_slip),
 }
 
 # ---------------------------------------------------------------------------------------- weapon sounds
@@ -413,18 +421,20 @@ ITEMS = {  # slot: (length s, peak, description, builder)
 # Assets/_Project/Audio/Weapons/Weapon_<Name>.wav. Events and timing: docs/systems/WEAPONS.md.
 def w_pistol(b):    # sharp crack, a low punch, short room tail
     air(b, 0, 0.03, 1.0, 1500, 12000, decay=0.006, seed=41, attack=0.0002)
+    air(b, 0, 0.12, 1.0, 600, 5000, decay=0.03, seed=141, attack=0.0003)      # the body of the shot: mid-band, 30 ms
     note(b, 0, 90.0, 0.12, 0.9, 0.03, "sine", glide=(220.0, 70.0), attack=0.0005)
     air(b, 0.004, 0.24, 0.5, 300, 5000, sweep=(400, 7000, 200, 1500), decay=0.055, seed=42, attack=0.001)
 
 
 def w_ar15(b):      # tighter and brighter, almost no tail: 10 a second must not smear
     air(b, 0, 0.025, 1.0, 2000, 14000, decay=0.005, seed=43, attack=0.0002)
+    air(b, 0, 0.08, 1.0, 800, 6000, decay=0.018, seed=143, attack=0.0003)     # body: shorter than the pistol's
     note(b, 0, 110.0, 0.07, 0.8, 0.018, "sine", glide=(260.0, 90.0), attack=0.0005)
     air(b, 0.003, 0.09, 0.4, 500, 6000, sweep=(600, 8000, 300, 2500), decay=0.022, seed=44, attack=0.001)
 
 
 def w_dry(b):       # dull click
-    air(b, 0, 0.02, 0.8, 600, 3500, decay=0.005, seed=45, attack=0.0003)
+    air(b, 0, 0.04, 0.8, 600, 3500, decay=0.012, seed=45, attack=0.0003)
     note(b, 0, 320.0, 0.05, 0.4, 0.012, "tri", attack=0.0005)
 
 
@@ -466,11 +476,11 @@ def w_swap(b):      # cloth swish out, a catch as the new gun comes up
 def w_impact_world(b):  # hard tick with a little debris
     air(b, 0, 0.03, 1.0, 1200, 9000, decay=0.006, seed=59, attack=0.0002)
     note(b, 0, 500.0, 0.05, 0.4, 0.012, "tri", glide=(800.0, 450.0), attack=0.0005)
-    air(b, 0.02, 0.1, 0.25, 2000, 7000, decay=0.03, seed=60)
+    air(b, 0.0, 0.11, 0.7, 1500, 7000, decay=0.03, seed=60, attack=0.0005)
 
 
 def w_impact_body(b):   # dull thud, no brightness
-    air(b, 0, 0.05, 0.7, 150, 1500, decay=0.014, seed=61, attack=0.0005)
+    air(b, 0, 0.08, 1.0, 250, 2200, decay=0.022, seed=61, attack=0.0005)
     note(b, 0, 100.0, 0.11, 0.9, 0.03, "sine", glide=(170.0, 85.0), attack=0.0005)
 
 
@@ -486,7 +496,7 @@ def w_glass(b):     # crack, then a spray of high glassy partials falling as sha
 
 def w_hurt(b):      # your own body: a low pulse, soft, 2D
     note(b, 0, 82.0, 0.2, 1.0, 0.06, "sine", glide=(120.0, 75.0), attack=0.002)
-    air(b, 0, 0.08, 0.25, 200, 1200, decay=0.025, seed=65)
+    air(b, 0, 0.1, 0.6, 400, 2500, decay=0.03, seed=65)
 
 
 def w_death(b):     # a falling tone that drops away under a soft noise close
@@ -502,22 +512,28 @@ def w_respawn(b):   # the lift chime's cousin: rising fifth with air, back on th
 
 
 WEAPONS = {  # name: (length s, peak, description, builder)
-    "PistolShot": (0.26, 0.90, "crack + punch 220 to 70 Hz + 0.2 s room tail", w_pistol),
-    "AR15Shot": (0.10, 0.90, "tighter crack, 100 ms so 10 a second stays clean", w_ar15),
-    "DryFire": (0.06, 0.50, "dull click", w_dry),
-    "ReloadMagOut": (0.11, 0.60, "slide + release click", w_mag_out),
-    "ReloadMagIn": (0.14, 0.65, "slide + solid seat", w_mag_in),
-    "ReloadSlide": (0.13, 0.65, "pistol slide: back click, forward clack", w_slide),
-    "ReloadCharge": (0.21, 0.65, "rifle charging handle: pull, heavy return", w_charge),
-    "ReloadFinished": (0.06, 0.40, "small settled click", w_reload_done),
-    "Swap": (0.22, 0.50, "swish + catch", w_swap),
-    "ImpactWorld": (0.13, 0.70, "hard tick + debris", w_impact_world),
-    "ImpactBody": (0.12, 0.70, "dull thud 170 to 85 Hz", w_impact_body),
-    "GlassShatter": (0.70, 0.85, "crack + 26 falling glass partials + bright wash", w_glass),
-    "Hurt": (0.22, 0.60, "low pulse 120 to 75 Hz, 2D", w_hurt),
-    "Death": (0.75, 0.60, "tone falling E4 to C3 over a low drop, 2D", w_death),
-    "Respawn": (0.52, 0.50, "C5 to G5 rise with air, 2D", w_respawn),
+    "PistolShot": (0.26, 0.97, "crack + punch 220 to 70 Hz + 0.2 s room tail", w_pistol),
+    "AR15Shot": (0.10, 0.97, "tighter crack, 100 ms so 10 a second stays clean", w_ar15),
+    "DryFire": (0.06, 0.90, "dull click", w_dry),
+    "ReloadMagOut": (0.11, 0.90, "slide + release click", w_mag_out),
+    "ReloadMagIn": (0.14, 0.90, "slide + solid seat", w_mag_in),
+    "ReloadSlide": (0.13, 0.90, "pistol slide: back click, forward clack", w_slide),
+    "ReloadCharge": (0.21, 0.90, "rifle charging handle: pull, heavy return", w_charge),
+    "ReloadFinished": (0.06, 0.90, "small settled click", w_reload_done),
+    "Swap": (0.22, 0.90, "swish + catch", w_swap),
+    "ImpactWorld": (0.13, 0.90, "hard tick + debris", w_impact_world),
+    "ImpactBody": (0.12, 0.90, "dull thud 170 to 85 Hz", w_impact_body),
+    "GlassShatter": (0.70, 0.95, "crack + 26 falling glass partials + bright wash", w_glass),
+    "Hurt": (0.22, 0.90, "low pulse 120 to 75 Hz, 2D", w_hurt),
+    "Death": (0.75, 0.90, "tone falling E4 to C3 over a low drop, 2D", w_death),
+    "Respawn": (0.52, 0.90, "C5 to G5 rise with air, 2D", w_respawn),
 }
+# Shots are the loudest thing in the set; handling sounds sit well under them.
+# A shot is a few milliseconds long, so it tops out at its peak ceiling (about -15 and -20 dB on this measure) before it
+# reaches the target; everything else is set under that so the order stays shot > glass > impacts > handling.
+WEAPON_LOUD = {"PistolShot": -7.0, "AR15Shot": -8.0, "GlassShatter": -17.0, "ImpactWorld": -20.0, "ImpactBody": -21.0,
+               "DryFire": -25.0, "ReloadMagOut": -24.0, "ReloadMagIn": -23.0, "ReloadSlide": -23.0, "ReloadCharge": -23.0,
+               "ReloadFinished": -27.0, "Swap": -25.0, "Hurt": -19.0, "Death": -17.0, "Respawn": -17.0}
 WEAPON_OUT = os.path.normpath(os.path.join(OUT, "..", "Weapons"))
 
 
@@ -527,10 +543,10 @@ def render_table(table):
         buf = [0.0] * int(length * SR)
         fn(buf)
         dc_and_fade(buf, guard=0.0005)   # world transients keep their attack
-        g = peak / (max(abs(x) for x in buf) or 1.0)
-        out[name] = [x * g for x in buf]
+        out[name] = level(buf, WEAPON_LOUD.get(name, -14.0), peak)
     return out
 
+ITEM_LOUD = {"Explosion": -7.0, "ImpactHeavy": -11.0, "ImpactLight": -13.0, "Beep": -13.0, "Slip": -13.0, "Arm": -16.0}
 ITEM_OUT = os.path.normpath(os.path.join(OUT, "..", "Items"))
 
 
@@ -541,11 +557,9 @@ def render_items():
         buf = [0.0] * int(length * SR)
         fn(buf)
         dc_and_fade(buf)
-        g = peak / (max(abs(x) for x in buf) or 1.0)
-        out[name] = [x * g for x in buf]
+        out[name] = level(buf, ITEM_LOUD.get(name, -14.0), peak)
     loop = vent_loop()
-    g = 0.5 / max(abs(x) for x in loop)
-    out["VentLoop"] = [x * g for x in loop]     # no fades: it must loop
+    out["VentLoop"] = level(loop, -17.0, 0.9)   # a bed under everything; no fades: it must loop
     return out
 
 
@@ -560,13 +574,99 @@ def dc_and_fade(buf, guard=0.004):
         buf[i] *= i / n
 
 
+# ------------------------------------------------------------------------------------------- analysis
+# Numbers that stand in for ears until someone listens: how loud each clip is to a listener (A-weighted, loudest
+# 46 ms), where its energy sits (spectral centroid), and which pairs are close enough to be confused.
+N_FFT = 2048
+
+
+def _fft(re, im):
+    n = len(re)
+    j = 0
+    for i in range(1, n):
+        bit = n >> 1
+        while j & bit:
+            j ^= bit
+            bit >>= 1
+        j |= bit
+        if i < j:
+            re[i], re[j] = re[j], re[i]
+            im[i], im[j] = im[j], im[i]
+    size = 2
+    while size <= n:
+        ang = -2 * math.pi / size
+        wr, wi = math.cos(ang), math.sin(ang)
+        for start in range(0, n, size):
+            cr, ci = 1.0, 0.0
+            for k in range(size // 2):
+                a, b = start + k, start + k + size // 2
+                tr, ti = re[b] * cr - im[b] * ci, re[b] * ci + im[b] * cr
+                re[b], im[b] = re[a] - tr, im[a] - ti
+                re[a], im[a] = re[a] + tr, im[a] + ti
+                cr, ci = cr * wr - ci * wi, cr * wi + ci * wr
+        size *= 2
+
+
+def _a_weight(f):
+    if f < 10:
+        return 0.0
+    f2 = f * f
+    ra = (12194.0 ** 2 * f2 * f2) / ((f2 + 20.6 ** 2) * math.sqrt((f2 + 107.7 ** 2) * (f2 + 737.9 ** 2)) * (f2 + 12194.0 ** 2))
+    return (ra * 1.2589) ** 2   # power gain, 0 dB at 1 kHz
+
+
+_AW = [_a_weight(k * SR / N_FFT) for k in range(N_FFT // 2)]
+_HANN = [0.5 - 0.5 * math.cos(2 * math.pi * i / N_FFT) for i in range(N_FFT)]
+BANDS = 24   # log bands 100 Hz .. 16 kHz, for comparing timbre
+
+
+def analyse(samples):
+    """dict(loud: A-weighted level of the loudest frame in dB, centroid: Hz, bands: normalised band energies,
+    env: 8-step level envelope) for one clip."""
+    pad = list(samples) + [0.0] * N_FFT
+    best, total, cen_num, cen_den = 0.0, [0.0] * BANDS, 0.0, 0.0
+    frames = []
+    lo, hi = math.log(100.0), math.log(16000.0)
+    for start in range(0, max(1, len(samples)), N_FFT // 2):
+        re = [pad[start + i] * _HANN[i] for i in range(N_FFT)]
+        im = [0.0] * N_FFT
+        _fft(re, im)
+        aw = 0.0
+        for k in range(1, N_FFT // 2):
+            p = re[k] * re[k] + im[k] * im[k]
+            f = k * SR / N_FFT
+            aw += p * _AW[k]
+            cen_num += p * f
+            cen_den += p
+            if 100.0 <= f < 16000.0:
+                total[int((math.log(f) - lo) / (hi - lo) * BANDS)] += p
+        frames.append(aw)
+        best = max(best, aw)
+    norm = math.sqrt(sum(x * x for x in total)) or 1.0
+    env = [0.0] * 8
+    for i, v in enumerate(frames):
+        env[min(7, i * 8 // len(frames))] += v
+    en = math.sqrt(sum(x * x for x in env)) or 1.0
+    scale = sum(h * h for h in _HANN) * N_FFT / 4      # so a full-scale sine reads about 0 dB
+    return dict(loud=10 * math.log10(best / scale + 1e-12), centroid=cen_num / (cen_den or 1.0),
+                bands=[x / norm for x in total], env=[x / en for x in env])
+
+
+def level(buf, target_db, peak_cap):
+    """Scale a clip to a perceived level (analyse()['loud'] == target_db), but never above peak_cap: a clip too short
+    or too peaky to reach the target is left at the ceiling, and the table shows by how much it falls short."""
+    pk = max(abs(x) for x in buf) or 1.0
+    unit = [x / pk for x in buf]
+    g = 10 ** ((target_db - analyse(unit)["loud"]) / 20)
+    g = min(g, peak_cap)
+    return [x * g for x in unit]
+
+
 def render(name, spec):
     buf = [0.0] * int(spec["length"] * SR)
     spec["fn"](buf)
     dc_and_fade(buf)
-    peak = max(abs(x) for x in buf) or 1.0
-    g = PEAK[spec["cls"]] / peak
-    return [max(-1.0, min(1.0, x * g)) for x in buf]
+    return level(buf, LOUD_EVENT.get(name, LOUD[spec["cls"]]), PEAK[spec["cls"]])
 
 
 def write_wav(path, samples):
@@ -587,7 +687,7 @@ def main():
         pk = max(abs(x) for x in s)
         rms = math.sqrt(sum(x * x for x in s) / len(s))
         end = abs(s[-1])
-        ok = pk <= 0.71 and end < 0.01 and len(s) / SR <= 1.2
+        ok = pk <= 0.91 and end < 0.01 and len(s) / SR <= 1.2
         bad |= not ok
         print(f"{name:18s} {len(s) / SR * 1000:7.0f} {20 * math.log10(pk):10.1f} {20 * math.log10(rms):9.1f}  {spec['cls']:6s} {spec['rel']}"
               + ("" if ok else "  << CHECK"))
@@ -624,7 +724,54 @@ def main():
         print(f"{name:18s} {len(smp) / SR * 1000:7.0f} {20 * math.log10(pk):10.1f} {20 * math.log10(rms):9.1f}" + ("" if ok else "  << CHECK"))
     print(f"{len(weapons)} files in {os.path.relpath(WEAPON_OUT)}")
     print("audition page:", os.path.relpath(write_audition()))
+    if "--analyse" in sys.argv:
+        analysis_report()
     return 1 if bad else 0
+
+
+def analysis_report():
+    """Prints loudness per clip, the spread per class, and pairs of UI clips similar enough to be confused."""
+    sets = [("UI", {n: (render(n, sp), sp["cls"], sp["length"]) for n, sp in EVENTS.items()})]
+    items = render_items()
+    sets.append(("Items", {n: (smp, "item", len(smp) / SR) for n, smp in items.items()}))
+    sets.append(("Weapons", {n: (smp, "weapon", len(smp) / SR) for n, smp in render_table(WEAPONS).items()}))
+    lines, warn = [], 0
+    for title, clips in sets:
+        feats = {n: analyse(smp) for n, (smp, _, _) in clips.items()}
+        lines.append(f"\n{title}: perceived level (A-weighted, loudest 46 ms) and brightness")
+        lines.append(f"{'clip':18s} {'class':7s} {'loud dB':>8s} {'centroid Hz':>12s}   (a note in brackets = short of its target)")
+        by_cls = {}
+        for n, (_, cls, _) in clips.items():
+            by_cls.setdefault(cls, []).append(feats[n]["loud"])
+        for n, (_, cls, _) in clips.items():
+            want = (LOUD_EVENT.get(n, LOUD.get(cls)) if title == "UI" else
+                    ITEM_LOUD.get(n, -17.0 if n == "VentLoop" else -14.0) if title == "Items" else WEAPON_LOUD.get(n, -14.0))
+            off = feats[n]["loud"] - want
+            flag = ""
+            if abs(off) > 1.5:
+                flag = f"  ({off:+.1f} dB from its target {want:.0f}: at its peak ceiling)"
+                warn += 1
+            lines.append(f"{n:18s} {cls:7s} {feats[n]['loud']:8.1f} {feats[n]['centroid']:12.0f}{flag}")
+        for cls, vals in by_cls.items():
+            lines.append(f"  {cls}: spread {max(vals) - min(vals):.1f} dB ({min(vals):.1f} to {max(vals):.1f})")
+        if title != "UI":
+            continue
+        lines.append("\nUI pairs close enough to be confused (same length within 30 %, timbre and shape both above 0.93):")
+        names, found = list(clips), 0
+        for i, a in enumerate(names):
+            for b in names[i + 1:]:
+                la, lb = clips[a][2], clips[b][2]
+                if min(la, lb) / max(la, lb) < 0.7:
+                    continue
+                tim = sum(x * y for x, y in zip(feats[a]["bands"], feats[b]["bands"]))
+                shp = sum(x * y for x, y in zip(feats[a]["env"], feats[b]["env"]))
+                if tim > 0.93 and shp > 0.93:
+                    lines.append(f"  {a} / {b}: timbre {tim:.2f}, shape {shp:.2f}")
+                    found += 1
+        if not found:
+            lines.append("  none")
+    print("\n".join(lines))
+    return warn
 
 
 def write_audition():
