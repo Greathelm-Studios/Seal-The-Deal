@@ -374,7 +374,7 @@ namespace CloseTheDeal.Editor.Greybox
                 // Steam relays traffic between friends over the peer-to-peer socket, not an IP socket.
                 var serialized = new SerializedObject(transport);
                 SetBool(serialized, "_peerToPeer", true);
-                SetInt(serialized, "_maximumClients", 4);
+                SetInt(serialized, "_maximumClients", 7);
                 serialized.ApplyModifiedPropertiesWithoutUndo();
             }
 

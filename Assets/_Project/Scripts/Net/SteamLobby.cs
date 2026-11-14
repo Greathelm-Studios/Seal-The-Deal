@@ -279,9 +279,9 @@ namespace CloseTheDeal.Net
         {
             _multipass.StartConnection(true, _transportIndex);
             // The transport applies the client cap serialized on its component when the server
-            // starts (FishySteamworks ships 4), so set it afterwards from the lobby size: every
-            // seat except the host's own, which never counts against the transport's cap.
-            _multipass.SetMaximumClients(_maxPlayers - 1, _transportIndex);
+            // starts (FishySteamworks ships 4), so set it afterwards from the lobby size.
+            // FishySteamworks keeps the host's own client off its count; Tugboat counts it.
+            _multipass.SetMaximumClients(LocalMode ? _maxPlayers : _maxPlayers - 1, _transportIndex);
             _net.ClientManager.StartConnection();
             OnChanged?.Invoke();
         }
@@ -316,6 +316,14 @@ namespace CloseTheDeal.Net
             {
                 _abandonedLobby = new CSteamID(cb.m_ulSteamIDLobby);
                 SteamMatchmaking.LeaveLobby(_abandonedLobby);
+                // Steam may have delivered this lobby's enter callback first.
+                if (LobbyId == _abandonedLobby)
+                {
+                    LobbyId = CSteamID.Nil;
+                    _hostId = CSteamID.Nil;
+                    SteamFriends.ClearRichPresence();
+                    OnChanged?.Invoke();
+                }
                 return;
             }
 
