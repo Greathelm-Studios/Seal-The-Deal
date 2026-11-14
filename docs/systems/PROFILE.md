@@ -1,6 +1,6 @@
 # PROFILE
 
-**Status:** Current (branch `claude/lane-gaps-5e5605`, not merged) · **Last updated:** 2026-11-14
+**Status:** Current (in `buffer`; built by the gaps lane) · **Last updated:** 2026-11-14
 
 ## What the player sees
 
@@ -10,7 +10,7 @@ Nothing drawn yet. Every finished match is kept on this PC: matches, wins, losse
 
 - **Only a finished match counts**, and only from the final record the host sends ([RECORDS.md](RECORDS.md)). The host leaving mid-match, or this player leaving, writes nothing.
 - **Holds career stats and seen hints only.** The outfit stays in the lobby's `outfit.json` (`OutfitSave`); settings stay with the UI kit. No value lives in two files.
-- **The file is `Application.persistentDataPath/profile.json`**, or the path after `-profileSave` on the command line (scripted checks always pass one, so they never touch a real profile). On this Mac in the editor: `~/Library/Application Support/DefaultCompany/CloseTheDeal/profile.json`; that folder moves if Player Settings' company or product name change.
+- **The file is `Application.persistentDataPath/profile.json`**, or the path after `-profileSave` on the command line. Scripted checks never touch a real profile: shell runs pass `-profileSave`, and the menu run uses `Temp/GapsRun/profile.json` (held in the editor's session, cleared when play stops). On this Mac in the editor: `~/Library/Application Support/DefaultCompany/CloseTheDeal/profile.json`; that folder moves if Player Settings' company or product name change.
 - **Written safely:** to `profile.json.tmp`, then swapped in, so a crash mid-write leaves the old profile whole.
 - **Missing file:** a fresh profile, `State = Fresh`.
 - **Unreadable file:** kept as `profile.json.corrupt`, a fresh profile starts, `State = RecoveredFromCorrupt`. A warning in the log, nothing on screen.

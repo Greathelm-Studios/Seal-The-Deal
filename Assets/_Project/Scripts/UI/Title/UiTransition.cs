@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace CloseTheDeal.UI.Title
@@ -188,7 +189,32 @@ namespace CloseTheDeal.UI.Title
             _fade.enabled = false;
         }
 
-        public void Run(UiTransitionKind kind, Action onCovered, Action onDone) => StartCoroutine(Play(kind, onCovered, onDone));
+        int _pending;
+        EventSystem _blocked;
+        bool _blockedWas;
+
+        public void Run(UiTransitionKind kind, Action onCovered, Action onDone)
+        {
+            // Keys and the pad: the overlay already eats clicks, but Submit and the arrows go to the selected button
+            // through the EventSystem, so a second A press on Host would fire again under the cover. Hold them off
+            // from the call until the last queued transition is gone.
+            if (_pending++ == 0 && EventSystem.current != null)
+            {
+                _blocked = EventSystem.current;
+                _blockedWas = _blocked.sendNavigationEvents;
+                _blocked.sendNavigationEvents = false;
+            }
+            StartCoroutine(Play(kind, onCovered, onDone));
+        }
+
+        void Unblock()
+        {
+            if (_blocked != null)
+                _blocked.sendNavigationEvents = _blockedWas;
+            _blocked = null;
+        }
+
+        void OnDestroy() => Unblock();
 
         IEnumerator Play(UiTransitionKind kind, Action onCovered, Action onDone)
         {
@@ -212,6 +238,8 @@ namespace CloseTheDeal.UI.Title
             }
             HideAll();
             Playing = false;
+            if (--_pending == 0)
+                Unblock();
             onDone?.Invoke();
         }
 

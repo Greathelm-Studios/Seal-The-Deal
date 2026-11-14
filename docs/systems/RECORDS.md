@@ -1,6 +1,6 @@
 # RECORDS
 
-**Status:** Current (branch `claude/lane-gaps-5e5605`, not merged) · **Last updated:** 2026-11-14
+**Status:** Current (in `buffer`; built by the gaps lane) · **Last updated:** 2026-11-14
 
 ## What the player sees
 
@@ -70,7 +70,9 @@ Firm colour and name: `MatchDirector.Instance.ColourFor(line.Firm)`, `FirmName(l
 
 ## Setup
 
-**Close the Deal > Lanes > Gaps > Add Records And Profile To Open Scene** adds a **Records** object with `MatchRecords`, `ProfileKeeper`, `LocalDeath`, `MatchSecretary` and `FirstRunHints` if missing, and creates the secretary's lines and the hints assets if missing. From the shell, `-executeMethod CloseTheDeal.Editor.Lanes.GapsLaneSetup.AddToIntegrationFromCommandLine` adds them to `Lane_Integration.unity` and saves it. **Run Records Check (solo)** on the same menu plays the scene by script; host and client runs are in [GapsLaneSetup.cs](../../Assets/_Project/Editor/Lanes/GapsLaneSetup.cs).
+**No scene is edited.** `RecordsInstaller` adds `Prefabs/Gaps/Records.prefab` at run time to every scene that has a `MatchDirector` and no `MatchRecords` yet, so `Lane_Integration`, the greybox and any rebuilt scene get it without a setup step. The prefab holds `MatchRecords`, `ProfileKeeper`, `LocalDeath`, `MatchSecretary`, `FirstRunHints` and the **Nameplates** canvas. It is named by `Resources/Gaps/RecordsInstaller.asset`; delete that asset to turn it all off. A scene that already holds a `MatchRecords` keeps its own.
+
+**Close the Deal > Lanes > Gaps > Build Records Prefab** makes the prefab, the installer and the secretary's lines and hints assets if missing (shell: `-executeMethod CloseTheDeal.Editor.Lanes.GapsLaneSetup.BuildFromCommandLine`). It never changes one a person edited. Tune values on the prefab. **Run Records Check (solo)** on the same menu plays `Lane_Integration` by script; host and client runs are in [GapsLaneSetup.cs](../../Assets/_Project/Editor/Lanes/GapsLaneSetup.cs).
 
 ## Known limitations
 

@@ -206,6 +206,7 @@ namespace CloseTheDeal.Editor.Lanes
         {
             if (!EditorPrefs.HasKey(SavedUiKey)) return;
             UiAudio.SetVolume(AudioBus.Ui, EditorPrefs.GetFloat(SavedUiKey, 1f));
+            UiAudio.Flush();
             EditorPrefs.DeleteKey(SavedUiKey);
         }
 

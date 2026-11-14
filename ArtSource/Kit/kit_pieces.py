@@ -3,6 +3,9 @@
 #  Generator : Claude Opus 5.5 (Claude Code, blender-modeling skill)
 #  Generated : 2026-11-11
 #  Prompt    : "Start the snap kit" (brief first pass, step 2: the minimum snap kit)
+#  Modified  : Claude Opus 5.5, 2026-11-13 — text at its true size (CAP_RATIO), bold/slant/fit options, and the
+#              zone signs redrawn as painted Mirror's-Edge-style supergraphics (Alex: lettering "larger and more
+#              character").
 #  Reviewed  : NOT YET REVIEWED BY A HUMAN
 #  Summary   : Every piece of the minimum office snap kit, one piece per build, chosen with
 #              --set PIECE=<name>. One script so the grid, heights, thicknesses and materials
@@ -141,6 +144,59 @@ P = params(
     RAMP_L=4.0, RAMP_RISE=1.0,      # ramp run and rise, metres: 1:4 slope (README_r5 atrium B)
     COVE_W=0.2,            # light line slot width in the soffit, metres
     COVE_D=0.08,           # its depth into the slab, leaving 0.12 m, metres (README_r5)
+    # ---- Fix list 2026-11-13 (Alex: "still blockout-y"): edges that catch gloss, signs, a real stair, props
+    END_CHAMFER=0.012,     # 45-degree chamfer on a wall's vertical end edges, both faces, metres. WHY: a 90 degree
+                           # box shows no highlight; two chamfered ends meet as a V joint line every 4 m that does
+    SIGN_W=3.2, SIGN_H=3.2,         # zone supergraphic, metres: storey-scale, painted on the wall (Alex: "think Mirror's Edge")
+    SIGN_Y=0.6,            # panel bottom, metres: above the skirting, top at 3.8 m under the 4.26 m reveal
+    SIGN_T=0.010,          # panel stands this far proud of the wall, metres
+    INK_T=0.004,           # letters stand this far proud of the panel, metres (panel + ink = 14 mm, inside 15 mm)
+    SIGN_PAD=0.22,         # inner margin of the panel, metres
+    LETTER_H=1.7,          # zone letter height, metres
+    NAME_H=0.26,           # department name height, metres
+    MICRO_H=0.03,          # microtype height, metres. WHY 0.03: the longest line (~70 characters) fits the panel (bible §13: "tiny strings of legal/technical microtype")
+    FONT_RES=3,            # curve resolution of the glyphs: few facets, they are flat graphics
+    TREAD_T2=0.06,         # straight-stair tread thickness, metres
+    NOSING_D=0.035,        # silver nosing strip on each tread front, metres
+    STRINGER_T=0.06,       # folded side plate of the straight stair, metres
+    DESK_W=1.6, DESK_D=0.8, DESK_H=0.74,   # sculptural desk, metres (standard desk height)
+    DESK_TOP=0.04, DESK_SIDE=0.05,         # its top and waterfall side thickness, metres
+    DESK_BEVEL=0.012,      # rounded desk edges, metres
+    CHAIR_SEAT_H=0.46, CHAIR_W=0.52, CHAIR_D=0.5, CHAIR_BACK_H=0.86,   # pod chair, metres
+    CHAIR_SHELL=0.06,      # shell thickness, metres
+    CHAIR_BASE_R=0.3, CHAIR_STEM_R=0.035,  # swivel base disc and stem radius, metres
+    # ---- Detail pass 2026-11-13, after Alex's reference plates (atrium, office floor, curved meeting room)
+    COL_W=0.8,             # graphic column section, metres: the plates' monumental square columns
+    COL_R=0.06,            # its rounded corners, metres
+    COL_SKIN=0.003,        # cobalt supergraphic stands this far proud, metres
+    COL_TEXT_H=0.06,       # wayfinding line height on a column, metres
+    COL_NUMBER_H=0.55,     # big floor number on a column, metres (true height since CAP_RATIO, 2026-11-13)
+    BENCH_L=2.4, BENCH_D=1.6,   # back-to-back workstation bench, metres (two 1.2 m desks each side)
+    SCREEN_TOP=1.15,       # bench divider top, metres: a crouch-cover line, like the counters
+    MONITOR_W=0.55, MONITOR_H=0.34,   # monitor panel, metres
+    PED_W=0.4, PED_D=0.55, PED_H=0.6, # under-desk drawer pedestal, metres
+    TASK_SEAT=0.47,        # task chair seat height, metres
+    STORE_L=1.6, STORE_D=0.45, STORE_H=1.0,   # low storage run, metres
+    COPIER_W=0.62, COPIER_D=0.66, COPIER_H=1.05,   # photocopier, metres
+    RECEPTION_L=4.0, RECEPTION_D=0.9, RECEPTION_H=1.1,   # reception desk, metres
+    RAIL_POST=0.04,        # balustrade post section, metres
+    RAIL_TOP=0.05,         # balustrade handrail section, metres
+    HEADER_R=1.5,          # curved header partition: glass radius in its 2 x 2 m cell, metres
+    PENDANT_L=2.4, PENDANT_W=0.07, PENDANT_H=0.06,   # linear pendant bar, metres
+    PENDANT_DROP=0.8,      # pendant hangs this far below the soffit, metres (bar at 3.5 m: clear of any jump)
+    OVERLAY_T=0.008,       # carpet / ceiling-grid overlay thickness, metres
+    PLANTER_L=1.0, PLANTER_W=0.45, PLANTER_H=0.55,   # white box planter, metres
+    LEAVES=11,             # leaf blades per planter
+    # ---- Japanese office props (sizes: concepts/Japanese_Aero/README.md "New dressing")
+    SERVER_W=0.35, SERVER_H=1.35,          # water server footprint and height with its bottle, metres
+    UMBRELLA_D=0.22, UMBRELLA_H=0.55,      # umbrella stand diameter and height, metres
+    VEND_W=0.9, VEND_D=0.65, VEND_H=1.8,   # drinks vending machine, metres
+    SLIPPER_W=0.9, SLIPPER_D=0.35, SLIPPER_H=0.7,   # slipper cabinet, metres
+    PHONE_W=0.24, PHONE_D=0.22, PHONE_H=0.1,         # white desk phone, metres
+    TRAY_W=0.28, TRAY_D=0.34, TRAY_H=0.18,           # two-tier document tray, metres
+    LOGO_D=0.4,            # AONAGI ring logo diameter on a wall, metres
+    LED_W=1.2, LED_H=0.18, LED_T=0.06, LED_Y=2.65,   # reception dot-matrix sign and its bottom height, metres
+    WATER_W=1.8, WATER_T=0.08, WATER_H=2.7,          # contained water-wall cassette, metres
 )
 
 CLEAR_H = P.FLOOR_H - P.SLAB      # floor to soffit, metres
@@ -174,12 +230,12 @@ def hexc(h):
 
 # WHY 646E86: the approved concepts' carpet is a darker grey-blue than the old #8A94A3 placeholder; this is
 # their painted value (#5E6A96 to #6D79A3, lit by a blue sky) pulled back toward grey so it reads as albedo.
-M_FLOOR = material('Floor_Carpet', hexc('B8C2CE'), roughness=0.03)
+M_FLOOR = material('Floor_Carpet', hexc('DCE8EC'), roughness=0.15)   # polished walkway, the mix (Japanese_Aero/DECISION.md)
 # WHY B8C2CE, near-mirror: round 5 drops carpet for a polished pale resin floor (Alex, 2026-11-12). The name stays
 # Floor_Carpet because Unity maps the exported material by name; KitImport.cs holds the same values.
-M_CEIL = material('Ceiling_Tile', hexc('F3F4F4'), roughness=0.9)
-M_WALL = material('Wall_PaperWhite', hexc('F3F4F4'), roughness=0.1)   # gloss white lacquer (README_r5)
-M_FRAME = material('Frame_Aluminium', hexc('C9CED3'), metallic=0.8, roughness=0.28)   # inset silver (README_r5)
+M_CEIL = material('Ceiling_Tile', hexc('F0F5F5'), roughness=0.9)
+M_WALL = material('Wall_PaperWhite', hexc('F4F8F8'), roughness=0.3)   # pearl lacquer at satin gloss (the mix)
+M_FRAME = material('Frame_Aluminium', hexc('C8D2D9'), metallic=0.85, roughness=0.35)   # silver (the mix)
 M_GLASS = material('Glass_Clear', (0.70, 0.85, 0.95), roughness=0.05)
 M_DOOR = material('Door_Leaf', hexc('C9CED3'), roughness=0.6)
 M_STAIR = material('Stair_Aluminium', hexc('C9CED3'), metallic=0.6, roughness=0.35)
@@ -204,7 +260,16 @@ def emissive(mat, strength=4.0):
 emissive(M_LIGHT)
 # Round 5: frosted glass for the high and low strips. A pale, mostly opaque white so it reads as "you can't see
 # through here" next to the near-clear Glass_Clear; KitImport sets its transparency in Unity.
-M_FROST = material('Glass_Frosted', hexc('E6ECF2'), roughness=0.6)
+M_FROST = material('Glass_Frosted', hexc('C6E9E6'), roughness=0.7)   # aqua pearl frost (the mix)
+# Detail pass 2026-11-13 (Alex's reference plates). Carpet and ceiling grid get tile textures in Unity (KitImport).
+M_CARPET = material('Carpet_Dark', hexc('7E96AC'), roughness=0.95)   # paler blue work-area carpet (the mix)
+M_GRID = material('Ceiling_Grid', hexc('F0F5F5'), roughness=0.9)    # tiled ceiling over work areas
+M_LEAF = material('Plant_Leaf', hexc('70AF59'), roughness=0.76)      # living green (Aero; the mix)
+# The mix (concepts/Japanese_Aero/DECISION.md): aqua and mist join cobalt; one red for the hanko dot; water.
+M_AQUA = material('Accent_Aqua', hexc('45BFC7'), roughness=0.24)     # sign faces, column skins, reception block
+M_MIST = material('Accent_Mist', hexc('A8BFD1'), roughness=0.6)      # quiet fields (Soft Club)
+M_SEAL = material('Accent_Seal', hexc('C7473E'), roughness=0.65)     # the hanko dot only
+M_WATER = material('Water_Wall', hexc('7ADAD8'), roughness=0.1)      # the contained water cassette
 
 
 def recessed(bm, cutter):
@@ -290,9 +355,27 @@ def finish_face(bm, finish):
     return bm if y is None else front_faces(bm, 2, min_y=y or None)
 
 
+def end_chamfers(x0, x1):
+    """Cutters that chamfer the vertical edges at a wall run's two ends on both faces, END_CHAMFER at 45 degrees.
+
+    Kept on the wall's own material (slot 0) so the bevel catches the gloss highlight; the snap end stays flat
+    across all but the outer 12 mm of each face, so the next wall still meets it flush.
+    """
+    c, eps = P.END_CHAMFER, 0.01
+    cuts = []
+    for cx, dx in ((x0, 1), (x1, -1)):
+        for cz, dz in ((0.0, -1), (-P.WALL, 1)):
+            # Triangle in (a along +dx, b along +dz) round the corner, its long side on the chamfer line a + b = c.
+            tri = [(c + eps, -eps), (-eps, c + eps), (-eps, -eps)]
+            outline = [(cx + dx * a, cz + dz * b) for a, b in tri]
+            cuts.append(prism_xz(outline, -eps, CLEAR_H + eps))
+    return join(*cuts)
+
+
 def wall_solid(width, finish=''):
-    """Opaque wall, floor to soffit, with shadow-gap skirting and a soffit reveal on both faces. Box collider."""
+    """Opaque wall, floor to soffit, with shadow-gap skirting, a soffit reveal and chamfered ends. Box collider."""
     bm = recessed(u(0, width, 0, CLEAR_H, -P.WALL, 0), wall_cuts(0, width, portal=finish == '_PortalHead'))
+    bm = boolean(bm, paint(end_chamfers(0, width), 0))
     ob = part(f'Kit_Wall_Solid_{width:g}m{finish}', finish_face(bm, finish), wall_mats(finish), smooth=None)
     expect(ob, size=(width, P.WALL, CLEAR_H))
     collider(ob, 'box')
@@ -310,7 +393,10 @@ def wall_door(finish=''):
     for name, box_ in (('Left', u(0, x0, 0, CLEAR_H, -P.WALL, 0)),
                        ('Right', u(x1, P.BAY, 0, CLEAR_H, -P.WALL, 0)),
                        ('Head', u(x0, x1, P.DOOR_H, CLEAR_H, -P.WALL, 0))):
-        bm = finish_face(recessed(box_, cuts(0, P.BAY)), finish)
+        bm = recessed(box_, cuts(0, P.BAY))
+        if name != 'Head':   # the outer ends of the left and right parts are the wall's snap ends
+            bm = boolean(bm, paint(end_chamfers(0, P.BAY), 0))
+        bm = finish_face(bm, finish)
         parts.append(part(f'Kit_Wall_Door_4m{finish}_{name}', bm, wall_mats(finish), smooth=None))
     left, right, head = parts
     for ob in parts:
@@ -689,6 +775,7 @@ def wall_niche():
     cut.faces.new(list(reversed(back)))
     bmesh.ops.recalc_face_normals(cut, faces=cut.faces)
     body = recessed(u(0, w, 0, CLEAR_H, -P.WALL, 0), wall_cuts(0, w))
+    body = boolean(body, paint(end_chamfers(0, w), 0))
     bm = boolean(body, paint(cut, 2))
     ob = part('Kit_Wall_Niche_4m', bm, [M_WALL, M_TRIM, M_COBALT], smooth=None)
     expect(ob, size=(w, P.WALL, CLEAR_H))
@@ -740,20 +827,26 @@ def stair_straight():
     Pivot: the front-left corner of the bottom step, at floor level. 24 risers x 0.1875 m, 0.3 m goings, 7.2 m run;
     the top tread lands at 4.5 m, flush with the deck above. Hull collider: its top runs along the nosings, so the
     capsule climbs a smooth slope (32 degrees) and a foot sits at most one riser above the back of a tread.
+
+    Built as two folded white stringers with separate white treads between them, each with a silver nosing, open
+    underneath and between treads, as in the concept (2026-11-13 fix list: "the stair is one solid wedge").
     """
     r, g, n, w = P.FLOOR_H / P.STAIR_RISERS, P.STAIR_GOING, P.STAIR_RISERS, P.STAIR_W
     run = n * g
-    under = 0.35   # depth of the white mass under the nosing line, metres
+    under = 0.35   # depth of each stringer under the nosing line, metres
     prof = [(0.0, 0.0)]
     for k in range(n):
         prof += [(-k * g, (k + 1) * r), (-(k + 1) * g, (k + 1) * r)]
     prof += [(-run, P.FLOOR_H - under), (-run + (P.FLOOR_H - under) * g / r, 0.0)]   # underside parallel to the pitch
     prof = list(reversed(prof))
-    bm = prism_zy(prof, 0, w)
-    bm.normal_update()
-    for f in bm.faces:
-        f.material_index = 1 if f.normal.z > 0.5 else 0   # tread tops silver, everything else gloss white
-    body = part('Kit_Stair_Straight_2m', bm, [M_WALL, M_FRAME], smooth=None)
+    st = P.STRINGER_T
+    pieces = [paint(prism_zy(prof, 0, st), 0), paint(prism_zy(prof, w - st, w), 0)]
+    for k in range(n):
+        top = (k + 1) * r
+        z_front, z_back = -k * g, -(k + 1) * g
+        pieces.append(paint(u(st, w - st, top - P.TREAD_T2, top, z_back, z_front - P.NOSING_D), 0))
+        pieces.append(paint(u(st, w - st, top - P.TREAD_T2, top, z_front - P.NOSING_D, z_front), 1))
+    body = part('Kit_Stair_Straight_2m', join(*pieces), [M_WALL, M_FRAME], smooth=None)
     expect(body, size=(w, run, P.FLOOR_H))
     collider(body, 'hull')
     guards = []
@@ -807,6 +900,578 @@ def slab_light_line():
     collider(ob, 'box')
 
 
+# ---------------------------------------------------------------- fix list 2026-11-13: signs and props
+
+ZONES = {   # letter: (Japanese, English, microtype). Sign copy checked by Codex (concepts/Japanese_Aero/README.md)
+    'L': ('法務部', 'LEGAL', '青凪総合サービス株式会社  /  法務部  /  ZONE L  /  1F'),
+    'R': ('審査部', 'REVIEW', '青凪総合サービス株式会社  /  審査部  /  ZONE R  /  1F'),
+    'C': ('請求部', 'CLAIMS', '青凪総合サービス株式会社  /  請求部  /  ZONE C  /  1F'),
+    'H': ('審問室', 'HEARINGS', '青凪総合サービス株式会社  /  審問室  /  ZONE H  /  1F-2F'),
+    'A': ('記録保管室', 'ARCHIVE', '青凪総合サービス株式会社  /  記録保管室  /  ZONE A  /  1F'),
+}
+COMPANY_JA, COMPANY_EN = '青凪総合サービス', 'AONAGI CORPORATE SERVICES'   # fictional (Japanese_Aero/README.md)
+
+
+def cjk_font():
+    """Blender's bundled Noto Sans CJK (SIL Open Font License): Japanese and Latin glyphs in one face.
+
+    WHY this font: it ships with Blender, so every machine that builds the kit has it, and its licence allows
+    shipping the glyphs as meshes. The Windows Japanese fonts (Yu Gothic, MS Gothic) do not allow that. Returns
+    None, falling back to the built-in Latin font, if this Blender has no CJK font.
+    """
+    import bpy, os
+    path = os.path.join(bpy.utils.system_resource('DATAFILES'), 'fonts', 'Noto Sans CJK Regular.woff2')
+    if not os.path.exists(path):
+        return None
+    return bpy.data.fonts.load(path, check_existing=True)
+
+
+# Cap height of Noto Sans CJK as Blender loads it, as a share of the curve's size. Measured 2026-11-13 ('H' at size 1
+# is 0.2567 tall). WHY measured: the kit used 0.72, the usual cap/em ratio, but Blender scales this woff2 smaller, so
+# every label came out at 36 % of its stated height. That was most of why the signs read small and quiet.
+CAP_RATIO = 0.2567
+
+
+def text_mesh(body, height, depth, weight=0.0, slant=0.0):
+    """Flat 3D text as a bmesh: Blender's bundled Noto Sans CJK, capital height `height` metres, extruded `depth`.
+
+    `weight` (metres) thickens every stroke outward, so the regular face reads bold; the cap height still comes out
+    at `height`. `slant` shears it forward (0.2 = 0.2 m sideways per metre up), the leaning italic of wayfinding
+    supergraphics. Laid in Blender's XY plane facing +Z, its baseline-left at the origin. Uses a temporary font
+    curve evaluated through the depsgraph (bpy.data only, no operators) and removes it again.
+    """
+    import bpy
+    cu = bpy.data.curves.new('tmp_text', 'FONT')
+    cu.body = body
+    font = cjk_font()
+    if font is not None:
+        cu.font = font
+    # WHY minus twice the weight: the outline offset adds `weight` above the caps and below the baseline.
+    cu.size = max(height - 2.0 * weight, 0.001) / CAP_RATIO
+    cu.offset = weight
+    cu.shear = slant
+    cu.extrude = depth * 0.5
+    cu.resolution_u = P.FONT_RES
+    ob = bpy.data.objects.new('tmp_text', cu)
+    bpy.context.scene.collection.objects.link(ob)
+    dg = bpy.context.evaluated_depsgraph_get()
+    me = ob.evaluated_get(dg).to_mesh()
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    ob.evaluated_get(dg).to_mesh_clear()
+    bpy.data.objects.remove(ob)
+    bpy.data.curves.remove(cu)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    # WHY: some CJK glyphs (自, 販, 履...) have overlapping or hairline outline pieces that fill into zero-area
+    # or inside-out faces; dissolving the degenerate ones and recalculating normals per glyph island fixes that.
+    bmesh.ops.dissolve_degenerate(bm, dist=1e-4, edges=bm.edges)   # 0.1 mm: below anything visible at 4 cm type
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    if weight:
+        bmesh.ops.translate(bm, verts=bm.verts, vec=(0.0, weight, 0.0))   # baseline back on y = 0
+    return bm
+
+
+def placed_text(body, height, x_right, y_base, z_face, weight=0.0, slant=0.0, max_width=None):
+    """Text standing on a wall-facing panel: reads left to right for someone facing the panel from +Z.
+
+    WHY x_right: facing the panel from Unity +Z the reader's right is Unity -X, so the line starts at the
+    panel's high-X edge and runs toward x = 0. z_face is the Unity z of the surface the letters stand on.
+    `max_width` (metres) condenses a line that would run longer, keeping its height: a squeezed line still reads,
+    one that runs off its panel does not.
+    """
+    bm = text_mesh(body, height, P.INK_T, weight, slant)
+    if max_width and bm.verts:
+        xs = [v.co.x for v in bm.verts]
+        x_min, width = min(xs), max(xs) - min(xs)
+        if width > max_width:
+            k = max_width / width
+            for v in bm.verts:
+                v.co.x = x_min + (v.co.x - x_min) * k
+    rotate(bm, 90.0, axis='X')                     # face Blender -Y (Unity +Z), up stays up
+    move(bm, -x_right, -(z_face + P.INK_T * 0.5), y_base)
+    return bm
+
+
+# Zone supergraphic layout, metres (Alex 2026-11-13: lettering "larger and more character ... think Mirror's Edge").
+SUPER_LETTER_H = 2.6      # the zone letter's capital height: most of a storey, read from across the atrium
+SUPER_LETTER_Y = 1.25     # its baseline, above the department name
+SUPER_WEIGHT = 0.07       # stroke thickening on the letter: a heavy display weight from the regular face
+SUPER_SLANT = 0.18        # forward lean: wayfinding that points along the route instead of standing still
+SUPER_JA_H, SUPER_JA_Y = 0.46, 0.5     # Japanese department name: cap height and baseline
+SUPER_EN_H, SUPER_EN_Y = 0.17, 0.2     # English name under it
+SUPER_BLOCK = (1.0, 2.45)              # aqua colour block behind the letter's lower half: bottom and top
+SUPER_BLOCK_W = 1.9                    # its width from the reader's left edge
+SUPER_STRIPE = (0.92, 1.02)            # the cobalt speed stripe that runs the whole width: bottom and top
+SUPER_TAG = (0.62, 0.32)               # navy floor tag beside the department name: width and height
+SUPER_PAINT = 0.003                    # colour blocks stand this far proud of the wall; the ink sits on them
+
+
+def sign_zone(letter):
+    """A zone supergraphic painted straight onto the wall, after Alex's "think Mirror's Edge": a storey-high slanted
+    zone letter in cobalt over an aqua colour block, a speed stripe running the full width, the department name
+    big in Japanese with English under it, and a navy floor tag beside the name. No panel: the wall is the
+    sign, which makes it architecture rather than an office notice. Pivot at floor level at the low-X edge on
+    the wall face; under 1 cm proud toward +Z. Visual only: no collider.
+    """
+    ja, en, micro = ZONES[letter]
+    floor = micro.split('/')[-1].strip()
+    W, pad, k = P.SIGN_W, P.SIGN_PAD, SUPER_SLANT
+    # The reader's left is high X (placed_text); a forward lean moves a shape's top toward -X, as the text's does.
+    b0, b1 = SUPER_BLOCK
+    bl = (b1 - b0) * k
+    block = prism_xy([(W, b0), (W - SUPER_BLOCK_W, b0), (W - SUPER_BLOCK_W - bl, b1), (W - bl, b1)], 0, SUPER_PAINT)
+    s0, s1 = SUPER_STRIPE
+    sl = (s1 - s0) * k
+    stripe = prism_xy([(W, s0), (0.15, s0), (0.15 - sl, s1), (W - sl, s1)], 0, SUPER_PAINT)
+    tw, th = SUPER_TAG
+    ty = SUPER_JA_Y   # beside the department name, clear of the leaning letter's top
+    tag = u(0.1, 0.1 + tw, ty, ty + th, 0, SUPER_PAINT)
+    big = placed_text(letter, SUPER_LETTER_H, W - pad, SUPER_LETTER_Y, SUPER_PAINT, SUPER_WEIGHT, k,
+                      max_width=W - 2 * pad - SUPER_LETTER_H * k)
+    name = placed_text(ja, SUPER_JA_H, W - pad, SUPER_JA_Y, SUPER_PAINT, 0.008, k, max_width=W - 2 * pad - tw - 0.1)
+    sub = placed_text(en, SUPER_EN_H, W - pad, SUPER_EN_Y, SUPER_PAINT, 0.008, k, max_width=W - 2 * pad)
+    tag_ink = placed_text(floor, th * 0.5, 0.1 + tw - 0.07, ty + th * 0.25, SUPER_PAINT, 0.008, k, max_width=tw - 0.12)
+    ob = part(f'Kit_Sign_Zone_{letter}', join(paint(block, 0), paint(stripe, 1), paint(big, 1), paint(name, 2),
+                                               paint(sub, 1), paint(tag, 2), paint(tag_ink, 3)),
+              [M_AQUA, M_COBALT, M_TRIM, M_WALL], smooth=None)
+    return ob
+
+
+def desk_sculpt():
+    """A sculptural waterfall desk: a gloss white top folding down into two side slabs, with a recessed cobalt
+    modesty panel (fix list 2026-11-13: scale cues). Pivot bottom centre, top surface at 0.74 m. Box collider.
+    """
+    W, D, H, t, s = P.DESK_W, P.DESK_D, P.DESK_H, P.DESK_TOP, P.DESK_SIDE
+    white = join(u(-W / 2, W / 2, H - t, H, -D / 2, D / 2),
+                 u(-W / 2, -W / 2 + s, 0, H - t, -D / 2, D / 2),
+                 u(W / 2 - s, W / 2, 0, H - t, -D / 2, D / 2))
+    bevel(white, P.DESK_BEVEL, segments=2, angle=45)
+    modesty = u(-W / 2 + s, W / 2 - s, 0.25, H - t, D / 2 - 0.12, D / 2 - 0.10)   # 0.1 m in from the back edge
+    ob = part('Kit_Desk_Sculpt', join(paint(white, 0), paint(modesty, 1)), [M_WALL, M_COBALT], smooth=30)
+    expect(ob, size=(W, D, H), tol=0.002)
+    collider(ob, 'box')
+
+
+def chair_pod():
+    """A pod chair: a cobalt shell seat and back on a silver swivel stem and disc base. Pivot bottom centre,
+    facing +Z. Hull collider (a loose prop for the props lane to make physical)."""
+    sw, sd, sh, t = P.CHAIR_W, P.CHAIR_D, P.CHAIR_SEAT_H, P.CHAIR_SHELL
+    seat = u(-sw / 2, sw / 2, sh - t, sh, -sd / 2, sd / 2)
+    back = u(-sw / 2, sw / 2, sh - t, P.CHAIR_BACK_H, -sd / 2, -sd / 2 + t)
+    shell = join(seat, back)
+    bevel(shell, 0.02, segments=3, angle=45)
+    stem = cylinder(P.CHAIR_STEM_R, sh - t - 0.03, segments=12, base='bottom')
+    move(stem, 0, 0, 0.03)
+    base = cylinder(P.CHAIR_BASE_R, 0.03, segments=24, base='bottom')
+    ob = part('Kit_Chair_Pod', join(paint(shell, 0), paint(join(stem, base), 1)), [M_COBALT, M_FRAME], smooth=30)
+    collider(ob, 'hull')
+
+
+# ---------------------------------------------------------------- detail pass 2026-11-13 (Alex's reference plates)
+
+def prism_xy(outline, z0, z1):
+    """A closed prism standing on a wall-like plane: `outline` is Unity (x, y) points, extruded from z0 to z1."""
+    bm = bmesh.new()
+    a = [bm.verts.new((-x, -z0, y)) for x, y in outline]
+    b = [bm.verts.new((-x, -z1, y)) for x, y in outline]
+    n = len(a)
+    for k in range(n):
+        bm.faces.new((a[k], a[(k + 1) % n], b[(k + 1) % n], b[k]))
+    bm.faces.new(a)
+    bm.faces.new(list(reversed(b)))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return bm
+
+
+def sweep_box(path, d0, d1, y0, y1):
+    """A rectangular section (d0-d1 into the thickness, y0-y1 high) swept along a path of (x, z, nx, nz)."""
+    rings = []
+    for x, z, nx, nz in path:
+        rings.append([(-(x + d * nx), -(z + d * nz), y) for d, y in ((d0, y0), (d1, y0), (d1, y1), (d0, y1))])
+    return sweep(rings)
+
+
+def column_graphic(height, number, lines):
+    """A monumental square column wrapped in a cobalt supergraphic band that climbs round its corner, with a
+    big zone number and wayfinding lines in navy (the reference plates' "32 / PARTNERS ^" columns).
+    Pivot bottom centre. Box collider. Stand it where it hides a wall end or marks a junction.
+    """
+    w = P.COL_W
+    h = w * 0.5
+    f = h - P.COL_R   # the flat half-width of each face, inside the rounded corners
+    s = P.COL_SKIN
+    body = u(-h, h, 0, height, -h, h)
+    bevel(body, P.COL_R, segments=3, angle=45)
+    tall = height > P.FLOOR_H
+    # WHY these: the band starts above the wayfinding text (top at ~1.5 m) and stays under the soffit; it is as
+    # large as that allows, because the plates' columns are mostly cobalt graphic, not a stripe.
+    y0, band, rise = (2.6, 2.8, height * 0.3) if tall else (1.7, 1.5, height * 0.2)
+    front = prism_xy([(-f, y0), (f, y0 + rise * 0.5), (f, y0 + rise * 0.5 + band), (-f, y0 + band)], h, h + s)
+    side = prism_zy([(f, y0 + rise * 0.5), (-f, y0 + rise), (-f, y0 + rise + band), (f, y0 + rise * 0.5 + band)], h, h + s)
+    # The mix: a thin cobalt stripe along the band's lower edge keeps the old identity colour on the aqua.
+    stripe = prism_xy([(-f, y0 - 0.1), (f, y0 + rise * 0.5 - 0.1), (f, y0 + rise * 0.5 - 0.04), (-f, y0 - 0.04)], h, h + s)
+    ink = [placed_text(number, P.COL_NUMBER_H, f - 0.04, 1.05, h, 0.03, SUPER_SLANT, max_width=2 * f - 0.08)]
+    for i, line in enumerate(lines):
+        ink.append(placed_text(line, P.COL_TEXT_H, f - 0.04, 0.85 - i * 0.11, h, max_width=2 * f - 0.08))
+    ob = part('Kit_Column_Graphic' + ('_Tall' if tall else ''),
+              join(paint(body, 0), paint(front, 1), paint(side, 3), paint(stripe, 4), paint(join(*ink), 2)),
+              [M_WALL, M_AQUA, M_TRIM, M_MIST, M_COBALT], smooth=30)
+    collider(ob, 'box')
+
+
+def workstation_bench():
+    """Back-to-back workstation bench: two 1.2 m desks a side, a 1.15 m divider (crouch-cover height), four
+    monitors, keyboards and two drawer pedestals; silver end panels. Pivot bottom centre. Box collider.
+    """
+    L, D, H = P.BENCH_L, P.BENCH_D, P.DESK_H
+    white = [u(-L / 2, L / 2, H - 0.03, H, -D / 2, -0.02), u(-L / 2, L / 2, H - 0.03, H, 0.02, D / 2)]
+    frost = u(-L / 2 + 0.04, L / 2 - 0.04, H, P.SCREEN_TOP, -0.015, 0.015)   # aqua pearl divider (the mix)
+    silver = [u(-L / 2, -L / 2 + 0.04, 0, H - 0.03, -D / 2 + 0.05, D / 2 - 0.05),
+              u(L / 2 - 0.04, L / 2, 0, H - 0.03, -D / 2 + 0.05, D / 2 - 0.05)]
+    dark = []
+    for side in (1, -1):
+        zc = side * 0.3
+        for x in (-0.6, 0.6):
+            # Silver flat panel with a dark screen face toward the user (+side), a silver foot, a pale keyboard.
+            silver.append(u(x - P.MONITOR_W / 2, x + P.MONITOR_W / 2, H + 0.12, H + 0.12 + P.MONITOR_H, zc - 0.015, zc + 0.015))
+            fz = zc + side * 0.015
+            dark.append(u(x - P.MONITOR_W / 2 + 0.02, x + P.MONITOR_W / 2 - 0.02, H + 0.14, H + 0.10 + P.MONITOR_H,
+                          min(fz, fz + side * 0.002), max(fz, fz + side * 0.002)))
+            silver.append(u(x - 0.03, x + 0.03, H, H + 0.14, zc - 0.01 - side * 0.03, zc + 0.01 - side * 0.03))
+            silver.append(u(x - 0.12, x + 0.12, H, H + 0.012, zc - 0.09, zc + 0.09))   # foot
+            white.append(u(x - 0.22, x + 0.22, H, H + 0.015, side * 0.55 - 0.07, side * 0.55 + 0.07))   # keyboard
+        xc = side * 0.85
+        z_out = side * (D / 2 - 0.02)
+        white.append(u(xc - P.PED_W / 2, xc + P.PED_W / 2, 0.02, P.PED_H, min(z_out, z_out - side * P.PED_D),
+                       max(z_out, z_out - side * P.PED_D)))
+    w = join(*white)
+    bevel(w, 0.006, segments=2, angle=45)
+    ob = part('Kit_Workstation_Bench', join(paint(w, 0), paint(join(*silver), 1), paint(join(*dark), 2), paint(frost, 3)),
+              [M_WALL, M_FRAME, M_TRIM, M_FROST], smooth=30)
+    expect(ob, size=(L, D, H + 0.12 + P.MONITOR_H), tol=0.002)
+    collider(ob, 'box')
+
+
+def chair_task():
+    """An office task chair: navy seat and back on a silver gas stem and five-star base. Faces +Z.
+    Pivot bottom centre. Hull collider (a loose prop for the props lane)."""
+    seat = u(-0.24, 0.24, P.TASK_SEAT - 0.07, P.TASK_SEAT, -0.23, 0.23)
+    back = u(-0.23, 0.23, P.TASK_SEAT + 0.05, P.TASK_SEAT + 0.6, -0.26, -0.2)
+    shell = join(seat, back)
+    bevel(shell, 0.02, segments=3, angle=45)
+    stem = cylinder(0.025, P.TASK_SEAT - 0.15, segments=10, base='bottom')
+    move(stem, 0, 0, 0.08)
+    legs = []
+    for k in range(5):
+        leg = u(0, 0.32, 0.05, 0.08, -0.02, 0.02)
+        rotate(leg, 72.0 * k, axis='Z')
+        legs.append(leg)
+    ob = part('Kit_Chair_Task', join(paint(shell, 0), paint(join(stem, *legs), 1)), [M_TRIM, M_FRAME], smooth=30)
+    collider(ob, 'hull')
+
+
+def storage_low():
+    """A 1 m-high run of white storage cabinets, four doors with navy shadow joints. Front faces +Z.
+    Pivot bottom centre. Box collider (crouch-height cover)."""
+    L, D, H = P.STORE_L, P.STORE_D, P.STORE_H
+    body = u(-L / 2, L / 2, 0, H, -D / 2, D / 2)
+    bevel(body, 0.01, segments=2, angle=45)
+    joints = join(*[u(x - 0.003, x + 0.003, 0.05, H - 0.05, D / 2 - 0.006, D / 2 + 0.01) for x in (-L / 4, 0.0, L / 4)])
+    ob = part('Kit_Storage_Low', recessed(body, joints), [M_WALL, M_TRIM], smooth=30)
+    expect(ob, size=(L, D, H), tol=0.002)
+    collider(ob, 'box')
+
+
+def copier():
+    """The photocopier the art bible asks for: a pale body with paper-tray joints, a dark lid and a silver
+    control panel. Front faces +Z. Pivot bottom centre. Box collider."""
+    W, D, H = P.COPIER_W, P.COPIER_D, P.COPIER_H
+    body_h = H - 0.1
+    body = u(-W / 2, W / 2, 0, body_h, -D / 2, D / 2)
+    bevel(body, 0.015, segments=2, angle=45)
+    trays = join(*[u(-W / 2 + 0.03, W / 2 - 0.03, y - 0.003, y + 0.003, D / 2 - 0.006, D / 2 + 0.01) for y in (0.22, 0.42, 0.62)])
+    body = recessed(body, trays)
+    lid = u(-W / 2 + 0.02, W / 2 - 0.02, body_h, H, -D / 2 + 0.02, D / 2 - 0.16)
+    panel = u(-W / 2 + 0.05, W / 2 - 0.05, body_h, body_h + 0.05, D / 2 - 0.15, D / 2 - 0.02)
+    ob = part('Kit_Copier', join(body, paint(lid, 1), paint(panel, 2)), [M_WALL, M_TRIM, M_FRAME], smooth=30)
+    collider(ob, 'box')
+
+
+def ring_logo(cx, cy, z_face, diameter):
+    """The AONAGI mark: an open aqua ring with a red hanko dot in its lower-right gap (Japanese_Aero/README.md).
+    Returns (ring, dot) bmeshes standing on a face at z_face, centred at Unity (cx, cy)."""
+    r_out, stroke = diameter / 2, diameter * 0.07
+    pts_o, pts_i = [], []
+    a0, a1, n = math.radians(-60), math.radians(260), 40   # open between -100 and -60 degrees (lower right)
+    for i in range(n + 1):
+        a = a0 + (a1 - a0) * i / n
+        pts_o.append((cx + r_out * math.cos(a), cy + r_out * math.sin(a)))
+        pts_i.append((cx + (r_out - stroke) * math.cos(a), cy + (r_out - stroke) * math.sin(a)))
+    ring = prism_xy(pts_o + list(reversed(pts_i)), z_face, z_face + P.INK_T)
+    da = math.radians(-80)
+    dot_c = (cx + (r_out - stroke / 2) * math.cos(da), cy + (r_out - stroke / 2) * math.sin(da))
+    dot = prism_xy([(dot_c[0] + diameter * 0.065 * math.cos(2 * math.pi * k / 16), dot_c[1] + diameter * 0.065 * math.sin(2 * math.pi * k / 16))
+                    for k in range(16)], z_face, z_face + P.INK_T)
+    return ring, dot
+
+
+def desk_reception():
+    """The AONAGI reception desk: pearl body with the company name in Japanese and English, the ring logo with
+    its red hanko dot, and an aqua end block (the Japanese corporate mix). Front faces +Z. Pivot bottom centre.
+    Box collider."""
+    L, D, H = P.RECEPTION_L, P.RECEPTION_D, P.RECEPTION_H
+    end = 0.5   # aqua end block length, metres
+    body = u(-L / 2, L / 2 - end, 0, H, -D / 2, D / 2)
+    bevel(body, 0.012, segments=2, angle=45)
+    block = u(L / 2 - end, L / 2, 0, H, -D / 2, D / 2)
+    bevel(block, 0.012, segments=2, angle=45)
+    x0 = L / 2 - end - 0.75
+    ink = join(placed_text(COMPANY_JA, 0.14, x0, 0.6, D / 2), placed_text(COMPANY_EN, 0.035, x0, 0.47, D / 2))
+    ring, dot = ring_logo(x0 + 0.33, 0.62, D / 2, 0.36)
+    ob = part('Kit_Desk_Reception', join(paint(body, 0), paint(block, 1), paint(ring, 1), paint(ink, 2), paint(dot, 3)),
+              [M_WALL, M_AQUA, M_TRIM, M_SEAL], smooth=30)
+    collider(ob, 'box')
+
+
+def guard_rail(width):
+    """Mezzanine balustrade as in the plates: clear glass between slim silver posts, with a silver handrail at
+    1.1 m. Runs +X from the pivot on the slab edge, sitting just inside it (-Z). Box collider over the frame."""
+    t, pr = P.RAIL_POST, P.RAIL_TOP
+    posts = [u(x - t / 2, x + t / 2, 0, P.GUARD_H, -0.05, -0.01) for x in (t / 2 + 0.02, width / 2, width - t / 2 - 0.02)]
+    rail = u(0, width, P.GUARD_H - 0.01, P.GUARD_H - 0.01 + pr, -0.055, -0.005)
+    frame = part(f'Kit_Guard_Rail_{width:g}m_Frame', join(*posts, rail), M_FRAME, smooth=None)
+    glass = part(f'Kit_Guard_Rail_{width:g}m_Glass', u(0.02, width - 0.02, 0.04, P.GUARD_H - 0.01, -0.04, -0.02),
+                 M_GLASS, smooth=None)
+    collider(frame, 'box')
+    group(f'Kit_Guard_Rail_{width:g}m', frame, glass)
+
+
+def partition_header(width):
+    """A glass meeting-room wall with a solid white header band from the 2.5 m top rail to the soffit, as in
+    Alex's curved meeting room concept. Same rails and pivot as Partition_Glass. Box collider, full height."""
+    zc = -P.PART_T * 0.5
+    frame = join(paint(u(0, width, 0, P.PART_RAIL, -P.PART_T, 0), 1),
+                 paint(u(0, width, P.PART_H - P.PART_RAIL, P.PART_H, -P.PART_T, 0), 1),
+                 paint(u(0, width, P.PART_H, CLEAR_H, -P.PART_T, 0), 0))
+    fr = part(f'Kit_Partition_Header_{width:g}m_Frame', frame, [M_WALL, M_RAIL], smooth=None)
+    glass = part(f'Kit_Partition_Header_{width:g}m_Glass',
+                 u(0, width, P.PART_RAIL, P.PART_H - P.PART_RAIL, zc - P.GLASS_T / 2, zc + P.GLASS_T / 2), M_GLASS, smooth=None)
+    collider(fr, 'box')
+    expect(fr, size=(width, P.PART_T, CLEAR_H))
+    group(f'Kit_Partition_Header_{width:g}m', fr, glass)
+
+
+def partition_header_curve():
+    """The curved corner of a header-band glass room in a 2 x 2 m cell (Alex's concept, version A): glass bent
+    round a 1.5 m radius, navy rails, white header band to the soffit. Snap ends as Wall_Return_2x2 (running +X
+    from (2, 0) and -Z from (0, -2)); the convex side faces outward. Box/hull colliders per segment.
+    """
+    R, L, T = P.HEADER_R, P.INFILL, P.PART_T
+    n = P.ARC_SEGMENTS
+
+    def arc_pt(t):
+        a = t * math.pi * 0.5
+        return R - R * math.sin(a), -R + R * math.cos(a), math.sin(a), -math.cos(a)
+
+    per = n // P.ARC_COLLIDERS
+    segs = [('LegX', [(L, 0, 0, -1), (R, 0, 0, -1)])]
+    segs += [(f'Arc{c + 1}', [arc_pt((c * per + i) / n) for i in range(per + 1)]) for c in range(P.ARC_COLLIDERS)]
+    segs.append(('LegZ', [(0, -R, 1, 0), (0, -L, 1, 0)]))
+    parts = []
+    for name, path in segs:
+        frame = join(paint(sweep_box(path, 0, T, 0, P.PART_RAIL), 1),
+                     paint(sweep_box(path, 0, T, P.PART_H - P.PART_RAIL, P.PART_H), 1),
+                     paint(sweep_box(path, 0, T, P.PART_H, CLEAR_H), 0))
+        ob = part(f'Kit_Partition_Header_Curve_2x2_{name}', frame, [M_WALL, M_RAIL], smooth=30)
+        collider(ob, 'box' if name.startswith('Leg') else 'hull')
+        parts.append(ob)
+    full = [(L, 0, 0, -1)] + [arc_pt(i / n) for i in range(n + 1)] + [(0, -L, 1, 0)]
+    g0, g1 = T / 2 - P.GLASS_T / 2, T / 2 + P.GLASS_T / 2
+    glass = part('Kit_Partition_Header_Curve_2x2_Glass', sweep_box(full, g0, g1, P.PART_RAIL, P.PART_H - P.PART_RAIL),
+                 M_GLASS, smooth=30)
+    group('Kit_Partition_Header_Curve_2x2', *parts, glass)
+
+
+def light_pendant():
+    """A linear pendant light: a slim white bar with a glowing underside, hung 0.8 m below the soffit on two
+    wires. Pivot top centre, against the soffit. Visual only: no collider."""
+    L, W, H, drop = P.PENDANT_L, P.PENDANT_W, P.PENDANT_H, P.PENDANT_DROP
+    eps = 0.005
+    bar = recessed(u(-L / 2, L / 2, -drop - H, -drop, -W / 2, W / 2),
+                   u(-L / 2 + 0.02, L / 2 - 0.02, -drop - H - eps, -drop - H + 0.01, -W / 2 + 0.012, W / 2 - 0.012))
+    wires = join(*[u(x - 0.003, x + 0.003, -drop, 0, -0.003, 0.003) for x in (-L / 2 + 0.25, L / 2 - 0.25)])
+    ob = part('Kit_Light_Pendant_Linear', join(bar, paint(wires, 2)), [M_WALL, M_LIGHT, M_FRAME], smooth=None)
+    expect(ob, size=(L, W, drop + H), tol=0.002)
+
+
+def carpet_overlay():
+    """A 4 x 4 m dark carpet layer, 8 mm thick, laid on a slab's polished top to mark a work area. Pivot as
+    the slab's (front-left, floor level). Visual only: no collider (8 mm is below anything a capsule notices)."""
+    bm = u(0, P.BAY, 0, P.OVERLAY_T, -P.BAY, 0)
+    bevel(bm, 0.003, segments=1, angle=45)
+    ob = part('Kit_Carpet_Overlay_4x4', bm, M_CARPET, smooth=None)
+    expect(ob, size=(P.BAY, P.BAY, P.OVERLAY_T), tol=0.001)
+
+
+def ceiling_grid():
+    """A 4 x 4 m tiled ceiling panel hung flush under a slab's soffit over a work area (the plates' tile grid).
+    Pivot at its top front-left corner: place it at the soffit. Visual only: no collider."""
+    ob = part('Kit_Ceiling_Grid_4x4', u(0, P.BAY, -P.OVERLAY_T, 0, -P.BAY, 0), M_GRID, smooth=None)
+    expect(ob, size=(P.BAY, P.BAY, P.OVERLAY_T))
+
+
+def planter_box():
+    """A white box planter with simple leafy blades, as in the plates (Alex's call, against the bible's
+    no-plants rule). Pivot bottom centre. Box collider on the planter only; the leaves are visual."""
+    import random
+    L, W, H = P.PLANTER_L, P.PLANTER_W, P.PLANTER_H
+    pot = u(-L / 2, L / 2, 0, H, -W / 2, W / 2)
+    bevel(pot, 0.02, segments=2, angle=45)
+    pot = recessed(pot, u(-L / 2 + 0.04, L / 2 - 0.04, H - 0.04, H + 0.01, -W / 2 + 0.04, W / 2 - 0.04))
+    pot_ob = part('Kit_Planter_Box_Pot', pot, [M_WALL, M_TRIM], smooth=30)
+    collider(pot_ob, 'box')
+    rng = random.Random(3)   # fixed seed: the same planter every build
+    leaves = []
+    for k in range(P.LEAVES):
+        size = rng.uniform(0.45, 0.75)
+        leaf = prism_xy([(0, 0), (0.07, size * 0.5), (0, size), (-0.07, size * 0.5)], -0.003, 0.003)
+        rotate(leaf, rng.uniform(15, 40), axis='X')
+        rotate(leaf, 360.0 * k / P.LEAVES + rng.uniform(-12, 12), axis='Z')
+        move(leaf, -rng.uniform(-L / 2 + 0.12, L / 2 - 0.12), -rng.uniform(-W / 2 + 0.08, W / 2 - 0.08), H - 0.04)
+        leaves.append(leaf)
+    leaf_ob = part('Kit_Planter_Box_Leaves', join(*leaves), M_LEAF, smooth=30)
+    group('Kit_Planter_Box', pot_ob, leaf_ob)
+
+
+# ---------------------------------------------------------------- Japanese office props (the mix)
+
+def water_server():
+    """A floor water server: white body, silver tap panel, an aqua water bottle on top, and its 給水 label.
+    Faces +Z. Pivot bottom centre. Box collider."""
+    w, H = P.SERVER_W, P.SERVER_H
+    body_h = H - 0.38
+    body = u(-w / 2, w / 2, 0, body_h, -w / 2, w / 2)
+    bevel(body, 0.02, segments=2, angle=45)
+    panel = u(-0.1, 0.1, 0.75, 0.95, w / 2, w / 2 + 0.01)
+    bottle = cylinder(0.14, 0.36, segments=20, base='bottom')
+    move(bottle, 0, 0, body_h)
+    label = placed_text('給水', 0.05, 0.08, 1.0, w / 2)
+    ob = part('Kit_Water_Server', join(paint(body, 0), paint(panel, 1), paint(bottle, 2), paint(label, 3)),
+              [M_WALL, M_FRAME, M_WATER, M_TRIM], smooth=30)
+    collider(ob, 'box')
+
+
+def umbrella_stand():
+    """A silver umbrella stand with three furled umbrellas (navy, aqua, white). Pivot bottom centre. Hull collider."""
+    r, H = P.UMBRELLA_D / 2, P.UMBRELLA_H
+    can = cylinder(r, H, segments=20, base='bottom')
+    brollies = []
+    for k, (dx, dz, lean) in enumerate(((-0.04, 0.03, 6), (0.05, 0.0, -5), (0.0, -0.05, 3))):
+        b = cone(0.03, 0.012, 0.9, segments=10, base='bottom')
+        rotate(b, lean, axis='X')
+        move(b, -dx, -dz, 0.05)
+        brollies.append(paint(b, k + 1))
+    ob = part('Kit_Umbrella_Stand', join(paint(can, 0), *brollies), [M_FRAME, M_TRIM, M_AQUA, M_WALL], smooth=30)
+    collider(ob, 'hull')
+
+
+def vending_machine():
+    """A drinks vending machine: white and silver body, a glass display of drink rows (aqua, white, green, navy),
+    a glowing header panel and the 自動販売機 label. Front faces +Z. Pivot bottom centre. Box collider.
+    Stand it against an opaque wall: at 1.8 m it is full cover."""
+    W, D, H = P.VEND_W, P.VEND_D, P.VEND_H
+    # WHY panels, not a boolean: cutting the window out of the body flipped faces in the exact solver. The body is
+    # a back block plus a front frame round the window opening.
+    xl, xr, yb, yt, zf = -W / 2 + 0.06, W / 2 - 0.22, 0.75, H - 0.25, D / 2 - 0.12
+    body = join(u(-W / 2, W / 2, 0, H, -D / 2, zf),
+                u(-W / 2, W / 2, 0, yb, zf, D / 2), u(-W / 2, W / 2, yt, H, zf, D / 2),
+                u(-W / 2, xl, yb, yt, zf, D / 2), u(xr, W / 2, yb, yt, zf, D / 2))
+    glass = u(-W / 2 + 0.06, W / 2 - 0.22, 0.75, H - 0.25, D / 2 - 0.02, D / 2 - 0.01)
+    header = u(-W / 2 + 0.06, W / 2 - 0.06, H - 0.22, H - 0.06, D / 2, D / 2 + 0.01)
+    drinks, mats = [], (3, 0, 4, 5)
+    for row, y in enumerate((0.8, 1.05, 1.3)):
+        for i in range(6):
+            c = cylinder(0.03, 0.17, segments=10, base='bottom')
+            move(c, -(-W / 2 + 0.13 + i * 0.095), -(D / 2 - 0.07), y)
+            drinks.append(paint(c, mats[(i + row) % 4]))
+    slot = u(W / 2 - 0.18, W / 2 - 0.08, 0.9, 1.3, D / 2, D / 2 + 0.01)
+    label = placed_text('自動販売機', 0.05, W / 2 - 0.1, H - 0.19, D / 2 + 0.01)
+    ob = part('Kit_Vending_Machine', join(paint(body, 0), paint(glass, 6), paint(header, 2), paint(slot, 1), *drinks, paint(label, 5)),
+              [M_WALL, M_FRAME, M_LIGHT, M_AQUA, M_LEAF, M_TRIM, M_GLASS], smooth=30)
+    collider(ob, 'box')
+
+
+def slipper_cabinet():
+    """A low white slipper cabinet with open cubbies and its 室内履き label. Front faces +Z. Pivot bottom centre.
+    Box collider."""
+    W, D, H = P.SLIPPER_W, P.SLIPPER_D, P.SLIPPER_H
+    # WHY a carcass, not cut cubbies: the cubby booleans left zero-area faces. Back, sides, a plinth, a deep top
+    # rail for the label, one shelf and two dividers make six open cubbies.
+    t = 0.02
+    body = join(u(-W / 2, W / 2, 0, H, -D / 2, -D / 2 + t),
+                u(-W / 2, -W / 2 + t, 0, H, -D / 2 + t, D / 2), u(W / 2 - t, W / 2, 0, H, -D / 2 + t, D / 2),
+                u(-W / 2 + t, W / 2 - t, 0, 0.04, -D / 2 + t, D / 2), u(-W / 2 + t, W / 2 - t, H - 0.1, H, -D / 2 + t, D / 2),
+                u(-W / 2 + t, W / 2 - t, 0.32, 0.34, -D / 2 + t, D / 2),
+                *[u(x - t / 2, x + t / 2, 0.04, H - 0.1, -D / 2 + t, D / 2) for x in (-W / 6, W / 6)])
+    body = paint(body, 0)
+    label = placed_text('室内履き', 0.04, W / 2 - 0.05, H - 0.07, D / 2)
+    ob = part('Kit_Slipper_Cabinet', join(body, paint(label, 2)), [M_WALL, M_MIST, M_TRIM], smooth=30)
+    collider(ob, 'box')
+
+
+def phone_desk():
+    """A white desk phone with a silver keypad and handset. Faces +Z. Pivot bottom centre. Visual only."""
+    w, d, h = P.PHONE_W, P.PHONE_D, P.PHONE_H
+    base = prism_zy([(d / 2, 0), (d / 2, 0.035), (-d / 2, h * 0.7), (-d / 2, 0)], -w / 2, w / 2)
+    handset = u(-w / 2 + 0.01, -w / 2 + 0.06, h * 0.55, h, -d / 2 + 0.01, d / 2 - 0.02)
+    keys = u(-0.02, w / 2 - 0.02, 0.05, 0.06, -0.04, 0.06)
+    ob = part('Kit_Phone_Desk', join(paint(base, 0), paint(handset, 0), paint(keys, 1)), [M_WALL, M_FRAME], smooth=30)
+
+
+def doc_tray():
+    """A two-tier document tray in aqua frosted plastic, with a paper stack. Pivot bottom centre. Visual only."""
+    w, d, h = P.TRAY_W, P.TRAY_D, P.TRAY_H
+    tiers = []
+    for y in (0.0, h / 2):
+        tiers.append(u(-w / 2, w / 2, y, y + 0.008, -d / 2, d / 2))
+        tiers.append(u(-w / 2, -w / 2 + 0.006, y, y + h / 2 - 0.01, -d / 2, d / 2))
+        tiers.append(u(w / 2 - 0.006, w / 2, y, y + h / 2 - 0.01, -d / 2, d / 2))
+    paper = u(-w / 2 + 0.02, w / 2 - 0.02, 0.008, 0.03, -d / 2 + 0.02, d / 2 - 0.03)
+    ob = part('Kit_Doc_Tray', join(paint(join(*tiers), 0), paint(paper, 1)), [M_FROST, M_WALL], smooth=None)
+
+
+def logo_aonagi():
+    """The AONAGI wall logo: the ring with its red hanko dot, the company name in Japanese and English.
+    Hangs on a wall face like a zone sign: pivot at floor level at its low-X edge, 4 mm proud toward +Z.
+    Visual only."""
+    D = P.LOGO_D
+    ring, dot = ring_logo(1.9, 1.9, 0, D)
+    ja = placed_text(COMPANY_JA, 0.16, 1.62, 1.86, 0, max_width=1.55)
+    en = placed_text('AONAGI', 0.07, 1.62, 1.72, 0)
+    ob = part('Kit_Logo_Aonagi', join(paint(ring, 0), paint(dot, 1), paint(join(ja, en), 2)), [M_AQUA, M_SEAL, M_TRIM], smooth=None)
+
+
+def sign_led_reception():
+    """The reception's dot-matrix sign: a dark panel with glowing 受付 1F lettering, its bottom at 2.65 m.
+    Hangs on a wall like a zone sign (pivot at floor level, low-X edge; proud toward +Z). Visual only."""
+    W, H, T, y = P.LED_W, P.LED_H, P.LED_T, P.LED_Y
+    panel = u(0, W, y, y + H, 0, T)
+    bevel(panel, 0.006, segments=2, angle=45)
+    text = placed_text('受付  1F  RECEPTION', 0.09, W - 0.08, y + 0.045, T, max_width=W - 0.16)
+    ob = part('Kit_Sign_LED_Reception', join(paint(panel, 0), paint(text, 1)), [M_TRIM, M_LIGHT], smooth=None)
+
+
+def water_wall():
+    """The contained water wall (Aero; the mix): a silver-framed cassette with a translucent aqua water panel,
+    1.8 x 2.7 m, 80 mm deep. Hangs on a wall face, pivot at floor level at its low-X edge, proud toward +Z.
+    Fixed. Box collider (it stands proud of the wall, so players must not walk into it)."""
+    W, T, H = P.WATER_W, P.WATER_T, P.WATER_H
+    frame = recessed(u(0, W, 0, H, 0, T), u(0.06, W - 0.06, 0.06, H - 0.06, T - 0.03, T + 0.01))
+    water = u(0.06, W - 0.06, 0.06, H - 0.06, T - 0.04, T - 0.02)
+    ob = part('Kit_Water_Wall', join(paint(frame, 0), paint(water, 1)), [M_FRAME, M_WATER], smooth=None)
+    collider(ob, 'box')
+
+
 PIECES = {
     'Slab_4x4': lambda: slab(P.BAY, P.BAY),
     'Slab_2x4': lambda: slab(P.INFILL, P.BAY),
@@ -847,6 +1512,41 @@ PIECES = {
     'Guard_Glass_4m': lambda: guard_glass(P.BAY),
     'Guard_Glass_2m': lambda: guard_glass(P.INFILL),
     'Slab_4x4_LightLine': slab_light_line,
+    # Fix list 2026-11-13
+    'Sign_Zone_L': lambda: sign_zone('L'),
+    'Sign_Zone_R': lambda: sign_zone('R'),
+    'Sign_Zone_C': lambda: sign_zone('C'),
+    'Sign_Zone_H': lambda: sign_zone('H'),
+    'Sign_Zone_A': lambda: sign_zone('A'),
+    'Desk_Sculpt': desk_sculpt,
+    'Chair_Pod': chair_pod,
+    # Detail pass 2026-11-13
+    'Column_Graphic': lambda: column_graphic(CLEAR_H, '1F', ['< L 法務部', '  C 請求部', '  A 記録保管室', '> H 受付']),
+    'Column_Graphic_Tall': lambda: column_graphic(2 * P.FLOOR_H - P.SLAB, '2F', ['^ H 審問室', '^ R 審査部', '  会議室', 'v 受付 1F']),
+    'Workstation_Bench': workstation_bench,
+    'Chair_Task': chair_task,
+    'Storage_Low': storage_low,
+    'Copier': copier,
+    'Desk_Reception': desk_reception,
+    'Guard_Rail_4m': lambda: guard_rail(P.BAY),
+    'Guard_Rail_2m': lambda: guard_rail(P.INFILL),
+    'Partition_Header_4m': lambda: partition_header(P.BAY),
+    'Partition_Header_2m': lambda: partition_header(P.INFILL),
+    'Partition_Header_Curve_2x2': partition_header_curve,
+    'Light_Pendant_Linear': light_pendant,
+    'Carpet_Overlay_4x4': carpet_overlay,
+    'Ceiling_Grid_4x4': ceiling_grid,
+    'Planter_Box': planter_box,
+    # Japanese office props (the mix, concepts/Japanese_Aero/DECISION.md)
+    'Water_Server': water_server,
+    'Umbrella_Stand': umbrella_stand,
+    'Vending_Machine': vending_machine,
+    'Slipper_Cabinet': slipper_cabinet,
+    'Phone_Desk': phone_desk,
+    'Doc_Tray': doc_tray,
+    'Logo_Aonagi': logo_aonagi,
+    'Sign_LED_Reception': sign_led_reception,
+    'Water_Wall': water_wall,
 }
 
 if P.PIECE not in PIECES:

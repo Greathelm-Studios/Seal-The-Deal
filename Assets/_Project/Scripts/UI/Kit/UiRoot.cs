@@ -1,3 +1,4 @@
+using CloseTheDeal.Net;
 using UnityEngine;
 
 namespace CloseTheDeal.UI
@@ -20,9 +21,15 @@ namespace CloseTheDeal.UI
         [SerializeField] UiScreenStack _stack;
         [Tooltip("The first screen: the title and main menu.")]
         [SerializeField] TitleScreen _title;
+        [Tooltip("Hosting, joining and loading: the wait, with Cancel. Opens over the title while the lobby is busy.")]
+        [SerializeField] SessionPanel _session;
+        [Tooltip("What went wrong and how to fix it. Opens over the title when the lobby reports a problem.")]
+        [SerializeField] ProblemPanel _problem;
 
         bool _repeatApplied;
         bool _started;
+        bool _brokenDismissed;
+        bool _enteringGame;
 
         void Awake()
         {
@@ -31,6 +38,14 @@ namespace CloseTheDeal.UI
                 _menu = FindAnyObjectByType<GameMenu>();
             if (_title != null)
                 _title.Bind(_menu);
+            SteamLobby lobby = _menu != null ? _menu.Lobby : null;
+            if (_session != null)
+                _session.Bind(lobby, _title);
+            if (_problem != null)
+            {
+                _problem.Bind(lobby, _title);
+                _problem.Dismissed += () => _brokenDismissed = true;
+            }
         }
 
         public UiScreenStack Stack => _stack;
@@ -46,6 +61,7 @@ namespace CloseTheDeal.UI
             }
 
             _menu.StateChanged += Sync;
+            _stack.Changed += Sync;
             _menu.HandTitleToKit(true);
             if (_started)
                 Sync();
@@ -67,6 +83,7 @@ namespace CloseTheDeal.UI
             if (_menu == null)
                 return;
             _menu.StateChanged -= Sync;
+            _stack.Changed -= Sync;
             _menu.HandTitleToKit(false);
         }
 
@@ -81,22 +98,87 @@ namespace CloseTheDeal.UI
             }
 
             // A click on empty paper drops focus; the next key or pad press puts it back on the top screen.
-            if (_stack.Count > 0 && UiInput.UsingKeysOrPad && !UiInput.Capturing
+            bool ours = _menu == null || (_menu.OutOfGame && !_enteringGame); // during the zoom into a game, input is the game's
+            if (ours && _stack.Count > 0 && UiInput.UsingKeysOrPad && !UiInput.Capturing
                 && UnityEngine.EventSystems.EventSystem.current != null
                 && UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject == null)
                 _stack.Top.Refocus();
 
-            if (_stack.Count > 0 && UiInput.CancelPressed && !UiInput.Capturing)
+            if (ours && _stack.Count > 0 && UiInput.CancelPressed && !UiInput.Capturing)
                 _stack.Cancel();
         }
 
+        public SessionPanel Session => _session;
+
+        public ProblemPanel Problem => _problem;
+
+        /// <summary>
+        /// Keeps the screens in step with the game menu and the lobby. Out of a game: the title, with the session
+        /// panel over it while the lobby is busy and the problem panel when it reports one (a problem persists in
+        /// the lobby, so this lands on Title then Problem whatever order the events come in). Into a game: the
+        /// window closes over the view (lane 8's frame zoom) and the screens clear under it. Runs on the menu's and
+        /// the stack's events, never per frame.
+        /// </summary>
         void Sync()
         {
-            bool atTitle = _menu.AtTitle;
-            if (atTitle && _stack.Count == 0)
+            if (!_menu.OutOfGame)
+            {
+                EnterGame();
+                return;
+            }
+
+            _enteringGame = false;
+            if (_stack.Count == 0)
                 _stack.Push(_title);
-            else if (!atTitle && _stack.Count > 0)
+            UiScreen want = Wanted();
+            UiScreen top = _stack.Top;
+            if (top == want)
+                return;
+            bool ours = top == _session || top == _problem;
+            if (want == null)
+            {
+                if (ours)
+                    _stack.Pop(!(top == _session && _session.Cancelled)); // a cancel already played Back
+                return;
+            }
+
+            if (ours)
+                _stack.Replace(want);
+            else if (top == _title)
+                _stack.Push(want);
+            // Over Settings or the quit question the panel waits: Sync runs again when that closes.
+        }
+
+        UiScreen Wanted()
+        {
+            SteamLobby lobby = _menu.Lobby;
+            if (lobby == null)
+                return null;
+            if (lobby.IsActive)
+                return _session;
+            if (_problem != null && _problem.Closing)
+                return null;
+            bool problem = lobby.Problem != LobbyProblem.None && !(lobby.Problem == LobbyProblem.NetworkBroken && _brokenDismissed);
+            return problem ? _problem : null;
+        }
+
+        /// <summary>A player of ours is in the world: close the window over the view, then clear the screens under it.</summary>
+        void EnterGame()
+        {
+            if (_stack.Count == 0 || _enteringGame)
+                return;
+            _enteringGame = true;
+            if (UiMotion.Reduced || !isActiveAndEnabled)
+            {
                 _stack.Clear();
+                return;
+            }
+
+            CloseTheDeal.UI.Title.UiTransition.Play(CloseTheDeal.UI.Title.UiTransitionKind.FrameZoom, () =>
+            {
+                if (!_menu.OutOfGame)
+                    _stack.Clear();
+            });
         }
     }
 }

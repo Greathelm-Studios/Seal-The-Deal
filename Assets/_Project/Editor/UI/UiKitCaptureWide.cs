@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using CloseTheDeal.Net;
+using CloseTheDeal.Player;
 using CloseTheDeal.UI;
 using UnityEditor;
 using UnityEngine;
@@ -12,7 +13,8 @@ namespace CloseTheDeal.Editor.UI
 {
     /// <summary>
     /// The wide pass's capture runs, one per slice (-uiCaptureMode wide1: the edge marker and device-aware key hints;
-    /// wide2: the title on the live sky and the settings fixes).
+    /// wide2: the title on the live sky and the settings fixes; wide3: hosting, joining, loading and every problem,
+    /// with a real local host and a real failed join on this PC).
     /// Same rules as
     /// the main run: Lane_Integration in Play Mode, headless with graphics, PASS / FAIL lines and a sound log.
     /// </summary>
@@ -30,17 +32,22 @@ namespace CloseTheDeal.Editor.UI
             switch (mode)
             {
                 case "wide1":
+                    _root.enabled = false; // the marker sheets clear the screens; the root would put the title back
                     yield return EdgeMarkers();
                     yield return KeyHintDevices();
                     yield return WideClip1();
+                    _root.enabled = true;
                     break;
                 case "wide2":
                     yield return TitleLiveSky();
                     yield return SettingsFixes();
                     yield return WideClip2();
                     break;
+                case "wide3":
+                    yield return SessionScreens(lobby);
+                    break;
                 default:
-                    yield return WideMore(mode, lobby);
+                    Fail("no capture script for mode " + mode);
                     break;
             }
 
@@ -365,10 +372,203 @@ namespace CloseTheDeal.Editor.UI
             Note($"clip_wide2: {_frame} frames at 30 fps");
         }
 
-        static IEnumerator WideMore(string mode, SteamLobby lobby)
+        // ---- Slice 3: hosting, joining, loading, problems ------------------------------------------------------
+
+        static IEnumerator SessionScreens(SteamLobby lobby)
         {
-            Fail("no capture script for mode " + mode);
-            yield break;
+            ushort port = ushort.TryParse(Arg("-lanePort"), out ushort p) ? p : (ushort)17785;
+            var tugboat = Object.FindAnyObjectByType<FishNet.Transporting.Tugboat.Tugboat>();
+            if (tugboat != null)
+                tugboat.SetPort(port);
+            Note($"local test port {port}, local mode {lobby.LocalMode}, Steam ready {SteamService.IsReady}");
+            UiSoundPlayer.IgnoreFocus = true;
+            GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
+            string folder = Path.Combine(_out, "clip_wide3");
+            Directory.CreateDirectory(folder);
+            _frame = 0;
+            UiMotion.Paused = false;
+            for (int i = 0; i < 10; i++)
+                yield return null;
+            UiMotion.Paused = true;
+            TitleScreen title = _root.Title;
+            Settle(0.6f);
+            Shot("13_title_local_1080", 1920, 1080);
+            Shot("13_title_local_720", 1280, 720);
+            Shot("13_title_local_2560x1080", 2560, 1080);
+            Check("offline: in local mode without Steam the title says friends can't join and how to fix it",
+                Find<TMPro.TMP_Text>(title, "JoinHint").gameObject.activeSelf && Find<TMPro.TMP_Text>(title, "JoinHint").text.StartsWith("Steam is not running"));
+            UiMotion.Paused = true;
+            yield return MarkerSideSwitch(folder);
+            UiMotion.Paused = false;
+
+            // 1. A join to a port where something takes the packets but never answers (a silent UDP socket): the
+            // client really waits, so the connecting state, its clock and Cancel can be seen; then the problem.
+            ushort silentPort = (ushort)(port + 1);
+            var silent = new System.Net.Sockets.UdpClient(silentPort);
+            tugboat?.SetPort(silentPort);
+            int sound0 = Sounds.Count;
+            lobby.JoinLocal();
+            yield return Until(() => _root.Stack.Top == _root.Session);
+            Check("joining: the session panel opens over the title", _root.Stack.Top == _root.Session, lobby.Stage.ToString());
+            Film(folder, 0.6f);
+            UiMotion.Paused = true;
+            Settle(0.1f);
+            Shot("13_session_joining_1080", 1920, 1080);
+            Shot("13_session_joining_720", 1280, 720);
+            Shot("13_session_joining_2560x1080", 2560, 1080);
+            CheckInside(_root.Session.transform, 1280, 720, "session panel at 1280x720");
+            CheckInside(_root.Session.transform, 2560, 1080, "session panel at 2560x1080");
+            UiMotion.Paused = false;
+            Note($"stage while joining: {lobby.Stage}, status '{lobby.StatusText}', {lobby.ConnectElapsed:0.0} s of {lobby.ConnectTimeout:0} s");
+            yield return 3f;
+            UiMotion.Paused = true;
+            Settle(0.1f);
+            Shot("13_session_joining_3s_1080", 1920, 1080);
+            UiMotion.Paused = false;
+            Check("joining: after 3 s the track is filling at the real rate", lobby.Stage == LobbyStage.Connecting && lobby.ConnectElapsed > 2.5f,
+                $"{lobby.Stage}, {lobby.ConnectElapsed:0.0} s");
+            float waitUntil = Time.realtimeSinceStartup + 25f;
+            yield return Until(() => lobby.Problem != LobbyProblem.None || !lobby.IsActive || Time.realtimeSinceStartup > waitUntil);
+            yield return 0.6f;
+            Check("failure: a join with no host ends on the problem panel, with Try again usable",
+                _root.Stack.Top == _root.Problem && lobby.Problem == LobbyProblem.Unreachable && Find<UiButton>(_root.Problem, "Fix").interactable,
+                $"problem {lobby.Problem}, top {(_root.Stack.Top != null ? _root.Stack.Top.name : "none")}, status '{lobby.StatusText}'");
+            Check("the problem arrived with the Error sound", Sounds.GetRange(sound0, Sounds.Count - sound0).Exists(x => x.EndsWith(" Error")),
+                string.Join(",", Sounds.GetRange(sound0, Sounds.Count - sound0)));
+            UiMotion.Paused = true;
+            Settle(0.4f);
+            Shot("13_problem_unreachable_1080", 1920, 1080);
+            Shot("13_problem_unreachable_720", 1280, 720);
+            Shot("13_problem_unreachable_2560x1080", 2560, 1080);
+            CheckInside(_root.Problem.transform, 1280, 720, "problem panel at 1280x720");
+            UiMotion.Paused = false;
+            Film(folder, 0.8f);
+
+            // 2. Back (Esc) forgets it: the title, its status, no panel.
+            _root.Stack.Cancel();
+            yield return 0.6f;
+            Check("Back on a problem returns to the title and forgets the problem",
+                _root.Stack.Top == title && lobby.Problem == LobbyProblem.None, $"top {_root.Stack.Top?.name}");
+            Film(folder, 0.6f);
+
+            // 3. Cancel while connecting: the lobby stops, the title says so, no problem.
+            lobby.JoinLocal();
+            yield return Until(() => _root.Stack.Top == _root.Session);
+            yield return 1f;
+            Film(folder, 0.5f);
+            _root.Stack.Cancel();
+            yield return 0.6f;
+            Check("edge: Cancel (Esc) while connecting stops the join and lands on the title with no problem",
+                !lobby.IsActive && _root.Stack.Top == title && lobby.Problem == LobbyProblem.None && lobby.StatusText == "You left the game.",
+                $"active {lobby.IsActive}, top {_root.Stack.Top?.name}, status '{lobby.StatusText}'");
+            Film(folder, 0.6f);
+            silent.Close();
+            tugboat?.SetPort(port);
+
+            // 4. Host: the session panel says hosting, then the window closes over the view and the game starts.
+            bool sawSession = false;
+            System.Action watch = () => sawSession |= _root.Stack.Top == _root.Session;
+            _root.Stack.Changed += watch;
+            Find<UiButton>(title, "HostGame").Activate();
+            yield return null;
+            Check("this run is the host (not a client of someone else's game)", lobby.IsHosting);
+            FilmTransition(folder, CloseTheDeal.UI.Title.UiTransitionKind.FrameZoom);
+            Film(folder, 0.4f);
+            yield return Until(() => PlayerMotor.Local != null);
+            Film(folder, 1.2f);
+            yield return 0.6f;
+            _root.Stack.Changed -= watch;
+            Check("hosting: the session panel showed, then the screens cleared for the game (window zoom)",
+                sawSession && _root.Stack.Count == 0 && !menu.OutOfGame, $"saw session {sawSession}, stack {_root.Stack.Count}");
+            Check("in a game the kit is out of the way and the player is ours", !menu.OutOfGame && PlayerMotor.Local != null && _root.Stack.Count == 0);
+            lobby.Leave();
+            yield return 1.2f;
+            Check("leaving brings the title back with 'You left the game.' and no problem panel",
+                _root.Stack.Top == title && lobby.Problem == LobbyProblem.None, $"top {_root.Stack.Top?.name}");
+            Film(folder, 0.8f);
+            Note($"clip_wide3: {_frame} frames at 30 fps");
+
+            yield return ProblemSheet(lobby);
+            yield return SoundProof(UiSoundEvent.PanelOpen, UiSoundEvent.PanelClose, UiSoundEvent.Error, UiSoundEvent.Back, UiSoundEvent.Confirm, UiSoundEvent.Select);
+            UiSoundPlayer.IgnoreFocus = false;
+        }
+
+        /// <summary>
+        /// Films lane 8's transition through its own preview path onto the capture camera (the live overlay draws on an
+        /// overlay canvas the capture camera can't see). The game view behind it isn't in the capture.
+        /// </summary>
+        static void FilmTransition(string folder, CloseTheDeal.UI.Title.UiTransitionKind kind)
+        {
+            float length = CloseTheDeal.UI.Title.UiTransition.Duration(kind);
+            for (float t = 0f; t <= length; t += Step)
+            {
+                CloseTheDeal.UI.Title.UiTransition.Preview(kind, t / length, _cam);
+                Texture2D tex = Grab(1280, 720);
+                File.WriteAllBytes(Path.Combine(folder, $"c{_frame++:0000}.png"), tex.EncodeToPNG());
+                Object.DestroyImmediate(tex);
+            }
+
+            CloseTheDeal.UI.Title.UiTransition.ClearPreview();
+        }
+
+        /// <summary>A target crossing behind you: the mark slides round the bottom edge to the other side, not a jump.</summary>
+        static IEnumerator MarkerSideSwitch(string folder)
+        {
+            var marker = NewMarker("SideSwitch", UiMarkKind.Rival);
+            Resize(1280, 720);
+            Vector2 size = ((RectTransform)_root.transform).rect.size;
+            Vector2 c = size * 0.5f;
+            marker.Place(new Vector2(-500f, c.y), true, 20f);
+            Settle(0.3f);
+            marker.Place(new Vector2(-500f, c.y), true, 20f);
+            marker.Place(new Vector2(size.x + 500f, c.y), false, 20f); // now behind, on the right
+            Vector2 first = marker.MarkPosition;
+            Check("marker: a side flip starts a slide instead of jumping across", first.x < c.x, $"first frame at {first}");
+            Film(folder, 0.3f, _ => marker.Place(new Vector2(size.x + 500f, c.y), false, 20f));
+            Check("marker: the slide lands on the new side within 150 ms", Mathf.Abs(marker.MarkPosition.x - (size.x - 48f)) < 1f, $"at {marker.MarkPosition}");
+            Object.DestroyImmediate(marker.gameObject);
+            Markers.Clear();
+            yield return null;
+        }
+
+        /// <summary>
+        /// Every problem the lobby can report, drawn by the real panel. Only Unreachable happens on one PC without
+        /// Steam; the others are filled in by the panel's own Show(problem) for the sheet and say so.
+        /// </summary>
+        static IEnumerator ProblemSheet(SteamLobby lobby)
+        {
+            UiMotion.Paused = true;
+            _root.enabled = false; // the root would close a panel the lobby isn't asking for; the sheet drives it by hand
+            _root.Stack.Push(_root.Problem);
+            Settle(1f);
+            var problems = (LobbyProblem[])System.Enum.GetValues(typeof(LobbyProblem));
+            const int cellW = 1000, cellH = 240;
+            var sheet = new Texture2D(cellW * 2, cellH * ((problems.Length) / 2), TextureFormat.RGB24, false);
+            int n = 0;
+            foreach (LobbyProblem problem in problems)
+            {
+                if (problem == LobbyProblem.None)
+                    continue;
+                _root.Problem.Show(problem);
+                Settle(0.2f);
+                Texture2D frame = Grab(1920, 1080);
+                int col = n % 2, row = n / 2;
+                Blit(frame, sheet, new RectInt(824, 1080 - 980, cellW, cellH), col * cellW, sheet.height - (row + 1) * cellH, cellW, cellH);
+                Object.DestroyImmediate(frame);
+                string headline = Find<TMPro.TMP_Text>(_root.Problem, "Headline").text;
+                UiButton fix = Find<UiButton>(_root.Problem, "Fix");
+                Note($"problem {problem}: '{headline}' fix '{(fix.gameObject.activeSelf ? fix.Fx.Label.text : "none")}' usable {fix.interactable}");
+                n++;
+            }
+
+            File.WriteAllBytes(Path.Combine(_out, "13_states_problems.png"), sheet.EncodeToPNG());
+            Object.DestroyImmediate(sheet);
+            Note("wrote 13_states_problems.png (every LobbyProblem, two per row, in enum order)");
+            Check("every problem has a headline and a way forward", n == problems.Length - 1);
+            _root.Stack.Pop();
+            _root.enabled = true;
+            Settle(1f);
+            yield return null;
         }
     }
 }

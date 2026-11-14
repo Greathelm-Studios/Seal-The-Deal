@@ -74,6 +74,9 @@ namespace CloseTheDeal.UI
         UiTween _flash;
         bool _visible;
         bool _onEdge;
+        Vector2 _edgeDir = Vector2.down;
+        UiTween _switch;
+        float _switchFrom, _switchTo;
         int _shownMetres = int.MinValue;
         UiMarkKind _kind = (UiMarkKind)(-1);
 
@@ -107,6 +110,7 @@ namespace CloseTheDeal.UI
             _area = (RectTransform)transform;
             _fade.Snap(0f);
             _flash.Snap(0f);
+            _switch.Snap(1f);
             _group.alpha = 0f;
             if (_kind < 0)
                 Kind = UiMarkKind.Ours;
@@ -140,11 +144,20 @@ namespace CloseTheDeal.UI
             bool inside = canvasPoint.x >= min.x && canvasPoint.x <= max.x && canvasPoint.y >= min.y && canvasPoint.y <= max.y;
             bool inView = inFront && inside;
 
-            Vector2 at = inView ? canvasPoint : EdgePoint(canvasPoint, size * 0.5f, max - size * 0.5f);
-            _body.anchoredPosition = at;
+            Vector2 centre = size * 0.5f;
+            Vector2 half = max - centre;
+            Vector2 dir = inView ? Vector2.up : Direction(canvasPoint, centre);
+            bool wasOnEdge = _onEdge;
             _onEdge = !inView;
+            if (_onEdge && wasOnEdge && _visible && !inFront)
+                dir = SideSwitch(dir); // it crossed behind you: slide round the bottom, the way you'd turn
+            else
+                _switch.Snap(1f);
+            _edgeDir = dir;
+            Vector2 at = inView ? canvasPoint : EdgePoint(centre + dir * 100f, centre, half);
+            _body.anchoredPosition = at;
             SetVisible(!inView || _showInView);
-            PlaceCues(inView ? Vector2.up : Direction(canvasPoint, size * 0.5f), inView);
+            PlaceCues(dir, inView);
             ShowDistance(metres);
         }
 
@@ -200,6 +213,43 @@ namespace CloseTheDeal.UI
             _flash.Start(1f, 0f, _tokens.PanelIn + _tokens.ConfirmTick, _tokens.EaseOut);
             UiMotion.Wake(this);
         }
+
+        /// <summary>
+        /// The target crossed behind you, so its side flipped (left edge to right): instead of a jump across the
+        /// screen the mark slides round the bottom edge, the way you'd turn, in 140 ms. Reduce motion: no slide.
+        /// Returns the direction to draw this frame.
+        /// </summary>
+        Vector2 SideSwitch(Vector2 dir)
+        {
+            float to = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+            if (_switch.Running)
+            {
+                _switchTo = to;
+                return AngleDir(SwitchAngle(_switch.Value));
+            }
+
+            float from = Mathf.Atan2(_edgeDir.y, _edgeDir.x) * Mathf.Rad2Deg;
+            if (Mathf.Abs(Mathf.DeltaAngle(from, to)) < 100f || UiMotion.Reduced || _tokens == null)
+                return dir;
+            _switchFrom = from;
+            _switchTo = to;
+            _switch.Start(0f, 1f, SwitchSeconds, _tokens.EaseInOut);
+            UiMotion.Wake(this);
+            return AngleDir(from);
+        }
+
+        const float SwitchSeconds = 0.14f;
+
+        /// <summary>From the old side down through straight below you (-90°) to the new side.</summary>
+        float SwitchAngle(float t)
+        {
+            if (t < 0.5f)
+                return Mathf.LerpAngle(_switchFrom, -90f, t * 2f);
+            return Mathf.LerpAngle(-90f, _switchTo, (t - 0.5f) * 2f);
+        }
+
+        static Vector2 AngleDir(float degrees) =>
+            new(Mathf.Cos(degrees * Mathf.Deg2Rad), Mathf.Sin(degrees * Mathf.Deg2Rad));
 
         /// <summary>
         /// The point on the safe rectangle's border along the line from the screen centre toward the target. A point
@@ -270,6 +320,7 @@ namespace CloseTheDeal.UI
         {
             _fade.Step(dt);
             _flash.Step(dt);
+            _switch.Step(dt);
             _group.alpha = _fade.Value;
             float f = _flash.Value;
             bool reduced = UiMotion.Reduced;
@@ -282,7 +333,7 @@ namespace CloseTheDeal.UI
             if (reduced && f > 0f)
                 _group.alpha = _fade.Value * (1f - 0.5f * f); // a dip instead of a pop
 
-            return _fade.Running || _flash.Running;
+            return _fade.Running || _flash.Running || _switch.Running;
         }
     }
 }
