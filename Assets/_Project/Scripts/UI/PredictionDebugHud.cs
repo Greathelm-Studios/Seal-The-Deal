@@ -9,7 +9,8 @@ namespace CloseTheDeal.UI
     /// Greybox readout for the local player's body: state, speed, how far the host's last
     /// correction moved it, and ping. Exists so the first network tests can tell "feels
     /// wrong" from "is wrong". Rebuilds its text at most ten times a second, and only when
-    /// a value changed.
+    /// a value changed. The player can hide it with Settings > Accessibility > Show network stats;
+    /// hidden, it reads nothing at all.
     /// </summary>
     public sealed class PredictionDebugHud : MonoBehaviour
     {
@@ -52,9 +53,38 @@ namespace CloseTheDeal.UI
 
         float _nextTime;
         Sample _shown;
+        GameObject _chip;
+
+        void OnEnable()
+        {
+            UiSettings.Changed += ApplySetting;
+            ApplySetting();
+        }
+
+        void OnDisable()
+        {
+            UiSettings.Changed -= ApplySetting;
+        }
+
+        /// <summary>The readout's backing chip is the text's parent; showing or hiding it follows the saved setting.</summary>
+        void ApplySetting()
+        {
+            if (_text == null)
+                return;
+            if (_chip == null)
+                _chip = _text.transform.parent != null ? _text.transform.parent.gameObject : _text.gameObject;
+            bool show = UiSettings.NetworkStats;
+            if (_chip.activeSelf != show)
+                _chip.SetActive(show);
+            _shown = default; // Redraw on the next refresh when it comes back.
+            _nextTime = 0f;
+        }
 
         void Update()
         {
+            if (_chip != null && !_chip.activeSelf)
+                return;
+
             if (Time.unscaledTime < _nextTime)
                 return;
             _nextTime = Time.unscaledTime + _interval;
