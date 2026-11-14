@@ -24,6 +24,7 @@ namespace CloseTheDeal.Editor.Lanes
     {
         const string ScenePath = "Assets/_Project/Scenes/Lanes/Lane_Integration.unity";
         const string ActiveKey = "TitlePlayCheck.Active", OutKey = "TitlePlayCheck.Out";
+        const string ReducedKey = "TitlePlayCheck.Reduced", ReducedSavedKey = "TitlePlayCheck.ReducedSaved";
         const int W = 960, H = 540;
 
         static IEnumerator _run;
@@ -68,6 +69,11 @@ namespace CloseTheDeal.Editor.Lanes
         {
             EditorApplication.update -= Pump;
             SessionState.SetBool(ActiveKey, false);
+            if (SessionState.GetBool(ReducedSavedKey, false))
+            {
+                UiSettings.ReducedMotion = SessionState.GetBool(ReducedKey, false);
+                SessionState.SetBool(ReducedSavedKey, false);
+            }
             Log.AppendLine(_failures == 0 ? "PASS" : $"FAIL ({_failures})");
             File.WriteAllText(Path.Combine(_out, "play_check.txt"), Log.ToString());
             Debug.Log("[TitlePlay]\n" + Log);
@@ -110,7 +116,10 @@ namespace CloseTheDeal.Editor.Lanes
             Check("the sky in use is the title's copy (planes every 18 s)", RenderSettings.skybox != null && RenderSettings.skybox.name.EndsWith("(title)"));
 
             SetUpCapture(root);
-            bool reducedBefore = UiSettings.ReducedMotion;
+            // PlayerPrefs are shared by every checkout on this Mac: remember the player's setting outside the run
+            // and put it back in Finish, whatever happens in between.
+            SessionState.SetBool(ReducedKey, UiSettings.ReducedMotion);
+            SessionState.SetBool(ReducedSavedKey, true);
             UiSettings.ReducedMotion = false;
 
             // Idle: four frames three seconds apart; the sky camera must have turned between them.
@@ -149,7 +158,6 @@ namespace CloseTheDeal.Editor.Lanes
             Quaternion still = sky.transform.rotation;
             foreach (object _ in Wait(2f)) yield return null;
             Check($"reduced motion stills the sky ({Quaternion.Angle(still, sky.transform.rotation):F3} degrees in 2 s)", Quaternion.Angle(still, sky.transform.rotation) < 0.01f);
-            UiSettings.ReducedMotion = reducedBefore;
 
             // Leaving the title: the sky camera stops and the game's own sky comes back.
             root.Title.gameObject.SetActive(false);
@@ -168,7 +176,10 @@ namespace CloseTheDeal.Editor.Lanes
             UiTransition.Timing(kind, out float expectCover, out _);
             float start = Time.realtimeSinceStartup, covered = -1f, done = -1f;
             var frames = new List<Texture2D>();
+            var events = UnityEngine.EventSystems.EventSystem.current;
+            bool navBefore = events != null && events.sendNavigationEvents;
             UiTransition.Play(kind, () => covered = Time.realtimeSinceStartup - start, () => done = Time.realtimeSinceStartup - start);
+            bool navDuring = events != null && events.sendNavigationEvents;
             UiTransitionHost host = null;
             while (done < 0f && Time.realtimeSinceStartup - start < 3f)
             {
@@ -181,6 +192,8 @@ namespace CloseTheDeal.Editor.Lanes
                 frames.Add(Grab());
             }
             frames.Add(Grab());
+            if (events != null)
+                Check($"{label}: keys and pad are held off while it plays and given back after", navBefore && !navDuring && events.sendNavigationEvents);
             // A frame or two of slack: the coroutine steps once per rendered frame, and grabbing makes frames slow.
             float slack = 0.12f;
             Check($"{label}: covered at {covered:F3} s (stated {expectCover:F2}), done at {done:F3} s (stated {expected:F2}), {frames.Count} frames",
