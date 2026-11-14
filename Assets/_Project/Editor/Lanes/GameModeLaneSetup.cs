@@ -61,6 +61,9 @@ namespace CloseTheDeal.Editor.Lanes
         [MenuItem("Close the Deal/Lanes/Set Up GameMode")]
         public static void SetUp()
         {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+
             MatchProfile profile = EnsureAssets();
             EnsurePlayerPrefab();
             TowerProfile laneTower = EnsureLaneTower();

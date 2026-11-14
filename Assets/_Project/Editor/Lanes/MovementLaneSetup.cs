@@ -41,6 +41,9 @@ namespace CloseTheDeal.Editor.Lanes
         [MenuItem("Close the Deal/Lanes/Set Up Movement")]
         public static void SetUp()
         {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+
             Scene scene = OpenOrCreateScene();
 
             var tower = AssetDatabase.LoadAssetAtPath<TowerProfile>(TowerProfilePath);

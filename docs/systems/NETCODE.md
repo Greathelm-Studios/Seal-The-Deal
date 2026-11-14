@@ -7,7 +7,7 @@
 
 One player presses **Host game**. A Steam lobby is created and the game starts a server on their PC.
 A friend joins in one of three ways, none of them a code: the host presses **Invite with the Steam overlay** and picks them; they pick **Join Game** on the host's name in their Steam friends list or profile; or they accept an invite in Steam chat. If their game is closed, Steam launches it straight into the lobby. Their game enters the lobby, reads the host's Steam ID from it and connects.
-Up to **4** players fit in one lobby. Both now stand in the towers as capsules and can walk, jump, climb ledges and blast each other about (see [PLAYER_MOVEMENT.md](PLAYER_MOVEMENT.md)).
+Up to **8** players fit in one lobby (the lobby's Max Players; it also sets the transport's cap when hosting starts). Both now stand in the towers as capsules and can walk, jump, climb ledges and blast each other about (see [PLAYER_MOVEMENT.md](PLAYER_MOVEMENT.md)).
 **Esc** brings the menu back; **Leave game** disconnects and leaves the lobby. The menu itself is in [MENU_AND_HUD.md](MENU_AND_HUD.md).
 
 The lobby is **friends-only**: the players must be Steam friends, or Steam refuses the join and the menu says so. A friend on a different game version is turned away with a message saying who needs to update.
