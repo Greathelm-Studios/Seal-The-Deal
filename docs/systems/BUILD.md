@@ -13,10 +13,10 @@ Menu: **Close the Deal > Build > Standalone (macOS)** or **(Windows)**, into `Bu
 Shell, Unity closed on that checkout:
 
 ```
-/Applications/Unity/Hub/Editor/6000.4.8f1/Unity.app/Contents/MacOS/Unity -batchmode -quit -projectPath <checkout> -executeMethod CloseTheDeal.Editor.Build.StandaloneBuild.BuildFromCommandLine -buildTarget mac -buildOut <folder> -logFile <folder>/build.log
+/Applications/Unity/Hub/Editor/6000.4.8f1/Unity.app/Contents/MacOS/Unity -batchmode -quit -projectPath <checkout> -executeMethod CloseTheDeal.Editor.Build.StandaloneBuild.BuildFromCommandLine -playerTarget mac -buildOut <folder> -logFile <folder>/build.log
 ```
 
-`-buildTarget windows` for Windows; `-buildNumber N` to set the number (default: the commit count). Exit code 0 = built, 2 = failed. `<folder>/build_report.txt` has the size and time, or the reason it failed.
+`-playerTarget windows` for Windows; `-buildNumber N` to set the number (default: the commit count). Exit code 0 = built, 2 = failed. `<folder>/build_report.txt` has the size and time, or the reason it failed.
 
 ## Rules the script keeps
 

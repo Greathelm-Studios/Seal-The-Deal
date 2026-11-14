@@ -16,7 +16,7 @@ namespace CloseTheDeal.Editor.Build
     /// passed to this build only, and the version stays what Player Settings say (Steam lobbies
     /// compare it). Menu: Close the Deal > Build. Shell:
     /// Unity -batchmode -quit -projectPath &lt;checkout&gt; -executeMethod CloseTheDeal.Editor.Build.StandaloneBuild.BuildFromCommandLine
-    ///   -buildTarget mac|windows -buildOut &lt;folder&gt; [-buildNumber N]
+    ///   -playerTarget mac|windows -buildOut &lt;folder&gt; [-buildNumber N]
     /// Exit code 0 = built; 2 = failed, with the reason in the log and in &lt;folder&gt;/build_report.txt.
     /// Design: docs/systems/BUILD.md.
     /// </summary>
@@ -35,7 +35,7 @@ namespace CloseTheDeal.Editor.Build
 
         public static void BuildFromCommandLine()
         {
-            string targetName = Arg("-buildTarget") ?? "mac";
+            string targetName = Arg("-playerTarget") ?? "mac";
             BuildTarget target = targetName.StartsWith("win", StringComparison.OrdinalIgnoreCase) ? BuildTarget.StandaloneWindows64 : BuildTarget.StandaloneOSX;
             string output = Arg("-buildOut") ?? Path.Combine("Builds", target == BuildTarget.StandaloneOSX ? "macOS" : "Windows");
             int.TryParse(Arg("-buildNumber"), out int number);

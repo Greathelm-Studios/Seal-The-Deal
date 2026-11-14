@@ -42,5 +42,5 @@ The lobby's `Secretary.LineSpoken` stays for anything already using it.
 ## Known limitations
 
 - **No voice.** `Moment` is there for a voice player to key clips on.
-- **Names** come from the reception board ("(no Steam)" without Steam), so local tests read oddly.
+- **Names** come from the reception board; without Steam they read "Associate 1", "Associate 2" (the scripted runs saw these).
 - A first pick-up, first kill and steal are said from each machine's own view of the events; a player who joins mid-match never hears that match's "first" lines.

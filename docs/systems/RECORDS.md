@@ -74,7 +74,7 @@ Firm colour and name: `MatchDirector.Instance.ColourFor(line.Firm)`, `FirmName(l
 
 ## Known limitations
 
-- **Names:** without Steam every player's name is "(no Steam)" (the reception board's own fallback), so a local test's feed reads oddly.
+- **Names:** without Steam, players read "Associate 1", "Associate 2" (seen in the scripted runs).
 - **A dropped client who rejoins starts a new line**: identity is the connection, not the Steam id.
 - **Fall-outs are heard from `FirmMember.OnFellOut`**, an observers message the host also receives as its own client. A dedicated server with no local player would miss falls; the game has none.
 - Nothing here is seen over Steam, on two computers, or with more than one client.

@@ -9,6 +9,7 @@ using CloseTheDeal.Editor.Greybox;
 using CloseTheDeal.MatchMode;
 using CloseTheDeal.Narration;
 using CloseTheDeal.Onboarding;
+using CloseTheDeal.Nameplates;
 using CloseTheDeal.Net;
 using CloseTheDeal.Profile;
 using CloseTheDeal.Records;
@@ -19,6 +20,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
 namespace CloseTheDeal.Editor.Lanes
@@ -75,6 +77,7 @@ namespace CloseTheDeal.Editor.Lanes
                 parts.Add("LocalDeath");
             }
 
+            AddNameplates(parts);
             EnsureContent(parts);
             AddWithAsset<MatchSecretary>(host, "_lines", AssetDatabase.LoadAssetAtPath<MatchSecretaryLines>(LinesPath), parts);
             AddWithAsset<FirstRunHints>(host, "_hints", AssetDatabase.LoadAssetAtPath<OnboardingHints>(HintsPath), parts);
@@ -82,6 +85,33 @@ namespace CloseTheDeal.Editor.Lanes
             if (parts.Count > 0)
                 EditorSceneManager.MarkSceneDirty(host.scene);
             return string.Join(", ", parts);
+        }
+
+        const string KitFolder = "Assets/_Project/UI/Kit";
+
+        /// <summary>Its own overlay canvas under the kit's menus (KitUI sorts at 20), built to the kit's 1920 x 1080 Expand scaling.</summary>
+        static void AddNameplates(List<string> parts)
+        {
+            if (Object.FindAnyObjectByType<Nameplates.Nameplates>(FindObjectsInactive.Include) != null)
+                return;
+
+            var go = new GameObject("Nameplates", typeof(RectTransform)) { layer = 5 };
+            Undo.RegisterCreatedObjectUndo(go, "Add nameplates");
+            var canvas = go.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 5;
+            var scaler = go.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
+            var plates = go.AddComponent<Nameplates.Nameplates>();
+            var so = new SerializedObject(plates);
+            so.FindProperty("_tokens").objectReferenceValue = AssetDatabase.LoadAssetAtPath<CloseTheDeal.UI.UiTokens>("Assets/_Project/UI/Tokens/UiTokens.asset");
+            so.FindProperty("_platePrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Plate.prefab");
+            so.FindProperty("_diamondSprite").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Sprite>(KitFolder + "/Sprites/Kit_White.png");
+            so.FindProperty("_markerSprite").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Sprite>(KitFolder + "/Sprites/Kit_Chevron.png");
+            so.ApplyModifiedPropertiesWithoutUndo();
+            parts.Add("Nameplates");
         }
 
         /// <summary>Adds the component if the scene has none, and fills its asset slot only while it is empty.</summary>
@@ -629,6 +659,7 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 6f;
             yield return StartMatch(true);
             yield return 4f;
+            yield return HostSeesNameplates(them);
             Note("match 3 running: the host now leaves mid-match");
             int matches = P(ProfileStat.MatchesPlayed);
             InstanceFinder.ServerManager.StopConnection(true);
@@ -636,6 +667,100 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 2f;
             Check("HOST: leaving mid-match wrote nothing to the host's profile", P(ProfileStat.MatchesPlayed) == matches && !File.Exists(ProfileStore.FilePath + ".tmp"), ShowProfile());
             yield return 3f;
+        }
+
+        // ---- Names over heads -------------------------------------------------------------------
+
+        static Nameplates.Nameplates Plates => Object.FindAnyObjectByType<Nameplates.Nameplates>();
+
+        /// <summary>The client joins the host's firm and stands in view: a name. Then it switches to the rival firm inside the host's tower: a marker for a short while.</summary>
+        static IEnumerator HostSeesNameplates(FirmMember them)
+        {
+            int myFirm = Me.Firm, theirFirm = them.Firm, theirSlot = them.Slot;
+            Vector3 mine = OpenSpot(myFirm, 1);
+            Me.ServerTeleport(mine);
+            them.ServerSetFirm(myFirm, theirSlot);
+            them.ServerTeleport(SpotAway(myFirm, 1, mine, 5f, 9f));
+            yield return 1.5f;
+            Aim(them.Position + Vector3.up * 1.2f);
+            yield return 1f;
+            Check("NAMES: a teammate in view has their name over their head", Plates != null && Plates.ShowsName(them) && !Plates.ShowsMarker(them));
+            Capture("nameplate_team");
+
+            them.ServerSetFirm(theirFirm, theirSlot);
+            yield return 0.6f;
+            Check("NAMES: a rival inside this tower is marked, with no name", Plates.ShowsMarker(them) && !Plates.ShowsName(them));
+            Capture("nameplate_raider");
+            yield return 2.5f;
+            Check("NAMES: the rival's marker goes after its 2 s", !Plates.ShowsMarker(them) && !Plates.ShowsName(them));
+        }
+
+        static Vector3 SpotAway(int tower, int floor, Vector3 from, float min, float max)
+        {
+            int solid = ~(LayerMask.GetMask("Player") | LayerMask.GetMask("Prop"));
+            for (float x = -8f; x <= 8f; x += 1f)
+            {
+                for (float z = -2f; z >= -12f; z -= 1f)
+                {
+                    Vector3 spot = Match.Arena.FloorPoint(tower, floor, new Vector3(x, 0f, z));
+                    float d = Vector3.Distance(spot, from);
+                    if (d >= min && d <= max && Physics.Raycast(spot + Vector3.up * 1.2f, Vector3.down, out RaycastHit ground, 2.5f, solid, QueryTriggerInteraction.Ignore)
+                        && !Physics.CheckCapsule(ground.point + Vector3.up * 0.5f, ground.point + Vector3.up * 1.5f, 0.35f, ~LayerMask.GetMask("Player"), QueryTriggerInteraction.Ignore))
+                        return ground.point + Vector3.up * 0.05f;
+                }
+            }
+
+            return from + Vector3.forward * min;
+        }
+
+        static readonly FieldInfo YawField = typeof(CloseTheDeal.Player.PlayerCamera).GetField("_yaw", BindingFlags.Instance | BindingFlags.NonPublic);
+        static readonly FieldInfo PitchField = typeof(CloseTheDeal.Player.PlayerCamera).GetField("_pitch", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        static void Aim(Vector3 point)
+        {
+            var cam = CloseTheDeal.Player.PlayerCamera.Instance;
+            Vector3 eye = Camera.main != null ? Camera.main.transform.position : Me.Position + Vector3.up * 1.6f;
+            Vector3 direction = (point - eye).normalized;
+            YawField.SetValue(cam, Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg);
+            PitchField.SetValue(cam, -Mathf.Asin(direction.y) * Mathf.Rad2Deg);
+        }
+
+        /// <summary>Renders the game camera with the nameplate canvas into a 1280 x 720 picture in the run's folder.</summary>
+        static void Capture(string name)
+        {
+            Camera cam = Camera.main;
+            Nameplates.Nameplates plates = Plates;
+            if (cam == null || plates == null)
+            {
+                Note("no capture: no camera or nameplates");
+                return;
+            }
+
+            var canvas = plates.GetComponent<Canvas>();
+            var scaler = plates.GetComponent<CanvasScaler>();
+            var rt = new RenderTexture(1280, 720, 24, RenderTextureFormat.ARGB32);
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = cam;
+            canvas.planeDistance = cam.nearClipPlane + 0.05f;
+            cam.targetTexture = rt;
+            scaler.enabled = false;
+            scaler.enabled = true;
+            Canvas.ForceUpdateCanvases();
+            typeof(Nameplates.Nameplates).GetMethod("LateUpdate", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(plates, null);
+            Canvas.ForceUpdateCanvases();
+            cam.Render();
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = rt;
+            var tex = new Texture2D(1280, 720, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, 1280, 720), 0, 0);
+            tex.Apply();
+            RenderTexture.active = previous;
+            File.WriteAllBytes(Path.Combine(_out, name + ".png"), tex.EncodeToPNG());
+            cam.targetTexture = null;
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            Object.DestroyImmediate(tex);
+            rt.Release();
+            Note("wrote " + name + ".png");
         }
 
         static IEnumerator HostKills(FirmMember them)
@@ -683,8 +808,15 @@ namespace CloseTheDeal.Editor.Lanes
             yield return new Until(() => _finals == 2, 5f, "the second final record");
             Check("CLIENT: dead when match 2 ended, and still recorded", _deadAtFinal && P(ProfileStat.MatchesPlayed) == 2 && P(ProfileStat.Deaths) == 2, ShowProfile());
 
+            yield return ClientMatchThree();
+        }
+
+        /// <summary>Match 3: the host makes this player a teammate (names over heads), then leaves mid-match.</summary>
+        static IEnumerator ClientMatchThree()
+        {
             yield return new Until(() => Match.Phase == MatchPhase.Running, 60f, "match 3 to run");
             int matches = P(ProfileStat.MatchesPlayed);
+            yield return ClientSeesHostName();
             yield return new Until(() => !InstanceFinder.ClientManager.Started, 60f, "the host to leave");
             yield return 2f;
             Check("CLIENT: the host left mid-match: nothing written, lines cleared", P(ProfileStat.MatchesPlayed) == matches && Records.Lines.Count == 0 && !File.Exists(ProfileStore.FilePath + ".tmp"), ShowProfile());
@@ -705,6 +837,25 @@ namespace CloseTheDeal.Editor.Lanes
             Note("final record: " + Show(final.Line));
             Check("CLIENT: its own claimed 99 kills were ignored; the host's 0 went to the profile", P(ProfileStat.Kills) == 0 && final.Line.Kills == 0, ShowProfile());
             Check("CLIENT: match 1 in the profile as a loss with the host's death, fall and time", P(ProfileStat.MatchesPlayed) == 1 && P(ProfileStat.Losses) == 1 && P(ProfileStat.Deaths) == 1 && P(ProfileStat.Falls) == 1 && final.Line.SecondsPlayed > 0, ShowProfile());
+        }
+
+        static IEnumerator ClientSeesHostName()
+        {
+            yield return new Until(() => Other() != null && Me.Firm == Other().Firm, 40f, "the host to put this player in its firm");
+            yield return 1.5f;
+            Aim(Other().Position + Vector3.up * 1.2f);
+            yield return 1f;
+            var plates = Object.FindAnyObjectByType<Nameplates.Nameplates>();
+            Check("CLIENT: the host, now a teammate and in view, has a name chip on this screen", plates != null && InView(Other()) && plates.ShowsName(Other()), $"in view {InView(Other())}, shown {plates != null && plates.ShowsName(Other())}");
+        }
+
+        static bool InView(FirmMember who)
+        {
+            Camera cam = Camera.main;
+            if (cam == null || who == null)
+                return false;
+            Vector3 p = cam.WorldToViewportPoint(who.Position + Vector3.up * (who.BodyHeight + 0.35f));
+            return p.z > 0f && p.x > 0f && p.x < 1f && p.y > 0f && p.y < 1f && Vector3.Distance(cam.transform.position, who.Position) < 40f;
         }
 
         static IEnumerator KeepJoining(SteamLobby lobby)
