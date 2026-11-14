@@ -82,7 +82,7 @@ The host's Esc menu still has **"Start now, skipping the desk"** (and "Rematch n
 Unity -batchmode -projectPath <checkout> -executeMethod CloseTheDeal.Editor.Lanes.IntegrationLaneSetup.SetUpFromCommandLine
 ```
 
-It creates the two Integration assets only if missing and never changes an existing asset. Each lane's step only adds what is missing. **Run Integration Check (solo)** on the same menu plays the scene by script; from the shell, `-executeMethod CloseTheDeal.Editor.Lanes.IntegrationLaneRun.RunFromShell -local -integrationRole solo|host|client -integrationOut <folder>` (host and client as two copies of the project).
+It creates the two Integration assets only if missing and never changes an existing asset. Each lane's step only adds what is missing. `Player.prefab` is add-only here: the lobby's outfit goes on only when the player has no `PlayerOutfit` (one that has is reported and left alone), and every lane step it calls is watched: a step that changes the prefab is named in a warning, so its owner can make it add-only. **Run Integration Check (solo)** on the same menu plays the scene by script; from the shell, `-executeMethod CloseTheDeal.Editor.Lanes.IntegrationLaneRun.RunFromShell -local -integrationRole solo|host|client -integrationOut <folder>` (host and client as two copies of the project).
 
 ## Known limitations
 

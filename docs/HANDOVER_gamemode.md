@@ -116,6 +116,11 @@ The greybox HUD and the menu's match section are rebuilt from the UI kit (lane 5
 - Still not seen: a person judging motion or sound.
 - At 720p the kit's smallest captions (13 px at 1080p) render about 9 px: legibility is borderline; that is the kit's type scale (lane 5).
 
+### Proposal: who owns Player.prefab (review ED-5, ED-7)
+- Nobody regenerates it. Every lane tool only adds to it: a missing component or child, an empty value filled; anything already set (by a person or another tool) is reported, never overwritten (AGENTS.md §4).
+- The greybox **Rebuild Player Prefab** keeps a list of lane components it must carry over (`FirmMember`, `CarryAnchor`, `PlayerOutfit` and its view, health, weapon holder and view, hands, the STDMC model) and re-adds them, or refuses while they are present. Not changed here: Alex's sessions own the generator.
+- Set Up Integration already follows this (2026-11-14). Its old rewrite came from the lobby's `PatchPlayerPrefab`, which re-seats an existing outfit: it deleted the `Outfit` figure and re-pointed `PlayerOutfit._view` at the STDMC model. The dead-zone, blast and mask lines in that diff were only Unity dropping YAML for fields the code no longer has. Now the integration tool skips the lobby patch when `PlayerOutfit` exists and warns if any lane step changes the prefab. Proven on buffer's prefab: byte-identical after a full run.
+
 ### Assumptions made while Adam was away (2026-11-14)
 - The briefcase seats on the left, so it never overlaps the gun; no shared held-object socket exists yet. If Harvey's `PlayerViewmodel.GunMount` becomes one, move onto it.
 - `Lane_Integration.unity` is committed from this lane for the spawn fix (asked by the orchestrator). It was rebuilt with Set Up Integration, then Add GameMode To Open Scene. The gaps lane's objects are left out on purpose: they install themselves at run time once that lane's installer is merged (AgentHub #504).
