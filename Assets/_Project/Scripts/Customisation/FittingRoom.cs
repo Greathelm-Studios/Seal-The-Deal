@@ -1,5 +1,6 @@
 using System;
 using CloseTheDeal.Lobby;
+using CloseTheDeal.MatchMode;
 using CloseTheDeal.Player;
 using UnityEngine;
 
@@ -96,6 +97,7 @@ namespace CloseTheDeal.Customisation
         bool _kept;
         int _wallMask;
         LobbyRoster _hookedRoster;
+        MatchDirector _hookedMatch;
 
         public bool IsOpen => _phase != Phase.Closed;
 
@@ -110,6 +112,8 @@ namespace CloseTheDeal.Customisation
         {
             if (_hookedRoster != null)
                 _hookedRoster.OnRunStarting -= OnRunStarting;
+            if (_hookedMatch != null)
+                _hookedMatch.OnPhaseChanged -= OnMatchPhase;
             if (Instance == this)
                 Instance = null;
         }
@@ -217,6 +221,8 @@ namespace CloseTheDeal.Customisation
         {
             if (_outfit != null)
                 _outfit.Revert();
+            if (LobbyRoster.Instance != null)
+                LobbyRoster.Instance.RequestFitting(false); // Or the board keeps showing "In the fitting room" and the desk refuses a ready.
             _kept = false;
             _screen.Close();
             Finish();
@@ -224,6 +230,19 @@ namespace CloseTheDeal.Customisation
 
         void OnRunStarting()
         {
+            // With a match flow, a run counts when its countdown really begins (OnMatchPhase): a
+            // desk start the match refuses must not count, and the host's menu start must.
+            if (MatchDirector.Instance == null && PlayerOutfit.Local != null)
+                PlayerOutfit.Local.RecordRunStarted();
+            if (_phase != Phase.Closed)
+                Abort();
+        }
+
+        /// <summary>The match's countdown began, however it was started (desk or the host's menu): count the run and leave the fitting room.</summary>
+        void OnMatchPhase(MatchPhase from, MatchPhase to)
+        {
+            if (to != MatchPhase.Countdown || from == MatchPhase.Countdown)
+                return;
             if (PlayerOutfit.Local != null)
                 PlayerOutfit.Local.RecordRunStarted();
             if (_phase != Phase.Closed)
@@ -235,6 +254,7 @@ namespace CloseTheDeal.Customisation
         void Update()
         {
             HookRoster();
+            HookMatch();
             if (_phase == Phase.Closed)
                 return;
 
@@ -247,6 +267,18 @@ namespace CloseTheDeal.Customisation
             // The game menu frees the mouse; while it is up, the fitting room waits.
             if (_phase == Phase.Open && LobbyInput.Captured)
                 ReadInput();
+        }
+
+        void HookMatch()
+        {
+            MatchDirector match = MatchDirector.Instance;
+            if (match == _hookedMatch)
+                return;
+            if (_hookedMatch != null)
+                _hookedMatch.OnPhaseChanged -= OnMatchPhase;
+            _hookedMatch = match;
+            if (_hookedMatch != null)
+                _hookedMatch.OnPhaseChanged += OnMatchPhase;
         }
 
         void HookRoster()

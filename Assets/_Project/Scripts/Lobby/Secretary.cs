@@ -95,8 +95,25 @@ namespace CloseTheDeal.Lobby
                 Unhook();
         }
 
-        void OnArrived(LobbyMember member) => Say(SecretaryMoment.Arrival, member.Name, member.Firm);
-        void OnReadyChanged(LobbyMember member, bool ready) => Say(ready ? SecretaryMoment.Ready : SecretaryMoment.NotReady, member.Name, member.Firm);
+        // Reception lines only: during a run she stays quiet, and the reset back to reception
+        // (every ready cleared at once) is not a string of withdrawals.
+        bool InReception => _roster != null && !_roster.RunInProgress;
+
+        void OnArrived(LobbyMember member)
+        {
+            if (InReception)
+                Say(SecretaryMoment.Arrival, member.Name, member.Firm);
+        }
+
+        void OnReadyChanged(LobbyMember member, bool ready)
+        {
+            if (!InReception)
+                return;
+            if (ready)
+                Say(SecretaryMoment.Ready, member.Name, member.Firm);
+            else if (_roster.TryGetLocal(out LobbyMember me) && me.ClientId == member.ClientId)
+                Say(SecretaryMoment.NotReady, member.Name, member.Firm);
+        }
         void OnFirmChosen(int firm) => Say(SecretaryMoment.FirmChosen, LocalName(), firm);
         void OnFirmRefused(int firm) => Say(SecretaryMoment.FirmRefused, LocalName(), firm);
         void OnStartBlocked(StartBlock block) => Say(SecretaryMoment.StartBlocked, LocalName(), 0);

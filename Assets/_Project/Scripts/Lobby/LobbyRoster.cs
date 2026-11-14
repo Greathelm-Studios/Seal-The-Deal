@@ -146,6 +146,8 @@ namespace CloseTheDeal.Lobby
         readonly SyncVar<bool> _runInProgress = new();
 
         bool _listening;
+        float _listenAfter;
+        const float InitialSyncSeconds = 1f;
         bool _nameSent;
 
         public LobbyRules Rules => _rules;
@@ -203,7 +205,10 @@ namespace CloseTheDeal.Lobby
         {
             base.OnStartClient();
             // From here on, additions are arrivals. Everything before was already in the room.
-            _listening = true;
+            // FishNet can replay the initial list just after this call, so arrivals count from
+            // a moment later; someone joining in that moment simply isn't greeted.
+            _listening = false;
+            _listenAfter = Time.unscaledTime + InitialSyncSeconds;
             _nameSent = false;
             SendNameOnce();
             OnChanged?.Invoke();
@@ -421,6 +426,8 @@ namespace CloseTheDeal.Lobby
                 return;
 
             LobbyMember member = _members[index];
+            if (fitting && _runInProgress.Value)
+                return; // A fitting request that lands after the start would never be cleared.
             MemberState next = fitting ? MemberState.Fitting : MemberState.Browsing;
             if (member.State == next)
                 return;
@@ -472,8 +479,8 @@ namespace CloseTheDeal.Lobby
             for (int i = 0; i < _members.Count; i++)
             {
                 LobbyMember member = _members[i];
-                if (member.State != MemberState.Ready)
-                    continue;
+                if (member.State == MemberState.Browsing)
+                    continue; // Ready and Fitting both go back to Browsing: a fresh decision, and nobody stuck in a fitting room they left.
                 member.State = MemberState.Browsing;
                 _members[i] = member;
             }
@@ -572,6 +579,10 @@ namespace CloseTheDeal.Lobby
             if (asServer)
                 return;
 
+            if (!_listening && _listenAfter > 0f && Time.unscaledTime >= _listenAfter)
+                _listening = true;
+            if (op == SyncListOperation.Add)
+                SendNameOnce();
             if (_listening)
                 ReportMoment(op, previous, next);
             OnChanged?.Invoke();
@@ -582,7 +593,6 @@ namespace CloseTheDeal.Lobby
         {
             if (op == SyncListOperation.Add)
             {
-                SendNameOnce();
                 OnArrived?.Invoke(next);
                 return;
             }

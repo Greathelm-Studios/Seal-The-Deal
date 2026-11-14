@@ -350,6 +350,12 @@ namespace CloseTheDeal.Editor.Lanes
             return bounds;
         }
 
+        static void FillIfEmpty(SerializedProperty property, Object value)
+        {
+            if (property.objectReferenceValue == null)
+                property.objectReferenceValue = value;
+        }
+
         static void SetRenderers(SerializedProperty list, Renderer[] renderers)
         {
             list.arraySize = renderers.Length;
@@ -384,9 +390,12 @@ namespace CloseTheDeal.Editor.Lanes
                 Transform lean = root.transform.Find("Graphics/Lean");
                 OutfitView view = FindModelBody(lean, out Transform model) ? AttachToModel(lean, model) : AddOutfitCharacter(lean, character);
 
-                var player = root.GetComponent<PlayerOutfit>() ?? root.AddComponent<PlayerOutfit>();
+                // Explicit null checks: `??` skips Unity's destroyed-object check.
+                var player = root.GetComponent<PlayerOutfit>();
+                if (player == null)
+                    player = root.AddComponent<PlayerOutfit>();
                 var so = new SerializedObject(player);
-                so.FindProperty("_view").objectReferenceValue = view;
+                FillIfEmpty(so.FindProperty("_view"), view);
                 so.ApplyModifiedPropertiesWithoutUndo();
 
                 PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
@@ -436,11 +445,16 @@ namespace CloseTheDeal.Editor.Lanes
             if (old != null)
                 Object.DestroyImmediate(old.gameObject);
 
-            var view = model.GetComponent<OutfitView>() ?? model.gameObject.AddComponent<OutfitView>();
+            var view = model.GetComponent<OutfitView>();
+            if (view == null)
+                view = model.gameObject.AddComponent<OutfitView>();
+            // Only empty values are filled (AGENTS.md §4): a person's choices on the prefab stay.
             var so = new SerializedObject(view);
-            so.FindProperty("_catalog").objectReferenceValue = AssetDatabase.LoadAssetAtPath<OutfitCatalog>(CatalogPath);
-            so.FindProperty("_motionPivot").objectReferenceValue = model; // The model's own root takes the change bob.
-            SetRenderers(so.FindProperty("_bodies"), model.GetComponentsInChildren<Renderer>(true));
+            FillIfEmpty(so.FindProperty("_catalog"), AssetDatabase.LoadAssetAtPath<OutfitCatalog>(CatalogPath));
+            FillIfEmpty(so.FindProperty("_motionPivot"), model); // The model's own root takes the change bob.
+            SerializedProperty bodies = so.FindProperty("_bodies");
+            if (bodies.arraySize == 0)
+                SetRenderers(bodies, model.GetComponentsInChildren<Renderer>(true));
             so.ApplyModifiedPropertiesWithoutUndo();
             return view;
         }
