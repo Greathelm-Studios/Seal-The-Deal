@@ -50,6 +50,9 @@ Method: `UiGlassCapture` renders each pane over the scene twice, without and wit
 | | NoBlur | 11.29:1 | 11.29:1 |
 | | Clear | **2.98:1 (fails)** | 6.46:1 |
 | | Kit GlassPane.prefab | **9.59:1** | **10.84:1** |
+| Window, fed from a UI image (`UiGlassBackdrop`) | Frosted | **11.30:1** | |
+| | HUD chip | **8.59:1** | |
+| | Kit GlassPane.prefab | **10.32:1** | |
 
 Frosted, HUD chip and NoBlur pass 4.5:1 in both captures, blur on and off. Clear fails over the dark suit, which is why it never carries text.
 Full table: [10_glass_contrast.md](../../ArtSource/UI/review/10_glass_contrast.md).
@@ -71,25 +74,30 @@ The blur reads the camera colour once, writes a half-res and three quarter-res t
 ## How it works
 
 ```
-camera: opaques + sky ──▶ UiGlassBlurFeature (BeforeRenderingTransparents)
-                            down ½ ─▶ down ¼ ─▶ gauss H ─▶ gauss V ─▶ global _UiGlassBlurTex, _UiGlassBlurOn = 1
-        transparents ──▶ Screen Space - Camera canvas ──▶ CloseTheDeal/UI/Glass samples _UiGlassBlurTex at the pane's screen UV
+screen camera: opaques + sky ──▶ UiGlassBlurFeature (BeforeRenderingTransparents)
+                                   down ½ ─▶ down ¼ ─▶ gauss H ─▶ gauss V ─▶ persistent texture = global _UiGlassBlurTex, _UiGlassBlurOn = 1
+               transparents ──▶ Screen Space - Camera canvas ─┐
+               after camera ──▶ Screen Space - Overlay canvas ─┴▶ CloseTheDeal/UI/Glass samples it at the pane's screen UV
+UI backdrop (title's live sky RawImage + UiGlassBackdrop) ──▶ blurs the IMAGE instead; scene blur stands down; mapped to the image's rect
 no pane alive / "No blur" / feature missing ──▶ passes skipped, _UiGlassBlurOn = 0 ──▶ shader uses the no-blur alpha
 ```
+
+Which camera feeds the glass: a Game camera that draws to the screen (not overlay cameras in a stack, not render-texture cameras such as mirrors or the title's sky camera), or `UiGlassBlurFeature.SourceCamera` when a tool sets one.
 
 - [UiGlassBlurFeature.cs](../../Assets/_Project/UI/Glass/Scripts/UiGlassBlurFeature.cs): the Render Graph renderer feature, on `Assets/Settings/PC_Renderer.asset` only.
 - [UiGlassBlur.shader](../../Assets/_Project/UI/Glass/UiGlassBlur.shader): the four blur passes.
 - [UiGlass.shader](../../Assets/_Project/UI/Glass/UiGlass.shader) (`CloseTheDeal/UI/Glass`): the pane.
 - [UiGlass.cs](../../Assets/_Project/UI/Glass/Scripts/UiGlass.cs): the component. Put it on a uGUI `Image` (white, no sprite needed); pick a preset; optional mullions (0–4) and a cyan bottom edge-light. It writes the pane's pixel size into uv1 (it turns on TexCoord1 on the canvas) and counts live panes for the feature.
+- [UiGlassBackdrop.cs](../../Assets/_Project/UI/Glass/Scripts/UiGlassBackdrop.cs): panes over a UI backdrop blur that image (quarter-size blur of its texture, only while shown). Added by itself at run time to every kit `TitleScreen.BackdropSlot`, where lane 8's live sky goes; no other lane's file is edited. Capture: [10_glass_window_glass_backdrop.png](../../ArtSource/UI/review/10_glass_window_glass_backdrop.png).
 - [UiGlassSettings.cs](../../Assets/_Project/UI/Glass/Scripts/UiGlassSettings.cs): the quality setting `Auto / Blur / NoBlur`, saved in PlayerPrefs (`ctd.ui.glassQuality`). The settings screen (lane 5) sets `UiGlassSettings.Current`.
 - [UiGlassSetup.cs](../../Assets/_Project/UI/Glass/Editor/UiGlassSetup.cs): **Close the Deal > UI > Build Glass Materials** (re-run safe), **Close the Deal > UI > Wire Kit Glass Pane** (puts `GlassFrosted.mat` in lane 5's `UiGlassPane` slot on `Assets/_Project/UI/Kit/GlassPane.prefab` and adds `UiGlass` with Owns Material off; agreed with lane 5, it takes that prefab over from lane 5's generator), and `AddFeature(renderer path)`.
 - [UiGlassCapture.cs](../../Assets/_Project/UI/Glass/Editor/UiGlassCapture.cs): the captures, the measurement and the timing, from the command line.
 
 ## Rules for UI built on it
 
-- Lane 5's kit panes are already wired: every pane built from `GlassPane.prefab` is glass. The kit canvas must still switch to Screen Space - Camera (lane 5's next slice) for the blur; until then kit panes show the fallback tint.
+- Lane 5's kit panes are wired: every pane built from `GlassPane.prefab` is glass, on its overlay canvas too. On the title and settings screens today the panes sit on white (the sill, the paper grid), so there is little to see through; suggested to lane 5 (#498) to let a pane overlap the sky.
 
-- **Glass canvases must be Screen Space - Camera.** A Screen Space - Overlay canvas draws after the camera; it gets the no-blur fallback (legible, not blurred). Not tested whether URP 17's overlay pass can see the texture.
+- Screen Space - Camera and Screen Space - Overlay canvases both get the blur (the texture outlives the camera's render graph). **The overlay path is not captured**: headless captures render camera-space canvases only, so it is checked by construction, not by a picture.
 - Text never sits on Clear. Text on Frosted or HUD chip is Deep Navy `#111B38`. Light text on glass is not a used pair.
 - Keep a glass canvas's plane distance in front of world geometry (the capture uses 0.08 m with a 0.05 m near clip), or a close wall cuts through the pane.
 
