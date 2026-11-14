@@ -26,6 +26,8 @@ One chip and one marker per other player, made when they join and destroyed when
 
 `Nameplates.ShowsName(member)`, `ShowsMarker(member)`: whether this screen shows them now, for checks and other UI.
 
+`WorldToCanvas.TryProject(camera, canvas, world, out at)`: the one world-to-canvas step, shared with the UI kit's off-screen edge marker (agreed with lane 5). False behind the camera, with `at` mirrored so a marker can clamp it to an edge.
+
 ## Setup
 
 Added by **Close the Deal > Lanes > Gaps > Add Records And Profile To Open Scene**: a **Nameplates** overlay canvas (sorting 5, under the kit's KitUI at 20; 1920 × 1080 Expand like the kit).

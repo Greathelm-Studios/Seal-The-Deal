@@ -273,13 +273,12 @@ namespace CloseTheDeal.Nameplates
             Camera cam = ResolveCamera();
             MatchDirector match = MatchDirector.Instance;
             bool running = match != null && match.Phase == MatchPhase.Running && match.Arena != null;
-            float scale = _canvas.scaleFactor > 0f ? _canvas.scaleFactor : 1f;
             for (int i = 0; i < _tags.Count; i++)
             {
                 if (me == null || cam == null || _tags[i].Member == null)
                     Hide(_tags[i]);
                 else
-                    Place(_tags[i], me, cam, scale, running ? match : null);
+                    Place(_tags[i], me, cam, running ? match : null);
             }
         }
 
@@ -290,9 +289,9 @@ namespace CloseTheDeal.Nameplates
         }
 
         /// <summary>Shows a teammate's name, or a raider's marker, at the spot above their head.</summary>
-        void Place(Tag tag, FirmMember me, Camera cam, float scale, MatchDirector runningMatch)
+        void Place(Tag tag, FirmMember me, Camera cam, MatchDirector runningMatch)
         {
-            bool onScreen = TryPlace(tag, me, cam, scale, out Vector2 at) && Alive(tag);
+            bool onScreen = TryPlace(tag, cam, out Vector2 at) && Alive(tag);
             bool team = tag.Member.Firm == me.Firm;
             bool marked = !team && runningMatch != null && RaiderMarked(tag, me, runningMatch);
             Fade(tag.ChipGroup, onScreen && team);
@@ -312,19 +311,14 @@ namespace CloseTheDeal.Nameplates
 
         static bool Alive(Tag tag) => tag.Health == null || !tag.Health.IsDead;
 
-        /// <summary>Screen spot above the head in canvas units; false when behind the camera or out of range.</summary>
-        bool TryPlace(Tag tag, FirmMember me, Camera cam, float scale, out Vector2 at)
+        /// <summary>Spot above the head in canvas units; false when behind the camera or out of range.</summary>
+        bool TryPlace(Tag tag, Camera cam, out Vector2 at)
         {
-            at = default;
             Vector3 head = tag.Member.Position + Vector3.up * (tag.Member.BodyHeight + _headroom);
-            Vector3 eye = cam.transform.position;
-            if ((head - eye).sqrMagnitude > _range * _range)
+            at = default;
+            if ((head - cam.transform.position).sqrMagnitude > _range * _range)
                 return false;
-            Vector3 screen = cam.WorldToScreenPoint(head);
-            if (screen.z <= 0f)
-                return false;
-            at = new Vector2(screen.x / scale, screen.y / scale);
-            return true;
+            return WorldToCanvas.TryProject(cam, _canvas, head, out at);
         }
 
         /// <summary>A rival is marked for a short while from the moment they step inside your tower.</summary>
