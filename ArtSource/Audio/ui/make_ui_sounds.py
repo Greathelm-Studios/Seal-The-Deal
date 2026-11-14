@@ -407,6 +407,130 @@ ITEMS = {  # slot: (length s, peak, description, builder)
     "WetFloorDown": (0.32, 0.6, "plastic clack + splash", i_wet_floor),
     "Slip": (0.30, 0.6, "squeak 700 to 1900 Hz + scuff", i_slip),
 }
+
+# ---------------------------------------------------------------------------------------- weapon sounds
+# World sounds for the shooting lane (3D at the muzzle or hit point, SFX bus; Hurt / Death / Respawn are 2D):
+# Assets/_Project/Audio/Weapons/Weapon_<Name>.wav. Events and timing: docs/systems/WEAPONS.md.
+def w_pistol(b):    # sharp crack, a low punch, short room tail
+    air(b, 0, 0.03, 1.0, 1500, 12000, decay=0.006, seed=41, attack=0.0002)
+    note(b, 0, 90.0, 0.12, 0.9, 0.03, "sine", glide=(220.0, 70.0), attack=0.0005)
+    air(b, 0.004, 0.24, 0.5, 300, 5000, sweep=(400, 7000, 200, 1500), decay=0.055, seed=42, attack=0.001)
+
+
+def w_ar15(b):      # tighter and brighter, almost no tail: 10 a second must not smear
+    air(b, 0, 0.025, 1.0, 2000, 14000, decay=0.005, seed=43, attack=0.0002)
+    note(b, 0, 110.0, 0.07, 0.8, 0.018, "sine", glide=(260.0, 90.0), attack=0.0005)
+    air(b, 0.003, 0.09, 0.4, 500, 6000, sweep=(600, 8000, 300, 2500), decay=0.022, seed=44, attack=0.001)
+
+
+def w_dry(b):       # dull click
+    air(b, 0, 0.02, 0.8, 600, 3500, decay=0.005, seed=45, attack=0.0003)
+    note(b, 0, 320.0, 0.05, 0.4, 0.012, "tri", attack=0.0005)
+
+
+def w_mag_out(b):   # slide of plastic on metal, then a release click
+    air(b, 0, 0.08, 0.5, 1500, 6000, sweep=(2500, 7000, 1200, 4000), decay=0.04, seed=46)
+    air(b, 0.07, 0.02, 0.9, 900, 5000, decay=0.005, seed=47, attack=0.0003)
+
+
+def w_mag_in(b):    # slide, then a solid seat with a low knock
+    air(b, 0, 0.06, 0.4, 1200, 5000, sweep=(1200, 4000, 2500, 7000), decay=0.03, seed=48)
+    air(b, 0.06, 0.03, 1.0, 500, 4500, decay=0.007, seed=49, attack=0.0003)
+    note(b, 0.06, 150.0, 0.07, 0.6, 0.02, "sine", glide=(210.0, 140.0), attack=0.0005)
+
+
+def w_slide(b):     # pistol slide: back (click), forward (clack)
+    air(b, 0, 0.02, 0.8, 1500, 8000, decay=0.005, seed=50, attack=0.0003)
+    air(b, 0.02, 0.05, 0.3, 2000, 7000, decay=0.03, seed=51)
+    air(b, 0.075, 0.03, 1.0, 900, 7000, decay=0.007, seed=52, attack=0.0003)
+    note(b, 0.075, 900.0, 0.05, 0.25, 0.012, "tri", attack=0.0005)
+
+
+def w_charge(b):    # rifle charging handle: longer pull, heavier return
+    air(b, 0, 0.02, 0.7, 1200, 7000, decay=0.005, seed=53, attack=0.0003)
+    air(b, 0.02, 0.09, 0.35, 1500, 6000, sweep=(1500, 5000, 2500, 7000), decay=0.05, seed=54)
+    air(b, 0.12, 0.04, 1.0, 600, 6000, decay=0.009, seed=55, attack=0.0003)
+    note(b, 0.12, 180.0, 0.08, 0.5, 0.02, "sine", glide=(260.0, 160.0), attack=0.0005)
+
+
+def w_reload_done(b):  # a small settled click
+    air(b, 0, 0.02, 0.7, 2000, 8000, decay=0.004, seed=56, attack=0.0003)
+    note(b, 0, 1046.5, 0.05, 0.3, 0.014, "tri", attack=0.0005)
+
+
+def w_swap(b):      # cloth swish out, a catch as the new gun comes up
+    swell(b, 0, 0.16, 0.7, 600, 3000, 1200, 6000, seed=57)
+    air(b, 0.17, 0.03, 0.9, 800, 5000, decay=0.007, seed=58, attack=0.0003)
+
+
+def w_impact_world(b):  # hard tick with a little debris
+    air(b, 0, 0.03, 1.0, 1200, 9000, decay=0.006, seed=59, attack=0.0002)
+    note(b, 0, 500.0, 0.05, 0.4, 0.012, "tri", glide=(800.0, 450.0), attack=0.0005)
+    air(b, 0.02, 0.1, 0.25, 2000, 7000, decay=0.03, seed=60)
+
+
+def w_impact_body(b):   # dull thud, no brightness
+    air(b, 0, 0.05, 0.7, 150, 1500, decay=0.014, seed=61, attack=0.0005)
+    note(b, 0, 100.0, 0.11, 0.9, 0.03, "sine", glide=(170.0, 85.0), attack=0.0005)
+
+
+def w_glass(b):     # crack, then a spray of high glassy partials falling as shards, and a bright noise wash
+    air(b, 0, 0.03, 1.0, 2500, 14000, decay=0.006, seed=62, attack=0.0002)
+    rng = random.Random(63)
+    for k in range(26):
+        t = 0.01 + rng.random() ** 1.6 * 0.5
+        f = rng.uniform(2200, 7500)
+        note(b, t, f, 0.16, rng.uniform(0.12, 0.35) * (1 - t), 0.03, "sine", glass=0.5, attack=0.0005)
+    air(b, 0.01, 0.6, 0.45, 3000, 12000, sweep=(3000, 13000, 2000, 7000), decay=0.16, seed=64)
+
+
+def w_hurt(b):      # your own body: a low pulse, soft, 2D
+    note(b, 0, 82.0, 0.2, 1.0, 0.06, "sine", glide=(120.0, 75.0), attack=0.002)
+    air(b, 0, 0.08, 0.25, 200, 1200, decay=0.025, seed=65)
+
+
+def w_death(b):     # a falling tone that drops away under a soft noise close
+    note(b, 0, hz("E4"), 0.7, 0.8, 0.25, "tri", glide=(hz("E4"), hz("C4") / 2))
+    note(b, 0, 60.0, 0.4, 0.8, 0.12, "sine", glide=(110.0, 50.0), attack=0.002)
+    air(b, 0, 0.7, 0.2, 300, 2500, sweep=(600, 4000, 150, 600), decay=0.3, seed=66)
+
+
+def w_respawn(b):   # the lift chime's cousin: rising fifth with air, back on the floor
+    air(b, 0, 0.2, 0.2, 1500, 6000, sweep=(800, 3000, 2500, 8000), decay=0.08, seed=67)
+    note(b, 0.05, hz("C5"), 0.3, 0.8, 0.09, "sine", glass=0.2)
+    note(b, 0.17, hz("G5"), 0.33, 0.9, 0.11, "sine", glass=0.25)
+
+
+WEAPONS = {  # name: (length s, peak, description, builder)
+    "PistolShot": (0.26, 0.90, "crack + punch 220 to 70 Hz + 0.2 s room tail", w_pistol),
+    "AR15Shot": (0.10, 0.90, "tighter crack, 100 ms so 10 a second stays clean", w_ar15),
+    "DryFire": (0.06, 0.50, "dull click", w_dry),
+    "ReloadMagOut": (0.11, 0.60, "slide + release click", w_mag_out),
+    "ReloadMagIn": (0.14, 0.65, "slide + solid seat", w_mag_in),
+    "ReloadSlide": (0.13, 0.65, "pistol slide: back click, forward clack", w_slide),
+    "ReloadCharge": (0.21, 0.65, "rifle charging handle: pull, heavy return", w_charge),
+    "ReloadFinished": (0.06, 0.40, "small settled click", w_reload_done),
+    "Swap": (0.22, 0.50, "swish + catch", w_swap),
+    "ImpactWorld": (0.13, 0.70, "hard tick + debris", w_impact_world),
+    "ImpactBody": (0.12, 0.70, "dull thud 170 to 85 Hz", w_impact_body),
+    "GlassShatter": (0.70, 0.85, "crack + 26 falling glass partials + bright wash", w_glass),
+    "Hurt": (0.22, 0.60, "low pulse 120 to 75 Hz, 2D", w_hurt),
+    "Death": (0.75, 0.60, "tone falling E4 to C3 over a low drop, 2D", w_death),
+    "Respawn": (0.52, 0.50, "C5 to G5 rise with air, 2D", w_respawn),
+}
+WEAPON_OUT = os.path.normpath(os.path.join(OUT, "..", "Weapons"))
+
+
+def render_table(table):
+    out = {}
+    for name, (length, peak, _, fn) in table.items():
+        buf = [0.0] * int(length * SR)
+        fn(buf)
+        dc_and_fade(buf, guard=0.0005)   # world transients keep their attack
+        g = peak / (max(abs(x) for x in buf) or 1.0)
+        out[name] = [x * g for x in buf]
+    return out
+
 ITEM_OUT = os.path.normpath(os.path.join(OUT, "..", "Items"))
 
 
@@ -427,11 +551,11 @@ def render_items():
 
 
 
-def dc_and_fade(buf):
+def dc_and_fade(buf, guard=0.004):
     m = sum(buf) / max(1, len(buf))
     for i in range(len(buf)):
         buf[i] -= m
-    n = min(len(buf), int(0.004 * SR))   # 4 ms fade-in guard, last 10 ms already faded by builders
+    n = max(1, min(len(buf), int(guard * SR)))   # 4 ms fade-in guard, last 10 ms already faded by builders
     for i in range(n):
         buf[i] *= i / n
 
@@ -488,7 +612,57 @@ def main():
     print(f"VentLoop seam: step {step:.4f} vs typical sample step {typical:.4f}" + ("" if step < typical * 4 else "  << CHECK"))
     bad |= step >= typical * 4
     print(f"{len(items)} files in {os.path.relpath(ITEM_OUT)}")
+    print(f"\n{'weapon sound':18s} {'len ms':>7s} {'peak dBFS':>10s} {'rms dBFS':>9s}")
+    os.makedirs(WEAPON_OUT, exist_ok=True)
+    weapons = render_table(WEAPONS)
+    for name, smp in weapons.items():
+        write_wav(os.path.join(WEAPON_OUT, f"Weapon_{name}.wav"), smp)
+        pk = max(abs(x) for x in smp)
+        rms = math.sqrt(sum(x * x for x in smp) / len(smp))
+        ok = abs(smp[-1]) < 0.01
+        bad |= not ok
+        print(f"{name:18s} {len(smp) / SR * 1000:7.0f} {20 * math.log10(pk):10.1f} {20 * math.log10(rms):9.1f}" + ("" if ok else "  << CHECK"))
+    print(f"{len(weapons)} files in {os.path.relpath(WEAPON_OUT)}")
+    print("audition page:", os.path.relpath(write_audition()))
     return 1 if bad else 0
+
+
+def write_audition():
+    """ArtSource/UI/review/10_sound_audition.html: every clip with a play button, for judging by ear.
+    Opens straight from disk; the clips are referenced by relative path, nothing is embedded."""
+    page = os.path.normpath(os.path.join(HERE, "..", "..", "UI", "review", "10_sound_audition.html"))
+    os.makedirs(os.path.dirname(page), exist_ok=True)
+
+    def rows(folder, prefix, table, describe):
+        out = ""
+        for name in table:
+            src = os.path.relpath(os.path.join(folder, f"{prefix}_{name}.wav"), os.path.dirname(page)).replace(os.sep, "/")
+            out += (f'<tr><td><button onclick="play(this)" data-src="{src}">Play</button></td>'
+                    f"<td><b>{name}</b></td><td>{describe(name)}</td></tr>\n")
+        return out
+    item_desc = dict({k: v[2] for k, v in ITEMS.items()}, VentLoop="gas hiss, seamless loop (plays twice here to hear the seam)")
+    body = "<h2>UI (31)</h2><table>" + rows(OUT, "UI", EVENTS, lambda n: f"{EVENTS[n]['length'] * 1000:.0f} ms · {EVENTS[n]['rel']}") + "</table>"
+    body += "<h2>Items (12)</h2><table>" + rows(ITEM_OUT, "Item", item_desc, lambda n: item_desc[n]) + "</table>"
+    body += "<h2>Weapons (15)</h2><table>" + rows(WEAPON_OUT, "Weapon", WEAPONS, lambda n: f"{WEAPONS[n][0] * 1000:.0f} ms · {WEAPONS[n][2]}") + "</table>"
+    html = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Seal the Deal: sound audition</title>
+<style>body{{font:16px/1.5 -apple-system,sans-serif;color:#111B38;background:#F3F4F4;max-width:900px;margin:32px auto;padding:0 16px}}
+h1{{font-weight:300;letter-spacing:.06em}}h2{{margin-top:32px;border-bottom:1px solid #C9CED3}}table{{border-collapse:collapse;width:100%}}
+td{{padding:4px 12px 4px 0;vertical-align:middle}}button{{font:inherit;padding:4px 14px;border:1px solid #111B38;background:#fff;color:#111B38;border-radius:4px;cursor:pointer}}
+button:hover{{background:#244FB9;color:#F3F4F4}}p{{max-width:70ch}}</style></head><body>
+<h1>SEAL THE DEAL · sound audition</h1>
+<p>Every clip the generator makes. <b>Nobody has listened to these yet</b>: they were synthesised and measured only. Press Play, or use
+"Play the hover run" to hear five hovers climb the scale as they do in the menu. Note any that are harsh, too long, too alike or wrong for the event.</p>
+<p><button onclick="run()">Play the hover run</button> <button onclick="burst()">Play AR-15 at 10 a second</button></p>
+{body}
+<script>
+function play(b){{const a=new Audio(b.dataset.src);a.play();if(b.dataset.src.includes('VentLoop'))a.onended=()=>new Audio(b.dataset.src).play();}}
+function run(){{[0,2,4,7,9].forEach((s,i)=>setTimeout(()=>{{const a=new Audio('{os.path.relpath(os.path.join(OUT, "UI_HoverMove.wav"), os.path.dirname(page)).replace(os.sep, "/")}');a.preservesPitch=false;a.playbackRate=Math.pow(2,s/12);a.play();}},i*140));}}
+function burst(){{for(let i=0;i<10;i++)setTimeout(()=>new Audio('{os.path.relpath(os.path.join(WEAPON_OUT, "Weapon_AR15Shot.wav"), os.path.dirname(page)).replace(os.sep, "/")}').play(),i*100);}}
+</script></body></html>
+"""
+    with open(page, "w", encoding="utf-8") as fh:
+        fh.write(html)
+    return page
 
 
 if __name__ == "__main__":

@@ -122,10 +122,32 @@ The same generator writes the pickups lane's 12 world sounds to `Assets/_Project
 | `WetFloorDown` | 320 ms | -4.4 dBFS | plastic clack and splash |
 | `Slip` | 300 ms | -4.4 dBFS | squeak 700 to 1900 Hz and a scuff |
 
+## Weapon sounds (world, SFX bus)
+
+The same generator writes the shooting lane's 15 sounds to `Assets/_Project/Audio/Weapons/Weapon_<Name>.wav`. Events and timing are in WEAPONS.md "Sounds the guns still need"; the shooting lane plays them from its own events (3D at the muzzle or hit point; Hurt, Death and Respawn 2D). **Unheard, like the rest.** A synthesised gunshot is the hardest of these to get right without ears: expect the two shots to need the most retuning.
+
+| Name | Length | Peak | What it is |
+|---|---|---|---|
+| `PistolShot` | 260 ms | -0.9 dBFS | crack, punch 220 to 70 Hz, 0.2 s room tail |
+| `AR15Shot` | 100 ms | -0.9 dBFS | tighter crack; 100 ms so 10 a second stays clean |
+| `DryFire` | 60 ms | -6.0 dBFS | dull click |
+| `ReloadMagOut` | 110 ms | -4.4 dBFS | slide and release click (15 % into the reload) |
+| `ReloadMagIn` | 140 ms | -3.7 dBFS | slide and solid seat (60 %) |
+| `ReloadSlide` | 130 ms | -3.7 dBFS | pistol slide: back click, forward clack (85 %) |
+| `ReloadCharge` | 210 ms | -3.7 dBFS | rifle charging handle: pull, heavy return (85 %) |
+| `ReloadFinished` | 60 ms | -8.0 dBFS | small settled click |
+| `Swap` | 220 ms | -6.0 dBFS | swish and catch |
+| `ImpactWorld` | 130 ms | -3.1 dBFS | hard tick and debris |
+| `ImpactBody` | 120 ms | -3.1 dBFS | dull thud 170 to 85 Hz |
+| `GlassShatter` | 700 ms | -1.4 dBFS | crack, 26 falling glass partials, bright wash |
+| `Hurt` | 220 ms | -4.4 dBFS | low pulse 120 to 75 Hz, 2D |
+| `Death` | 750 ms | -4.4 dBFS | tone falling E4 to C3 over a low drop, 2D |
+| `Respawn` | 520 ms | -6.0 dBFS | C5 to G5 rise with air, 2D |
+
 ## Regenerating
 
 ```bash
-python3 ArtSource/Audio/ui/make_ui_sounds.py            # writes the 31 UI WAVs and the 12 item WAVs, prints peak and RMS
+python3 ArtSource/Audio/ui/make_ui_sounds.py            # writes the 31 UI WAVs the 12 item WAVs and the 15 weapon WAVs, prints peak and RMS
 python3 ArtSource/Audio/ui/make_ui_sounds.py --table    # also prints this table as markdown
 ```
 
