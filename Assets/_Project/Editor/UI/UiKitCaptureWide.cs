@@ -46,6 +46,9 @@ namespace CloseTheDeal.Editor.UI
                 case "wide3":
                     yield return SessionScreens(lobby);
                     break;
+                case "wide-frame":
+                    yield return TitleFrame(Arg("-uiShotPrefix") ?? "14_title_frame");
+                    break;
                 default:
                     Fail("no capture script for mode " + mode);
                     break;
@@ -277,6 +280,30 @@ namespace CloseTheDeal.Editor.UI
             Shot("12_title_live_sky_1080", 1920, 1080);
             Shot("12_title_live_sky_720", 1280, 720);
             Shot("12_title_live_sky_2560x1080", 2560, 1080);
+            CheckInside(title.transform, 1280, 720, "title at 1280x720");
+            CheckInside(title.transform, 2560, 1080, "title at 2560x1080");
+        }
+
+        /// <summary>
+        /// The title's window frame on the live sky at 1080p, 720p and 21:9 (prefix chosen on the command line, so a
+        /// before / after pair comes from the same code), with the frame's measured bar widths in the log.
+        /// </summary>
+        static IEnumerator TitleFrame(string prefix)
+        {
+            TitleScreen title = _root.Title;
+            for (int i = 0; i < 20; i++)
+                yield return null;
+            Settle(0.5f);
+            Resize(1920, 1080);
+            var mullion = title.transform.Find("SkyWindow/Frame/Mullions/MullionLeft") as RectTransform;
+            var reveal = mullion != null ? mullion.Find("Reveal") as RectTransform : null;
+            var transom = title.transform.Find("SkyWindow/Frame/Transom") as RectTransform;
+            var shade = transom != null ? transom.Find("Shadow") as RectTransform : null;
+            if (mullion != null && transom != null)
+                Note($"frame at 1080p: mullion face {mullion.rect.width:0} px + reveal {(reveal != null ? reveal.rect.width : 0f):0} px; transom {transom.rect.height:0} px + shadow {(shade != null ? shade.rect.height : 0f):0} px");
+            Shot(prefix + "_1080", 1920, 1080);
+            Shot(prefix + "_720", 1280, 720);
+            Shot(prefix + "_2560x1080", 2560, 1080);
             CheckInside(title.transform, 1280, 720, "title at 1280x720");
             CheckInside(title.transform, 2560, 1080, "title at 2560x1080");
         }
