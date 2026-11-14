@@ -103,6 +103,9 @@ namespace CloseTheDeal.Player.Dev
             _lobby = FindAnyObjectByType<SteamLobby>();
             yield return Until(() => _lobby != null && _lobby.Ready, 30f, "lobby ready");
             UseOwnPort();
+            if (Arg("-hostFill") == "0")
+                PlayerMotor.HostFillsMissingInput = false;
+            Note($"host fills a client's missing input: {PlayerMotor.HostFillsMissingInput}");
             Note($"role {_role}, local mode {_lobby.LocalMode}, latency each way {_latencyMs} ms, graphics {SystemInfo.graphicsDeviceType}");
 
             if (_role == "client")
@@ -114,8 +117,11 @@ namespace CloseTheDeal.Player.Dev
             if (Me != null)
             {
                 AddLatency();
+                HoldMenuClosed(true);
                 InstanceFinder.TimeManager.OnPostTick += OnPostTick;
                 HookLocal(Me);
+                if (_role != "client")
+                    Check("this instance is the server, not a guest in someone else's game", InstanceFinder.IsServerStarted, $"port {Arg("-sessionPort")}");
                 Check("first spawn is idle on the floor", Me.State == MoveState.Grounded && Me.PlanarSpeed < 0.1f, $"state {Me.State}, speed {Me.PlanarSpeed:0.00}");
                 yield return RunRole();
             }
@@ -131,6 +137,7 @@ namespace CloseTheDeal.Player.Dev
                 case "host": return Host();
                 case "client": return Client();
                 case "tower": return Tower();
+                case "hud": return HudRole();
                 default:
                     Check("known session role", false, _role);
                     return Wait(0f);
@@ -184,6 +191,21 @@ namespace CloseTheDeal.Player.Dev
             if (tugboat != null)
                 tugboat.SetPort(port);
             Note($"local port {port}");
+        }
+
+        /// <summary>
+        /// A headless editor can't lock the cursor, and the game menu reopens whenever the cursor
+        /// is free, so in a scripted run it would sit open and take Space as its own Submit. Holds
+        /// it closed (its checks paused) except where a check opens it on purpose.
+        /// </summary>
+        void HoldMenuClosed(bool hold)
+        {
+            var menu = FindAnyObjectByType<CloseTheDeal.UI.GameMenu>();
+            if (menu == null)
+                return;
+            if (hold)
+                menu.Resume();
+            menu.enabled = !hold;
         }
 
         /// <summary>Delays this instance's outgoing packets; with the same on the other side, the round trip is twice this.</summary>
@@ -644,6 +666,127 @@ namespace CloseTheDeal.Player.Dev
             File.WriteAllBytes(Path.Combine(_outFolder, $"{_role}_{_captures:00}_{name}.png"), _readback.EncodeToPNG());
         }
 
+        static readonly Vector2Int[] HudSizes = { new(1920, 1080), new(1280, 720), new(2560, 1080) };
+
+        /// <summary>
+        /// The camera's view with the screen-space HUD on top, at each test size. Overlay canvases
+        /// are not drawn by a camera render, so for the capture they are switched to draw through
+        /// the camera and put back straight after.
+        /// </summary>
+        void CaptureWithUi(string name)
+        {
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+                return;
+
+            Camera camera = Camera.main;
+            var overlays = new List<Canvas>();
+            foreach (Canvas canvas in FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+            {
+                if (!canvas.isRootCanvas || canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                    continue;
+                overlays.Add(canvas);
+                canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                canvas.worldCamera = camera;
+                canvas.planeDistance = camera.nearClipPlane + 0.05f;
+            }
+
+            foreach (Vector2Int size in HudSizes)
+            {
+                var target = new RenderTexture(size.x, size.y, 24);
+                var readback = new Texture2D(size.x, size.y, TextureFormat.RGB24, false);
+                RenderTexture before = camera.targetTexture;
+                camera.targetTexture = target;
+                Canvas.ForceUpdateCanvases();
+                camera.Render();
+                camera.targetTexture = before;
+
+                RenderTexture active = RenderTexture.active;
+                RenderTexture.active = target;
+                readback.ReadPixels(new Rect(0, 0, size.x, size.y), 0, 0);
+                readback.Apply();
+                RenderTexture.active = active;
+                _captures++;
+                File.WriteAllBytes(Path.Combine(_outFolder, $"{_role}_{_captures:00}_{name}_{size.x}x{size.y}.png"), readback.EncodeToPNG());
+                Destroy(target);
+                Destroy(readback);
+            }
+
+            foreach (Canvas canvas in overlays)
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        }
+
+        // ---- HUD: movement's UI, captured ----------------------------------------------------
+
+        IEnumerator HudRole()
+        {
+            CloseTheDeal.UI.UiSound.Played += e => Note("ui sound: " + e);
+            var hud = FindAnyObjectByType<CloseTheDeal.Player.Hud.MovementHud>(FindObjectsInactive.Include);
+            Check("movement's HUD is in the scene", hud != null, "run Close the Deal > Lanes > Add Movement HUD To Open Scene, or pass -sessionAddHud");
+            if (hud == null)
+                yield break;
+
+            // A headless editor can't lock the cursor, and the game menu reopens whenever the cursor is
+            // free; a real player never sees that. Close it and pause that check while capturing.
+            var menu = FindAnyObjectByType<CloseTheDeal.UI.GameMenu>();
+            if (menu != null)
+            {
+                menu.Resume();
+                menu.enabled = false;
+            }
+
+            yield return Wait(1.5f);
+            CaptureWithUi("hud_default");
+
+            // The refusal: for real at the lane scene's 2.4 m wall; elsewhere shown straight from the HUD, and said so.
+            if (GameObject.Find("Wall 2.4 m") != null)
+            {
+                yield return WallRefusalCheck();
+            }
+            else
+            {
+                Note("no 2.4 m wall in this scene: the refusal is shown from the HUD directly, not from a real climb");
+                hud.ShowRefusal(MantleRefusal.TooHigh);
+            }
+            yield return Wait(0.3f);
+            CaptureWithUi("refusal");
+            yield return Wait(2.6f);
+            CaptureWithUi("refusal_faded");
+
+            yield return Tap(Key.F1);
+            yield return Wait(0.4f);
+            Check("Help opens the controls card", hud.HelpOpen, "F1");
+            CaptureWithUi("help_keyboard");
+
+            InputSystem.QueueStateEvent(_pad, new GamepadState { leftStick = new Vector2(0.6f, 0f) });
+            yield return Wait(0.1f);
+            InputSystem.QueueStateEvent(_pad, new GamepadState());
+            yield return Wait(0.3f);
+            CaptureWithUi("help_gamepad");
+            Check("the card switches to the controller's buttons", Me.GetComponent<PlayerInputReader>().LastUsedGamepad, "after a stick push");
+
+            // Edge: the menu opens while the card is up; coming back, the card is closed and nothing is stuck.
+            PlayerInputReader.ScriptedCapture = false;
+            if (menu != null)
+                menu.enabled = true;
+            Cursor.lockState = CursorLockMode.None;
+            yield return Wait(0.5f);
+            CaptureWithUi("menu_over_card");
+            PlayerInputReader.ScriptedCapture = true;
+            if (menu != null)
+            {
+                menu.Resume();
+                menu.enabled = false;
+            }
+            yield return Wait(0.5f);
+            Check("after the menu, the card is closed", !hud.HelpOpen, $"help open {hud.HelpOpen}");
+
+            yield return Tap(Key.F1);
+            yield return Wait(0.4f);
+            yield return Tap(Key.F1);
+            yield return Wait(0.4f);
+            Check("Help closes the card again", !hud.HelpOpen, "F1 twice");
+        }
+
         /// <summary>A second camera looking at a body from outside, since the owner never sees their own.</summary>
         void CaptureFromOutside(string name, Vector3 subject, Vector3 offset)
         {
@@ -751,6 +894,7 @@ namespace CloseTheDeal.Player.Dev
             yield return StairSlideMeasure();
             yield return MenuMidJumpCheck();
             yield return KnockMidMantleCheck();
+            yield return KnockHeightCheck();
             yield return RespawnCheck();
         }
 
@@ -1103,12 +1247,14 @@ namespace CloseTheDeal.Player.Dev
             string up = CloseWindow();
             int upAir = _airTicks;
             float upSlowest = _minSpeed;
+            float upMean = _ticks > 0 ? _speedSum / _ticks : 0f;
 
             yield return StepOffTowardWindows();
             Capture("stairs_top");
             Note($"MEASURE spiral stairs up at a sprint, {rise:0.0} m: {took:0.00} s; {up}");
             Check("climbs a whole flight at a sprint", Feet.y > centre.y + rise - 0.1f && Me.State == MoveState.Grounded, $"feet at {Feet.y:0.00} m, state {Me.State}");
-            Check("never leaves the treads or stalls on the way up", upAir == 0 && upSlowest > Me.Profile.WalkSpeed, $"airborne ticks {upAir}, slowest {upSlowest:0.00} m/s (sprint is {Me.Profile.SprintSpeed:0.0})");
+            Check("never leaves the treads or stalls on the way up", upAir == 0 && upMean > Me.Profile.SprintSpeed * 0.85f && upSlowest > Me.Profile.WalkSpeed * 0.8f,
+                $"airborne ticks {upAir}, mean {upMean:0.00} m/s, slowest {upSlowest:0.00} m/s (sprint is {Me.Profile.SprintSpeed:0.0})");
         }
 
         IEnumerator StepOffTowardWindows()
@@ -1378,6 +1524,7 @@ namespace CloseTheDeal.Player.Dev
             yield return Wait(0.15f);
 
             // The mouse is freed in mid-air with every key still down: exactly what Esc does.
+            HoldMenuClosed(false);
             PlayerInputReader.ScriptedCapture = false;
             Cursor.lockState = CursorLockMode.None;
             yield return Frames(2);
@@ -1394,8 +1541,7 @@ namespace CloseTheDeal.Player.Dev
             ReleaseAll();
             yield return Frames(2);
             PlayerInputReader.ScriptedCapture = true;
-            if (menu != null)
-                menu.Resume();
+            HoldMenuClosed(true);
             yield return Wait(0.6f);
             Check("no stuck or late input after the menu closes", _localJumps == jumps + 1 && Me.PlanarSpeed < 0.05f, $"jumps +{_localJumps - jumps}, speed {Me.PlanarSpeed:0.00} m/s");
         }
@@ -1422,6 +1568,27 @@ namespace CloseTheDeal.Player.Dev
             ReleaseAll();
             Check("thrown clear and back in control", thrown > 1.5f && walks && _localKnocks == knocks + 1, $"thrown {thrown:0.0} m, walks again {walks}, knock events +{_localKnocks - knocks}");
             yield return Wait(0.4f);
+        }
+
+        /// <summary>
+        /// The game mode lane's scripted shove (6 m/s forward, 4.5 m/s up) on flat floor, measured.
+        /// Expected from the profile: the rise is 4.5 squared over twice the knocked gravity
+        /// (Air Gravity Multiplier times 9.81), which is 0.52 m at the default multiplier of 2.
+        /// </summary>
+        IEnumerator KnockHeightCheck()
+        {
+            yield return Place(new Vector3(0f, 0.05f, -5f), 0f);
+            float floor = Feet.y;
+            float expected = 4.5f * 4.5f / (2f * -Physics.gravity.y * Me.Profile.AirGravityMultiplier);
+            Vector3 from = Feet;
+            OpenWindow();
+            Me.ApplyKnockback(new Vector3(0f, 4.5f, 6f), 0.7f);
+            yield return Wait(0.2f);
+            yield return Until(() => Me.State != MoveState.Knocked && Me.Grounded, 4f, "lands after the shove");
+            CloseWindow();
+            float rise = _topY - floor;
+            Note($"MEASURE knockback 6 forward + 4.5 up: rose {rise:0.00} m (expected {expected:0.00} m), travelled {Vector3.Distance(from, Feet):0.0} m");
+            Check("a shove rises as high as its upward speed says, once", Mathf.Abs(rise - expected) < 0.1f, $"{rise:0.00} m against {expected:0.00} m");
         }
 
         IEnumerator RespawnCheck()

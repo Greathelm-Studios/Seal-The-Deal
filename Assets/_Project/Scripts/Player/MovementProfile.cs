@@ -21,6 +21,9 @@ namespace CloseTheDeal.Player
         [Tooltip("How hard the floor grips a running player: the fraction of their speed taken away each second. It is what stops you when you let go, and what bleeds off speed above your running speed if you stay on the floor instead of hopping. At 6 a sprint stops in 0.3 s and 1 m (measured in the movement lane scene); lower values slide further.")]
         public float GroundFriction = 6f;
 
+        [Tooltip("How fast a player running on the floor can swing their speed round to a new direction without losing any of it, in degrees per second. Holding 9 m/s round the spiral stairs' walking line needs about 300; 720 makes every turn on foot lossless. 0 = turns only by grip and acceleration, which bleeds speed in tight curves (sprint dropped to 6 m/s up the spiral). Reversing (more than 100° away) still brakes.")]
+        public float GroundTurnRate = 720f;
+
         [Tooltip("Below this speed, in metres per second, the floor grips as if you were moving this fast, so the last bit of a stop is crisp instead of a long creep. Higher = stops deader.")]
         public float StopSpeed = 3f;
 

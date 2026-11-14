@@ -39,6 +39,7 @@ Your own moves show the instant you press them. The host is still the judge: if 
 | Throw / drop | G | Right stick press | `Consume(Throw)` | pickups and furniture |
 | Reload | R | West (X / Square) | `Consume(Reload)` | weapons |
 | Weapon slots 1–4 | 1, 2, 3, 4 | D-pad up, right, down, left | `ConsumeWeaponSlot()` (1–4, 0 = none) | weapons |
+| Help | F1 | View (Select / Share) | `Pressed(PlayerPress.Help)` | movement's controls card |
 | Menu | Esc | Start | read by `GameMenu` directly | menu |
 
 Presses are latched every frame and kept until the owning system consumes them on its tick, so a tap between ticks is never lost; one system per button. `Pressed` and `WeaponSlotPressed` events fire on the frame for sound and UI. **Enter no longer fires.** The pad's Attack moved from West to the right trigger so West could be Reload.
@@ -116,6 +117,14 @@ Pressed buttons are on `PlayerInputReader` (owner only): `Pressed(PlayerPress)` 
 
 For help text, the real bindings come from the actions asset: read them with `InputAction.GetBindingDisplayString` for the action names in the Controls table above, so the card changes with the player's rebinding and the device in use.
 
+## Movement's HUD
+
+Built from the UI kit's prefabs by `Close the Deal > Lanes > Add Movement HUD To Open Scene` (also run by `Set Up Movement`), under the game menu's `Hud`; it only adds what is missing. Script: `Player/Hud/MovementHud.cs`.
+
+- **Refusal line:** a kit `StatusLine` at the bottom centre. When the local player presses jump at something they can't climb it says why ("Can't climb that: it's above your reach." / "...there's no room on top."), with the kit's refusal mark (amber square, navy keyline) and the `Error` sound; it fades in at the kit's hover timing, holds 2.2 s (`Refusal Seconds`), and fades out. A second refusal restarts the hold.
+- **Controls card:** a kit `Plate` of `KeyHint` lines, opened and closed with Help (F1, pad View), sliding in from the left at the kit's panel timing with `PanelOpen` / `PanelClose`; with Reduce motion it only fades. Every key is read from the player's own copy of the actions (`PlayerInputReader.BindingText`), so rebinding shows, and the card switches between keyboard and controller labels as soon as the player touches the other device (`PlayerInputReader.DeviceChanged`). Opening the game menu hides the HUD and closes the card; it never comes back open on its own.
+- **Crosshair:** one crosshair, the kit's `UiCrosshair`. Lane 5 is adding `OpenPixels` (extra gap) and `Pulse`; movement will feed the gap from speed and air time and shooting's spread when that lands. Not built yet.
+
 ## Scripts
 
 Under [Assets/_Project/Scripts/Player/](../../Assets/_Project/Scripts/Player/):
@@ -151,7 +160,7 @@ Run by the scripted session: the editor as host and a development player as clie
 - **Snap on the client** (the distance the host's correction moved the body's latest predicted position, after replaying the inputs the host had not yet seen): **0 corrections over 1 cm** through sprint, slide and hop, three chained hops, air strafing, a sprinting climb, a slide, the desk climb and crouch; **2 corrections, worst 2.0 cm** on the spiral stairs going up. A deliberate host-side blast the client could not predict showed a 199.5 cm snap, so the measure does see a snap. The view never moved against the body on those frames.
 - **The older "corrections" figures in the first logs were wrong**: they compared against a tick-indexed history that was labelled two or more ticks off the host's. `LastCorrectionMetres` now uses FishNet's pre- and post-reconcile events instead.
 - **The host seeing the client:** the client's body moved smoothly on the host (no frame moved against its velocity in the final run; one frame stepped 8.5 times its speed, cause not found).
-- **Not seen working:** other players' crouch, lean and slide on a client. In the last pair run the client saw the host's jump, landing, sprint and climb, but crouch only to 0.13 and lean to 0.20 (of 1.0), and the slide never. Jumps, landings and climbs travel as counters inside the reconcile; crouch, lean and slide are values that have to be carried by the replayed inputs of a body the client doesn't own, and they are not arriving. Cause not found; this is the top open item (see the handover).
+- **Other players' crouch, lean and slide on a client:** seen in full since the input fix (client saw the host crouch to 1.00, lean to 1.00, slide at 11.4 m/s; before it, 0.13, 0.20 and no slide). The cause was FishNet handing over empty input, flagged Ticked but not Created, for ticks whose real input hadn't arrived; the motor ran those as "let go of everything". It now repeats the last real input for up to 20 ticks (see Who owns what).
 - **Not seen at all:** a real second machine, Steam, more than 2 players, packet loss, or ping above about 120 ms.
 
 ## Level rules (for whoever builds floors)
@@ -169,8 +178,7 @@ Run by the scripted session: the editor as host and a development player as clie
 - No ladders or ziplines yet; climbing means mantling.
 - **A leaning player's head is not hittable.** The collider stays an upright capsule, so the 0.45 m of head that pokes round a corner can see and shoot but can't be hit. Fix when real hit detection lands: a head hitbox on the lean pivot.
 - No gamepad lean testing yet; it is bound to the shoulder buttons. Interact moved from E to F to free E for lean; nothing used Interact yet.
-- **Sprint speed is not held up the spiral stairs.** At the default grip (6) and Ground Acceleration (70), the floor can't turn a 9 m/s body round the treads' 1.7 m walking line without shedding speed: 6.1 m/s at the slowest. Raising Ground Acceleration holds more speed through the turn and makes every start and turn snappier; not retuned yet because no new value has been measured.
+- **Sprint speed dips at the foot of the spiral stairs.** With `Ground Turn Rate` 720°/s a sprint holds its speed round the flight's turn (the flight now takes 1.66 s, was 1.84 s; mean 7.8 m/s), but the step from the floor onto the first tread still dips it to about 5.3 m/s for a moment. Measured on the lane's slice, which uses the template tool's stair numbers (2.6 m treads, 0.8 m column, 4.5 m floors); the scripted run in the greybox tower placed the body on top of something at the start and measured nothing, so the real tower is not measured.
 - **Bandwidth at 8 players** (about 3.1 Mbit/s up from the host before packing) is too much for many home connections. The fix, when needed: send other players' reconciles less often than every tick, or cut the reconcile down (the climb target and exit can be sent only while climbing).
-- Remote players' crouch, lean and slide do not reliably reach other clients (see "Seen from a client").
 - No ladders, ziplines or wall jumps.
 - The committed floor templates in `Assets/_Project/Floors/` predate the layout [TOWER.md](TOWER.md) and the template tool describe: `Floor_Lobby.prefab` is 20 × 10 m with a 1 m sill, 4 m floors and straight ramps, where the tool builds 28 × 14 m, a 0.6 m sill, 4.5 m floors and spiral stairs (and `SpiralFlight.asset` is not committed). The doc and the tool agree, so the prefabs look stale: `Close the Deal > Greybox > Rebuild Floor Templates` should bring them up to date. The lane scene builds its own slice to TOWER.md's numbers, so the stair, sill and slide results above are from that slice.

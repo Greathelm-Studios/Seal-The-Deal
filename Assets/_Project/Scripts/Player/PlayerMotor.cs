@@ -165,6 +165,8 @@ namespace CloseTheDeal.Player
         const float MaxSnapSpeed = 12f;
         /// <summary>A gap under the feet smaller than this is left to physics, metres.</summary>
         const float SnapSlack = 0.005f;
+        /// <summary>Widest change of direction the floor turn swings through, degrees; anything wider is a reversal and brakes.</summary>
+        const float MaxGroundTurnAngle = 100f;
 
 
         /// <summary>The body this client controls, for local readouts. Null on a pure host with no player.</summary>
@@ -180,6 +182,13 @@ namespace CloseTheDeal.Player
         /// have let go of everything, so a player who drops out coasts to a stop.
         /// </summary>
         const uint SpectatorRepeatTicks = 20;
+
+        /// <summary>
+        /// Whether the host also fills a client's missing ticks with its last real input (true) or
+        /// runs them empty, as FishNet hands them over (false). Other clients always fill. Kept
+        /// switchable while the two are measured against each other; see PLAYER_MOVEMENT.md.
+        /// </summary>
+        internal static bool HostFillsMissingInput = true;
 
         readonly PredictionRigidbody _body = new();
         Vector3 _tipBeforeReconcile;
@@ -502,7 +511,7 @@ namespace CloseTheDeal.Player
         /// </summary>
         MoveInput FillMissingInput(MoveInput input, ReplicateState state)
         {
-            if (IsOwner)
+            if (IsOwner || (IsServerStarted && !HostFillsMissingInput))
                 return input;
 
             if (state.ContainsCreated())
@@ -563,7 +572,9 @@ namespace CloseTheDeal.Player
                 planar *= Mathf.Max(speed - drop, 0f) / speed;
             }
 
-            return Accelerate(planar, WishDirection(input), WishSpeed(input), _profile.GroundAcceleration, dt);
+            Vector3 wish = WishDirection(input);
+            planar = TurnAlongGround(planar, wish, dt);
+            return Accelerate(planar, wish, WishSpeed(input), _profile.GroundAcceleration, dt);
         }
 
         /// <summary>
@@ -573,6 +584,22 @@ namespace CloseTheDeal.Player
         Vector3 CapOwnSpeed(Vector3 planar, float speedBefore)
         {
             return Vector3.ClampMagnitude(planar, Mathf.Max(speedBefore, _profile.MaxSpeed));
+        }
+
+        /// <summary>
+        /// Swings the floor speed toward the held direction without losing any of it, at the
+        /// profile's turn rate, so a sprint holds its speed round the spiral stairs and other
+        /// tight curves. A reversal (more than 100° away) is left to acceleration, which brakes.
+        /// </summary>
+        Vector3 TurnAlongGround(Vector3 planar, Vector3 wish, float dt)
+        {
+            if (_profile.GroundTurnRate <= 0f || wish.sqrMagnitude < 0.01f || planar.sqrMagnitude < 0.01f)
+                return planar;
+
+            if (Vector3.Angle(planar, wish) > MaxGroundTurnAngle)
+                return planar;
+
+            return Vector3.RotateTowards(planar, wish.normalized * planar.magnitude, _profile.GroundTurnRate * Mathf.Deg2Rad * dt, 0f);
         }
 
         /// <summary>
