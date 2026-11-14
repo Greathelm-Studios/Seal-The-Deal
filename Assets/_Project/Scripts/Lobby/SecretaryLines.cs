@@ -11,6 +11,7 @@ namespace CloseTheDeal.Lobby
         FirmChosen,
         FirmRefused,
         StartBlocked,
+        ShortHanded,
         Start
     }
 
@@ -40,6 +41,9 @@ namespace CloseTheDeal.Lobby
         [Tooltip("The host tries to start before the rule is met. Heard by the host only.")]
         [SerializeField] string[] _startBlocked = new string[0];
 
+        [Tooltip("The host's first hold arms a short-handed start (a firm is empty or the firms are uneven). Heard by the host only.")]
+        [SerializeField] string[] _shortHanded = new string[0];
+
         [Tooltip("The run starts. Heard by everyone.")]
         [SerializeField] string[] _start = new string[0];
 
@@ -58,13 +62,14 @@ namespace CloseTheDeal.Lobby
                 case SecretaryMoment.FirmChosen: return _firmChosen;
                 case SecretaryMoment.FirmRefused: return _firmRefused;
                 case SecretaryMoment.StartBlocked: return _startBlocked;
+                case SecretaryMoment.ShortHanded: return _shortHanded;
                 default: return _start;
             }
         }
 
 #if UNITY_EDITOR
         /// <summary>Editor tools only: fills a freshly created asset. Never called at runtime (AGENTS.md §4).</summary>
-        public void EditorInit(string[] arrival, string[] ready, string[] notReady, string[] firmChosen, string[] firmRefused, string[] startBlocked, string[] start)
+        public void EditorInit(string[] arrival, string[] ready, string[] notReady, string[] firmChosen, string[] firmRefused, string[] startBlocked, string[] shortHanded, string[] start)
         {
             _arrival = arrival;
             _ready = ready;
@@ -72,6 +77,7 @@ namespace CloseTheDeal.Lobby
             _firmChosen = firmChosen;
             _firmRefused = firmRefused;
             _startBlocked = startBlocked;
+            _shortHanded = shortHanded;
             _start = start;
         }
 #endif

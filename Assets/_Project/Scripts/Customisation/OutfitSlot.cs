@@ -22,6 +22,20 @@ namespace CloseTheDeal.Customisation
         [Tooltip("The choice a player starts with when they have no save, counted from 0 in the list above. It must be unlocked from the first run.")]
         [Min(0)] [SerializeField] int _defaultOption;
 
+        [Header("Fitting-room view")]
+        [Tooltip("How far round the character the view turns to show this category, in degrees from straight in front (positive = towards the character's left). The view eases there when the player moves to this category, so the part being changed faces the camera.")]
+        [Range(-180f, 180f)] [SerializeField] float _viewAngle = 30f;
+
+        [Tooltip("How far from the character the camera stands for this category, in metres. Closer for small parts (a belt), further for the whole suit. Below 1.2 the head leaves the frame.")]
+        [Range(0.8f, 4f)] [SerializeField] float _viewDistance = 2.3f;
+
+        [Tooltip("The height the camera looks at for this category, in metres above the feet: about 1.3 for a shirt, 0.95 for the whole body, 0.9 for a belt.")]
+        [Range(0.3f, 1.8f)] [SerializeField] float _viewHeight = 0.95f;
+
+        public float ViewAngle => _viewAngle;
+        public float ViewDistance => _viewDistance;
+        public float ViewHeight => _viewHeight;
+
         public string DisplayName => _displayName;
         public int MaterialNameCount => _materialNames.Length;
         public string MaterialName(int i) => _materialNames[i];
@@ -33,12 +47,15 @@ namespace CloseTheDeal.Customisation
 
 #if UNITY_EDITOR
         /// <summary>Editor tools only: fills a freshly created slot. Never called at runtime (AGENTS.md §4).</summary>
-        public void EditorInit(string displayName, string[] materialNames, OutfitOption[] options, int defaultOption)
+        public void EditorInit(string displayName, string[] materialNames, OutfitOption[] options, int defaultOption, float viewAngle = 30f, float viewDistance = 2.3f, float viewHeight = 0.95f)
         {
             _displayName = displayName;
             _materialNames = materialNames;
             _options = options;
             _defaultOption = defaultOption;
+            _viewAngle = viewAngle;
+            _viewDistance = viewDistance;
+            _viewHeight = viewHeight;
         }
 #endif
     }

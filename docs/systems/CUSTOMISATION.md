@@ -75,6 +75,45 @@ Late joiners get everyone's outfit with each player's spawn.
 - Parts that are separate meshes (hair, eyewear) become show/hide categories: that needs one small addition to `OutfitView` (enable one child per choice), not done here because no such parts exist yet.
 - What the owner's categories need from the art: see [HANDOVER_lobby.md](../HANDOVER_lobby.md).
 
+## UI contract
+
+State and events a screen reads. The outfit itself is decided by the host (`PlayerOutfit`); everything below is local to the player browsing.
+
+### State (read)
+
+| Read | Type | Meaning |
+|---|---|---|
+| `PlayerOutfit.Local` | `PlayerOutfit`, null until the local player has spawned | The player's outfit |
+| `Worn` | `OutfitLoadout` (8 bytes, one option index per category) | What the host holds the player wearing |
+| `RunsStarted` | int | Runs started on this PC: decides what is unlocked |
+| `Catalog.SlotCount`, `Catalog.Slot(i)` | `OutfitSlot` | The categories, in listing order |
+| `slot.DisplayName`, `slot.OptionCount`, `slot.Option(i)` | string, int, `OutfitOption` | A category and its choices |
+| `option.DisplayName`, `BaseColour`, `ShadowColour`, `ContourColour` | string, Color | A choice and the colours it paints |
+| `option.IsUnlocked(runsStarted)`, `option.RunsToUnlock` | bool, int | Locked state and the reason: "Locked. Opens after you have started {n} runs. You have started {runs}." |
+| `FittingRoom.Instance.IsOpen` | bool | The fitting room is in use |
+| `FittingRoomScreen.Show(catalog, loadout, focusedSlot, runsStarted, gamepad)` | call | Redraws the form from the browsed loadout; called on a change, never per frame |
+
+### Events
+
+| Event | Payload | Fires on | When |
+|---|---|---|---|
+| `FittingRoom.OnEntered` | none | Local | The player stepped into the fitting room (camera starts swinging out) |
+| `FittingRoom.OnExited` | bool kept | Local | Back in first person; `kept` false for a put back or a cut-short session |
+| `FittingRoom.OnSlotFocused` | int slot | Local | The player moved to another category |
+| `FittingRoom.OnOptionShown` | int slot, int option | Local | A choice was shown on the character (every flick) |
+| `FittingRoom.OnLockedRefused` | none | Local | Keep was pressed with a locked choice in the outfit |
+| `PlayerOutfit.OnWornChanged` | `OutfitLoadout` | Every machine | A player's worn outfit changed after the host accepted it |
+| `PlayerOutfit.OnRefused` | none | The owner | The host refused the outfit (an id the catalog doesn't have) |
+| `PlayerOutfit.OnRunsStartedChanged` | int | The owner | A run started: locked choices may have opened |
+
+### Requests (send)
+
+`PlayerOutfit.Preview(loadout)` shows a choice locally; `Commit(loadout)` saves it and asks the host; `Revert()` puts back what is worn. The fitting room calls these; a replacement screen should drive `FittingRoom`, not these directly.
+
+### Feel
+
+On every flick the camera pushes in a little and settles, and the character does a small stretch-and-settle (`OutfitView` change bob). Moving to another category eases the camera to that category's own angle, distance and height (set on each `OutfitSlot`), turning back from wherever the player spun it. Keep and put back both slide the form away with a notice ("Outfit kept." / "Outfit put back."). Sounds and motion hang off the events above; none is hard-coded. Tuning: `FittingRoom` (view smoothing, push), `OutfitView` (bob), `OutfitSlot` (view).
+
 ## Known limitations
 
 - **The secretary figure has no animator** (T-pose). Players use Alex's animated rig.

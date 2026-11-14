@@ -19,7 +19,7 @@ MonoBehaviour:
   Width: 20
   MainDepth: 10
   SpineDepth: 4
-  Gap: 12
+  Gap: 60
   Lobby: {fileID: 5970590393967326313, guid: c2cb47fb8a25144b3953a9900d92f70c, type: 3}
   Checkpoint: {fileID: 5970590393967326313, guid: c2cb47fb8a25144b3953a9900d92f70c, type: 3}
   Boardroom: {fileID: 5970590393967326313, guid: c2cb47fb8a25144b3953a9900d92f70c, type: 3}

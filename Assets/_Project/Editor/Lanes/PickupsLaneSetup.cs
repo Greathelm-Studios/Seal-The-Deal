@@ -44,6 +44,7 @@ namespace CloseTheDeal.Editor.Lanes
         const string LaneTowerPath = ProfileFolder + "/LaneTowerFrame.asset";
         const string EmptyFloorPath = PrefabFolder + "/LaneEmptyFloor.prefab";
         const int PropsPerFloorCap = 16; // docs/systems/PROPS.md
+        const float LaneTowerGap = 60f;
 
         // The test floor: a slice of office 12 m up, so things can be thrown out of it.
         const float FloorTop = 12f;
@@ -81,7 +82,7 @@ namespace CloseTheDeal.Editor.Lanes
         {
             public CarryProfile Carry;
             public GameObject Chair, Desk, Monitor, Cabinet;
-            public GameObject Panel, Pistol, Rifle, GrenadeCase, Extinguisher, WetFloorSign, Dummy;
+            public GameObject Panel, Pistol, Rifle, GrenadeCase, Extinguisher, WetFloorSign, Dummy, PlantPot, Tablet;
         }
 
         static Assets EnsureAssets()
@@ -92,6 +93,7 @@ namespace CloseTheDeal.Editor.Lanes
             GreyboxPropSetup.PropSet greybox = GreyboxPropSetup.Ensure(false);
 
             var assets = new Assets { Carry = Profile<CarryProfile>("DefaultCarry", null) };
+            ItemSoundsSetup.Link(assets.Carry);
 
             // The greybox furniture becomes something hands can take.
             assets.Chair = MakeFurnitureCarryable("Chair", assets.Carry, Item("Chair", "Chair", ItemKind.Furniture, 8f, d =>
@@ -143,6 +145,11 @@ namespace CloseTheDeal.Editor.Lanes
             assets.Extinguisher = BuildExtinguisher(assets.Carry);
             assets.WetFloorSign = BuildWetFloorSign(assets.Carry);
             assets.Dummy = BuildDummy();
+            assets.PlantPot = BuildPlantPot();
+            assets.Tablet = BuildTablet();
+
+            // Every other loose prop in the project, whoever made it, can be carried and thrown too.
+            ThrowableProps.GiveEveryPropAPickup();
 
             AddCarrierToPlayer(assets.Carry);
             AssetDatabase.SaveAssets();
@@ -398,6 +405,69 @@ namespace CloseTheDeal.Editor.Lanes
 
             AddPickup(root, definition, carry, visual);
             return SavePrefab(root, path);
+        }
+
+        // ---- Loose props with no definition: everything about them is worked out at runtime ----
+
+        /// <summary>
+        /// A plant pot built the way any loose prop from another tool arrives: no Visual child,
+        /// no item definition, no carry rules. Its name, hold and throw come from its size and
+        /// its 4 kg body (LooseItemDefinition).
+        /// </summary>
+        static GameObject BuildPlantPot()
+        {
+            string path = PrefabFolder + "/PlantPot.prefab";
+            if (!ShouldWrite(path, out GameObject existing))
+                return existing;
+
+            GameObject root = NewLooseRoot("PlantPot", 4f);
+            var collider = root.AddComponent<CapsuleCollider>();
+            collider.center = new Vector3(0f, 0.38f, 0f);
+            collider.radius = 0.2f;
+            collider.height = 0.76f;
+
+            Material pot = Mat("PlantPot", new Color(0.93f, 0.92f, 0.89f), 0.35f);
+            Material leaf = Mat("PlantLeaf", new Color(0.24f, 0.45f, 0.3f), 0.2f);
+            Material soil = Mat("PlantSoil", new Color(0.2f, 0.16f, 0.13f), 0.05f);
+            Part(root.transform, PrimitiveType.Cylinder, "Pot", new Vector3(0f, 0.16f, 0f), new Vector3(0.32f, 0.16f, 0.32f), pot);
+            Part(root.transform, PrimitiveType.Cylinder, "Soil", new Vector3(0f, 0.32f, 0f), new Vector3(0.29f, 0.005f, 0.29f), soil);
+            Part(root.transform, PrimitiveType.Sphere, "Leaves", new Vector3(0f, 0.52f, 0f), new Vector3(0.4f, 0.42f, 0.4f), leaf);
+            Part(root.transform, PrimitiveType.Sphere, "Leaves Top", new Vector3(0.05f, 0.68f, -0.03f), new Vector3(0.26f, 0.22f, 0.26f), leaf);
+
+            root.AddComponent<Pickup>();
+            return SavePrefab(root, path);
+        }
+
+        /// <summary>A desk tablet: the lightest loose prop, so it flies fastest and hurts least.</summary>
+        static GameObject BuildTablet()
+        {
+            string path = PrefabFolder + "/Tablet.prefab";
+            if (!ShouldWrite(path, out GameObject existing))
+                return existing;
+
+            GameObject root = NewLooseRoot("Tablet", 0.6f);
+            Box(root, new Vector3(0f, 0.006f, 0f), new Vector3(0.25f, 0.012f, 0.18f));
+
+            Material shell = Mat("TabletShell", new Color(0.78f, 0.8f, 0.83f), 0.6f);
+            Material screen = Mat("TabletScreen", new Color(0.08f, 0.12f, 0.2f), 0.9f);
+            Part(root.transform, PrimitiveType.Cube, "Shell", new Vector3(0f, 0.005f, 0f), new Vector3(0.25f, 0.01f, 0.18f), shell);
+            Part(root.transform, PrimitiveType.Cube, "Screen", new Vector3(0f, 0.0105f, 0f), new Vector3(0.23f, 0.001f, 0.16f), screen);
+
+            root.AddComponent<Pickup>();
+            return SavePrefab(root, path);
+        }
+
+        /// <summary>A networked, host-simulated prop with its meshes straight under the root, as another tool would make it.</summary>
+        static GameObject NewLooseRoot(string name, float mass)
+        {
+            var root = new GameObject(name) { layer = PropLayer };
+            var body = root.AddComponent<Rigidbody>();
+            body.mass = mass;
+            body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            root.AddComponent<NetworkObject>();
+            AddNetBody(root);
+            root.AddComponent<Prop>();
+            return root;
         }
 
         static GameObject BuildPistol(CarryProfile carry)
@@ -893,6 +963,10 @@ namespace CloseTheDeal.Editor.Lanes
             var profile = ScriptableObject.CreateInstance<TowerProfile>();
             profile.Lobby = profile.Checkpoint = profile.Boardroom = profile.Roof = empty;
             profile.Offices = new[] { empty };
+            // The two empty towers stand well apart, so the hand-built slice and the ground
+            // under its windows are street, not inside a tower: things thrown out of it are
+            // out of the building (Pickup's fall rule) yet still inside Switchboard's box.
+            profile.Gap = LaneTowerGap;
             AssetDatabase.CreateAsset(profile, LaneTowerPath);
             Debug.Log("[Pickups] Created " + LaneTowerPath);
             return profile;
@@ -935,7 +1009,10 @@ namespace CloseTheDeal.Editor.Lanes
             Put(assets.Desk, "Desk cases", 0f, 0f, 3.5f);
             Put(assets.Desk, "Desk monitor", 5f, 0f, 3.5f);
             Put(assets.Pistol, "Pistol", -5.45f, DeskTop + 0.02f, 3.4f, 20f);
-            Put(assets.Rifle, "AR-15", -4.7f, DeskTop + 0.02f, 3.5f, 80f);
+            // The AR-15 is left out of this one floor to keep it inside the prop cap with the two
+            // loose props below; the pistol stands for guns here.
+            Put(assets.Tablet, "Tablet", -4.6f, DeskTop + 0.02f, 3.4f, 15f);
+            Put(assets.PlantPot, "Plant Pot", -8.2f, 0f, -3.5f);
             Put(assets.GrenadeCase, "Grenade Case A", -0.4f, DeskTop + 0.02f, 3.45f);
             Put(assets.GrenadeCase, "Grenade Case B", 0.4f, DeskTop + 0.02f, 3.45f);
             Put(assets.Monitor, "Monitor", 5f, DeskTop + 0.02f, 3.6f, 180f);
@@ -1025,6 +1102,199 @@ namespace CloseTheDeal.Editor.Lanes
             if (!AssetDatabase.IsValidFolder(parent + "/" + name))
                 AssetDatabase.CreateFolder(parent, name);
         }
+
+        /// <summary>
+        /// The one item sound set (Profiles/Items/ItemSounds.asset), linked from the carry
+        /// profile. Fills only what is empty: the game mixer's SFX bus once the UI sound lane's
+        /// mixer is in the project, and each clip from Audio/Items/Item_&lt;Slot&gt;.wav once the
+        /// sound generator has written it, and links the set from the carry profile if its
+        /// Sounds slot is empty (the one change this tool makes to an existing asset: an empty
+        /// slot it owns). A slot someone has set is never changed.
+        /// </summary>
+        static class ItemSoundsSetup
+        {
+            const string SetPath = ProfileFolder + "/ItemSounds.asset";
+            const string MixerPath = "Assets/_Project/Audio/UI/GameMixer.mixer";
+            const string ClipFolder = "Assets/_Project/Audio/Items";
+            const string SfxGroup = "SFX";
+
+            static readonly string[] Slots =
+            {
+                "PickUp", "Drop", "Throw", "ImpactLight", "ImpactHeavy",
+                "Arm", "Beep", "Explosion", "VentLoop", "VentEnd", "WetFloorDown", "Slip"
+            };
+
+            public static void Link(CarryProfile carry)
+            {
+                ItemSoundSet set = AssetDatabase.LoadAssetAtPath<ItemSoundSet>(SetPath);
+                if (set == null)
+                {
+                    set = ScriptableObject.CreateInstance<ItemSoundSet>();
+                    AssetDatabase.CreateAsset(set, SetPath);
+                    Debug.Log("[Pickups] Created " + SetPath);
+                }
+
+                var so = new SerializedObject(set);
+                FillBus(so);
+                foreach (string slot in Slots)
+                    FillClip(so, slot);
+                so.ApplyModifiedPropertiesWithoutUndo();
+
+                if (carry != null && carry.Sounds == null)
+                {
+                    var carrySo = new SerializedObject(carry);
+                    GreyboxSceneSetup.SetReference(carrySo, "Sounds", set);
+                    carrySo.ApplyModifiedPropertiesWithoutUndo();
+                }
+            }
+
+            static void FillBus(SerializedObject so)
+            {
+                SerializedProperty output = so.FindProperty("Output");
+                if (output.objectReferenceValue != null)
+                    return;
+
+                var mixer = AssetDatabase.LoadAssetAtPath<UnityEngine.Audio.AudioMixer>(MixerPath);
+                UnityEngine.Audio.AudioMixerGroup[] groups = mixer != null ? mixer.FindMatchingGroups(SfxGroup) : null;
+                if (groups == null || groups.Length == 0)
+                {
+                    Debug.Log($"[Pickups] Item sounds have no mixer bus yet: no {SfxGroup} group at {MixerPath}. Re-run after the UI sound lane is merged.");
+                    return;
+                }
+
+                output.objectReferenceValue = groups[0];
+            }
+
+            static void FillClip(SerializedObject so, string slot)
+            {
+                SerializedProperty clip = so.FindProperty(slot);
+                if (clip.objectReferenceValue != null)
+                    return;
+
+                var found = AssetDatabase.LoadAssetAtPath<AudioClip>($"{ClipFolder}/Item_{slot}.wav");
+                if (found != null)
+                    clip.objectReferenceValue = found;
+            }
+        }
+
+        /// <summary>
+        /// Any loose object in the game can be picked up and thrown (Alex, 2026-11-13). A prop
+        /// needs only the components below; its name, hold and throw are worked out at runtime
+        /// from its size and mass (LooseItemDefinition), and a hand-made item definition on its
+        /// Pickup overrides them. Design: docs/systems/ITEMS.md, "Any loose prop".
+        /// </summary>
+        static class ThrowableProps
+        {
+            const string ProjectFolder = "Assets/_Project";
+            const float GuessedKgPerCubicMetre = 40f; // a chair's box comes out near 10 kg, a desk's near 38
+
+            /// <summary>Adds a definition-free Pickup to every networked prop prefab under Assets/_Project that has none.</summary>
+            public static void GiveEveryPropAPickup()
+            {
+                foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { ProjectFolder }))
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+                    var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                    if (prefab == null || prefab.GetComponent<Prop>() == null || prefab.GetComponent<Pickup>() != null)
+                        continue;
+
+                    EditPrefab(path, root => root.AddComponent<Pickup>());
+                    Debug.Log($"[Pickups] {path} can now be carried and thrown (no item definition: worked out from its size and mass).");
+                }
+            }
+
+            [MenuItem("Close the Deal/Items/Make Selected Prefabs Throwable")]
+            static void MakeSelectedThrowable()
+            {
+                int made = 0;
+                foreach (Object selected in Selection.objects)
+                {
+                    string path = AssetDatabase.GetAssetPath(selected);
+                    if (!path.EndsWith(".prefab"))
+                        continue;
+
+                    MakeThrowable(path);
+                    made++;
+                }
+
+                if (made == 0)
+                    Debug.LogWarning("[Pickups] Select one or more prefabs in the Project window first.");
+                AssetDatabase.SaveAssets();
+            }
+
+            [MenuItem("Close the Deal/Items/Make Selected Prefabs Throwable", true)]
+            static bool CanMakeSelectedThrowable() => Selection.objects.Length > 0;
+
+            /// <summary>
+            /// Adds what a loose object needs, keeping anything already there: the Prop layer, a
+            /// collider if it has none, a body (with a guessed mass, logged, if it had none),
+            /// FishNet's NetworkObject, Switchboard's NetBody, Prop and Pickup.
+            /// </summary>
+            static void MakeThrowable(string path)
+            {
+                var notes = new System.Collections.Generic.List<string>();
+                EditPrefab(path, root =>
+                {
+                    SetPropLayer(root);
+                    EnsureCollider(root, notes);
+                    EnsureBody(root, notes);
+                    if (root.GetComponent<NetworkObject>() == null)
+                        root.AddComponent<NetworkObject>();
+                    if (root.GetComponent<NetBody>() == null)
+                        AddNetBody(root);
+                    if (root.GetComponent<Prop>() == null)
+                        root.AddComponent<Prop>();
+                    if (root.GetComponent<Pickup>() == null)
+                        root.AddComponent<Pickup>();
+                });
+
+                string extra = notes.Count > 0 ? " " + string.Join(" ", notes) : "";
+                Debug.Log($"[Pickups] {path} is now a loose, throwable prop.{extra}");
+            }
+
+            static void SetPropLayer(GameObject root)
+            {
+                root.layer = PropLayer;
+                foreach (Collider collider in root.GetComponentsInChildren<Collider>(true))
+                    collider.gameObject.layer = PropLayer;
+            }
+
+            static void EnsureCollider(GameObject root, System.Collections.Generic.List<string> notes)
+            {
+                Collider[] colliders = root.GetComponentsInChildren<Collider>(true);
+                foreach (Collider collider in colliders)
+                {
+                    if (collider is MeshCollider { convex: false } mesh)
+                    {
+                        mesh.convex = true;
+                        notes.Add($"Made the mesh collider on {mesh.name} convex (a moving body needs it; a box is cheaper).");
+                    }
+                }
+
+                if (colliders.Length > 0)
+                    return;
+
+                Bounds size = LooseItemDefinition.LocalBounds(root.transform, root.GetComponentsInChildren<Renderer>(true), colliders);
+                Vector3 scale = root.transform.lossyScale;
+                var box = root.AddComponent<BoxCollider>();
+                box.center = new Vector3(size.center.x / scale.x, size.center.y / scale.y, size.center.z / scale.z);
+                box.size = new Vector3(size.size.x / scale.x, size.size.y / scale.y, size.size.z / scale.z);
+                notes.Add($"Added a box collider round what it draws ({size.size.x:0.00} x {size.size.y:0.00} x {size.size.z:0.00} m).");
+            }
+
+            static void EnsureBody(GameObject root, System.Collections.Generic.List<string> notes)
+            {
+                if (root.GetComponent<Rigidbody>() != null)
+                    return;
+
+                Bounds size = LooseItemDefinition.LocalBounds(root.transform, root.GetComponentsInChildren<Renderer>(true), root.GetComponentsInChildren<Collider>(true));
+                float mass = Mathf.Clamp(size.size.x * size.size.y * size.size.z * GuessedKgPerCubicMetre, 0.3f, 80f);
+                var body = root.AddComponent<Rigidbody>();
+                body.mass = mass;
+                body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                notes.Add($"Guessed its mass at {mass:0.0} kg from its size: set the real one on its Rigidbody (over 35 kg cannot be lifted).");
+            }
+        }
     }
 }
 
@@ -1035,7 +1305,6 @@ namespace CloseTheDeal.Editor.Lanes
     using System.IO;
     using System.Text;
     using FishNet;
-    using Unity.Profiling;
     using UnityEngine.InputSystem.LowLevel;
 
     /// <summary>
@@ -1073,7 +1342,11 @@ namespace CloseTheDeal.Editor.Lanes
         static int _frame;
 
         [MenuItem("Close the Deal/Lanes/Run Pickups Check")]
-        static void RunFromMenu() => Begin("solo", "Temp/PickupsRun");
+        static void RunFromMenu()
+        {
+            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                Begin("solo", "Temp/PickupsRun");
+        }
 
         public static void RunFromShell() => Begin(Arg("-pickupsRole") ?? "solo", Arg("-pickupsOut") ?? "Temp/PickupsRun");
 
@@ -1103,8 +1376,26 @@ namespace CloseTheDeal.Editor.Lanes
         [InitializeOnLoadMethod]
         static void Resume()
         {
+            EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeChanged;
             if (SessionState.GetBool(ActiveKey, false))
                 EditorApplication.update += Pump;
+        }
+
+        /// <summary>
+        /// Stopping Play in the middle of a check ends the check: otherwise the next Play, in any
+        /// scene, would pick the script up again and drive the player.
+        /// </summary>
+        static void OnPlayModeChanged(PlayModeStateChange change)
+        {
+            if (change != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool(ActiveKey, false))
+                return;
+
+            EditorApplication.update -= Pump;
+            SessionState.SetBool(ActiveKey, false);
+            _script = null;
+            Stack.Clear();
+            Debug.Log("[Pickups] Run Pickups Check stopped before it finished; nothing was reported.");
         }
 
         static void Pump()
@@ -1360,6 +1651,7 @@ namespace CloseTheDeal.Editor.Lanes
         {
             SteamLobby lobby = UnityEngine.Object.FindAnyObjectByType<SteamLobby>();
             yield return new Until(() => lobby.Ready, 20f, "the lobby to be ready");
+            UseOwnPort();
             if (host)
             {
                 lobby.Host();
@@ -1382,8 +1674,24 @@ namespace CloseTheDeal.Editor.Lanes
             }
 
             yield return new Until(() => Me != null, 30f, "this machine's player to spawn");
+            if (host)
+                Check("this machine is the host (it did not join someone else's game on the same port)", InstanceFinder.IsServerStarted);
             Cursor.lockState = CursorLockMode.Locked;
             yield return 1.5f;
+        }
+
+        /// <summary>
+        /// Other copies of the game on this Mac (an open editor pressing Host, other lanes' runs)
+        /// use the default local port; this lane's runs keep to their own, 17783 unless
+        /// -pickupsPort says otherwise, so a host here never joins someone else's game.
+        /// </summary>
+        static void UseOwnPort()
+        {
+            ushort port = ushort.TryParse(Arg("-pickupsPort"), out ushort chosen) ? chosen : (ushort)17783;
+            var tugboat = UnityEngine.Object.FindAnyObjectByType<FishNet.Transporting.Tugboat.Tugboat>();
+            if (tugboat != null)
+                tugboat.SetPort(port);
+            Note($"local port {port}");
         }
 
         // ---- Solo: every feature and edge case on one machine (host with its own player) -----
@@ -1424,7 +1732,7 @@ namespace CloseTheDeal.Editor.Lanes
 
             me.LocalTake(chairA);
             yield return 0.6f;
-            Check("E takes the chair", me.Held == chairA && chairA.State == PickupState.Held);
+            Check("F takes the chair", me.Held == chairA && chairA.State == PickupState.Held);
             Check("a chair slows the carrier a little", me.Motor.Profile.WalkSpeed < fullWalk, $"walk speed {me.Motor.Profile.WalkSpeed:0.00} of {fullWalk:0.00} m/s");
             FirstPersonStill("02_carry_chair");
 
@@ -1435,12 +1743,26 @@ namespace CloseTheDeal.Editor.Lanes
             Stand(me, new Vector3(-2.5f, FloorY, -2f), -90f);
             yield return 0.5f;
             float healthBefore = dummyC.Health;
+            int landedBy = -2;
+            float landedDamage = -1f;
+            Action<Pickup, int, GameObject, float> onLanded = (item, thrower, hit, damage) =>
+            {
+                if (item == chairA) { landedBy = thrower; landedDamage = damage; }
+            };
+            Pickup.ServerThrowLanded += onLanded;
             me.LocalThrow(AimAt(me, dummyC.transform.position + Vector3.up * 1.1f, 0.08f));
             yield return 0.15f;
             FirstPersonStill("03_chair_in_flight");
+            denied = null;
+            me.LocalTake(chairA);
+            yield return 0.1f;
+            Check("the thrower cannot snatch a chair straight back mid-throw", me.Held == null && denied == DenyReason.TooSoon, $"refusal: {denied}");
             yield return 1.6f;
             Check("a thrown chair leaves the hands", me.Held == null && chairA.State == PickupState.InWorld);
             Check("a thrown chair damages what it hits", dummyC.Health < healthBefore, $"dummy {healthBefore:0} -> {dummyC.Health:0}");
+            Pickup.ServerThrowLanded -= onLanded;
+            Check("the host reports the throw landing, with who threw it and the damage", landedBy == me.OwnerId && landedDamage > 0f,
+                $"thrower {landedBy} (me {me.OwnerId}), damage {landedDamage:0.0}");
             Check("walking speed is back after letting go", Mathf.Approximately(me.Motor.Profile.WalkSpeed, fullWalk));
 
             // 2. Cubicle panel as moving cover, and the slowdown measured by walking.
@@ -1541,6 +1863,13 @@ namespace CloseTheDeal.Editor.Lanes
             me.LocalUse();
             yield return 0.3f;
             Check("right mouse pulls the pin and it vents", extinguisher.IsVenting);
+            AudioSource ventLoop = can.GetComponentInChildren<AudioSource>(true);
+            bool audioRuns = ventLoop != null && ventLoop.isPlaying;
+            if (audioRuns)
+                Check("the vent loop goes through the item sound set's mixer bus", ventLoop.outputAudioMixerGroup == can.Sounds?.Output,
+                    $"bus: {(ventLoop.outputAudioMixerGroup != null ? ventLoop.outputAudioMixerGroup.name : "none (no game mixer in this checkout yet)")}");
+            else
+                Note("NOT CHECKED  the vent loop playing: this run has no audio output, so no source reports playing.");
             Stand(me, new Vector3(3f, FloorY, -2f), -90f);
             yield return 1.5f;
             FirstPersonStill("08_extinguisher_smoke");
@@ -1555,6 +1884,10 @@ namespace CloseTheDeal.Editor.Lanes
             Check("it lays a smoke cloud", smokeParticles > 40, $"{smokeParticles} smoke puffs alive");
             yield return new Until(() => !extinguisher.IsVenting, 8f, "the extinguisher to run empty");
             Check("it runs empty and stops", extinguisher.IsEmpty);
+            // The host's own client hears the change a tick after the server value: wait for it.
+            yield return 0.3f;
+            if (audioRuns)
+                Check("the vent loop stops when it runs empty", !ventLoop.isPlaying);
 
             // 6. Wet floor sign.
             Pickup sign = Find("Wet Floor Sign");
@@ -1618,24 +1951,21 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 0.5f;
             Check("a chair thrown out of the building is put back where it started", Vector3.Distance(chairB.transform.position, new Vector3(0f, 12f, 2.2f)) < 0.5f, $"now at {V(chairB.transform.position)}");
 
-            // 9. Allocations while carrying.
-            yield return TakeWhereItIs(me, panelA);
-            _recording = false;
-            yield return 0.5f;
-            long carrying = 0;
-            yield return MeasureAllocations(90, bytes => carrying = bytes);
-            me.LocalDrop();
-            yield return 0.8f;
-            long emptyHanded = 0;
-            yield return MeasureAllocations(90, bytes => emptyHanded = bytes);
-            _recording = true;
-            if (carrying <= 0 && emptyHanded <= 0)
-                Note($"NOT MEASURED  allocations: the frame allocation counter read {carrying} / {emptyHanded} in this run, so it proves nothing.");
-            else
-                Check("carrying allocates no more per frame than standing empty-handed", carrying <= emptyHanded + 64,
-                    $"{carrying} B/frame carrying a panel, {emptyHanded} B/frame empty-handed (editor play mode, 90 frames each)");
+            // 9. Any loose prop: no item definition, everything worked out from size and mass.
+            yield return LooseProps(me, dummyC);
 
-            // 10. Leaving the game while carrying.
+            // 10. Allocations while carrying: the carry code itself, called directly.
+            yield return TakeWhereItIs(me, panelA);
+            yield return CarryAllocations(me, "a cubicle panel (has a Visual child)");
+            me.LocalDrop();
+            yield return 0.6f;
+            Pickup pot = Find("Plant Pot");
+            yield return TakeWhereItIs(me, pot);
+            yield return CarryAllocations(me, "the plant pot (copy in the hands)");
+            me.LocalDrop();
+            yield return 0.6f;
+
+            // 11. Leaving the game while carrying.
             yield return TakeWhereItIs(me, chairA);
             Vector3 carriedAt = chairA.transform.position;
             Check("carrying a chair before leaving", me.Held == chairA);
@@ -1674,16 +2004,92 @@ namespace CloseTheDeal.Editor.Lanes
                     $"held: {(who.Held != null ? who.Held.name : "nothing")}, item at {V(at)}, stood at {V(stand)}, state {who.Motor.State}, refused: {(refused.HasValue ? refused.ToString() : "no answer")}");
         }
 
-        static IEnumerator MeasureAllocations(int frames, Action<long> result)
+        /// <summary>
+        /// A plant pot and a tablet that nobody wrote a definition for: named from the prefab,
+        /// held by their size, thrown by their weight, and a thrown pot hurts a dummy.
+        /// </summary>
+        static IEnumerator LooseProps(ItemCarrier me, DamageDummy dummy)
         {
-            using ProfilerRecorder recorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocated In Frame", frames + 4);
-            int startFrame = Time.frameCount;
-            yield return new Until(() => Time.frameCount >= startFrame + frames, 10f, "frames to measure");
-            long total = 0;
-            int count = Mathf.Min(recorder.Count, frames);
-            for (int i = 0; i < count; i++)
-                total += recorder.GetSample(recorder.Count - 1 - i).Value;
-            result(count > 0 ? total / count : -1);
+            Pickup pot = Find("Plant Pot");
+            Pickup tablet = Find("Tablet");
+            ItemDefinition potItem = pot.Definition;
+            ItemDefinition tabletItem = tablet.Definition;
+            Check("a loose prop with no definition is named from its prefab", pot.IsDerived && potItem.DisplayName == "Plant Pot" && tabletItem.DisplayName == "Tablet",
+                $"\"{potItem.DisplayName}\", \"{tabletItem.DisplayName}\"");
+            Check("its weight is its body's mass", Mathf.Approximately(potItem.WeightKg, 4f) && Mathf.Approximately(tabletItem.WeightKg, 0.6f),
+                $"pot {potItem.WeightKg:0.0} kg, tablet {tabletItem.WeightKg:0.0} kg");
+            Check("lighter loose props are thrown faster", tabletItem.ThrowSpeed > potItem.ThrowSpeed,
+                $"tablet {tabletItem.ThrowSpeed:0.0} m/s, pot {potItem.ThrowSpeed:0.0} m/s");
+            Note($"derived hold: pot offset {V(potItem.HeldOffset)} clearance {potItem.HoldClearance:0.00}; tablet offset {V(tabletItem.HeldOffset)}");
+
+            yield return TakeWhereItIs(me, pot);
+            Check("F takes a loose prop that has no definition", me.Held == pot);
+            Transform copy = pot.transform.Find("In hands");
+            Renderer own = pot.transform.Find("Pot").GetComponent<Renderer>();
+            Check("a carried loose prop is drawn in the hands and not where its solid part is",
+                copy != null && copy.gameObject.activeSelf && !own.enabled,
+                $"copy {(copy != null ? (copy.gameObject.activeSelf ? "shown" : "hidden") : "missing")}, own mesh {(own.enabled ? "shown" : "hidden")}");
+            FirstPersonStill("12_carry_plant_pot");
+
+            Stand(me, new Vector3(-3f, FloorY, -2f), -90f);
+            yield return 0.5f;
+            float healthBefore = dummy.Health;
+            me.LocalThrow(AimAt(me, dummy.transform.position + Vector3.up * 1.1f, 0.06f));
+            yield return 0.15f;
+            FirstPersonStill("13_plant_pot_in_flight");
+            yield return 1.6f;
+            Check("a thrown loose prop damages what it hits", dummy.Health < healthBefore, $"dummy {healthBefore:0} -> {dummy.Health:0}");
+            Check("once it lands, the loose prop is drawn where it is again", own.enabled && (copy == null || !copy.gameObject.activeSelf));
+            Check("it stays in the room", pot.State == PickupState.InWorld && pot.transform.position.y > FloorY - 0.5f, $"at {V(pot.transform.position)}");
+
+            yield return TakeWhereItIs(me, tablet);
+            Check("a 0.6 kg tablet is taken too", me.Held == tablet);
+            me.LocalDrop();
+            yield return 0.6f;
+        }
+
+        /// <summary>
+        /// Calls the carry code's per-frame and per-tick work directly (the owner's input read,
+        /// the item following the hands, both host ticks) many times and counts what it
+        /// allocates on this thread. Earlier runs compared whole editor frames carrying and
+        /// empty-handed; those numbers include the editor itself and moved by 80 to 170 bytes
+        /// between windows either way, so they could not say whether carrying allocates.
+        /// </summary>
+        static IEnumerator CarryAllocations(ItemCarrier me, string what)
+        {
+            Pickup held = me.Held;
+            if (held == null)
+            {
+                Check($"carrying {what} for the allocation count", false);
+                yield break;
+            }
+
+            Action carrierUpdate = Method(me, "Update");
+            Action carrierTick = Method(me, "ServerTick");
+            Action itemLate = Method(held, "LateUpdate");
+            Action itemTick = Method(held, "ServerTick");
+
+            // Once each first, so anything built lazily on first use is not counted.
+            carrierUpdate(); carrierTick(); itemLate(); itemTick();
+            const int Calls = 600;
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < Calls; i++)
+            {
+                carrierUpdate();
+                carrierTick();
+                itemLate();
+                itemTick();
+            }
+
+            long bytes = GC.GetAllocatedBytesForCurrentThread() - before;
+            Check($"carrying {what} allocates nothing per frame", bytes == 0, $"{bytes} B over {Calls} frames and ticks of the carry code");
+            yield return null;
+        }
+
+        static Action Method(object target, string name)
+        {
+            MethodInfo method = target.GetType().GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            return (Action)Delegate.CreateDelegate(typeof(Action), target, method);
         }
 
         // ---- Host and client: two machines ----------------------------------------------------

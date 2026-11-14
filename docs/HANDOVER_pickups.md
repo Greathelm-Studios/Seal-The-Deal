@@ -28,9 +28,12 @@ The three office weapons proposed were fire extinguisher, wet floor sign and des
 
 ### Run results
 
-Latest runs (2026-11-13, after merging main and moving every item onto Switchboard's `NetBody`):
+Latest runs (2026-11-13, after merging `buffer` and adding "any loose prop"):
 
-- **Solo (host only): 33 passed, 0 failed.** The earlier wet-floor re-pickup failure was the script, not the game: the slip knocks the sign about 1 m, which clears the trap as designed, and the script was standing at its old spot. It now walks to where the sign is. The allocation check passed this run; it has been flaky before.
+- **Solo (host only): 43 passed, 0 failed.** New: a plant pot and a tablet with no item definition are named from their prefabs ("Plant Pot", "Tablet"), weigh their body mass, the lighter is thrown faster, the pot is drawn in the hands while its own meshes hide, a thrown pot took a dummy from 80 to 65, and both are taken by F.
+- **Allocation check: cause found and the check replaced.** The old check compared whole editor frames carrying and empty-handed (591 vs 514 B, 1123 vs 949 B, once equal); those numbers include the editor itself and nothing in the carry path allocated. It now calls the carry code directly (owner input read, item following the hands, both host ticks) 600 times and counts this thread's allocations: **0 B carrying a panel, 0 B carrying the plant pot.**
+- **Wet floor re-pickup: not a game bug.** The slip knocks the sign about 1 m, which clears the trap as designed; the old check reached for its old spot. It walks to the sign now and passes.
+- **Gun "dropped" on every machine: fixed** in `Pickup.ServerUseUp`: a used-up item (gun into the slots, case gone off) empties the hands through the holder change only, with no `Released`, on every machine (agreed with the shooting lane, AgentHub #395).
 - Not checked in batchmode: the look prompt (the mouse cannot be captured) and walking speed under load by keys (profile numbers checked instead: chair 5.48 of 6.00 m/s).
 - **Host + client, two copies on one Mac over the local connection: host 4/4, client 8/8.** Contested grab gave the chair to exactly one player; the client saw the host's case arm, beep 13 times and explode, and its own player was thrown; a client leaving while carrying left the chair in the level once; a thrown chair came to rest at the same point on both through Switchboard (-1.80, 12.25, -5.78). No `[Switchboard]` warnings in either log.
 - In this run the client won the contested grab, so "the loser is told why" was only seen from the host's side.
@@ -43,7 +46,7 @@ Defined in `ItemCarrier.CreateInput`:
 
 | Action | Keyboard / mouse | Pad |
 |---|---|---|
-| Interact | F (E is lean right) | West button |
+| Interact | F (E is lean right) | North button (West is Reload) |
 | Throw | Left mouse | Right trigger |
 | Drop | G | D-pad down |
 | Use Item | Right mouse | Left trigger |
@@ -81,10 +84,23 @@ Open `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`, press Play, then **Host 
 
 - **Owner words vs GDD:** the GDD's v1 weapon table lists "throwable explosive" but no furniture carrying, gun pickups or office gadgets. Built to the owner's 2026-11-12 words; GDD not edited (only Adam changes design).
 - **Carry slowdown uses reflection** on `PlayerMotor._profile` (labelled workaround, ITEMS.md known limitations). If the movement lane renames that field, carrying stops slowing players and logs one error.
-- **Gun pickups and death:** gun definitions are set to never return (`ReturnsAfterUsedSeconds = 0`), so the snippet's `ServerUseUp()` despawns the gun pickup for good once taken. If the weapon holder does not drop a fresh pickup when a player dies, guns are lost on death, which breaks "never lost". The shooting lane picks one at integration: drop a pickup on death, or give the gun definitions a return time.
+- **Gun pickups:** a taken gun goes into the weapon slots and its pickup is despawned (`GunPickups`, integration). The weapon holder keeps its guns through death, so none are lost.
+- **Fixed from the review lane (AgentHub #429):** the fall-return rule is now "outside the building" (below the ground, or outside both towers' footprints and 2.5 m below where it started), so stairwells no longer take items away and a ground-floor window throw comes back. **Open:** a carried item moves every tick, so Switchboard streams it at the full near rate although every client draws it from the carrier; marking held bodies as not needing poses is a Switchboard change (Harvey's).
 - **Setup reaches FishNet's scene id call by name** (`NetworkObject.CreateSceneId` is internal). Without it networked items placed in a freshly built scene never spawn. If a FishNet update renames it, the tool logs an error and the fix is FishNet's own Reserialize NetworkObjects menu.
 - Running the setup menu also re-applies the office look, which rewrites `Assets/_Project/Art/Look/OfficeLook_Volume.asset` and its `.meta`. Those files were left uncommitted in this worktree; they are not lane changes.
 - A carried panel is an immovable wall on the host and pushes other players aside. Fun or exploit needs a playtest.
+
+## Sound (2026-11-13)
+
+- **Real clips, no stand-ins.** The twelve item sounds in [ITEMS.md](systems/ITEMS.md) "Item sounds" are the UI sound lane's (`Audio/Items/Item_<Slot>.wav`, merged through `buffer`). **Set Up Pickups** fills `Profiles/Items/ItemSounds.asset` from them and routes it to the game mixer's SFX bus. The code-made `ItemTones` are deleted.
+- **Nobody has heard them**: synthesised and measured by the sound lane; batchmode runs only report sources playing and their bus.
+- Item sounds go through `ItemAudio` (pooled 3D sources on the set's bus); the explosion no longer bypasses the mixer.
+- The Grenade Case, extinguisher and wet floor sign events used to fire twice on the host; they now fire once, so their sounds are not doubled. A joining player hears no grab for items already carried.
+
+### Assumptions made while Adam was away (overnight 2026-11-13)
+
+- **The extinguisher keeps hissing after it is dropped**, or its carrier dies or leaves: it is still venting and driving itself round the floor until empty (6 s), and the design says it "cannot be stopped". The loop stops when it runs empty, comes back, is despawned (new match) or this machine leaves. Say if you want it silenced on drop.
+- **Carried items trail the view a little** (up to 10°, more for heavier things) and **ease into the hands** over 0.12–0.24 s when taken, so taking and turning have weight. Tuning is on `DefaultCarry.asset` under "Feel in the hands"; set the sway follow speeds very high to turn it off.
 
 ## The one thing that still makes pickups feel like a demo
 

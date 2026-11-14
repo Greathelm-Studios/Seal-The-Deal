@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Managing.Object.DefaultPrefabObjects
   _prefabs:
   - {fileID: 8429749960946613886, guid: 3904a506348f64515aca8101734eadc0, type: 3}
+  - {fileID: 6106603723869239320, guid: dd49e6750748a40a68b324ebdd69cb05, type: 3}
   - {fileID: 4680666766096500643, guid: 15448478584a8834db2a385545a8f514, type: 3}
   - {fileID: 8671774297361233293, guid: a6aac1943d3d44296a42983ddf0e98a4, type: 3}
   - {fileID: 1482439493815475541, guid: 4eed81abbe26e4ff39569d7acc81859d, type: 3}
@@ -21,6 +22,7 @@ MonoBehaviour:
   - {fileID: 5093474298900817497, guid: 85d04c1019a3240d08cea31c132b6fb6, type: 3}
   - {fileID: 6408008661249199825, guid: 8b3cb556d9fd4664abb5c9d84b0b5916, type: 3}
   - {fileID: 6508409696102552002, guid: 05b1885cca1073a499d885ca0ecdd9a8, type: 3}
+  - {fileID: 3257496445077483444, guid: 6fe052389fcd44d10aa0f519740af9a7, type: 3}
   - {fileID: 2850183199097149676, guid: d3165340415ba4f518ec537d1f4a69a7, type: 3}
   - {fileID: 6700126035713234456, guid: 31aed5b546ed84c60a40378d967a8719, type: 3}
   - {fileID: 3722864391915260168, guid: 342df3485ed854e29ae1c5ca0526ab33, type: 3}

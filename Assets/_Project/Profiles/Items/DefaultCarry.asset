@@ -31,3 +31,11 @@ MonoBehaviour:
   LiveThrowSeconds: 3
   FallReturnDistance: 6
   FallReturnSeconds: 2
+  Sounds: {fileID: 11400000, guid: 24aaac374adc044ffbdafe7a3cc42feb, type: 2}
+  LooseThrowSpeedLight: 15
+  LooseThrowSpeedHeavy: 5
+  LooseTumbleLight: 2.2
+  LooseTumbleHeavy: 0.3
+  LooseHoldAhead: 0.55
+  LooseHoldBelowEye: 0.3
+  LooseHoldDropPerMetre: 0.7
