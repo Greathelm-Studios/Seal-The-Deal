@@ -45,14 +45,22 @@ namespace CloseTheDeal.Player
         static void HookPrefs() => InputPrefs.BindingsHooked = true;
 
         /// <summary>The player's saved rebinding, put on this reader's own copy of the actions (overrides are not copied by Instantiate).</summary>
+        /// <summary>The rebind text last put on this reader's actions; null until the first apply.</summary>
+        string _appliedBindings;
+
+        /// <summary>
+        /// Puts the saved rebinding on this reader's own actions. InputPrefs.Changed also fires for
+        /// every sensitivity step, so the actions are only rebuilt when the rebind text changed.
+        /// </summary>
         void ApplyBindingOverrides()
         {
-            _own.RemoveAllBindingOverrides();
-            if (IgnoreSavedBindings)
+            string json = IgnoreSavedBindings ? string.Empty : InputPrefs.BindingOverridesJson ?? string.Empty;
+            if (json == _appliedBindings)
                 return;
 
-            string json = InputPrefs.BindingOverridesJson;
-            if (!string.IsNullOrEmpty(json))
+            _appliedBindings = json;
+            _own.RemoveAllBindingOverrides();
+            if (json.Length > 0)
                 _own.LoadBindingOverridesFromJson(json);
         }
 
