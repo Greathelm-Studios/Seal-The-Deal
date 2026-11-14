@@ -94,7 +94,7 @@ Moving through the fitting-room form and the host list is the UI kit's navigatio
 
 ## Open, for whoever picks this up
 
-- **Buffer's Player.prefab draws every player twice**: the lobby's old greybox outfit figure (Graphics/Lean/Outfit) stands beside Alex's model (Graphics/Lean/Body) and PlayerOutfit's View points at the figure. Set Up Lobby is add-only and only reports it. Fix by hand: delete Outfit, point PlayerOutfit > View at an OutfitView on Body (Catalog = OutfitCatalog, Bodies = Body's renderers). Raised with the orchestrator (hub #543).
+- Fixed 2026-11-14 by the one-off migration **Close the Deal > Lanes > Migrations > Player: Outfit on the Real Model (once)** (hub #543, owner's go-ahead): Player.prefab drew every player twice. It deleted the greybox figure at Graphics/Lean/Outfit, put an OutfitView on Graphics/Lean/Body (Catalog = OutfitCatalog, Bodies = Body's renderers, change bob on Body) and pointed PlayerOutfit > View at it. Re-running it does nothing. Not yet seen in a played game.
 - Owner's direction 2026-11-14: no more gameplay, rules or netcode in this lane. Not built and left open: a ban or remove list (a removed player can rejoin), locking the lobby, moving a player between firms, unlocks from career stats (ProfileStore) instead of runs started, rematch with the same firms.
 - Fonts are the kit's stand-in (Liberation Sans) until the target faces are licensed.
 
