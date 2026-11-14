@@ -10,7 +10,7 @@ Everyone waits in their firm's reception until the host presses **Start the matc
 
 The briefcase starts on the **plaza**, the street between the two towers, the same distance from both receptions. Step over your reception's window sill to reach it.
 
-A soft column of light rises from the briefcase and shows through floors and walls within 30 m, so you can find it from anywhere nearby. Press **F** near it to pick it up: anyone can. Everyone sees it hanging at your hip; you see it low on the right of your view. It shows in **cyan** while your firm holds it, **amber `#FF9E1B`** while the rival does, and leather brown while it lies loose, on each player's own screen. Press **G** to drop it ahead of you for a teammate.
+A soft column of light rises from the briefcase and shows through floors and walls within 30 m, so you can find it from anywhere nearby. While the rival firm holds it, the column breathes (a cue that doesn't rely on telling cyan from amber); your own firm's stays steady. Press **F** near it to pick it up: anyone can. Everyone sees it hanging at your hip; you see it low on the right of your view. It shows in **cyan** while your firm holds it, **amber `#FF9E1B`** while the rival does, and leather brown while it lies loose, on each player's own screen. Press **G** to drop it ahead of you for a teammate.
 
 The carrier drops it if they are knocked down, fall out of the building, or leave the game. A loose briefcase can be taken by anyone, so the rival can steal it.
 
