@@ -221,6 +221,35 @@ namespace CloseTheDeal.MatchMode
             return _arena.FloorLabel(floor) + ", " + tower;
         }
 
+        /// <summary>
+        /// The result in one sentence, for the menu's result section and any results screen:
+        /// how it was won, when, and whether that was your firm. localFirm may be NoFirm.
+        /// </summary>
+        public string ReasonLine(MatchSnapshot result, int localFirm)
+        {
+            string clock = MatchHud.FormatClock(result.EndSeconds);
+            string floor = _arena.FloorLabel(result.EndFloor);
+            string how;
+            switch (result.Reason)
+            {
+                case MatchEndReason.BriefcaseOnRoof:
+                    how = $"Briefcase delivered to the roof at {clock}.";
+                    break;
+                case MatchEndReason.ClockHolding:
+                    how = $"The quarter closed at {clock} with the briefcase in their hands, on {floor}.";
+                    break;
+                case MatchEndReason.ClockLastCarried:
+                    how = $"The quarter closed at {clock}. The briefcase lay loose on {floor}; they carried it last.";
+                    break;
+                default:
+                    return $"The quarter closed at {clock} and nobody ever picked the briefcase up.";
+            }
+
+            if (localFirm == NoFirm)
+                return how;
+            return how + (result.Winner == localFirm ? " That is your firm." : " That is the rival firm.");
+        }
+
         /// <summary>What the member's interact or drop key would do right now.</summary>
         public MatchPrompt PromptFor(FirmMember member)
         {

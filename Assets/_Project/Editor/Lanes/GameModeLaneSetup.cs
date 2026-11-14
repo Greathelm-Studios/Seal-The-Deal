@@ -1,5 +1,6 @@
 using System.IO;
 using CloseTheDeal.Editor.Greybox;
+using CloseTheDeal.Editor.UI;
 using CloseTheDeal.MatchMode;
 using CloseTheDeal.Props;
 using CloseTheDeal.Tower;
@@ -471,222 +472,256 @@ namespace CloseTheDeal.Editor.Lanes
             EnsureMenuSection(menu, match);
         }
 
-        // ---- HUD -----------------------------------------------------------------------------
+        // ---- HUD (built from the UI kit) -----------------------------------------------------
 
+        const string KitFolder = "Assets/_Project/UI/Kit";
+        const string KitTokensPath = "Assets/_Project/UI/Tokens/UiTokens.asset";
+
+        /// <summary>The kit's prefabs, sprites and tokens. Null when the UI kit isn't in this project yet (Close the Deal > Lanes > Set Up UI).</summary>
+        sealed class Kit
+        {
+            public UiTokens Tokens;
+            public GameObject Plate, StatusLine, KeyHint, Primary;
+            public Sprite White, Outline;
+
+            public static Kit Load()
+            {
+                var kit = new Kit
+                {
+                    Tokens = AssetDatabase.LoadAssetAtPath<UiTokens>(KitTokensPath),
+                    Plate = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Plate.prefab"),
+                    StatusLine = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/StatusLine.prefab"),
+                    KeyHint = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/KeyHint.prefab"),
+                    Primary = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Button_Primary.prefab"),
+                    White = AssetDatabase.LoadAssetAtPath<Sprite>(KitFolder + "/Sprites/Kit_White.png"),
+                    Outline = AssetDatabase.LoadAssetAtPath<Sprite>(KitFolder + "/Sprites/Kit_Outline1.png")
+                };
+                bool complete = kit.Tokens != null && kit.Plate != null && kit.StatusLine != null && kit.KeyHint != null && kit.Primary != null && kit.White != null && kit.Outline != null;
+                if (!complete)
+                    Debug.LogError("[GameMode] The UI kit is missing pieces under " + KitFolder + ". Run Close the Deal > Lanes > Set Up UI first.");
+                return complete ? kit : null;
+            }
+        }
+
+        /// <summary>
+        /// The match HUD under the game menu's Hud. A HUD this tool built before the kit (no tokens
+        /// wired) is replaced; one already on the kit is left alone.
+        /// </summary>
         static void EnsureHud(GameMenu menu, MatchDirector match)
         {
             Transform hud = menu.transform.Find("Hud");
-            if (hud == null || hud.Find(HudName) != null || menu.GetComponent<MatchHud>() != null)
+            if (hud == null)
                 return;
 
-            var root = new GameObject(HudName, typeof(RectTransform));
-            root.transform.SetParent(hud, false);
-            Stretch((RectTransform)root.transform);
+            MatchHud existing = menu.GetComponent<MatchHud>();
+            if (OnKit(existing))
+            {
+                // A kit HUD from before the marker's edge image was wired: fill only that slot.
+                Transform edge = hud.Find(HudName + "/Marker/Edge");
+                if (edge != null)
+                    FillIfEmpty(existing, "_markerEdgeImage", edge.GetComponent<UnityEngine.UI.Image>());
+                return;
+            }
+
+            Kit kit = Kit.Load();
+            if (kit == null)
+                return;
+
+            Transform old = hud.Find(HudName);
+            if (old != null)
+            {
+                Debug.Log("[GameMode] Replacing the pre-kit match HUD this tool built.");
+                Object.DestroyImmediate(old.gameObject);
+            }
+
+            MatchHud component = existing != null ? existing : menu.gameObject.AddComponent<MatchHud>();
+            BuildHud(kit, hud, component, match);
+        }
+
+        static void BuildHud(Kit kit, Transform hud, MatchHud component, MatchDirector match)
+        {
+            UiTokens t = kit.Tokens;
+            RectTransform root = UiKitAssets.Node(hud, HudName);
+            UiKitAssets.Stretch(root);
+            var so = new SerializedObject(component);
+            void Wire(string field, Object value) => so.FindProperty(field).objectReferenceValue = value;
 
             // Clock: top centre.
-            TMP_Text clock = Chip(root.transform, "Clock", new Vector2(0.5f, 1f), new Vector2(0f, -24f), new Vector2(150f, 48f), 28f, TextAlignmentOptions.Center, out _);
-            clock.fontStyle = FontStyles.Bold;
+            RectTransform clock = PlateAt(kit, root, "Clock", new Vector2(0.5f, 1f), new Vector2(0f, -20f), new Vector2(240f, 84f));
+            Wire("_clockPlate", clock);
+            Wire("_clockCaption", UiKitAssets.Label(clock, "Caption", 0f, 8f, 240f, 18f, "QUARTER", t.Caption, t.Ink2, TextAlignmentOptions.Center));
+            Wire("_clockText", UiKitAssets.Label(clock, "Time", 0f, 26f, 240f, 52f, "15:00", t.Heading, t.Navy, TextAlignmentOptions.Center));
 
-            // Top right: the briefcase, then the firms, your own first.
-            TMP_Text briefcase = FirmRow(root.transform, "Briefcase", new Vector2(-24f, -24f), out UnityEngine.UI.Image briefcaseSwatch);
-            TMP_Text own = FirmRow(root.transform, "OwnFirm", new Vector2(-24f, -106f), out UnityEngine.UI.Image ownSwatch);
-            TMP_Text rival = FirmRow(root.transform, "RivalFirm", new Vector2(-24f, -188f), out UnityEngine.UI.Image rivalSwatch);
+            // Briefcase tracker: top right, a bar in the holder's colour down its left edge.
+            RectTransform tracker = PlateAt(kit, root, "Tracker", new Vector2(1f, 1f), new Vector2(-24f, -20f), new Vector2(460f, 88f));
+            Wire("_trackerBar", UiKitAssets.Box(tracker, "Bar", 0f, 0f, 8f, 88f, t.Silver, kit.White));
+            UiKitAssets.Label(tracker, "Caption", 24f, 10f, 420f, 18f, "BRIEFCASE", t.Caption, t.Ink2);
+            Wire("_trackerHolder", UiKitAssets.Label(tracker, "Holder", 24f, 28f, 420f, 28f, string.Empty, t.Item, t.Navy));
+            Wire("_trackerWhere", UiKitAssets.Label(tracker, "Where", 24f, 58f, 420f, 22f, string.Empty, t.Label, t.Ink2));
 
-            // Countdown: big, above the crosshair.
-            TMP_Text countdown = Chip(root.transform, "Countdown", new Vector2(0.5f, 0.5f), new Vector2(0f, 190f), new Vector2(170f, 170f), 120f, TextAlignmentOptions.Center, out GameObject countdownChip);
-            countdown.fontStyle = FontStyles.Bold;
+            // Open-floor ladder: left middle, roof at the top. Rows are copied from the template at run time.
+            RectTransform ladder = PlateAt(kit, root, "Ladder", new Vector2(0f, 0.5f), new Vector2(24f, 0f), new Vector2(300f, 200f));
+            Wire("_ladderPlate", ladder);
+            Wire("_ladderCaption", UiKitAssets.Label(ladder, "Caption", 16f, 12f, 268f, 18f, "OPEN TO RECEPTION", t.Caption, t.Navy));
+            RectTransform rows = UiKitAssets.At(ladder, "Rows", 16f, 40f, 268f, 0f);
+            Wire("_ladder", rows);
+            RectTransform row = UiKitAssets.At(rows, "Row", 0f, 0f, 268f, 24f);
+            UiKitAssets.Box(row, "Box", 0f, 6f, 12f, 12f, t.Cobalt, kit.White);
+            UiKitAssets.Label(row, "Label", 22f, 0f, 220f, 24f, "Floor", t.Label, t.Navy);
+            UiKitAssets.Box(row, "Mark", 250f, 6f, 12f, 12f, t.Silver, kit.White);
+            Wire("_ladderRow", row);
+            Wire("_openSprite", kit.White);
+            Wire("_shutSprite", kit.Outline);
 
-            // Key prompt: just under the crosshair.
-            TMP_Text prompt = Chip(root.transform, "Prompt", new Vector2(0.5f, 0.5f), new Vector2(0f, -90f), new Vector2(380f, 44f), 20f, TextAlignmentOptions.Center, out GameObject promptChip);
+            // Countdown: large, above the crosshair.
+            RectTransform countdown = Anchored(UiKitAssets.Node(root, "Countdown"), new Vector2(0.5f, 0.5f), new Vector2(0f, 170f), new Vector2(240f, 120f));
+            countdown.localScale = Vector3.one * 2f;
+            var countdownGroup = countdown.gameObject.AddComponent<CanvasGroup>();
+            countdownGroup.alpha = 0f;
+            countdownGroup.blocksRaycasts = false;
+            Wire("_countdownGroup", countdownGroup);
+            Wire("_countdownText", UiKitAssets.Label(countdown, "Number", 0f, 0f, 240f, 120f, "5", t.Title, t.Navy, TextAlignmentOptions.Center));
 
-            // One-off lines: bottom centre.
-            TMP_Text notice = Chip(root.transform, "Notice", new Vector2(0.5f, 0f), new Vector2(0f, 150f), new Vector2(980f, 52f), 20f, TextAlignmentOptions.Center, out GameObject noticeChip);
-            var noticeGroup = noticeChip.AddComponent<CanvasGroup>();
-            noticeGroup.alpha = 0f;
-            noticeGroup.blocksRaycasts = false;
-            noticeGroup.interactable = false;
+            // Floor-opened banner: under the clock.
+            RectTransform banner = PlateAt(kit, root, "Banner", new Vector2(0.5f, 1f), new Vector2(0f, -118f), new Vector2(760f, 56f));
+            Wire("_banner", banner);
+            Wire("_bannerGroup", Group(banner));
+            TMP_Text bannerText = UiKitAssets.Label(banner, "Text", 20f, 0f, 720f, 56f, string.Empty, t.Item, t.Navy, TextAlignmentOptions.Center);
+            bannerText.richText = true;
+            Wire("_bannerText", bannerText);
 
-            var component = menu.gameObject.AddComponent<MatchHud>();
-            var so = new SerializedObject(component);
-            GreyboxSceneSetup.SetReference(so, "_match", match);
-            GreyboxSceneSetup.SetReference(so, "_root", root);
-            GreyboxSceneSetup.SetReference(so, "_clockText", clock);
-            GreyboxSceneSetup.SetReference(so, "_briefcaseText", briefcase);
-            GreyboxSceneSetup.SetReference(so, "_briefcaseSwatch", briefcaseSwatch);
-            GreyboxSceneSetup.SetReference(so, "_ownText", own);
-            GreyboxSceneSetup.SetReference(so, "_ownSwatch", ownSwatch);
-            GreyboxSceneSetup.SetReference(so, "_rivalText", rival);
-            GreyboxSceneSetup.SetReference(so, "_rivalSwatch", rivalSwatch);
-            GreyboxSceneSetup.SetReference(so, "_countdownChip", countdownChip);
-            GreyboxSceneSetup.SetReference(so, "_countdownText", countdown);
-            GreyboxSceneSetup.SetReference(so, "_noticeGroup", noticeGroup);
-            GreyboxSceneSetup.SetReference(so, "_noticeText", notice);
-            GreyboxSceneSetup.SetReference(so, "_promptChip", promptChip);
-            GreyboxSceneSetup.SetReference(so, "_promptText", prompt);
+            // One-off lines and refusals: the kit's status line on a plate, low centre.
+            RectTransform notice = PlateAt(kit, root, "Notice", new Vector2(0.5f, 0f), new Vector2(0f, 140f), new Vector2(820f, 64f));
+            Wire("_notice", notice);
+            Wire("_noticeGroup", Group(notice));
+            var line = UiKitAssets.Instance<UiStatusLine>(kit.StatusLine, notice, "Line");
+            UiKitAssets.Place((RectTransform)line.transform, 20f, 6f, 780f, 52f);
+            TMP_Text lineText = line.transform.Find("Text").GetComponent<TMP_Text>();
+            lineText.rectTransform.sizeDelta = new Vector2(758f, lineText.rectTransform.sizeDelta.y);
+            lineText.textWrappingMode = TextWrappingModes.Normal;
+            Wire("_noticeLine", line);
+
+            // Key prompt: under the crosshair.
+            var hint = (RectTransform)UiKitAssets.Instance<RectTransform>(kit.KeyHint, root, "Prompt");
+            Anchored(hint, new Vector2(0.5f, 0.5f), new Vector2(0f, -84f), new Vector2(380f, 40f));
+            RectTransform hintLabel = (RectTransform)hint.Find("Label");
+            hintLabel.sizeDelta = new Vector2(320f, hintLabel.sizeDelta.y);
+            Wire("_prompt", hint.gameObject);
+            Wire("_promptKey", hint.Find("Key").GetComponent<TMP_Text>());
+            Wire("_promptLabel", hintLabel.GetComponent<TMP_Text>());
+            hint.gameObject.SetActive(false);
+
+            // The marker over the briefcase on screen.
+            RectTransform marker = Anchored(UiKitAssets.Node(root, "Marker"), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(22f, 22f));
+            Wire("_markerFill", UiKitAssets.Img(UiKitAssets.Fill(marker, "Fill", 3f), kit.White, t.Silver));
+            Wire("_markerEdgeImage", UiKitAssets.Img(UiKitAssets.Fill(marker, "Edge"), kit.Outline, t.Navy));
+            Wire("_marker", marker);
+
+            Wire("_match", match);
+            Wire("_tokens", t);
+            Wire("_root", root.gameObject);
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>Two lines on a dark chip, with a bar of the firm's colour down its left edge.</summary>
-        static TMP_Text FirmRow(Transform parent, string name, Vector2 offset, out UnityEngine.UI.Image swatch)
+        /// <summary>True when this component was already built by the kit version of this tool (its tokens are wired).</summary>
+        static bool OnKit(Component component)
         {
-            TMP_Text text = Chip(parent, name, new Vector2(1f, 1f), offset, new Vector2(440f, 72f), 17f, TextAlignmentOptions.MidlineLeft, out GameObject chip);
-            text.rectTransform.offsetMin = new Vector2(24f, 0f);
-
-            var bar = new GameObject("Swatch", typeof(RectTransform));
-            bar.transform.SetParent(chip.transform, false);
-            swatch = bar.AddComponent<UnityEngine.UI.Image>();
-            swatch.raycastTarget = false;
-            var rect = (RectTransform)bar.transform;
-            rect.anchorMin = new Vector2(0f, 0f);
-            rect.anchorMax = new Vector2(0f, 1f);
-            rect.pivot = new Vector2(0f, 0.5f);
-            rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = new Vector2(10f, 0f);
-            return text;
+            return component != null && new SerializedObject(component).FindProperty("_tokens").objectReferenceValue != null;
         }
 
-        /// <summary>HUD text on a dark translucent chip pinned to a screen corner or the centre, so it reads over bright walls and sky.</summary>
-        static TMP_Text Chip(Transform parent, string name, Vector2 anchor, Vector2 offset, Vector2 size, float fontSize, TextAlignmentOptions alignment, out GameObject chip)
+        static RectTransform PlateAt(Kit kit, Transform parent, string name, Vector2 anchor, Vector2 position, Vector2 size)
         {
-            chip = new GameObject(name, typeof(RectTransform));
-            chip.transform.SetParent(parent, false);
-            var back = chip.AddComponent<UnityEngine.UI.Image>();
-            back.color = ChipBack;
-            back.raycastTarget = false;
-            var rect = (RectTransform)chip.transform;
+            var plate = UiKitAssets.Instance<RectTransform>(kit.Plate, parent, name);
+            return Anchored(plate, anchor, position, size);
+        }
+
+        static RectTransform Anchored(RectTransform rect, Vector2 anchor, Vector2 position, Vector2 size)
+        {
             rect.anchorMin = rect.anchorMax = rect.pivot = anchor;
-            rect.anchoredPosition = offset;
+            rect.anchoredPosition = position;
             rect.sizeDelta = size;
-
-            TMP_Text text = Label(chip.transform, "Text", string.Empty, fontSize, Text);
-            text.alignment = alignment;
-            Stretch(text.rectTransform);
-            text.rectTransform.offsetMin = new Vector2(12f, 0f);
-            text.rectTransform.offsetMax = new Vector2(-12f, 0f);
-            return text;
+            return rect;
         }
 
-        // ---- Menu section --------------------------------------------------------------------
+        static CanvasGroup Group(RectTransform rect)
+        {
+            var group = rect.gameObject.AddComponent<CanvasGroup>();
+            group.alpha = 0f;
+            group.blocksRaycasts = false;
+            group.interactable = false;
+            return group;
+        }
 
+        // ---- Menu section (built from the UI kit) -----------------------------------------------
+
+        /// <summary>
+        /// The match's section on the game menu card: a plate with the headline, the reason as the
+        /// kit's status line, and the kit's primary button. A section this tool built before the kit
+        /// is replaced; the panel's words (set per scene in the Inspector) are kept.
+        /// </summary>
         static void EnsureMenuSection(GameMenu menu, MatchDirector match)
         {
             Transform card = menu.transform.Find("Menu/Card");
-            if (card == null || card.Find(SectionName) != null || menu.GetComponent<MatchMenuPanel>() != null)
+            if (card == null)
                 return;
 
-            var section = new GameObject(SectionName, typeof(RectTransform));
-            section.transform.SetParent(card, false);
-            var column = section.AddComponent<UnityEngine.UI.VerticalLayoutGroup>();
-            column.spacing = 10f;
-            column.childControlWidth = true;
-            column.childControlHeight = true;
-            column.childForceExpandWidth = true;
-            column.childForceExpandHeight = false;
+            MatchMenuPanel existing = menu.GetComponent<MatchMenuPanel>();
+            if (OnKit(existing))
+                return;
 
-            // Above the in-game buttons, so the result is the first thing read.
+            Kit kit = Kit.Load();
+            if (kit == null)
+                return;
+
+            Transform old = card.Find(SectionName);
+            int index = old != null ? old.GetSiblingIndex() : -1;
+            if (old != null)
+            {
+                Debug.Log("[GameMode] Replacing the pre-kit match section this tool built.");
+                Object.DestroyImmediate(old.gameObject);
+            }
+
+            UiTokens t = kit.Tokens;
+            var section = UiKitAssets.Instance<RectTransform>(kit.Plate, card, SectionName);
+            var layout = section.gameObject.AddComponent<UnityEngine.UI.LayoutElement>();
+            layout.minHeight = layout.preferredHeight = 196f;
             Transform gameSection = card.Find("GameSection");
-            if (gameSection != null)
-                section.transform.SetSiblingIndex(gameSection.GetSiblingIndex());
+            section.SetSiblingIndex(index >= 0 ? index : gameSection != null ? gameSection.GetSiblingIndex() : card.childCount - 1);
 
-            TMP_Text headline = Label(section.transform, "Headline", string.Empty, 28f, Text);
+            MatchMenuPanel panel = existing != null ? existing : menu.gameObject.AddComponent<MatchMenuPanel>();
+            WireMenuSection(kit, section, panel, menu, match);
+        }
+
+        /// <summary>Headline, reason line and button on the section's plate, wired to the panel.</summary>
+        static void WireMenuSection(Kit kit, RectTransform section, MatchMenuPanel panel, GameMenu menu, MatchDirector match)
+        {
+            UiTokens t = kit.Tokens;
+            TMP_Text headline = UiKitAssets.Label(section, "Headline", 20f, 14f, 584f, 30f, string.Empty, t.Item, t.Navy);
             headline.fontStyle = FontStyles.Bold;
-            Height(headline.gameObject, 36f);
+            var reason = UiKitAssets.Instance<UiStatusLine>(kit.StatusLine, section, "Reason");
+            UiKitAssets.Place((RectTransform)reason.transform, 20f, 48f, 584f, 64f);
+            TMP_Text reasonText = reason.transform.Find("Text").GetComponent<TMP_Text>();
+            reasonText.rectTransform.sizeDelta = new Vector2(562f, 64f);
+            reasonText.textWrappingMode = TextWrappingModes.Normal;
+            var action = UiKitAssets.Instance<UiButton>(kit.Primary, section, "MatchActionButton");
+            RectTransform actionRect = (RectTransform)action.transform;
+            UiKitAssets.Place(actionRect, 20f, 120f, 584f, t.PrimaryHeight);
+            TMP_Text actionLabel = action.transform.Find("Plate/Label")?.GetComponent<TMP_Text>();
 
-            TMP_Text detail = Label(section.transform, "Detail", string.Empty, 19f, Muted);
-            detail.textWrappingMode = TextWrappingModes.Normal;
-            detail.overflowMode = TextOverflowModes.Overflow;
-            Height(detail.gameObject, 52f);
 
-            UnityEngine.UI.Button action = Button(section.transform, "MatchActionButton", "Start the match", out TMP_Text actionLabel);
-
-            TMP_Text waiting = Label(section.transform, "Waiting", string.Empty, 19f, Muted);
-            Height(waiting.gameObject, 28f);
-
-            var rule = new GameObject("Divider", typeof(RectTransform));
-            rule.transform.SetParent(section.transform, false);
-            var line = rule.AddComponent<UnityEngine.UI.Image>();
-            line.color = Divider;
-            line.raycastTarget = false;
-            Height(rule, 1f);
-
-            var panel = menu.gameObject.AddComponent<MatchMenuPanel>();
             var so = new SerializedObject(panel);
-            GreyboxSceneSetup.SetReference(so, "_match", match);
-            GreyboxSceneSetup.SetReference(so, "_menu", menu);
-            GreyboxSceneSetup.SetReference(so, "_section", section);
-            GreyboxSceneSetup.SetReference(so, "_headline", headline);
-            GreyboxSceneSetup.SetReference(so, "_detail", detail);
-            GreyboxSceneSetup.SetReference(so, "_actionButton", action);
-            GreyboxSceneSetup.SetReference(so, "_actionLabel", actionLabel);
-            GreyboxSceneSetup.SetReference(so, "_waitingText", waiting);
+            so.FindProperty("_match").objectReferenceValue = match;
+            so.FindProperty("_menu").objectReferenceValue = menu;
+            so.FindProperty("_tokens").objectReferenceValue = t;
+            so.FindProperty("_section").objectReferenceValue = section.gameObject;
+            so.FindProperty("_headline").objectReferenceValue = headline;
+            so.FindProperty("_reason").objectReferenceValue = reason;
+            so.FindProperty("_action").objectReferenceValue = action;
+            so.FindProperty("_actionLabel").objectReferenceValue = actionLabel;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        static UnityEngine.UI.Button Button(Transform parent, string name, string label, out TMP_Text text)
-        {
-            GameObject go = TMP_DefaultControls.CreateButton(new TMP_DefaultControls.Resources());
-            go.name = name;
-            go.transform.SetParent(parent, false);
-
-            var image = go.GetComponent<UnityEngine.UI.Image>();
-            image.sprite = null;
-            image.color = Primary;
-
-            var button = go.GetComponent<UnityEngine.UI.Button>();
-            button.colors = new UnityEngine.UI.ColorBlock
-            {
-                normalColor = new Color(0.86f, 0.86f, 0.86f, 1f),
-                highlightedColor = Color.white,
-                pressedColor = new Color(0.7f, 0.7f, 0.7f, 1f),
-                selectedColor = Color.white,
-                disabledColor = new Color(0.6f, 0.6f, 0.6f, 0.4f),
-                colorMultiplier = 1f,
-                fadeDuration = 0.08f
-            };
-
-            text = go.GetComponentInChildren<TMP_Text>();
-            text.text = label;
-            text.fontSize = 22;
-            text.fontStyle = FontStyles.Bold;
-            text.characterSpacing = -2f;
-            text.color = PrimaryText;
-            text.raycastTarget = false;
-            Height(go, 64f);
-            return button;
-        }
-
         // ---- Small helpers -------------------------------------------------------------------
-
-        static TMP_Text Label(Transform parent, string name, string content, float size, Color colour)
-        {
-            var go = new GameObject(name, typeof(RectTransform));
-            go.transform.SetParent(parent, false);
-            var text = go.AddComponent<TextMeshProUGUI>();
-            text.text = content;
-            text.fontSize = size;
-            text.color = colour;
-            text.richText = true;
-            text.raycastTarget = false;
-            text.textWrappingMode = TextWrappingModes.NoWrap;
-            text.overflowMode = TextOverflowModes.Ellipsis;
-            text.alignment = TextAlignmentOptions.MidlineLeft;
-            return text;
-        }
-
-        static void Height(GameObject go, float height)
-        {
-            var element = go.AddComponent<UnityEngine.UI.LayoutElement>();
-            element.minHeight = height;
-            element.preferredHeight = height;
-        }
-
-        static void Stretch(RectTransform rect)
-        {
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-        }
 
         /// <summary>Sets an object slot only when nobody has filled it (AGENTS.md §4).</summary>
         static void FillIfEmpty(Object target, string field, Object value)

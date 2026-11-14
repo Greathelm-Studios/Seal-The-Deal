@@ -6,22 +6,24 @@ using UnityEngine.EventSystems;
 namespace CloseTheDeal.MatchMode
 {
     /// <summary>
-    /// The match's section of the game menu: where the match stands, who won and why, and the
-    /// host's one button (start, then rematch). When a match ends it opens the menu through
-    /// GameMenu, so the menu's own rule still holds: menu open, mouse free, player idle.
-    /// Text changes only on match events. Design: docs/systems/MATCH.md.
+    /// The match's section of the game menu, built with the UI kit: where the match stands,
+    /// who sealed the deal and why, and the host's one button (start, then rematch). Everyone
+    /// else reads why they can't press it. When a match ends it opens the menu through
+    /// GameMenu, so the menu's rule still holds: menu open, mouse free, player idle. A full
+    /// results screen is lane 5's; this is the result until that lands. Text changes only on
+    /// match events. Design: docs/systems/MATCH.md.
     /// </summary>
     public sealed class MatchMenuPanel : MonoBehaviour
     {
         [Header("Wiring")]
         [SerializeField] MatchDirector _match;
         [SerializeField] GameMenu _menu;
+        [SerializeField] UiTokens _tokens;
         [SerializeField] GameObject _section;
         [SerializeField] TMP_Text _headline;
-        [SerializeField] TMP_Text _detail;
-        [SerializeField] UnityEngine.UI.Button _actionButton;
+        [SerializeField] UiStatusLine _reason;
+        [SerializeField] UiButton _action;
         [SerializeField] TMP_Text _actionLabel;
-        [SerializeField] TMP_Text _waitingText;
 
         [Header("Words")]
         [Tooltip("The host's button before the first match. In a scene where the lobby desk starts the match, say that this skips the desk.")]
@@ -35,7 +37,7 @@ namespace CloseTheDeal.MatchMode
 
         void OnEnable()
         {
-            _match.OnStarted += Refresh;
+            _match.OnStarted += OnStarted;
             _match.OnClosed += Refresh;
             _match.OnPhaseChanged += OnPhaseChanged;
             _match.OnCountdownChanged += OnSecondPassed;
@@ -43,13 +45,13 @@ namespace CloseTheDeal.MatchMode
             _match.OnArenaChanged += Refresh;
             FirmMember.OnRosterChanged += Refresh;
             FirmMember.OnLocalChanged += Refresh;
-            _actionButton.onClick.AddListener(OnAction);
+            _action.Clicked += OnAction;
             Refresh();
         }
 
         void OnDisable()
         {
-            _match.OnStarted -= Refresh;
+            _match.OnStarted -= OnStarted;
             _match.OnClosed -= Refresh;
             _match.OnPhaseChanged -= OnPhaseChanged;
             _match.OnCountdownChanged -= OnSecondPassed;
@@ -57,7 +59,15 @@ namespace CloseTheDeal.MatchMode
             _match.OnArenaChanged -= Refresh;
             FirmMember.OnRosterChanged -= Refresh;
             FirmMember.OnLocalChanged -= Refresh;
-            _actionButton.onClick.RemoveListener(OnAction);
+            _action.Clicked -= OnAction;
+        }
+
+        /// <summary>Joining while a result is up: the result is where the match stands, so the menu shows it (quietly: it isn't news).</summary>
+        void OnStarted()
+        {
+            Refresh();
+            if (_match.Phase == MatchPhase.Ended)
+                _menu.Open();
         }
 
         void OnAction()
@@ -66,6 +76,8 @@ namespace CloseTheDeal.MatchMode
                 _match.HostStart();
             else if (_match.CanHostRematch)
                 _match.HostRematch();
+            else
+                return;
 
             // The round is starting: hand the player back their mouse and their body.
             _menu.Resume();
@@ -78,8 +90,8 @@ namespace CloseTheDeal.MatchMode
                 return;
 
             _menu.Open();
-            if (_match.CanHostRematch && EventSystem.current != null)
-                EventSystem.current.SetSelectedGameObject(_actionButton.gameObject);
+            if (EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(_action.gameObject);
         }
 
         /// <summary>The clock only matters here while the menu is actually up.</summary>
@@ -99,14 +111,17 @@ namespace CloseTheDeal.MatchMode
             MatchPhase phase = _match.Phase;
             bool host = _match.IsServerStarted;
             bool action = phase == MatchPhase.Waiting || phase == MatchPhase.Ended;
+            int own = FirmMember.Local.Firm;
 
             _headline.text = Headline(phase);
-            _detail.text = Detail(phase);
-            _actionButton.gameObject.SetActive(action && host);
-            _actionButton.interactable = _match.CanHostStart || _match.CanHostRematch;
+            _reason.Set(Detail(phase, own), phase == MatchPhase.Ended ? UiStatusKind.Info : UiStatusKind.Busy);
+
+            // Shown to everyone while there is something to start; only the host can press it,
+            // and anyone else who tries is told why (the kit's refusal plate and line).
+            _action.gameObject.SetActive(action);
             _actionLabel.text = phase == MatchPhase.Ended ? _rematchLabel : _startLabel;
-            _waitingText.gameObject.SetActive(action && !host);
-            _waitingText.text = phase == MatchPhase.Ended ? _waitingForRematch : _waitingForStart;
+            _action.interactable = host && (_match.CanHostStart || _match.CanHostRematch);
+            _action.RefusalReason = host ? "The towers are still being built." : phase == MatchPhase.Ended ? _waitingForRematch : _waitingForStart;
         }
 
         string Headline(MatchPhase phase)
@@ -114,43 +129,26 @@ namespace CloseTheDeal.MatchMode
             switch (phase)
             {
                 case MatchPhase.Waiting:
-                    return "Waiting in reception";
+                    return "WAITING IN RECEPTION";
                 case MatchPhase.Countdown:
-                    return "Starting";
+                    return "STARTING";
                 case MatchPhase.Running:
-                    return "Match running  ·  " + MatchHud.FormatClock(_match.SecondsLeft) + " left";
+                    return "QUARTER OPEN  ·  " + MatchHud.FormatClock(_match.SecondsLeft) + " LEFT";
                 default:
                     MatchSnapshot result = _match.Snapshot;
-                    return result.Winner == MatchDirector.NoFirm ? "No deal." : _match.FirmName(result.Winner) + " sealed the deal.";
+                    return result.Winner == MatchDirector.NoFirm ? "NO DEAL" : _match.FirmName(result.Winner).ToUpperInvariant() + " SEALED THE DEAL";
             }
         }
 
-        string Detail(MatchPhase phase)
+        string Detail(MatchPhase phase, int own)
         {
-            int own = FirmMember.Local.Firm;
-            if (phase != MatchPhase.Ended)
-                return $"You are with <b>{_match.FirmName(own)}</b>.  {FirmMember.CountIn(own)} v {FirmMember.CountIn(1 - own)}";
+            if (phase == MatchPhase.Ended)
+                return _match.ReasonLine(_match.Snapshot, own);
 
-            MatchSnapshot result = _match.Snapshot;
-            string side = result.Winner == MatchDirector.NoFirm ? string.Empty : result.Winner == own ? "  That is your firm." : "  That is the rival firm.";
-            return Reason(result) + side;
-        }
-
-        string Reason(MatchSnapshot result)
-        {
-            string clock = MatchHud.FormatClock(result.EndSeconds);
-            string floor = _match.Arena.FloorLabel(result.EndFloor);
-            switch (result.Reason)
-            {
-                case MatchEndReason.BriefcaseOnRoof:
-                    return $"Briefcase delivered to the roof at {clock}.";
-                case MatchEndReason.ClockHolding:
-                    return $"The quarter closed at {clock} with the briefcase in their hands, on {floor}.";
-                case MatchEndReason.ClockLastCarried:
-                    return $"The quarter closed at {clock}. The briefcase lay loose on {floor}; they carried it last.";
-                default:
-                    return $"The quarter closed at {clock} and nobody ever picked the briefcase up.";
-            }
+            string firms = $"You are with {_match.FirmName(own)}.  {FirmMember.CountIn(own)} v {FirmMember.CountIn(1 - own)}";
+            if (phase == MatchPhase.Waiting && !_match.IsServerStarted)
+                return firms + "  " + _waitingForStart;
+            return firms;
         }
     }
 }
