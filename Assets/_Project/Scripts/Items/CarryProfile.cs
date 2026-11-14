@@ -39,6 +39,9 @@ namespace CloseTheDeal.Items
         [Tooltip("How long a thing just let go cannot touch the player who let go of it, in seconds, so a throw never trips over its own thrower. Too short and big furniture snags on the way out.")]
         [Min(0f)] public float ThrowerIgnoreSeconds = 0.35f;
 
+        [Tooltip("How long a player must wait before taking back the thing they just let go of, in seconds. Stops a thrown chair being snatched back and thrown again every few ticks at someone pinned in a corner. Anyone else may catch it at once.")]
+        [Min(0f)] public float RetakeSeconds = 0.6f;
+
         [Tooltip("Tick to make a player drop what they carry when a blast or a heavy hit knocks them about.")]
         public bool DropWhenKnocked = true;
 

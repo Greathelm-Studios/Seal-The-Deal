@@ -46,7 +46,7 @@ Defined in `ItemCarrier.CreateInput`:
 
 | Action | Keyboard / mouse | Pad |
 |---|---|---|
-| Interact | F (E is lean right) | West button |
+| Interact | F (E is lean right) | North button (West is Reload) |
 | Throw | Left mouse | Right trigger |
 | Drop | G | D-pad down |
 | Use Item | Right mouse | Left trigger |
@@ -84,7 +84,8 @@ Open `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`, press Play, then **Host 
 
 - **Owner words vs GDD:** the GDD's v1 weapon table lists "throwable explosive" but no furniture carrying, gun pickups or office gadgets. Built to the owner's 2026-11-12 words; GDD not edited (only Adam changes design).
 - **Carry slowdown uses reflection** on `PlayerMotor._profile` (labelled workaround, ITEMS.md known limitations). If the movement lane renames that field, carrying stops slowing players and logs one error.
-- **Gun pickups and death:** gun definitions are set to never return (`ReturnsAfterUsedSeconds = 0`), so the snippet's `ServerUseUp()` despawns the gun pickup for good once taken. If the weapon holder does not drop a fresh pickup when a player dies, guns are lost on death, which breaks "never lost". The shooting lane picks one at integration: drop a pickup on death, or give the gun definitions a return time.
+- **Gun pickups:** a taken gun goes into the weapon slots and its pickup is despawned (`GunPickups`, integration). The weapon holder keeps its guns through death, so none are lost.
+- **Open from the review lane (AgentHub #429), not fixed:** the fall-return rule is "6 m below where it started", not "outside the building": an item carried or blasted two floors down is taken back mid-flight, and one thrown out of a floor-0 or floor-1 window lands less than 6 m down and stays outside for the match. The fix is to test against the tower's own floors (`TowerFrame`), which is a bigger change. Also: a carried item moves every tick, so Switchboard streams it at the full near rate although every client draws it from the carrier; marking held bodies as not needing poses is a Switchboard change (Harvey's).
 - **Setup reaches FishNet's scene id call by name** (`NetworkObject.CreateSceneId` is internal). Without it networked items placed in a freshly built scene never spawn. If a FishNet update renames it, the tool logs an error and the fix is FishNet's own Reserialize NetworkObjects menu.
 - Running the setup menu also re-applies the office look, which rewrites `Assets/_Project/Art/Look/OfficeLook_Volume.asset` and its `.meta`. Those files were left uncommitted in this worktree; they are not lane changes.
 - A carried panel is an immovable wall on the host and pushes other players aside. Fun or exploit needs a playtest.

@@ -96,6 +96,8 @@ namespace CloseTheDeal.Items
         float _throwerSafeUntil;
         PlayerMotor _thrower;
         int _lastHolderClientId = -1;
+        ItemCarrier _letGoBy;
+        float _retakeAt;
         Vector3 _lastVelocity;
         float _returnAt;
 
@@ -139,6 +141,9 @@ namespace CloseTheDeal.Items
         public Rigidbody Body => _body;
         public ItemCarrier Holder => _carrier;
         public PickupState State => _away.Value ? PickupState.Away : _holder.Value != null ? PickupState.Held : PickupState.InWorld;
+
+        /// <summary>Host only. True while the player who just let go of it must wait before taking it back.</summary>
+        public bool ServerTooSoonFor(ItemCarrier carrier) => carrier == _letGoBy && Time.time < _retakeAt;
 
         /// <summary>Host only. The client id of whoever held it last, or -1 if nobody has.</summary>
         public int LastHolderClientId => _lastHolderClientId;
@@ -260,6 +265,8 @@ namespace CloseTheDeal.Items
                 return;
 
             PlayerMotor releasedBy = _carrier.Motor;
+            _letGoBy = _carrier;
+            _retakeAt = Time.time + Rules.RetakeSeconds;
             _holder.Value = null;
             ApplyState();
 
@@ -304,6 +311,9 @@ namespace CloseTheDeal.Items
         void ServerSendAway(float returnAfterSeconds, bool announce)
         {
             ServerDropFromHands(announce);
+            // An armed case or a venting extinguisher stops: nothing goes on happening out of play.
+            if (_behaviour != null)
+                _behaviour.ServerOnSentAway();
             _live = false;
             _away.Value = true;
             ApplyState();

@@ -57,6 +57,8 @@ An item's weight is authored twice, on its definition and as its prefab body's m
 - **Prop cap:** every item is a prop and counts toward the 16 per floor in [PROPS.md](PROPS.md). Nothing here spawns extra objects: an explosion scatters what is already on the floor, smoke is local particles, the puddle is part of the sign. Using an item up hides it and later puts it back; it is not despawned and respawned unless its definition says it never returns.
 - **Out of the building:** a loose item more than 6 m below where it started is taken out of play and is back at its starting place 2 seconds later.
 - **Layers:** a carried panel's solid part sits on the **Player** layer while carried, so its carrier's own footing and ledge-climbing never treat it as ground, and it ignores its carrier's body. It goes back to the **Prop** layer when let go.
+- **Grabbing:** in reach (2.5 m + 0.75 m allowance for a joining player's lag) and nothing solid between the eye and the item that is not itself a pickup: no grabbing through walls, floors or locked doors. A carried item is also held back by locked doors as by walls, so it is never let go on the far side. The player who let go of something waits 0.6 s (`RetakeSeconds`) before taking that same thing back; anyone else may catch it at once.
+- **Out of play mid-use:** an armed Grenade Case that falls out of the building is disarmed, and a venting extinguisher stops, before they are put back.
 - **In the hands (drawn only):** a taken item eases from where it lay into the hands in 0.12 s (light) to 0.24 s (at the weight limit), easing out. In the carrier's own view it trails a fast turn, swinging round the eye, more for heavier things (follow 28/s light, 9/s heavy) and never more than 10°. Other players see it level at the carrier's chest with no lag. All on the carry profile, "Feel in the hands".
 - **Telling the Grenade Case from a firm's briefcase:** it is never called a briefcase in any text a player reads; it is red with a yellow hazard band, a keypad and a warning light, where the objective is the firm's own case; and it beeps and flashes from the moment it is armed.
 
@@ -102,13 +104,13 @@ What a HUD reads for items. All of it is events: nothing here needs checking eve
 | The hands slot | `ItemCarrier.HeldChanged`, `ItemCarrier.Held` | `Action<Pickup>` (null = empty) | Taken, thrown, dropped, placed, knocked loose, used up | Every machine |
 | What is in the slot | `Pickup.Definition` | `DisplayName`, `UseVerb` (empty = no right-mouse action), `Kind`, `WeightKg`; `Pickup.IsDerived` for a loose prop with no definition | Read when `HeldChanged` fires | Every machine |
 | How heavy it is to carry | `ItemCarrier.Load` | `float` 0..1 (0 up to 3 kg, 1 at the 35 kg limit) | Changes only with `HeldChanged` | Every machine |
-| Refusals, with reasons | `ItemCarrier.Denied` | `Action<DenyReason>`: `Gone`, `HandsFull`, `TooHeavy`, `TooFar`, `KnockedAbout`, `CannotUseHere` | Once per refused request | Owner |
+| Refusals, with reasons | `ItemCarrier.Denied` | `Action<DenyReason>`: `Gone`, `HandsFull`, `TooHeavy`, `TooFar`, `KnockedAbout`, `CannotUseHere`, `TooSoon` | Once per refused request | Owner |
 | Losing a contested grab | `Denied` with `DenyReason.Gone` | as above | When the host gave it to someone else first | Owner |
 | How it left the hands | `Pickup.Released` | `Action<Pickup, ReleaseKind>`: `Dropped`, `Thrown`, `Placed`, `Knocked` | Only a real let-go: a gun taken into the slots or a case that went off empties the hands through `HeldChanged` alone | Every machine |
 | A throw landing | `Pickup.Impact` | `Action<Pickup, float>` impact speed, m/s | Each hard landing while thrown | Every machine |
 | Gadget state | `GrenadeCase` Armed, Beeped, Exploded(point); `FireExtinguisher` PinPulled, RanEmpty; `WetFloorSign` PutDown, Cleared, Slipped(point) | C# events and UnityEvents | As named | Every machine |
 
-**Refusal wording** (the voice is corporate and plain; the UI lane may restyle, not reword the reasons): `Gone` "Someone else got it", `HandsFull` "Hands full · G to drop", `TooHeavy` "Too heavy to lift", `TooFar` "Too far away", `KnockedAbout` (no text: the player is tumbling), `CannotUseHere` "No room to put it down here".
+**Refusal wording** (the voice is corporate and plain; the UI lane may restyle, not reword the reasons): `Gone` "Someone else got it", `HandsFull` "Hands full · G to drop", `TooHeavy` "Too heavy to lift", `TooFar` "Too far away", `KnockedAbout` (no text: the player is tumbling), `CannotUseHere` "No room to put it down here", `TooSoon` (no text: the player let go of it under 0.6 s ago and cannot snatch it straight back; anyone else can).
 
 **Throw charge:** none. Every item has one throw strength (`Definition.ThrowSpeed`), so there is no charge to show. A throw arc, if the UI wants one, is drawn locally from the camera's forward, `ThrowSpeed`, the carrier's velocity × `CarryProfile.InheritVelocity`, gravity, and the release point `ItemCarrier.GetHoldPose(item, false, …)`: no synced state is needed.
 
@@ -156,7 +158,7 @@ Every moment has a C# event and a UnityEvent on the prefab, firing on every mach
 - Shared hands (static, set by the integration glue): `ItemCarrier.HandsTakenElsewhere` (true refuses an item as hands full, on the owner's prompt and key and on the host) and `InteractClaimedElsewhere` (owner: something else answers F this frame).
 - `GrenadeCase`: Armed, Beeped, Exploded (point). `FireExtinguisher`: PinPulled, RanEmpty. `WetFloorSign`: PutDown, Cleared, Slipped (point).
 
-Sounds: see "Item sounds" above. `ItemPromptLabel` is the lane's own two lines of on-screen text and is only in the lane's test scene.
+Sounds: see "Item sounds" above. `ItemPromptLabel` is the lane's own two lines of on-screen text, in the lane's test scene and the integration scene until the revamped HUD replaces it.
 
 ## Scripts
 

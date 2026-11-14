@@ -1337,7 +1337,11 @@ namespace CloseTheDeal.Editor.Lanes
         static int _frame;
 
         [MenuItem("Close the Deal/Lanes/Run Pickups Check")]
-        static void RunFromMenu() => Begin("solo", "Temp/PickupsRun");
+        static void RunFromMenu()
+        {
+            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                Begin("solo", "Temp/PickupsRun");
+        }
 
         public static void RunFromShell() => Begin(Arg("-pickupsRole") ?? "solo", Arg("-pickupsOut") ?? "Temp/PickupsRun");
 
@@ -1367,8 +1371,26 @@ namespace CloseTheDeal.Editor.Lanes
         [InitializeOnLoadMethod]
         static void Resume()
         {
+            EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeChanged;
             if (SessionState.GetBool(ActiveKey, false))
                 EditorApplication.update += Pump;
+        }
+
+        /// <summary>
+        /// Stopping Play in the middle of a check ends the check: otherwise the next Play, in any
+        /// scene, would pick the script up again and drive the player.
+        /// </summary>
+        static void OnPlayModeChanged(PlayModeStateChange change)
+        {
+            if (change != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool(ActiveKey, false))
+                return;
+
+            EditorApplication.update -= Pump;
+            SessionState.SetBool(ActiveKey, false);
+            _script = null;
+            Stack.Clear();
+            Debug.Log("[Pickups] Run Pickups Check stopped before it finished; nothing was reported.");
         }
 
         static void Pump()
@@ -1719,6 +1741,10 @@ namespace CloseTheDeal.Editor.Lanes
             me.LocalThrow(AimAt(me, dummyC.transform.position + Vector3.up * 1.1f, 0.08f));
             yield return 0.15f;
             FirstPersonStill("03_chair_in_flight");
+            denied = null;
+            me.LocalTake(chairA);
+            yield return 0.1f;
+            Check("the thrower cannot snatch a chair straight back mid-throw", me.Held == null && denied == DenyReason.TooSoon, $"refusal: {denied}");
             yield return 1.6f;
             Check("a thrown chair leaves the hands", me.Held == null && chairA.State == PickupState.InWorld);
             Check("a thrown chair damages what it hits", dummyC.Health < healthBefore, $"dummy {healthBefore:0} -> {dummyC.Health:0}");

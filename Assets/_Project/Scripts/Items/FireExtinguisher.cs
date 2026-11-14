@@ -99,6 +99,12 @@ namespace CloseTheDeal.Items
             _ventUntilTick.Value = TimeManager.Tick + TimeManager.TimeToTicks(_profile.SmokeSeconds, TickRounding.RoundUp);
         }
 
+        /// <summary>Out of play mid-vent (it fell out of the building): it stops venting and comes back full.</summary>
+        public override void ServerOnSentAway()
+        {
+            _ventUntilTick.Value = 0;
+        }
+
         public override void ServerOnReturned()
         {
             _ventUntilTick.Value = 0;

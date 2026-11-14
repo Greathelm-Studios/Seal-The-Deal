@@ -93,6 +93,12 @@ namespace CloseTheDeal.Items
             ItemAudio.Configure(_audio, Item.Sounds);
         }
 
+        /// <summary>Out of play before it went off (it fell out of the building): it is disarmed, not left to go off at its home.</summary>
+        public override void ServerOnSentAway()
+        {
+            _detonateTick.Value = 0;
+        }
+
         public override void OnStartServer()
         {
             base.OnStartServer();
