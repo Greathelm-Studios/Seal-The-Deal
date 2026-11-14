@@ -686,7 +686,7 @@ namespace CloseTheDeal.Player
 
             float vertical = CutJumpOnRelease(velocity.y, input.JumpHeld);
             _body.Velocity(new Vector3(planar.x, ClampFall(vertical), planar.z));
-            AddExtraGravity(vertical > 0f ? _profile.AirGravityMultiplier : _profile.FallGravityMultiplier);
+            AddExtraGravity(JumpGravity(vertical));
         }
 
         /// <summary>Letting go of jump while still rising keeps only part of the upward speed: a tap hops, a hold leaps. Once per jump.</summary>
@@ -719,7 +719,7 @@ namespace CloseTheDeal.Player
             else
             {
                 _body.Velocity(new Vector3(velocity.x, ClampFall(velocity.y), velocity.z));
-                AddExtraGravity(_profile.AirGravityMultiplier);
+                AddExtraGravity(_profile.KnockedGravityMultiplier);
             }
 
             if (_stateTicksLeft > 0)
@@ -864,10 +864,18 @@ namespace CloseTheDeal.Player
             return _profile.MaxFallSpeed > 0f ? Mathf.Max(verticalSpeed, -_profile.MaxFallSpeed) : verticalSpeed;
         }
 
-        /// <summary>Tops Unity's own gravity up to the given multiple of it.</summary>
+        /// <summary>The jump's arc: lighter rising, a moment's hang at the top, heavier falling.</summary>
+        float JumpGravity(float vertical)
+        {
+            if (Mathf.Abs(vertical) < _profile.ApexHangSpeed)
+                return _profile.ApexGravityMultiplier;
+            return vertical > 0f ? _profile.AirGravityMultiplier : _profile.FallGravityMultiplier;
+        }
+
+        /// <summary>Brings Unity's own gravity to the given multiple of it: tops it up above 1, holds some of it off below 1.</summary>
         void AddExtraGravity(float multiplier)
         {
-            if (multiplier > 1f)
+            if (!Mathf.Approximately(multiplier, 1f))
                 _body.AddForce(Physics.gravity * (multiplier - 1f), ForceMode.Acceleration);
         }
 
