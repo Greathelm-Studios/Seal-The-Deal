@@ -102,7 +102,10 @@ Open `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`, press Play, then **Host 
 - Built from the UI kit only (`ItemHud`): prompt under the crosshair, too-heavy, refusals with the kit shake and `HandsFull` / `Error` sounds, and the hands slot at the bottom left, above the network-stats panel. Design table in [ITEMS.md](systems/ITEMS.md), "The item HUD (built)".
 - **Captured in `Lane_Integration.unity`** ([docs/handover/pickups/item_hud/](handover/pickups/item_hud/): 9/9 checks; prompt, too heavy, the hands slot sliding in over 250 ms, hands full with its shake, dropped) at 1920×1080 and 1280×720 by `-pickupsRole hud` (the HUD is added to the scene for that run only; the scene file is not saved). To put it in the saved scene: open `Lane_Integration.unity`, **Close the Deal > Lanes > Add Item HUD To Open Scene**, save. Until then that scene holds the deleted `ItemPromptLabel` as a missing script.
 - **The pistol viewmodel stays drawn while the hands carry a chair** (seen in every capture): the viewmodel / shooting lane should hide or lower the gun while `ItemCarrier.Held` is not null (ItemCarrier already blocks firing then).
-- Not seen: a person playing with it, gamepad glyphs (the keys read F / LMB / G / RMB only), and a client's view of the HUD (the capture is the host's own player).
+- **Pad players** see pad buttons (Y / RT / DOWN / LT) once they use the pad; checked by script with a virtual pad (captures `hud_08`, `hud_09`). PlayStation symbols are not drawn (Xbox names on every pad): assumption while Adam is away.
+- **A client's own HUD** is captured in the two-machine run (`client_hud_hands_*`): its hands slot names the chair the host gave it.
+- `Lane_Integration.unity` now holds the item HUD (saved by `PickupsLaneSetup.AddItemHudToIntegrationScene`), so the missing-script label is gone.
+- Not seen: a person playing with it.
 - Hand seats for Harvey's posing layer: `ItemDefinition` main and support seats, `Pickup.TryGetHandSeats` (AgentHub #464).
 
 ### Assumptions made while Adam was away (overnight 2026-11-13)

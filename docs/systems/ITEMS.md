@@ -130,6 +130,8 @@ What a HUD reads for items. All of it is events: nothing here needs checking eve
 | Refusal | Same, for 1.6 s, then back to whatever is looked at | Amber edge, the reason ("Hands full · G to drop") | The kit's refusal shake (6 px, the one spring allowed to overshoot) | `HandsFull` for hands full, `Error` for the rest |
 | Hands slot | Bottom left, 32 px in (bottom centre is the briefcase notice, bottom right the usual weapon corner) | Plate: "IN HANDS", the item's name, a cobalt weight line (`ItemCarrier.Load`), key hints LMB Throw, G Drop, RMB and the use verb when it has one | Slides up 24 px and fades in 200 ms; out in 140 ms | None of its own: the item's pick-up and drop sounds play in the world |
 
+**Pad or keyboard:** every key name follows the device the player last used for any game action (`ItemCarrier.UsingPad`, from `InputSystem.onActionChange`, no per-frame work): keyboard F / LMB / G / RMB, pad Y / RT / DOWN / LT (Xbox names on every pad; PlayStation symbols are not drawn yet). The hands-full refusal names the drop button the same way ("Hands full · D-pad down to drop"); the stand-in font draws arrows too small to read, so words are used. `ItemCarrier.KeyName(ItemAction)` gives the name for any HUD.
+
 Reduce motion: fades only, no rise and no shake. No throw cue: every item has one throw strength, so there is nothing to charge, and an arc was left out as clutter for a throw that flies nearly straight at these speeds (decision taken while Adam was away; revisit if playtests miss throws).
 
 ## Item sounds

@@ -18,6 +18,15 @@ namespace CloseTheDeal.Items
         TooHeavy = 2
     }
 
+    /// <summary>This lane's four inputs, for naming their keys.</summary>
+    public enum ItemAction : byte
+    {
+        Interact = 0,
+        Throw = 1,
+        Drop = 2,
+        Use = 3
+    }
+
     /// <summary>Why the host refused a request, so the UI can say so.</summary>
     public enum DenyReason : byte
     {
@@ -84,6 +93,17 @@ namespace CloseTheDeal.Items
         /// briefcase in reach): return true and no item is prompted or asked for this frame.
         /// </summary>
         public static Func<ItemCarrier, bool> InteractClaimedElsewhere;
+
+        /// <summary>This machine. True when the last game input came from a gamepad, so prompts name pad buttons.</summary>
+        public static bool UsingPad { get; private set; }
+
+        /// <summary>This machine. The player switched between keyboard and mouse (false) and a gamepad (true).</summary>
+        public static event Action<bool> UsingPadChanged;
+
+        /// <summary>The key or button for each of this lane's actions, as the HUD should print it.</summary>
+        public static string KeyName(ItemAction action) => UsingPad
+            ? action switch { ItemAction.Interact => "Y", ItemAction.Throw => "RT", ItemAction.Drop => "DOWN", _ => "LT" }
+            : action switch { ItemAction.Interact => "F", ItemAction.Throw => "LMB", ItemAction.Drop => "G", _ => "RMB" };
 
         /// <summary>Owner only. What the crosshair is on changed. The item is null when the kind is None.</summary>
         public event Action<PromptKind, ItemDefinition> PromptChanged;
@@ -164,6 +184,8 @@ namespace CloseTheDeal.Items
                 return;
 
             Local = this;
+            InputSystem.onActionChange -= NoteDevice;
+            InputSystem.onActionChange += NoteDevice;
             CreateInput();
             enabled = true;
             LocalChanged?.Invoke(this);
@@ -176,6 +198,7 @@ namespace CloseTheDeal.Items
                 return;
 
             enabled = false;
+            InputSystem.onActionChange -= NoteDevice;
             DisposeInput();
             SetPrompt(PromptKind.None, null);
             if (Local == this)
@@ -201,6 +224,20 @@ namespace CloseTheDeal.Items
 
             if (_sharedActions != null)
                 _sharedAttack = _sharedActions.FindActionMap(SharedMapName)?.FindAction(SharedAttackName);
+        }
+
+        /// <summary>Any game action performed: note whether a pad or the keyboard and mouse did it. No allocation.</summary>
+        static void NoteDevice(object source, InputActionChange change)
+        {
+            if (change != InputActionChange.ActionPerformed || source is not InputAction action || action.activeControl == null)
+                return;
+
+            bool pad = action.activeControl.device is Gamepad;
+            if (pad == UsingPad)
+                return;
+
+            UsingPad = pad;
+            UsingPadChanged?.Invoke(pad);
         }
 
         static InputAction Button(string name, string binding, string padBinding)
