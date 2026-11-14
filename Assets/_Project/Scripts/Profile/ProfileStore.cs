@@ -20,6 +20,9 @@ namespace CloseTheDeal.Profile
         const string FileName = "profile.json";
         const string PathArg = "-profileSave";
 
+        /// <summary>Editor only: a scripted check started from a menu stores its own path here, so it never touches the real profile.</summary>
+        public const string EditorPathKey = "ProfileStore.EditorPath";
+
         /// <summary>Why the profile in memory is what it is. For logs and a settings page line, not for a player-facing error.</summary>
         public enum LoadState
         {
@@ -226,6 +229,11 @@ namespace CloseTheDeal.Profile
                     return args[i + 1];
             }
 
+#if UNITY_EDITOR
+            string editorPath = UnityEditor.SessionState.GetString(EditorPathKey, string.Empty);
+            if (editorPath.Length > 0)
+                return editorPath;
+#endif
             return null;
         }
     }

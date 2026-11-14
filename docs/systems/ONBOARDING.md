@@ -1,6 +1,6 @@
 # ONBOARDING
 
-**Status:** Current (branch `claude/lane-gaps-5e5605`, not merged) · **Last updated:** 2026-11-14
+**Status:** Current (in `buffer`; built by the gaps lane) · **Last updated:** 2026-11-14
 
 ## What the player sees
 
@@ -20,7 +20,7 @@ Local only. Every trigger is read from state that is already synced: the local p
 
 ## Designer values
 
-`Assets/_Project/Profiles/Onboarding/OnboardingHints.asset`: per hint an **Id** (what the profile remembers; renaming it shows it again once), **When**, **Text** (`{interact}`, `{drop}` become the keys) and **Seconds**; plus **Gap Seconds**. On the **Records** object, `FirstRunHints` has **Reception Check Seconds**. Every shipped hint is a proposal for Adam.
+`Assets/_Project/Profiles/Onboarding/OnboardingHints.asset`: per hint an **Id** (what the profile remembers; renaming it shows it again once), **When**, **Text** (`{interact}`, `{drop}` become the keys) and **Seconds**; plus **Gap Seconds**. On the Records prefab (`Prefabs/Gaps/Records.prefab`), `FirstRunHints` has **Reception Check Seconds**. Every shipped hint is a proposal for Adam.
 
 ## Scripts
 
