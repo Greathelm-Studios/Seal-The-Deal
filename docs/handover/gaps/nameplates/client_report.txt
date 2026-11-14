@@ -1,0 +1,34 @@
+ROLE client: joins the host's match late. Everything here is what the client saw. Profile at /private/tmp/claude-501/-Users-adamf-Documents-GitHub-Seal-The-Deal--claude-worktrees-lane-gaps-5e5605/35fa725e-fd0a-4c37-8a2b-6871411d7903/scratchpad/runs/hc/client_profile.json
+PASS  CLIENT: this copy is not the host
+PASS  CLIENT: joined while the match was already running  · phase when this player spawned: Running
+PASS  CLIENT: the host's lines arrived, its own and the host's  · 2 lines
+down: Killed by 0, back in 5 s on Reception
+said (Secretary, FirstKill): Associate 1 has let Associate 2 go. HR has been informed.
+hint (died): You'll be back on this floor in a few seconds. You keep your guns. Anything you carried was dropped.
+down: KnockedOut by 0, back in 0 s on Reception
+said (Secretary, WindowKill): Associate 2 has left the building. Associate 1 held the window.
+hint (fell-out): Leaving through a window sends you back to your firm's last checkpoint, without the briefcase.
+said (Secretary, FloorOpened): Roof has been unlocked. The staff there are thrilled.
+said (Secretary, Lost): Ashcombe & Pryce closed it. HR will be in touch about your future. Briefly.
+final record: k0 d1 f1 wk0 pick0 steal0 open0 carry0s best0 played13s
+PASS  CLIENT: its own claimed 99 kills were ignored; the host's 0 went to the profile  · matches 1, wins 0, losses 1, kills 0, deaths 1, falls 1, window kills 0, carry 0s, best floor 0, history 1
+PASS  CLIENT: match 1 in the profile as a loss with the host's death, fall and time  · matches 1, wins 0, losses 1, kills 0, deaths 1, falls 1, window kills 0, carry 0s, best floor 0, history 1
+hint (rival-carrying): The rival firm has the briefcase. Knock the carrier down and it drops. Skybridges on checkpoint floors cross to their tower.
+said (Secretary, MatchStart): Today's agenda: one briefcase, two roofs. Any other business can wait.
+hint (kept): Every finished match is kept. Your wins, kills and time with the briefcase carry over.
+down: Killed by 0, back in 5 s on Reception
+said (Secretary, FirstPickup): Ashcombe & Pryce has taken possession of the briefcase. Possession is most of the law.
+said (Secretary, FloorOpened): Roof is open. Please mind the wet paint.
+said (Secretary, Lost): The deal went to Ashcombe & Pryce. I've cancelled your parking.
+PASS  CLIENT: dead when match 2 ended, and still recorded  · matches 2, wins 0, losses 2, kills 0, deaths 2, falls 1, window kills 0, carry 0s, best floor 0, history 2
+hint (briefcase-rule): One briefcase decides the match. Carry it onto either roof and your firm wins.
+said (Secretary, MatchStart): The briefcase is on the plaza. It won't file itself.
+PASS  CLIENT: the host, now a teammate and in view, has a name chip on this screen  · in view True, shown True
+wrote client_nameplate_team_1080p.png
+wrote client_nameplate_team_720p.png
+PASS  CLIENT: the host left mid-match: nothing written, lines cleared  · matches 2, wins 0, losses 2, kills 0, deaths 2, falls 1, window kills 0, carry 0s, best floor 0, history 2
+PASS  CLIENT: no profile or records errors in the log  · 0
+PASS  CLIENT: the secretary called the window kill and the loss  · FirstKill, WindowKill, FloorOpened, Lost, MatchStart, FirstPickup, FloorOpened, Lost, MatchStart
+PASS  CLIENT: the death report named the host as killer with a 5 s wait, then the window kill with none  · 3 reports
+PASS  CLIENT: the death and fall hints showed once each  · died, fell-out, rival-carrying, kept, briefcase-rule
+RESULT: 0 failed, 12 passed (client).

@@ -99,8 +99,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Nameplates.Nameplates
   _tokens: {fileID: 11400000, guid: 61158a05088084d98903809b38fa7986, type: 2}
   _platePrefab: {fileID: 748675521735827151, guid: cb1b25dc967b74f4ca60729ab983da96, type: 3}
-  _diamondSprite: {fileID: 21300000, guid: 31a569a68c2c84a2ca36ead416b04f6d, type: 3}
-  _markerSprite: {fileID: 21300000, guid: 895e4cc6011844505ac085c15c99733e, type: 3}
+  _diamondSprite: {fileID: 21300000, guid: 5d02cf57b6fd64b16907349b3c441978, type: 3}
+  _markerSprite: {fileID: 21300000, guid: d8d117ce49fb34573a7237985b6555d5, type: 3}
   _range: 40
   _headroom: 0.35
   _raiderSeconds: 2
