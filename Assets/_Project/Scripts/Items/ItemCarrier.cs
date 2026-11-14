@@ -118,6 +118,7 @@ namespace CloseTheDeal.Items
         Transform _viewBody;
         MotorSpeedOverride _speed;
         Pickup _held;
+        float _canTakeAt;
 
         // Owner only.
         InputAction _interact;
@@ -336,7 +337,7 @@ namespace CloseTheDeal.Items
                 _lookPickup = hit.collider.GetComponentInParent<Pickup>();
             }
 
-            return _lookPickup != null && _lookPickup.State == PickupState.InWorld ? _lookPickup : null;
+            return _lookPickup != null && _lookPickup.State == PickupState.InWorld && _lookPickup.Offered ? _lookPickup : null;
         }
 
         void UpdatePrompt(Pickup target)
@@ -428,8 +429,10 @@ namespace CloseTheDeal.Items
                 return DenyReason.KnockedAbout;
             if (pickup.Definition.WeightKg > _profile.MaxCarryWeight)
                 return DenyReason.TooHeavy;
-            if (pickup.ServerTooSoonFor(this))
+            if (Time.time < _canTakeAt)
                 return DenyReason.TooSoon;
+            if (pickup.GetComponent<CloseTheDeal.Props.NotThrowable>() != null)
+                return DenyReason.Gone;
 
             return InReach(pickup) ? null : DenyReason.TooFar;
         }
@@ -447,8 +450,10 @@ namespace CloseTheDeal.Items
             if ((nearest - eye).sqrMagnitude > reach * reach)
                 return false;
 
+            // The first thing in the way must be the item itself: another loose prop in front of a
+            // wall does not let a grab reach through the wall behind it.
             return !Physics.Linecast(eye, nearest, out RaycastHit blocker, ItemLayers.LookMask, QueryTriggerInteraction.Ignore)
-                || blocker.collider.GetComponentInParent<Pickup>() != null;
+                || blocker.collider.GetComponentInParent<Pickup>() == pickup;
         }
 
         /// <summary>An item already in the hands, or the hands shared with something else that holds them.</summary>
@@ -559,7 +564,16 @@ namespace CloseTheDeal.Items
             rotation = frame * Quaternion.Euler(item.HeldEuler);
         }
 
-        static readonly RaycastHit[] HoldHits = new RaycastHit[16];
+        static readonly RaycastHit[] HoldHits = new RaycastHit[32];
+
+        /// <summary>
+        /// Host only. Something just left these hands: this player takes nothing for a moment,
+        /// whatever it is, so cycling two items cannot throw faster than the cooldown.
+        /// </summary>
+        internal void ServerNoteLetGo(float seconds)
+        {
+            _canTakeAt = Time.time + seconds;
+        }
 
         /// <summary>
         /// How far the hands can reach before something solid that is not a loose item: the

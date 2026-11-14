@@ -108,6 +108,12 @@ Open `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`, press Play, then **Host 
 - Not seen: a person playing with it.
 - Hand seats for Harvey's posing layer: `ItemDefinition` main and support seats, `Pickup.TryGetHandSeats` (AgentHub #464).
 
+## Review lane, second pass (AgentHub #480)
+
+- Fixed: no grab through a wall behind another prop; the re-grab wait is per player (any item); a dropped or thrown plain prop no longer eases back toward where it was taken on the host; an empty extinguisher lost out of the building comes back empty; `NotThrowable` is honoured at runtime; hold clearance capped at 0.3 m.
+- **On a client**, a released plain prop now waits where it left the hands until the host's new pose arrives (up to 0.4 s), then eases onto it. A clean snap needs a NetBody reset call (Switchboard, Harvey's).
+- **Greybox.unity (the build scene) has no item HUD** and is outside this lane: its owner runs **Add Item HUD To Open Scene** there (orchestrator told).
+
 ### Assumptions made while Adam was away (overnight 2026-11-13)
 
 - **The extinguisher keeps hissing after it is dropped**, or its carrier dies or leaves: it is still venting and driving itself round the floor until empty (6 s), and the design says it "cannot be stopped". The loop stops when it runs empty, comes back, is despawned (new match) or this machine leaves. Say if you want it silenced on drop.

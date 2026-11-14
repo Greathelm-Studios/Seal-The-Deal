@@ -1355,6 +1355,12 @@ namespace CloseTheDeal.Editor.Lanes
                     string path = AssetDatabase.GetAssetPath(selected);
                     if (!path.EndsWith(".prefab"))
                         continue;
+                    var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                    if (prefab.GetComponentInChildren<PlayerMotor>(true) != null || prefab.GetComponent<NotThrowable>() != null)
+                    {
+                        Debug.LogWarning($"[Pickups] Left {path} alone: it is a player or marked NotThrowable.");
+                        continue;
+                    }
 
                     MakeThrowable(path);
                     made++;
