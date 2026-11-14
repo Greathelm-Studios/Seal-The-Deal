@@ -17,7 +17,7 @@ UiSound (hub, Scripts/UI/Kit, lane 5) --> UiSoundPlayer --> AudioSource pool -->
 - Two layers: control sounds (hover, focus, press, toggle, tick...) keep 12 ms apart, so one action never stacks two of them; screen sounds (Transition, PanelOpen, PanelClose, TitleAppear and the four transition kinds) play on top, so a button that opens a screen is heard as its Confirm and the screen's whoosh together.
 - Title sting: `TitleAppear` plays when the player reaches the title (from boot or back from a game), not when a dialog or Settings closes back onto it.
 - Transitions: each of lane 8's overlay transitions plays its own sound when it starts (`UiTransition.cs`): cloud wipe, pane slide, frame zoom (the game starting; this is the game-start sting, so there is no separate one) and the reduced-motion fade.
-- Ambient bed: `Assets/_Project/Audio/Ambience/Ambience_MenuBed.wav`, 64 s, seamless, streamed Vorbis on the Music bus. It plays under the title and its screens and in the lobby reception, fading in and out over 1.5 s. **It ships switched off**: `UiSoundSet.ambienceLevel` is 0; raise it (0.3 is a quiet bed) to hear it. The player's Music slider scales it.
+- Ambient bed: `Assets/_Project/Audio/Ambience/Ambience_MenuBed.wav`, 64 s, seamless, streamed Vorbis on the Music bus. It plays under the title and its screens and in the lobby reception, fading in and out over 1.5 s; it keeps playing from the title into reception and fades when the run starts. It is 64 s, not the few minutes asked for, to keep the file about 6 MB in LFS: someone idling on the title hears it repeat about once a minute. **It ships switched off**: `UiSoundSet.ambienceLevel` is 0; raise it (0.3 is a quiet bed) to hear it. The player's Music slider scales it.
 - Hover run: each hover in a run climbs the pentatonic scale (C D E G A, via pitch); a pause of 0.6 s starts the run again.
 - Slider: one tick clip, pitch follows the value from -5 to +12 semitones.
 - Set: [UiSoundSet](../../Assets/_Project/Scripts/UI/Sound/UiSoundSet.cs) asset at `Assets/_Project/Resources/UI/UiSoundSet.asset`, built by **Close the Deal > UI > Set Up Sound**. That menu also sets the clips' import settings: mono, decompress on load, PCM under 0.45 s and ADPCM above, preloaded.
@@ -170,7 +170,7 @@ The same generator writes the shooting lane's 15 sounds to `Assets/_Project/Audi
 | `Death` | 750 ms | -3.5 dBFS | -17.0 dB | tone falling E4 to C3 over a low drop, 2D |
 | `Respawn` | 520 ms | -11.9 dBFS | -17.0 dB | C5 to G5 rise with air, 2D |
 
-The audition page (`ArtSource/UI/review/10_sound_audition.html`) groups every clip by where it plays and has a 20 s "walk through the menu" with the ambient bed under it. Opened in a browser from a local web server on 2026-11-14: all 64 clips (and the bed) loaded, the walk started, the bed faded in to 0.3. Not opened straight from disk.
+The audition page (`ArtSource/UI/review/10_sound_audition.html`) groups every clip by where it plays and has a 25 s "walk through the menu" (title, settings, hosting into reception with the bed still under it, the run starting, the countdown). Opened in a browser from a local web server on 2026-11-14: all 64 clips (and the bed) loaded, the walk started, the bed faded in to 0.3. Not opened straight from disk.
 
 ## Regenerating
 

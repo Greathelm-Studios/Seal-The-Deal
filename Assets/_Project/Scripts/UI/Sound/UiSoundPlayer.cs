@@ -133,7 +133,7 @@ namespace CloseTheDeal.UI
                 var roster = CloseTheDeal.Lobby.LobbyRoster.Instance;
                 bool reception = roster != null && !roster.RunInProgress;
                 if (title && !atTitle)
-                    UiSoundPlayer.Play(UiSoundEvent.TitleAppear, 0f);
+                    UiSound.Play(UiSoundEvent.TitleAppear);   // through the hub, so its Played log sees it
                 atTitle = title;
                 SetBed(title || reception);
             }

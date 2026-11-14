@@ -18,6 +18,12 @@ Rule that decides most of it: the sound player keeps 12 ms between any two sound
 | Settings | Open from the title | was Confirm only (the screen's Transition in the same frame was dropped); **now Confirm and the Transition together** (screen sounds have their own layer) | Fixed |
 | Settings | Change tab (Q / E or click) | TabChange | OK |
 | Settings | Back button or Esc | Back, once | OK |
+| Video tab | Pick a resolution | the tick, then "Keep this resolution?" opens with PanelOpen | OK |
+| Resolution dialog | Keep | Confirm | OK |
+| Resolution dialog | Revert or Esc | Back | OK |
+| Resolution dialog | Time runs out | was nothing; **now Back** (the change is undone) | Fixed |
+| Audio tab | Test sound button | was Confirm (masked the test sound: **the player never heard the level they set**); **now the test sound** | Fixed |
+| Accessibility tab | Crosshair colour swatches | was Select, the same as a press; **now the tick, pitched by the swatch** | Fixed |
 | Controls tab | Press a key cell | was Confirm (masked KeyBindListen: **the listen sound was never heard**); **now KeyBindListen** | Fixed |
 | Controls tab | Press a free key | KeyBindSet | OK |
 | Controls tab | Esc while listening | Back | OK |
@@ -27,7 +33,8 @@ Rule that decides most of it: the sound player keeps 12 ms between any two sound
 | Any dialog | Stay or Esc | Back, once | OK |
 | Title | Esc | PanelOpen ("Quit to desktop?") | OK |
 | Title | Title appears | **TitleAppear** (once per arrival, not when a dialog closes) | Added |
+| Game start with Reduce motion on | the stack is cleared without a transition | nothing | **Known issue**: lane 5's `UiRoot.EnterGame`, reported to them |
 | Game start | Frame-zoom transition | **TransitionFrameZoom** (the game-start sting); cloud wipe, pane slide and fade each have their own | Added |
 | Kit | Dropdown open / close | never fires | Not a fault: the kit has no dropdown control |
 
-Title and transition sounds are hooked in `UiSoundPlayer.cs` and lane 8's `Scripts/UI/Title/UiTransition.cs`. Fixes are in `Scripts/UI/Kit/ControlsPage.cs`, `UiConfirmDialog.cs` (`Configure` gains an optional last `confirmSound`), `UiStepper.cs` and `UiSlider.cs`, agreed with the UI lane on AgentHub (#553, #554).
+Title and transition sounds are hooked in `UiSoundPlayer.cs` and lane 8's `Scripts/UI/Title/UiTransition.cs`. Fixes are in `Scripts/UI/Kit/ControlsPage.cs`, `UiConfirmDialog.cs` (`Configure` gains an optional last `confirmSound`), `UiStepper.cs`, `UiSlider.cs`, `AudioPage.cs`, `UiSwatches.cs` and `VideoPage.cs`, agreed with the UI lane on AgentHub (#553, #554).
