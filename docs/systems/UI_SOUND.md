@@ -17,7 +17,7 @@ UiSound (hub, Scripts/UI/Kit, lane 5) --> UiSoundPlayer --> AudioSource pool -->
 - Hover run: each hover in a run climbs the pentatonic scale (C D E G A, via pitch); a pause of 0.6 s starts the run again.
 - Slider: one tick clip, pitch follows the value from -5 to +12 semitones.
 - Set: [UiSoundSet](../../Assets/_Project/Scripts/UI/Sound/UiSoundSet.cs) asset at `Assets/_Project/Resources/UI/UiSoundSet.asset`, built by **Close the Deal > UI > Set Up Sound**. That menu also sets the clips' import settings: mono, decompress on load, PCM under 0.45 s and ADPCM above, preloaded.
-- Mixer: `Assets/_Project/Audio/UI/GameMixer.mixer`: Master with children Music, SFX, Voice, UI. Exposed volumes: `MasterVolume`, `MusicVolume`, `SfxVolume`, `VoiceVolume`, `UiVolume` (dB). The settings screen calls `UiAudio.SetVolume(AudioBus.Ui, 0..1)`; it writes dB (1 = 0 dB, 0 = -80 dB) and saves to PlayerPrefs; saved volumes are restored after the first scene loads.
+- Mixer: `Assets/_Project/Audio/UI/GameMixer.mixer`: Master with children Music, SFX, Voice, UI. Exposed volumes: `MasterVolume`, `MusicVolume`, `SfxVolume`, `VoiceVolume`, `UiVolume` (dB). A volume slider calls `UiAudio.SetVolume(AudioBus.Ui, 0..1)` (**no settings row calls it yet**: the audio rows are the UI lane's); it writes dB (1 = 0 dB, 0 = -80 dB) and saves to PlayerPrefs; saved volumes are restored after the first scene loads.
 - Host authority: sound is presentation only. Nothing here reads or writes game state or the network.
 
 ## The sounds
@@ -151,7 +151,7 @@ python3 ArtSource/Audio/ui/make_ui_sounds.py            # writes the 31 UI WAVs 
 python3 ArtSource/Audio/ui/make_ui_sounds.py --table    # also prints this table as markdown
 ```
 
-The output is deterministic (fixed noise seeds): two runs give byte-identical files. Edit the `EVENTS` table (notes, durations, timbre) and re-run, then run **Set Up Sound** if clips were added.
+The output is deterministic (fixed noise seeds): two runs give byte-identical files. Edit the `EVENTS` table (notes, durations, timbre) and re-run, then run **Set Up Sound** if clips were added. That menu only adds: it sets a new clip's import settings once, adds entries for new events, and leaves existing entries, hand-tuned values and the mixer alone.
 
 ## Not in this set
 
