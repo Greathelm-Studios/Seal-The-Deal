@@ -4,8 +4,8 @@ using UnityEngine.Audio;
 namespace CloseTheDeal.UI
 {
     /// <summary>
-    /// The door to the mixer for a volume slider (the settings screen's audio rows call it once they exist): SetVolume(AudioBus.Ui, 0.8f) takes a 0 to 1 slider value,
-    /// writes the exposed dB parameter and remembers it between launches (PlayerPrefs).
+    /// The door to the mixer for a volume slider (Settings › Audio calls it per step): SetVolume(AudioBus.Ui, 0.8f) takes a 0 to 1 slider value,
+    /// writes the exposed dB parameter and remembers it between launches (PlayerPrefs, written to disk by Flush).
     /// </summary>
     public static class UiAudio
     {
@@ -22,8 +22,32 @@ namespace CloseTheDeal.UI
         {
             slider01 = Mathf.Clamp01(slider01);
             Apply(bus, slider01);
-            if (save) { PlayerPrefs.SetFloat(Key + bus, slider01); PlayerPrefs.Save(); }
+            if (save) { PlayerPrefs.SetFloat(Key + bus, slider01); unsaved = true; }
         }
+
+        /// <summary>Write changed volumes to disk. A slider drag calls SetVolume many times a second, so SetVolume only
+        /// remembers the value; this runs when the settings screen closes (it saves all preferences), when the game loses
+        /// focus and when it quits.</summary>
+        public static void Flush()
+        {
+            if (!unsaved) return;
+            unsaved = false;
+            PlayerPrefs.Save();
+        }
+
+        static bool unsaved;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void HookSaving()
+        {
+            unsaved = false;
+            Application.quitting -= Flush;
+            Application.quitting += Flush;
+            Application.focusChanged -= OnFocus;
+            Application.focusChanged += OnFocus;
+        }
+
+        static void OnFocus(bool focused) { if (!focused) Flush(); }
 
         /// <summary>Slider 0 to 1 as dB: 1 is 0 dB, 0 is silent (-80), in between is a perceptual curve.</summary>
         public static float ToDecibels(float slider01) => slider01 <= 0.0001f ? -80f : Mathf.Clamp(20f * Mathf.Log10(slider01), -80f, 0f);

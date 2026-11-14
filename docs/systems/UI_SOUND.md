@@ -17,7 +17,7 @@ UiSound (hub, Scripts/UI/Kit, lane 5) --> UiSoundPlayer --> AudioSource pool -->
 - Hover run: each hover in a run climbs the pentatonic scale (C D E G A, via pitch); a pause of 0.6 s starts the run again.
 - Slider: one tick clip, pitch follows the value from -5 to +12 semitones.
 - Set: [UiSoundSet](../../Assets/_Project/Scripts/UI/Sound/UiSoundSet.cs) asset at `Assets/_Project/Resources/UI/UiSoundSet.asset`, built by **Close the Deal > UI > Set Up Sound**. That menu also sets the clips' import settings: mono, decompress on load, PCM under 0.45 s and ADPCM above, preloaded.
-- Mixer: `Assets/_Project/Audio/UI/GameMixer.mixer`: Master with children Music, SFX, Voice, UI. Exposed volumes: `MasterVolume`, `MusicVolume`, `SfxVolume`, `VoiceVolume`, `UiVolume` (dB). A volume slider calls `UiAudio.SetVolume(AudioBus.Ui, 0..1)` (**no settings row calls it yet**: the audio rows are the UI lane's); it writes dB (1 = 0 dB, 0 = -80 dB) and saves to PlayerPrefs; saved volumes are restored after the first scene loads.
+- Mixer: `Assets/_Project/Audio/UI/GameMixer.mixer`: Master with children Music, SFX, Voice, UI. Exposed volumes: `MasterVolume`, `MusicVolume`, `SfxVolume`, `VoiceVolume`, `UiVolume` (dB). A volume slider calls `UiAudio.SetVolume(AudioBus.Ui, 0..1)` (**no settings row calls it yet**: the audio rows are the UI lane's); it writes dB (1 = 0 dB, 0 = -80 dB) and remembers the value in PlayerPrefs (written to disk by `UiAudio.Flush()` when the game loses focus or quits, and when the settings screen closes, never per slider step); saved volumes are restored after the first scene loads.
 - Host authority: sound is presentation only. Nothing here reads or writes game state or the network.
 
 ## The sounds
