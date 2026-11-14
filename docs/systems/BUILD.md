@@ -1,6 +1,6 @@
 # BUILD
 
-**Status:** Current (branch `claude/lane-gaps-5e5605`, not merged) · **Last updated:** 2026-11-14
+**Status:** Current (in `buffer`; built by the gaps lane) · **Last updated:** 2026-11-14
 
 ## What the player sees
 

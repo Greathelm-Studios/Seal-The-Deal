@@ -39,12 +39,12 @@ namespace CloseTheDeal.Editor.Art
         const string GroupName = "Bounce Lights";
         const string KitRootName = "Kit Office";
 
-        /// <summary>Façade bays across the floor (KitOfficeScene.Bays).</summary>
-        const int Bays = 7;
+        /// <summary>Façade bays across the floor (KitOfficeScene: 8 × 4 m since the labyrinth, 2026-11-13).</summary>
+        const int Bays = 8;
         /// <summary>Bay width along the façade, metres (KitOfficeScene.Bay).</summary>
         const float Bay = 4f;
-        /// <summary>Room size, metres (KitOfficeScene: 28 m wide, 18 m deep).</summary>
-        const float RoomWidth = 28f, RoomDepth = 18f;
+        /// <summary>Room size, metres (KitOfficeScene's labyrinth: 32 m wide, 24 m deep, since 2026-11-13).</summary>
+        const float RoomWidth = 32f, RoomDepth = 24f;
         /// <summary>Top of the window sill, metres above the floor (GreyboxTowerSetup.SillHeight, 0.6 since 2026-11-12).</summary>
         const float SillHeight = 0.6f;
         /// <summary>Floor to ceiling, metres: the window glass runs from the sill to here (KitOfficeScene.ClearHeight).</summary>

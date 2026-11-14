@@ -121,7 +121,7 @@ namespace CloseTheDeal.Editor.Greybox
 
         // ---- Player prefab -------------------------------------------------------------------
 
-        static void RebuildPlayerPrefabIfOwned()
+        internal static void RebuildPlayerPrefabIfOwned()
         {
             if (GeneratedAssetGuard.MayOverwrite(PlayerPrefabPath))
                 BuildPlayerPrefab();
@@ -190,6 +190,7 @@ namespace CloseTheDeal.Editor.Greybox
             serializedMotor.ApplyModifiedPropertiesWithoutUndo();
 
             AddAnimator(graphics, motor);
+            GreyboxViewmodelSetup.AddTo(root, motor, actions);
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             Object.DestroyImmediate(root);
@@ -468,13 +469,14 @@ namespace CloseTheDeal.Editor.Greybox
 
         // ---- Project settings ----------------------------------------------------------------
 
-        static void EnsureLayers()
+        internal static void EnsureLayers()
         {
             EnsureLayer(PlayerLayer, PlayerLayerName);
             EnsureLayer(PropLayer, PropLayerName);
+            GreyboxViewmodelSetup.EnsureLayer();
         }
 
-        static void EnsureLayer(int index, string name)
+        internal static void EnsureLayer(int index, string name)
         {
             if (LayerMask.LayerToName(index) == name)
                 return;

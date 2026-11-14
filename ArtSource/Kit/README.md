@@ -1,6 +1,6 @@
 # Office snap kit
 
-**Status:** Current · **Last updated:** 2026-11-12
+**Status:** Current · **Last updated:** 2026-11-13
 
 The modular kit for office floors: slabs, walls, doorway, window bays, façade columns, glass partitions, the spiral stair, its locked door and a ceiling light.
 All pieces come from one script, [kit_pieces.py](kit_pieces.py), so they share one set of grid, height and material values.
@@ -98,9 +98,58 @@ Alex's picks: corridors A (capsule loop), junctions B (split X), rooms A (capsul
 
 New material slot: `Glass_Frosted` #E6ECF2 (80 % opaque in Unity).
 
+### Fix list, 2026-11-13 (Alex: "still blockout-y")
+
+| Piece / change | What | Collider |
+|---|---|---|
+| Wall ends (`Wall_Solid_*`, `Wall_Door_4m*` outer ends, `Wall_Niche_4m`) | 12 mm 45° chamfers on the vertical end edges, both faces, in the wall's own gloss white: every 4 m panel meets the next in a V joint that catches the highlight. Snap ends stay flat except the outer 12 mm | Unchanged |
+| `Stair_Straight_2m` | Now two folded white stringers with 24 separate 60 mm white treads, each with a 35 mm silver nosing, open underneath; glass guards as before | Hull along the nosings, unchanged |
+| `Sign_Zone_L`, `_R`, `_C`, `_H`, `_A` | 2.4 × 3.2 m cobalt panel from 0.6 m to 3.8 m: a 1.7 m white letter, the department name, a hairline rule and a line of microtype (built-in font). 14 mm proud. Pivot at floor level at the panel's low-X edge on the wall face; it reads from +Z | None (visual) |
+| `Desk_Sculpt` | 1.6 × 0.8 × 0.74 m waterfall desk, gloss white with a recessed cobalt modesty panel. Pivot bottom centre | Box |
+| `Chair_Pod` | Cobalt shell seat and back on a silver swivel stem and disc, seat 0.46 m. Pivot bottom centre, faces +Z | Hull (loose prop: physics is the props lane's) |
+
+### Detail pass, 2026-11-13 (Alex: "follow these", his atrium, office-floor and curved meeting room plates)
+
+Alex's calls for this pass: carpet in work areas with polished walkways, some planters, keep the labyrinth layout.
+
+| Piece | What | Collider |
+|---|---|---|
+| `Column_Graphic`, `Column_Graphic_Tall` | 0.8 m square column (4.3 / 8.8 m), rounded corners, a cobalt supergraphic band climbing round two faces, a big zone number and four wayfinding lines in navy | Box |
+| `Workstation_Bench` | 2.4 × 1.6 m back-to-back bench: four monitors, keyboards, a 1.15 m divider (crouch cover), two pedestals, silver ends | Box |
+| `Chair_Task` | Navy task chair on a silver five-star base, faces +Z | Hull (loose prop) |
+| `Storage_Low` | 1.6 × 0.45 × 1.0 m white cabinets with navy joints | Box |
+| `Copier` | The bible's photocopier: pale body, tray joints, dark lid, silver panel | Box |
+| `Desk_Reception` | 4 m reception desk, KELLER MORROW / ATTORNEYS AT LAW, cobalt end block | Box |
+| `Guard_Rail_4m`, `_2m` | Glass balustrade between slim silver posts with a 1.1 m handrail | Box on the frame |
+| `Partition_Header_4m`, `_2m`, `Partition_Header_Curve_2x2` | Glass meeting-room walls with a white header band from 2.5 m to the soffit; the curve bends round 1.5 m in a 2 × 2 m cell (Alex's concept A) | Box; hulls on the curve |
+| `Light_Pendant_Linear` | 2.4 m linear pendant, glowing underside, hung 0.8 m on two wires | None |
+| `Carpet_Overlay_4x4` | 8 mm dark carpet layer (`Carpet_Dark`, tile texture) on a slab's polished top | None |
+| `Ceiling_Grid_4x4` | Tiled ceiling panel (`Ceiling_Grid`, tile texture) under a soffit | None |
+| `Planter_Box` | White box planter with leaf blades (`Plant_Leaf`) | Box on the pot |
+
+`KitOffice.unity` now has: the curved header-glass meeting room in zone C on carpet under a tile grid; tall graphic columns at three atrium corners and two in the window corridor; the reception desk facing the window corridor; workstation benches with task chairs, storage, copiers and planters on carpet with pendants upstairs and in zone R; the posted balustrade round the atrium. The DevMirror and the floor bakes (bounce light, reflection probes) are now part of the scene build, so a rebuild keeps them.
+
+**SSAO** on `Assets/Settings/PC_Renderer.asset`: intensity 0.4 → 0.9, radius 0.3 → 0.45 m, samples medium → high, so corners and wall bases darken and pieces look built rather than placed. A first try at 1.2 / 0.6 m drew grainy dark halos round the islands.
+`KitOffice.unity` now carries a sign per zone, desks and chairs in the meeting room and upstairs, and a second counter in the junction. The unsaved scene it replaced is kept as `KitOffice_PreFixList.unity`.
+
 **Kept, not changed, and flagged in README_r5:** the partition's whole-wall collider (breakable glass and walk-through openings belong to the shooting lane), the stair cage and its silver handrail, the full-height red locked door, the spiral as a way up, the 0.6 m window sill. Zone letters (L, R, C, H, A) and sky prints are a decal pass, not modelled.
 [labyrinth_scene.py](labyrinth_scene.py) snaps the new pieces into a 16 × 16 m maze section and renders it to `review/labyrinth/`.
 In Unity (2026-11-13) the 12 pieces were imported on their own, without rebuilding KitTest: all at rotation 0 and scale 1, sizes matching to 1 mm, materials remapped; the stair's sloped guards and the curved return get mesh colliders, the rest boxes. The same section laid out from the prefabs in a temporary scene is captured in `review/unity_labyrinth/`. Not yet walked in Play Mode.
+
+### Japanese corporate mix, 2026-11-13 (Alex: "do a mix of all 3")
+
+The office is now AONAGI (青凪総合サービス), a Japanese firm. The mix of the current look, Aero (A) and Soft Club (B) is written down in [concepts/Japanese_Aero/DECISION.md](concepts/Japanese_Aero/DECISION.md): palette, what each look contributes, and the kept gameplay rules. Sizes and sign copy are in that folder's README.
+
+| Piece | What | Collider |
+|---|---|---|
+| `Water_Server`, `Umbrella_Stand`, `Vending_Machine`, `Slipper_Cabinet` | The office's daily life; tall ones only against opaque walls | Box |
+| `Phone_Desk`, `Doc_Tray` | White desk phone and document tray, placed on the bench ends | None |
+| `Logo_Aonagi`, `Sign_LED_Reception` | Ring logo with the red hanko dot; dot-matrix reception sign | None |
+| `Water_Wall` | 1.8 × 2.7 m silver-framed water cassette. The liquid is drawn by the `Close the Deal/Aero Water Pane` shader ([AeroWater.shader](../../Assets/_Project/Art/Water/AeroWater.shader)): a fake tank interior seen through the glass with parallax: sharp caustic filaments on the back wall, colour deepening with depth and path length, swaying light shafts, bubbles at two depths, the bright underside of the surface seen from below, a travelling wave line with empty glass above, two glass streaks. Geometry stays one flat panel | Box |
+
+**Supergraphics, 2026-11-13** (Alex: lettering "larger and more character ... think Mirror's Edge"). `Sign_Zone_*` are no longer panels: each is a 3.2 m wide graphic painted onto the wall, a 2.6 m slanted cobalt zone letter over a leaning aqua block, a cobalt speed stripe across the full width, the department name 0.46 m high in Japanese with English under it, and a navy floor tag. All kit text now comes out at its stated height: `kit_pieces.py` had assumed Noto's capitals are 0.72 of the font size, Blender loads them at 0.257, so every label (signs, columns, reception desk, logo, LED sign, prop labels) was 36 % of its intended size. `text_mesh` also takes a stroke weight and a slant now, and `placed_text` condenses a line that would overrun its surface.
+
+Existing pieces picked up the palette (pearl walls, paler carpet, aqua frost, aqua/mist column skins with 1F/2F wayfinding, bilingual zone signs). CJK text uses Blender's bundled Noto Sans CJK (OFL). `KitImport.cs` gives `Water_Wall` the water shader and leaves its colours alone on re-import, so Inspector tuning survives.
 
 ## Checks run
 

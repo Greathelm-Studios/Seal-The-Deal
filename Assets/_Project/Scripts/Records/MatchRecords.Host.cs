@@ -60,6 +60,12 @@ namespace CloseTheDeal.Records
             FirmMember.OnRosterChanged -= HostRosterChanged;
             ItemCarrier.ServerItemTaken -= HostItemTaken;
             Pickup.ServerThrowLanded -= HostThrowLanded;
+            UnwatchThrows();
+        }
+
+        /// <summary>Pickups used up without a release (a gun taken into a slot) never unsubscribe themselves.</summary>
+        void UnwatchThrows()
+        {
             foreach (Pickup pickup in _watchedThrows)
             {
                 if (pickup != null)
@@ -120,6 +126,7 @@ namespace CloseTheDeal.Records
             _carrierClient = -1;
             _carryCarried = 0f;
             _carried.Clear();
+            UnwatchThrows();
             // The countdown's start tick names the match; the host's own copy hears it like everyone else's.
             _hostKey = _match.Snapshot.PhaseTick;
             _net.ServerManager.Broadcast(new MatchResetBroadcast { MatchKey = _hostKey });
@@ -184,14 +191,38 @@ namespace CloseTheDeal.Records
 
         void HostConnectionChanged(NetworkConnection connection, RemoteConnectionStateArgs args)
         {
-            if (args.ConnectionState != RemoteConnectionState.Stopped || !_tally.TryGetValue(connection.ClientId, out MatchLine line))
+            if (args.ConnectionState != RemoteConnectionState.Stopped)
                 return;
 
-            // A leaver's numbers go with them: nothing is written for a match they didn't finish.
-            if (_carrierClient == connection.ClientId)
+            // A leaver's numbers go with them: nothing is written for a match they didn't finish. Ids are
+            // reused by the transport, so nothing of theirs may be left for the next player with this id.
+            int id = connection.ClientId;
+            if (_carrierClient == id)
                 HostEndCarry(Time.time);
-            _tally.Remove(connection.ClientId);
+            _joinedAt.Remove(id);
+            _carried.Remove(id);
+            ForgetHits(id);
+            if (!_tally.TryGetValue(id, out MatchLine line))
+                return;
+            _tally.Remove(id);
             _net.ServerManager.Broadcast(new MatchLineBroadcast { MatchKey = _hostKey, Gone = true, Line = line });
+        }
+
+        readonly List<int> _forget = new();
+
+        /// <summary>Drops the hits this player took and the window-kill credit they held on others.</summary>
+        void ForgetHits(int clientId)
+        {
+            _lastHit.Remove(clientId);
+            _forget.Clear();
+            foreach (KeyValuePair<int, LastHit> hit in _lastHit)
+            {
+                if (hit.Value.Attacker == clientId)
+                    _forget.Add(hit.Key);
+            }
+
+            for (int i = 0; i < _forget.Count; i++)
+                _lastHit.Remove(_forget[i]);
         }
 
         void HostAuthenticated(NetworkConnection connection, bool passed)
@@ -263,6 +294,8 @@ namespace CloseTheDeal.Records
             MatchLine line = HostLine(victim);
             line.Deaths = Add(line.Deaths);
             HostPut(line);
+            // The killing hit is credited here; it must not also earn a window kill if the body is thrown outside.
+            _lastHit.Remove(line.ClientId);
             FirmMember killer = Rival(victim, info.AttackerClientId);
             if (killer != null)
             {
@@ -276,7 +309,8 @@ namespace CloseTheDeal.Records
 
         void HostFellOut(FirmMember victim)
         {
-            if (!IsHostCounting || victim.Owner == null || !victim.Owner.IsValid)
+            // A body that is already dead was counted as a death; being carried outside by the blast isn't a second loss.
+            if (!IsHostCounting || victim.Owner == null || !victim.Owner.IsValid || IsDead(victim))
                 return;
 
             MatchLine line = HostLine(victim);
@@ -296,6 +330,8 @@ namespace CloseTheDeal.Records
             _lastHit.Remove(line.ClientId);
             HostFeed(line.ClientId, killer, killer != null ? KillKind.KnockedOut : KillKind.Fell);
         }
+
+        static bool IsDead(FirmMember member) => member.TryGetComponent(out Health health) && health.IsDead;
 
         /// <summary>The attacker's player if they are on the other firm; null for the world, yourself or a teammate.</summary>
         static FirmMember Rival(FirmMember victim, int attackerClientId)
@@ -429,11 +465,14 @@ namespace CloseTheDeal.Records
                 if (member.Owner == null || !_tally.TryGetValue(member.Owner.ClientId, out MatchLine line))
                     continue;
 
+                // A late joiner's line is made before the host seats them in a firm; correct it once that lands.
                 int floor = _match.Arena.FloorOf(member.Position);
-                if (floor <= line.BestFloor)
+                bool firmMoved = line.Firm != member.Firm;
+                if (floor <= line.BestFloor && !firmMoved)
                     continue;
 
-                line.BestFloor = (byte)Mathf.Min(floor, byte.MaxValue);
+                line.Firm = (byte)member.Firm;
+                line.BestFloor = (byte)Mathf.Clamp(Mathf.Max(floor, line.BestFloor), 0, byte.MaxValue);
                 HostPut(line);
             }
         }

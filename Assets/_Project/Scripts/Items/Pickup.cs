@@ -623,6 +623,7 @@ namespace CloseTheDeal.Items
                 _blend = 0f;
                 _awaitingPose = false;
                 next.NotifyHeld(this);
+                ShowLookedAt(false);
                 _rootWhileHeld = transform.position;
                 StartTake(next);
                 if (!_quiet)

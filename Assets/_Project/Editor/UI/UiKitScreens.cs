@@ -17,7 +17,7 @@ namespace CloseTheDeal.Editor.UI
     /// </summary>
     internal static class UiKitScreens
     {
-        internal static GameObject Title, Settings, Confirm, Canvas;
+        internal static GameObject Title, Settings, Confirm, Session, Problem, Canvas;
 
         /// <summary>The title lane's band for the title lockup and menu starts at 64% of the frame; the sill sits above it.</summary>
         const float SillY = 664f;
@@ -27,6 +27,8 @@ namespace CloseTheDeal.Editor.UI
             Title = Ensure(ScreenFolder + "/TitleScreen.prefab", BuildTitle, rebuild);
             Settings = Ensure(ScreenFolder + "/SettingsScreen.prefab", UiKitSettingsBuilder.Build, rebuild);
             Confirm = Ensure(ScreenFolder + "/ConfirmDialog.prefab", BuildConfirm, rebuild);
+            Session = Ensure(ScreenFolder + "/SessionPanel.prefab", UiKitSessionBuilder.BuildSession, rebuild);
+            Problem = Ensure(ScreenFolder + "/ProblemPanel.prefab", UiKitSessionBuilder.BuildProblem, rebuild);
             Canvas = Ensure(ScreenFolder + "/KitCanvas.prefab", BuildCanvas, rebuild);
         }
 
@@ -57,6 +59,10 @@ namespace CloseTheDeal.Editor.UI
             var title = Instance<TitleScreen>(Title, go.transform, "TitleScreen");
             var settings = Instance<SettingsScreen>(Settings, go.transform, "SettingsScreen");
             var quit = Instance<UiConfirmDialog>(Confirm, go.transform, "QuitDialog");
+            var session = Instance<SessionPanel>(Session, go.transform, "SessionPanel");
+            var problem = Instance<ProblemPanel>(Problem, go.transform, "ProblemPanel");
+            session.gameObject.SetActive(false);
+            problem.gameObject.SetActive(false);
             Instance<UiFocusFrame>(UiKitComponents.FocusFrame, go.transform, "FocusFrame");
             title.gameObject.SetActive(false);
             settings.gameObject.SetActive(false);
@@ -70,6 +76,8 @@ namespace CloseTheDeal.Editor.UI
             Set(root, "_tokens", Tokens);
             Set(root, "_stack", stack);
             Set(root, "_title", title);
+            Set(root, "_session", session);
+            Set(root, "_problem", problem);
             return go;
         }
 
@@ -217,6 +225,7 @@ namespace CloseTheDeal.Editor.UI
             Set(screen, "_build", build);
             SetArray(screen, "_versionLines", new Object[] { version });
             Set(screen, "_menuGroup", menuLine.GetComponent<CanvasGroup>());
+            SetArray(screen, "_centreGroups", new Object[] { statusGroup.GetComponent<CanvasGroup>(), info.GetComponent<CanvasGroup>() });
             return root.gameObject;
         }
 
