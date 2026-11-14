@@ -4,7 +4,7 @@ using UnityEngine.Audio;
 namespace CloseTheDeal.UI
 {
     /// <summary>
-    /// The settings screen's door to the mixer: SetVolume(AudioBus.Ui, 0.8f) takes a 0 to 1 slider value,
+    /// The door to the mixer for a volume slider (the settings screen's audio rows call it once they exist): SetVolume(AudioBus.Ui, 0.8f) takes a 0 to 1 slider value,
     /// writes the exposed dB parameter and remembers it between launches (PlayerPrefs).
     /// </summary>
     public static class UiAudio
@@ -19,7 +19,7 @@ namespace CloseTheDeal.UI
         {
             slider01 = Mathf.Clamp01(slider01);
             Apply(bus, slider01);
-            if (save) PlayerPrefs.SetFloat(Key + bus, slider01);
+            if (save) { PlayerPrefs.SetFloat(Key + bus, slider01); PlayerPrefs.Save(); }
         }
 
         /// <summary>Slider 0 to 1 as dB: 1 is 0 dB, 0 is silent (-80), in between is a perceptual curve.</summary>
