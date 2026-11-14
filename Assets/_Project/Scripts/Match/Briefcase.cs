@@ -23,8 +23,9 @@ namespace CloseTheDeal.MatchMode
         [Tooltip("The parts tinted to show who holds it: your firm's colour, the rival's, or the loose colour from the match profile.")]
         [SerializeField] Renderer[] _firmMarkers = new Renderer[0];
 
-        /// <summary>How the case sits in the carrier's view, relative to their eye: side-on, tilted a little toward them.</summary>
-        static readonly Quaternion FirstPersonTilt = Quaternion.Euler(0f, 75f, 8f);
+        /// <summary>Turned side-on and leaning in toward the middle of the view; mirrored when the case sits on the left.</summary>
+        static readonly Quaternion FirstPersonTiltRight = Quaternion.Euler(0f, 75f, 8f);
+        static readonly Quaternion FirstPersonTiltLeft = Quaternion.Euler(0f, -75f, -8f);
 
         static readonly int BaseColour = Shader.PropertyToID("_BaseColor");
         static readonly int Fade = Shader.PropertyToID("_Fade");
@@ -53,6 +54,7 @@ namespace CloseTheDeal.MatchMode
         Vector3 _centreLocal;
 
         float _popStarted = -1f;
+        float _handScale = 1f;
         Renderer _beacon;
         MaterialPropertyBlock _beaconBlock;
         float _shownFade = -1f;
@@ -78,6 +80,9 @@ namespace CloseTheDeal.MatchMode
         public Vector3 Centre => transform.TransformPoint(_centreLocal);
 
         public Vector3 Position => _rigidbody.position;
+
+        /// <summary>Host: lying still (asleep, or barely moving), not in flight.</summary>
+        internal bool Resting => _rigidbody.IsSleeping() || _rigidbody.linearVelocity.sqrMagnitude < 0.04f;
 
         // ---- Lifecycle -----------------------------------------------------------------------
 
@@ -155,7 +160,10 @@ namespace CloseTheDeal.MatchMode
             }
 
             _carrier = null;
+            _handScale = 1f;
             _visual.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            if (_popStarted < 0f)
+                _visual.localScale = Vector3.one;
 
             // The host already moved the body. A client jumps it to where it was let go, so it
             // never shows for a frame at the spot it was picked up from while the transform catches up.
@@ -203,6 +211,8 @@ namespace CloseTheDeal.MatchMode
             }
 
             _visual.SetPositionAndRotation(position, rotation);
+            if (_popStarted < 0f)
+                _visual.localScale = Vector3.one * Mathf.Lerp(1f, _handScale, t);
         }
 
         /// <summary>A quick squash and settle on the visual when it changes hands: wide and short first, then back to its own shape.</summary>
@@ -210,11 +220,11 @@ namespace CloseTheDeal.MatchMode
         {
             float t = Mathf.Clamp01((Time.unscaledTime - _popStarted) / PopSeconds);
             float amount = PopScale * Mathf.Sin(t * Mathf.PI) * (1f - t * 0.5f);
-            _visual.localScale = new Vector3(1f + amount, 1f - amount * 0.6f, 1f + amount);
+            _visual.localScale = new Vector3(1f + amount, 1f - amount * 0.6f, 1f + amount) * _handScale;
             if (t < 1f)
                 return;
 
-            _visual.localScale = Vector3.one;
+            _visual.localScale = Vector3.one * _handScale;
             _popStarted = -1f;
         }
 
@@ -319,11 +329,13 @@ namespace CloseTheDeal.MatchMode
             {
                 Transform eye = view.transform;
                 position = eye.TransformPoint(match.Profile.FirstPersonOffset);
-                rotation = eye.rotation * FirstPersonTilt;
+                rotation = eye.rotation * (match.Profile.FirstPersonOffset.x < 0f ? FirstPersonTiltLeft : FirstPersonTiltRight);
+                _handScale = match.Profile.FirstPersonScale;
                 return;
             }
 
             _carrier.CarryAnchor.GetPositionAndRotation(out position, out rotation);
+            _handScale = 1f;
         }
 
         /// <summary>In your firm's colour while one of you holds it, the rival's while they do, the loose colour otherwise; on your own screen.</summary>

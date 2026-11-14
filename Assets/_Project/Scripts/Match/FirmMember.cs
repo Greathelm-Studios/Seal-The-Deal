@@ -138,7 +138,7 @@ namespace CloseTheDeal.MatchMode
             base.OnStartNetwork();
             Members.Add(this);
             _firm.OnChange += OnFirmChanged;
-            OnRosterChanged?.Invoke();
+            MatchWiring.Raise(OnRosterChanged);
             // The briefcase status can name this player as carrier before their body exists here.
             if (MatchDirector.Instance != null)
                 MatchDirector.Instance.ApplyGates();
@@ -149,7 +149,7 @@ namespace CloseTheDeal.MatchMode
             base.OnStopNetwork();
             _firm.OnChange -= OnFirmChanged;
             Members.Remove(this);
-            OnRosterChanged?.Invoke();
+            MatchWiring.Raise(OnRosterChanged);
         }
 
         public override void OnStartServer()
@@ -185,7 +185,7 @@ namespace CloseTheDeal.MatchMode
             _drop.Enable();
 
             Local = this;
-            OnLocalChanged?.Invoke();
+            MatchWiring.Raise(OnLocalChanged);
         }
 
         public override void OnStopClient()
@@ -202,7 +202,7 @@ namespace CloseTheDeal.MatchMode
             if (Local == this)
                 Local = null;
             SetPrompt(MatchPrompt.None);
-            OnLocalChanged?.Invoke();
+            MatchWiring.Raise(OnLocalChanged);
         }
 
         void OnFirmChanged(byte previous, byte next, bool asServer)
@@ -210,9 +210,9 @@ namespace CloseTheDeal.MatchMode
             if (asServer != IsServerStarted)
                 return;
 
-            OnRosterChanged?.Invoke();
+            MatchWiring.Raise(OnRosterChanged);
             if (Local == this)
-                OnLocalChanged?.Invoke();
+                MatchWiring.Raise(OnLocalChanged);
         }
 
         // ---- Owner: keys and prompt ----------------------------------------------------------

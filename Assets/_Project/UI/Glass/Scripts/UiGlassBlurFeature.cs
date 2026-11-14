@@ -8,11 +8,14 @@ using UnityEngine.Rendering.Universal;
 namespace CloseTheDeal.UI
 {
     /// <summary>
-    /// URP (Render Graph) renderer feature: copies the camera colour after the opaque scene and sky, blurs it
-    /// at quarter resolution (down, down, gaussian H, gaussian V) and publishes it as the global
-    /// _UiGlassBlurTex for CloseTheDeal/UI/Glass. Runs BeforeRenderingTransparents so Screen Space - Camera
-    /// canvases (drawn in the transparent pass) can sample it. Cost: see docs/systems/UI_GLASS.md.
-    /// Does nothing (and sets _UiGlassBlurOn = 0) on non-game cameras, with quality "No blur", or when no pane is alive.
+    /// URP (Render Graph) renderer feature: copies the camera colour after the opaque scene and sky, blurs it at
+    /// quarter resolution (down, down, gaussian H, gaussian V) into a PERSISTENT texture and publishes it as the
+    /// global _UiGlassBlurTex for CloseTheDeal/UI/Glass. Because the texture outlives the render graph, both
+    /// Screen Space - Camera canvases (drawn in the transparent pass, after this) and Screen Space - Overlay canvases
+    /// (drawn after the camera) can sample it. Cost: see docs/systems/UI_GLASS.md.
+    /// Runs only for scene cameras: not overlay cameras in a stack, not cameras that draw nothing of the scene
+    /// (culling mask 0, e.g. the title's sky camera), not while a UI backdrop (UiGlassBackdrop) feeds the glass,
+    /// not with quality "No blur", and not while no pane is alive.
     /// </summary>
     public class UiGlassBlurFeature : ScriptableRendererFeature
     {
@@ -22,16 +25,22 @@ namespace CloseTheDeal.UI
 
         static readonly int BlurTex = Shader.PropertyToID("_UiGlassBlurTex");
         static readonly int BlurOn = Shader.PropertyToID("_UiGlassBlurOn");
+        static readonly int BlurRect = Shader.PropertyToID("_UiGlassBlurRect");
         static readonly int Radius = Shader.PropertyToID("_UiGlassRadius");
 
         /// <summary>Panes alive in the scene. The passes are skipped when zero: scenes without glass pay nothing.</summary>
         public static int ActivePanes;
+
+        /// <summary>Optional: the one camera whose view the glass blurs (capture tools rendering into a texture).
+        /// Null = any game camera that draws to the screen.</summary>
+        public static Camera SourceCamera;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetCount() => ActivePanes = 0;   // enter Play Mode without a domain reload
 
         Material _mat;
         Pass _pass;
+        RTHandle _persist;
 
         public override void Create()
         {
@@ -42,27 +51,48 @@ namespace CloseTheDeal.UI
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
-            var type = renderingData.cameraData.cameraType;
-            bool game = type == CameraType.Game || type == CameraType.SceneView;
-            // Overlay cameras in a stack keep the base camera's blur: one blur per frame, not one per camera.
-            if (renderingData.cameraData.renderType == CameraRenderType.Overlay) return;
+            ref var cd = ref renderingData.cameraData;
+            if (cd.cameraType != CameraType.Game || cd.renderType == CameraRenderType.Overlay) return;
+            if (cd.camera.cullingMask == 0) return;            // draws no scene (the title sky camera): not a source
+            // Only the camera that draws the screen feeds the glass (not mirrors, minimaps or other render
+            // textures), unless a tool names its own camera.
+            if (SourceCamera != null ? cd.camera != SourceCamera : cd.camera.targetTexture != null) return;
+            if (UiGlassBackdrop.Active > 0) return;            // a UI backdrop feeds the glass this frame
             // Off until this frame's publish pass turns it on (in command order), so any skipped or early-out
             // frame falls back to the plain tint instead of sampling a stale texture.
-            if (game) Shader.SetGlobalFloat(BlurOn, 0f);
-            if (!game || shader == null || !UiGlassSettings.BlurAllowed || ActivePanes <= 0) return;
+            Shader.SetGlobalFloat(BlurOn, 0f);
+            if (shader == null || !UiGlassSettings.BlurAllowed || ActivePanes <= 0) return;
             if (_mat == null) _mat = CoreUtils.CreateEngineMaterial(shader);
-            _pass.Setup(_mat, radius);
+
+            var d = cd.cameraTargetDescriptor;
+            d.width = Mathf.Max(d.width / 4, 2);
+            d.height = Mathf.Max(d.height / 4, 2);
+            d.depthBufferBits = 0;
+            d.depthStencilFormat = GraphicsFormat.None;
+            d.msaaSamples = 1;
+            d.graphicsFormat = GraphicsFormat.B10G11R11_UFloatPack32;
+            RenderingUtils.ReAllocateHandleIfNeeded(ref _persist, d, FilterMode.Bilinear, TextureWrapMode.Clamp,
+                name: "_UiGlassBlurPersistent");
+            Shader.SetGlobalTexture(BlurTex, _persist);
+            Shader.SetGlobalVector(BlurRect, new Vector4(0, 0, 1, 1));
+            _pass.Setup(_mat, radius, _persist);
             renderer.EnqueuePass(_pass);
         }
 
-        protected override void Dispose(bool disposing) => CoreUtils.Destroy(_mat);
+        protected override void Dispose(bool disposing)
+        {
+            CoreUtils.Destroy(_mat);
+            _persist?.Release();
+            _persist = null;
+        }
 
         class Pass : ScriptableRenderPass
         {
             Material _m;
             float _radius;
+            RTHandle _dest;
             public Pass() { profilingSampler = new ProfilingSampler("UiGlassBlur"); }
-            public void Setup(Material m, float radius) { _m = m; _radius = radius; }
+            public void Setup(Material m, float radius, RTHandle dest) { _m = m; _radius = radius; _dest = dest; }
 
             class PublishData { }
 
@@ -70,7 +100,7 @@ namespace CloseTheDeal.UI
             {
                 var res = frameData.Get<UniversalResourceData>();
                 var cam = frameData.Get<UniversalCameraData>();
-                if (res.isActiveTargetBackBuffer) return;     // nothing sampleable yet; panes keep the fallback
+                if (res.isActiveTargetBackBuffer || _dest == null) return;   // nothing sampleable: panes keep the fallback
 
                 int w = Mathf.Max(cam.cameraTargetDescriptor.width, 4), h = Mathf.Max(cam.cameraTargetDescriptor.height, 4);
                 TextureHandle Make(string n, int div)
@@ -86,18 +116,18 @@ namespace CloseTheDeal.UI
                 var half = Make("_UiGlassHalf", 2);
                 var quarter = Make("_UiGlassQuarter", 4);
                 var tmp = Make("_UiGlassTmp", 4);
+                var dest = rg.ImportTexture(_dest);
                 _m.SetFloat(Radius, _radius);
 
                 rg.AddBlitPass(new RenderGraphUtils.BlitMaterialParameters(res.activeColorTexture, half, _m, 0), "UiGlass Down 1/2");
                 rg.AddBlitPass(new RenderGraphUtils.BlitMaterialParameters(half, quarter, _m, 1), "UiGlass Down 1/4");
                 rg.AddBlitPass(new RenderGraphUtils.BlitMaterialParameters(quarter, tmp, _m, 2), "UiGlass Blur H");
-                rg.AddBlitPass(new RenderGraphUtils.BlitMaterialParameters(tmp, quarter, _m, 3), "UiGlass Blur V");
+                rg.AddBlitPass(new RenderGraphUtils.BlitMaterialParameters(tmp, dest, _m, 3), "UiGlass Blur V");
 
-                // Publish: a pass that reads the result and sets it as a global for the transparent pass.
+                // Publish: reads the result (orders it before the canvases) and turns the glass on.
                 using (var b = rg.AddRasterRenderPass<PublishData>("UiGlass Publish", out _))
                 {
-                    b.UseTexture(quarter, AccessFlags.Read);
-                    b.SetGlobalTextureAfterPass(quarter, BlurTex);
+                    b.UseTexture(dest, AccessFlags.Read);
                     b.AllowPassCulling(false);
                     b.AllowGlobalStateModification(true);
                     b.SetRenderFunc((PublishData d, RasterGraphContext c) => c.cmd.SetGlobalFloat(BlurOn, 1f));

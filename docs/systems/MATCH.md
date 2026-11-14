@@ -48,7 +48,7 @@ The result opens the menu: who sealed the deal and how. The host gets **Rematch*
 
 ## Designer-authored vs runtime-derived (AGENTS.md §4)
 
-**Authored:** `Assets/_Project/Profiles/Match/DefaultMatch.asset` (`MatchProfile`): firms, own / rival / loose colours, countdown, match length, briefcase prefab and its spot on the plaza, pick-up range, drop toss, stray and return delays, how far outside a wall still counts as inside, fall time, skybridge width and rail height, carry blend, first-person offset, notice time. `Firm_AshcombePryce.asset` and `Firm_HalloranVoss.asset` (`FirmDefinition`): display name, neutral marker colour, which building. Every field has a tooltip.
+**Authored:** `Assets/_Project/Profiles/Match/DefaultMatch.asset` (`MatchProfile`): firms, own / rival / loose colours, countdown, match length, briefcase prefab and its spot on the plaza, pick-up range, drop toss, stray and return delays, how far outside a wall still counts as inside, fall time, skybridge width and rail height, carry blend, first-person offset and scale (the carrier's own view of the case: tucked small into the lower left corner so the stairs ahead stay clear and the gun keeps the right), notice time. `Firm_AshcombePryce.asset` and `Firm_HalloranVoss.asset` (`FirmDefinition`): display name, neutral marker colour, which building. Every field has a tooltip.
 
 **Derived:** floor names ("Floor 4", "Checkpoint 2"), which floor a point is on, whether it is in a building or on the neutral ground (all from `TowerProfile` and the built towers), the plaza and skybridges, the clock, a firm's checkpoint spot (where its player stood when they reached it).
 
@@ -169,6 +169,7 @@ Outside the folder: `Tower/TeamSpawner.cs` (balanced teams, a spawn hook and ove
 - **Getting on the plaza or a bridge means climbing the 0.6 m sill** (a mantle, 0.4–1.6 m in the movement profile).
 - **Blasts don't move the briefcase.** `Knockback.Explode` only throws `Prop`s; wire `Briefcase.Throw` in when weapons land.
 - **The gap counts as outside** except the plaza and the bridges. A zipline crossing over 1.2 s would send its rider back.
-- **A briefcase wedged unreachably inside a building** has no recovery, except one lodged on a floor above the open floor (a knocked-loose case on a shut slab), which is sent back.
+- **A briefcase wedged unreachably inside a building** has no recovery, except one lodged on a floor above the open floor (a knocked-loose case on a shut slab), which is sent back once it comes to rest there (never mid-air: a case thrown up the stairwell lands first).
 - **Outside `Lane_Integration.unity` the host starts the match from the menu.** In that scene the lobby desk starts it through `HostStartRun` ([INTEGRATION.md](INTEGRATION.md)).
+- **The lobby taking the case off the winner after a result** is tidying up: it raises no drop event and plays no drop sound.
 - The client's player is put back by the host's correction, so a teleport shows as one corrected tick on the owner's screen.
