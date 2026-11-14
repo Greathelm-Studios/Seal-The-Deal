@@ -61,9 +61,10 @@ The camera and the arm exist only while that player is the local one. The player
 
 ## Files
 
-- [PlayerViewmodel.cs](../../Assets/_Project/Scripts/Player/Viewmodel/PlayerViewmodel.cs): on the root of [Player.prefab](../../Assets/_Project/Prefabs/Player.prefab). Creates the arm and its camera for the local player and places the gun each frame. Weapon code calls its `Fire()` and `Reload()`.
+- [PlayerViewmodel.cs](../../Assets/_Project/Scripts/Player/Viewmodel/PlayerViewmodel.cs): on the root of [Player.prefab](../../Assets/_Project/Prefabs/Player.prefab). Creates the arm and its camera for the local player and places the gun each frame. Weapon code calls its `Equip()`, `Fire()` and `Reload()`.
 - [ViewmodelArms.cs](../../Assets/_Project/Scripts/Player/Viewmodel/ViewmodelArms.cs): on the arms prefab. Shoulder pin and the left arm fold; the arm itself is a `HandGrip`.
 - [HandGrip.cs](../../Assets/_Project/Scripts/Player/Viewmodel/HandGrip.cs): one right arm holding one grip: the two-bone solve, the hand turn and the finger closing, with the elbow swing and curl values. Used by the first-person arm and by the body.
+- [WeaponHold.cs](../../Assets/_Project/Scripts/Player/Viewmodel/WeaponHold.cs): what the hands hold: a model and where each hand sits on it. Weapon code fills one in per weapon.
 - [PlayerHeldWeapon.cs](../../Assets/_Project/Scripts/Player/Viewmodel/PlayerHeldWeapon.cs) and [HeldWeaponSettle.cs](../../Assets/_Project/Scripts/Player/Viewmodel/HeldWeaponSettle.cs): the body's gun arm, added to the player's `Graphics` object at spawn (not on the prefab). The second file is its after-the-ragdoll pass.
 - [ViewmodelProfile.cs](../../Assets/_Project/Scripts/Player/Viewmodel/ViewmodelProfile.cs) and [DefaultViewmodel.asset](../../Assets/_Project/Profiles/DefaultViewmodel.asset): the tuning panel. Runtime never writes it.
 - [ViewmodelArms.prefab](../../Assets/_Project/Prefabs/Viewmodel/ViewmodelArms.prefab): its origin is the eye. `GunMount` holds `Pistol` and `GripHand`; `Shoulder` is the shoulder point; `Arms` is the character's skeleton with arm geometry only. Generated; edit it and the tool leaves it alone from then on (§4).
@@ -105,12 +106,26 @@ Where the starting numbers came from: NorseFPS frames its hand cannon at (0.18, 
 ## Driving it from weapon code
 
 ```csharp
-// On the owning client, when a shot has been fired / a reload has started:
-viewmodel.Fire();
-viewmodel.Reload();
+// On every machine, once, when weapon code takes over this player:
+viewmodel.Driven = true;            // the stand-in keys (attack, R, T) stop
+
+// On every machine, whenever the weapon a player holds changes:
+viewmodel.Equip(new WeaponHold(model, gripSeat, gripTurn, supportSeat, supportTurn, twoHanded));
+// or, for a weapon with no place for the left hand:
+viewmodel.Equip(new WeaponHold(model, gripSeat, gripEuler));
+
+// On the owning client:
+viewmodel.Fire();                   // a shot
+viewmodel.Reload(seconds);          // a reload started; lasts as long as the weapon's
+viewmodel.CancelReload();           // it was interrupted
+Transform muzzle = viewmodel.Muzzle; // where tracers should leave from
 ```
 
-Both do nothing on players the client does not control.
+`Equip` swaps the model in the first-person view and in the body's hand together, and moves the hand seats onto it. Seats are in the model's own space from its pivot: blue (+Z) is where the fingers point, green (+Y) runs from the little finger to the index finger. The model's pivot is the point the view places in front of the eye, and its muzzle should point along +Z. `Muzzle` is the model's child named `Muzzle`, or the model itself when it has none. Nothing here is synced: call `Equip` on each machine from whatever syncs the held weapon. The body keeps every copy it has made and switches them on and off, so switching back and forth creates nothing.
+
+`Fire`, `Reload` and `CancelReload` do nothing on players the client does not control.
+
+**Meant for Adam's weapon system** (`WeaponHolder` / `WeaponView`, on his branch, not on origin as of 2026-11-14). The agreed split: his system keeps shooting, tracers, impacts and the camera kick, and stops drawing its own gun in the view and on the body; this viewmodel draws the gun in both places. Nothing is wired yet.
 
 ## Known limitations
 
@@ -123,7 +138,8 @@ Both do nothing on players the client does not control.
 - **Crouch and slide have no gun motion.** They are on Adam's movement lane's branch, not here; when they merge, the gun will still trail the camera's drop but has no pose of its own for them.
 - **The arm is at 99% of its reach** (0.428 of 0.433 m), which is what makes it straight. The shoulder follows all of the movement drift so the grip stays in the hand; the climb drop can still stretch it a few millimetres past reach. Moving the gun further forward in the profile needs the shoulder moved forward with it.
 - **Temporary stand-in input.** `PlayerViewmodel.ReadTestInput` listens to the attack button and reads the R key straight from the keyboard, because nothing fires or reloads yet and the actions asset has no reload action. Real fix: the weapon code of slice 2 calls `Fire()` and `Reload()` and that method is deleted.
-- **The finger pose is one fixed grip**, set by eye for this pistol. Another weapon or a loose prop needs its own `GripHand` and curl values; that arrives with swapping the held item (slice 3).
+- **The finger curl is one fixed grip**, set by eye for this pistol. `Equip` moves the hand seats per weapon but not how far the fingers close.
+- **Swapping the held model is proved only as a mechanism.** In play as host on 2026-11-14 a stand-in rifle (a Kenney blaster with guessed seats, far too big) was swapped in and the pistol swapped back: both the view and the body changed, the left hand came up and went away, and the console stayed clean. No real second weapon has been fitted, there is no put-away or draw move (the model changes in one frame), and nothing calls `Equip` yet.
 - **Only the right hand can be the main hand.** There is no left-handed one-handed hold and nothing held in the left hand alone; the left hand only supports.
 - **Two-handed holding is only seen on the stand-in pistol**, in Editor renders and in play as host, standing still (the view and the body from the front and side). There is no two-handed weapon model, the hold has not been seen moving, and another client cannot see the T switch.
 - **Picking up and throwing props is not built here.** Adam's pickups lane reports carry and throw on a branch that is not on origin; the hands above are the posing layer a carried prop would use (a main seat and a support seat on the prop).

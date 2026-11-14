@@ -12,6 +12,9 @@
 //              step bob is a smooth arc, and it has a sprint carry, a climb drop and breathing.
 //  Modified  : Claude Fable 5.2, 2026-11-14 — a weapon can be held in one hand or both
 //              (Harvey: "add a left and right hand system and a two handed system").
+//  Modified  : Claude Fable 5.2, 2026-11-14 — weapon code can now drive it: swap the held model,
+//              time and cancel a reload, and turn the stand-in keys off (Harvey: "Take the best
+//              option and get it ready").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Sits on the player prefab. For the player this client controls, and nobody
 //              else, it hangs the first-person arms on the camera, draws them with a camera
@@ -48,13 +51,18 @@ namespace CloseTheDeal.Player
     /// <para><b>The body:</b> every player's body, local or not, also gets a
     /// <see cref="PlayerHeldWeapon"/> at spawn, which holds the same weapon the same way for
     /// everyone else to see.</para>
-    /// <para><b>Driving it:</b> weapon code calls <see cref="Fire"/> and <see cref="Reload"/>.
-    /// Until that code exists this component listens to the attack button and the R key
-    /// itself; see <see cref="ReadTestInput"/>.</para>
+    /// <para><b>Driving it:</b> weapon code calls <see cref="Equip"/> when the held weapon
+    /// changes (on every machine, so the body changes too), <see cref="Fire"/> for a shot and
+    /// <see cref="Reload"/> / <see cref="CancelReload"/>, and sets <see cref="Driven"/>. Until
+    /// that code exists this component listens to the attack button and the R key itself;
+    /// see <see cref="ReadTestInput"/>.</para>
     /// </remarks>
     /// <example>
     /// <code>
-    /// // From weapon code, on the owning client, when a shot has been fired:
+    /// // From weapon code, on every machine, when a player's held weapon changes:
+    /// _viewmodel.Driven = true;
+    /// _viewmodel.Equip(new WeaponHold(rifleModel, gripSeat, gripTurn, supportSeat, supportTurn, true));
+    /// // On the owning client, when a shot has been fired:
     /// _viewmodel.Fire();
     /// </code>
     /// </example>
@@ -133,6 +141,12 @@ namespace CloseTheDeal.Player
         float _kickSide = 1f;
         /// <summary>Seconds into the current reload move; negative when none is playing.</summary>
         float _reloadElapsed = -1f;
+        /// <summary>How long the current reload move lasts, in seconds.</summary>
+        float _reloadSeconds;
+        PlayerHeldWeapon _body;
+        /// <summary>What weapon code last asked the hands to hold; used again when the arms are rebuilt.</summary>
+        WeaponHold _hold;
+        bool _hasHold;
 
         /// <summary>True while this client is showing arms for this player.</summary>
         public bool IsShown => _arms != null;
@@ -160,6 +174,52 @@ namespace CloseTheDeal.Player
         /// <summary>How the gun is turned at rest right now, blended the same way as <see cref="RestPosition"/>.</summary>
         public Quaternion RestTurn => Quaternion.Slerp(Quaternion.Euler(_profile.GunTurn), Quaternion.Euler(_profile.TwoHandedTurn), _twoHand);
 
+        /// <summary>
+        /// Set by weapon code once it is driving this viewmodel. While true, the stand-in keys
+        /// (attack kicks, R reloads, T switches hands) are ignored.
+        /// </summary>
+        public bool Driven { get; set; }
+
+        /// <summary>
+        /// The muzzle of the first-person weapon: the child of the held model named "Muzzle", or
+        /// the model itself when it has none. Null while this client shows no arms for this player.
+        /// </summary>
+        public Transform Muzzle { get; private set; }
+
+        /// <summary>
+        /// Changes what the hands hold, in the first-person view and on the body. Call on every
+        /// machine when a player's held weapon changes; nothing here is synced. Not for every
+        /// frame: it creates and destroys objects.
+        /// </summary>
+        /// <param name="hold">The model and where each hand sits on it.</param>
+        public void Equip(in WeaponHold hold)
+        {
+            if (hold.Model == null)
+                return;
+
+            _hold = hold;
+            _hasHold = true;
+            _twoHanded = hold.TwoHanded && hold.HasSupport;
+            if (_arms != null)
+                Muzzle = FindMuzzle(_arms.Equip(hold));
+            if (_body != null)
+                _body.Equip(hold);
+        }
+
+        static Transform FindMuzzle(Transform model)
+        {
+            if (model == null)
+                return null;
+
+            foreach (Transform part in model.GetComponentsInChildren<Transform>(true))
+            {
+                if (part.name == "Muzzle")
+                    return part;
+            }
+
+            return model;
+        }
+
         /// <summary>True from the start of a reload move until the gun is back on aim.</summary>
         public bool IsReloading => _reloadElapsed >= 0f;
 
@@ -174,10 +234,23 @@ namespace CloseTheDeal.Player
         }
 
         /// <summary>Starts the reload move. Does nothing on players this client does not control, or while one is already playing.</summary>
-        public void Reload()
+        /// <param name="seconds">How long the move lasts, to match the weapon's reload. Zero or less uses the profile's.</param>
+        public void Reload(float seconds = 0f)
         {
-            if (_arms != null && !IsReloading)
-                _reloadElapsed = 0f;
+            if (_arms == null || IsReloading)
+                return;
+
+            _reloadSeconds = seconds > 0f ? seconds : _profile.ReloadSeconds;
+            _reloadElapsed = 0f;
+        }
+
+        /// <summary>Stops a reload move early and brings the gun back up from where it has got to.</summary>
+        public void CancelReload()
+        {
+            // The move is the same going down as coming up, so jumping to the matching point
+            // on the way up carries on from the same depth with no pop.
+            if (IsReloading && _reloadElapsed < _reloadSeconds * 0.5f)
+                _reloadElapsed = _reloadSeconds - _reloadElapsed;
         }
 
         void Awake()
@@ -191,7 +264,7 @@ namespace CloseTheDeal.Player
             {
                 _twoHanded = _armsPrefab.TwoHanded;
                 _twoHand = _twoHanded ? 1f : 0f;
-                PlayerHeldWeapon.Attach(body.gameObject, _motor, this, _profile, _armsPrefab);
+                _body = PlayerHeldWeapon.Attach(body.gameObject, _motor, this, _profile, _armsPrefab);
             }
         }
 
@@ -214,7 +287,7 @@ namespace CloseTheDeal.Player
             else if (!local && _arms != null)
                 Hide();
 
-            if (_arms != null)
+            if (_arms != null && !Driven)
                 ReadTestInput();
         }
 
@@ -271,7 +344,10 @@ namespace CloseTheDeal.Player
             // from the profile every frame.
             _arms = Instantiate(_armsPrefab, cameraObject.transform);
             _arms.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            if (_hasHold)
+                _arms.Equip(_hold);
             _arms.TwoHanded = _twoHanded;
+            Muzzle = FindMuzzle(_arms.HeldModel);
 
             _lastCameraRotation = _baseCamera.transform.rotation;
             _lag = Vector2.zero;
@@ -303,6 +379,7 @@ namespace CloseTheDeal.Player
                 Destroy(_armsCamera.gameObject); // Takes the arms with it.
 
             _arms = null;
+            Muzzle = null;
             _armsCamera = null;
             _baseCamera = null;
         }
@@ -439,13 +516,13 @@ namespace CloseTheDeal.Player
                 return 0f;
 
             _reloadElapsed += dt;
-            if (_reloadElapsed >= _profile.ReloadSeconds)
+            if (_reloadElapsed >= _reloadSeconds)
             {
                 _reloadElapsed = -1f;
                 return 0f;
             }
 
-            float arch = Mathf.Sin(_reloadElapsed / _profile.ReloadSeconds * Mathf.PI);
+            float arch = Mathf.Sin(_reloadElapsed / _reloadSeconds * Mathf.PI);
             return arch * arch;
         }
 

@@ -6,6 +6,8 @@
 //  Modified  : Claude Fable 5.2, 2026-11-14 — the body's left arm joins the hold when the
 //              weapon is held in both hands (Harvey: "add a left and right hand system and a
 //              two handed system").
+//  Modified  : Claude Fable 5.2, 2026-11-14 — the weapon in the hand can be swapped while playing,
+//              for weapon code to drive (Harvey: "Take the best option and get it ready").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Added to the player's smoothed visual when the player spawns. Makes the body
 //              everyone else sees (and the player's own shadow and mirror image) hold the
@@ -13,6 +15,7 @@
 //              same grip, pointing where the player aims. Separate from PlayerAnimator so the
 //              gun arm can be removed or swapped without touching the body's animation.
 // -----------------------------------------------------------------------------
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -96,8 +99,10 @@ namespace CloseTheDeal.Player
         readonly HandGrip _support = new();
         Vector3 _supportPosition;
         Quaternion _supportRotation;
-        /// <summary>True when the arms prefab has a seat for the left hand and the body has a left arm to put on it.</summary>
+        /// <summary>True when the held weapon has a seat for the left hand and the body has a left arm to put on it.</summary>
         bool _hasSupport;
+        /// <summary>True when the body's left arm bones were found.</summary>
+        bool _leftArm;
         Transform _leanPivot;
         Transform _gun;
         Renderer[] _gunRenderers;
@@ -109,6 +114,17 @@ namespace CloseTheDeal.Player
         /// <summary>The steady part of the gun's turn away from the aimed turn.</summary>
         Quaternion _restTurn = Quaternion.identity;
         bool _ready;
+        /// <summary>A weapon asked for before <c>Start</c> had found the arm bones; held until then.</summary>
+        WeaponHold _waiting;
+        bool _hasWaiting;
+        /// <summary>
+        /// Every weapon copy made so far, by the model it was copied from. A weapon put away is
+        /// switched off and kept, never destroyed. WHY: <see cref="PlayerAnimator"/> lists every
+        /// transform under the hips once, on its first frame, and puts each back to its rest
+        /// pose every frame after; a copy in that list that was destroyed threw on every frame
+        /// (seen in play). Keeping them also means switching back and forth creates nothing.
+        /// </summary>
+        readonly Dictionary<Transform, Transform> _copies = new();
         /// <summary>Whether the weapon is currently drawn as a shadow only, as the owner's own body is.</summary>
         bool _shadowOnly;
 
@@ -153,15 +169,9 @@ namespace CloseTheDeal.Player
 
             // The left hand's seat is optional: a prefab without one is simply one-handed.
             Transform supportSeat = _source.SupportTarget;
-            _hasSupport = supportSeat != null && _support.Bind(avatar, true);
-            if (_hasSupport)
-            {
+            _leftArm = _support.Bind(avatar, true);
+            if (_leftArm)
                 _support.CopyTuning(_source.SupportGrip);
-                _supportPosition = supportSeat.localPosition;
-                _supportRotation = supportSeat.localRotation;
-            }
-            _gripPosition = seat.localPosition;
-            _gripRotation = seat.localRotation;
 
             // The model hangs off the pivot the motor tilts for a lean; its height on the
             // prefab is fixed, a lean only slides it sideways.
@@ -172,19 +182,65 @@ namespace CloseTheDeal.Player
                 _leanPivot = _leanPivot.parent;
             _pivotHeight = _leanPivot.localPosition.y;
 
-            _gun = Instantiate(weapon, _grip.Hand);
-            _gun.name = "HeldWeapon";
-            // The bones carry the rig's own scale, so the size is set against the world.
-            float boneScale = _grip.Hand.lossyScale.x;
-            _gun.localScale = weapon.lossyScale / (boneScale > 0f ? boneScale : 1f);
-            foreach (Transform part in _gun.GetComponentsInChildren<Transform>(true))
-                part.gameObject.layer = gameObject.layer;
-            _gunRenderers = _gun.GetComponentsInChildren<Renderer>(true);
             gameObject.AddComponent<HeldWeaponSettle>().Follow(this);
-            // The first-person copy casts no shadow (the body casts the player's); this one is the body's.
-            SetShadowOnly(false);
-
             _ready = true;
+
+            // What the arms prefab holds, unless weapon code has already asked for something else.
+            if (_hasWaiting)
+                Equip(_waiting);
+            else if (supportSeat != null)
+                Equip(new WeaponHold(weapon, seat.localPosition, seat.localRotation, supportSeat.localPosition, supportSeat.localRotation, _view.TwoHanded));
+            else
+                Equip(new WeaponHold(weapon, seat.localPosition, seat.localRotation.eulerAngles));
+        }
+
+        /// <summary>
+        /// Swaps the weapon in the body's hand for a copy of another model. Not for every
+        /// frame: the first time a model is held it is copied. <see cref="PlayerViewmodel.Equip"/> calls
+        /// this; weapon code should call that, so the view and the body change together.
+        /// </summary>
+        /// <param name="hold">The model and where each hand sits on it.</param>
+        public void Equip(in WeaponHold hold)
+        {
+            if (hold.Model == null)
+                return;
+
+            if (!_ready)
+            {
+                // Start has not found the arm yet (or could not); it picks this up if it does.
+                _waiting = hold;
+                _hasWaiting = true;
+                return;
+            }
+
+            if (_gun != null)
+                _gun.gameObject.SetActive(false);
+
+            _gripPosition = hold.GripPosition;
+            _gripRotation = hold.GripRotation;
+            _hasSupport = _leftArm && hold.HasSupport;
+            _supportPosition = hold.SupportPosition;
+            _supportRotation = hold.SupportRotation;
+
+            if (!_copies.TryGetValue(hold.Model, out _gun) || _gun == null)
+            {
+                _gun = Instantiate(hold.Model, _grip.Hand);
+                _gun.name = "HeldWeapon";
+                // The bones carry the rig's own scale, so the size is set against the world.
+                float boneScale = _grip.Hand.lossyScale.x;
+                _gun.localScale = hold.Model.lossyScale / (boneScale > 0f ? boneScale : 1f);
+                foreach (Transform part in _gun.GetComponentsInChildren<Transform>(true))
+                    part.gameObject.layer = gameObject.layer;
+                _copies[hold.Model] = _gun;
+            }
+            _gun.gameObject.SetActive(true);
+            _gunRenderers = _gun.GetComponentsInChildren<Renderer>(true);
+            // The first-person copy casts no shadow (the body casts the player's); this one is the body's.
+            SetShadowOnly(_shadowOnly);
+
+            // A different weapon hangs differently; let the steady sag be found again.
+            _restOffset = Vector3.zero;
+            _restTurn = Quaternion.identity;
         }
 
         void LateUpdate()

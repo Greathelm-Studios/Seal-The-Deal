@@ -17,6 +17,8 @@
 //  Modified  : Claude Fable 5.2, 2026-11-14 — the left arm can now hold the weapon too, for
 //              a two-handed hold (Harvey: "add a left and right hand system and a two handed
 //              system").
+//  Modified  : Claude Fable 5.2, 2026-11-14 — the held model can be swapped while playing, for
+//              weapon code to drive (Harvey: "Take the best option and get it ready").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Sits on the first-person arms prefab. Owns the rig side of the viewmodel:
 //              where the gun mount and shoulder are, and bending the arm so the hand stays on
@@ -93,6 +95,10 @@ namespace CloseTheDeal.Player
         PlayableGraph _graph;
         Renderer[] _renderers;
         bool _visible = true;
+        /// <summary>The model put in the mount by <see cref="Equip"/>; null while the prefab's own is still there.</summary>
+        Transform _equipped;
+        /// <summary>False when the equipped model has no place for the left hand.</summary>
+        bool _supportSeated = true;
 
         /// <summary>The gun arm's settings. The body other players see copies its finger curls and elbow swing.</summary>
         public HandGrip Grip => _grip;
@@ -120,6 +126,8 @@ namespace CloseTheDeal.Player
             {
                 if (_gunMount == null)
                     return null;
+                if (_equipped != null)
+                    return _equipped;
 
                 for (int i = 0; i < _gunMount.childCount; i++)
                 {
@@ -151,6 +159,52 @@ namespace CloseTheDeal.Player
         {
             if (_graph.IsValid())
                 _graph.Destroy();
+        }
+
+        /// <summary>
+        /// Swaps what is in the gun mount for a copy of another model and moves the hand seats
+        /// onto it. Not for every frame: it creates and destroys objects.
+        /// </summary>
+        /// <param name="hold">The model and where each hand sits on it.</param>
+        /// <returns>The copy now in the mount, or null when there is no mount or no model.</returns>
+        public Transform Equip(in WeaponHold hold)
+        {
+            if (_gunMount == null || hold.Model == null)
+                return null;
+
+            Transform old = HeldModel;
+            if (old != null)
+            {
+                // Destroy waits for the end of the frame; taken out of the mount now so
+                // nothing finds it there in the meantime.
+                old.SetParent(null, false);
+                old.gameObject.SetActive(false);
+                Destroy(old.gameObject);
+            }
+
+            _equipped = Instantiate(hold.Model, _gunMount);
+            _equipped.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            _equipped.gameObject.SetActive(true);
+            foreach (Transform part in _equipped.GetComponentsInChildren<Transform>(true))
+                part.gameObject.layer = gameObject.layer;
+
+            _renderers = GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < _renderers.Length; i++)
+            {
+                // The body's copy casts the shadow; this one is only what the eye sees.
+                if (_renderers[i].transform.IsChildOf(_equipped))
+                    _renderers[i].shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                _renderers[i].forceRenderingOff = !_visible;
+            }
+
+            if (_gripTarget != null)
+                _gripTarget.SetLocalPositionAndRotation(hold.GripPosition, hold.GripRotation);
+            _supportSeated = hold.HasSupport;
+            if (_supportTarget != null && hold.HasSupport)
+                _supportTarget.SetLocalPositionAndRotation(hold.SupportPosition, hold.SupportRotation);
+            _twoHanded = hold.TwoHanded && hold.HasSupport;
+
+            return _equipped;
         }
 
         /// <summary>Places the gun mount and the shoulder for this frame.</summary>
@@ -194,7 +248,7 @@ namespace CloseTheDeal.Player
             if (_rig == null || !_grip.IsRigged)
                 return;
 
-            bool both = _twoHanded && _supportTarget != null && _supportGrip.IsRigged;
+            bool both = _twoHanded && _supportSeated && _supportTarget != null && _supportGrip.IsRigged;
 
             // WHY every frame: the Animator rewrites the bones from the clip before this runs.
             // WHY set to one as well as zero: the clip does not key the arm's scale, so once
