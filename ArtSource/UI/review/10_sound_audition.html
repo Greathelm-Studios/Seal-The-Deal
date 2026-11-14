@@ -1,0 +1,73 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Seal the Deal: sound audition</title>
+<style>body{font:16px/1.5 -apple-system,sans-serif;color:#111B38;background:#F3F4F4;max-width:900px;margin:32px auto;padding:0 16px}
+h1{font-weight:300;letter-spacing:.06em}h2{margin-top:32px;border-bottom:1px solid #C9CED3}table{border-collapse:collapse;width:100%}
+td{padding:4px 12px 4px 0;vertical-align:middle}button{font:inherit;padding:4px 14px;border:1px solid #111B38;background:#fff;color:#111B38;border-radius:4px;cursor:pointer}
+button:hover{background:#244FB9;color:#F3F4F4}p{max-width:70ch}</style></head><body>
+<h1>SEAL THE DEAL · sound audition</h1>
+<p>Every clip the generator makes. <b>Nobody has listened to these yet</b>: they were synthesised and measured only. Press Play, or use
+"Play the hover run" to hear five hovers climb the scale as they do in the menu. Note any that are harsh, too long, too alike or wrong for the event.</p>
+<p><button onclick="run()">Play the hover run</button> <button onclick="burst()">Play AR-15 at 10 a second</button></p>
+<h2>UI (31)</h2><table><tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_HoverMove.wav">Play</button></td><td><b>HoverMove</b></td><td>100 ms · G5; run steps up C D E G A</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_Focus.wav">Play</button></td><td><b>Focus</b></td><td>100 ms · E5, softer than hover</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_Select.wav">Play</button></td><td><b>Select</b></td><td>180 ms · C5 to G5, rises a fifth</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_Confirm.wav">Play</button></td><td><b>Confirm</b></td><td>260 ms · C5 G5 C6, rises (resolves up)</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_Back.wav">Play</button></td><td><b>Back</b></td><td>200 ms · G5 to C5, falls</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_Error.wav">Play</button></td><td><b>Error</b></td><td>300 ms · E4 to C4, falls (dull, soft)</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_TabChange.wav">Play</button></td><td><b>TabChange</b></td><td>120 ms · E5 glass tick + air</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_ToggleOn.wav">Play</button></td><td><b>ToggleOn</b></td><td>140 ms · C5 to G5, quick rise</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_ToggleOff.wav">Play</button></td><td><b>ToggleOff</b></td><td>140 ms · G5 to C5, quick fall</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_SliderTick.wav">Play</button></td><td><b>SliderTick</b></td><td>50 ms · C6 tick; runtime pitch follows value</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_DropdownOpen.wav">Play</button></td><td><b>DropdownOpen</b></td><td>160 ms · air swish up + A5</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_DropdownClose.wav">Play</button></td><td><b>DropdownClose</b></td><td>140 ms · air swish down + E5</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_KeyBindListen.wav">Play</button></td><td><b>KeyBindListen</b></td><td>200 ms · E5 double pulse (waiting)</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_KeyBindSet.wav">Play</button></td><td><b>KeyBindSet</b></td><td>300 ms · C6 ding over G5</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_PanelOpen.wav">Play</button></td><td><b>PanelOpen</b></td><td>300 ms · C5 + G5 rising sweep</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_PanelClose.wav">Play</button></td><td><b>PanelClose</b></td><td>260 ms · G5 + C5 falling sweep</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_Transition.wav">Play</button></td><td><b>Transition</b></td><td>480 ms · noise whoosh up; C5 under</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_Notification.wav">Play</button></td><td><b>Notification</b></td><td>460 ms · G5 then D6, rises a fifth</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_LobbyReady.wav">Play</button></td><td><b>LobbyReady</b></td><td>220 ms · E5 to B5, rises</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_LobbyUnready.wav">Play</button></td><td><b>LobbyUnready</b></td><td>200 ms · B5 to E5, falls</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_CountdownTick.wav">Play</button></td><td><b>CountdownTick</b></td><td>70 ms · E5 tick, one pitch</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_CountdownGo.wav">Play</button></td><td><b>CountdownGo</b></td><td>500 ms · C5 E5 G5 C6 flourish, up</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_MatchWon.wav">Play</button></td><td><b>MatchWon</b></td><td>1100 ms · C5 E5 G5 C6 E6 arpeggio, up</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_MatchLost.wav">Play</button></td><td><b>MatchLost</b></td><td>1000 ms · G4 E4 C4, slow fall</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_FloorOpened.wav">Play</button></td><td><b>FloorOpened</b></td><td>650 ms · C6 then G6 lift chime over C4</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_BriefcaseTaken.wav">Play</button></td><td><b>BriefcaseTaken</b></td><td>240 ms · clack + G5 to C6 rise</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_BriefcaseDropped.wav">Play</button></td><td><b>BriefcaseDropped</b></td><td>200 ms · thud + C4 fall</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_HandsFull.wav">Play</button></td><td><b>HandsFull</b></td><td>200 ms · D4 double bonk, low</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_HitMarker.wav">Play</button></td><td><b>HitMarker</b></td><td>55 ms · G7 tick (3.1 kHz), very short (full auto: 10 per second)</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_HitMarkerHead.wav">Play</button></td><td><b>HitMarkerHead</b></td><td>55 ms · C8 tick (4.2 kHz) over G7: brighter, precision hit</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/UI/UI_KillConfirm.wav">Play</button></td><td><b>KillConfirm</b></td><td>200 ms · E7 to B7 ticks + B6 ring (2.6 to 3.9 kHz)</td></tr>
+</table><h2>Items (12)</h2><table><tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Items/Item_PickUp.wav">Play</button></td><td><b>PickUp</b></td><td>grab: soft noise + knock</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Items/Item_Drop.wav">Play</button></td><td><b>Drop</b></td><td>dull knock + small bounce</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Items/Item_Throw.wav">Play</button></td><td><b>Throw</b></td><td>whoosh, band falling</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Items/Item_ImpactLight.wav">Play</button></td><td><b>ImpactLight</b></td><td>thin clack, full strength</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Items/Item_ImpactHeavy.wav">Play</button></td><td><b>ImpactHeavy</b></td><td>low thud 140 to 55 Hz, full strength</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Items/Item_Arm.wav">Play</button></td><td><b>Arm</b></td><td>two-part click</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Items/Item_Beep.wav">Play</button></td><td><b>Beep</b></td><td>2.1 kHz, 50 ms</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Items/Item_Explosion.wav">Play</button></td><td><b>Explosion</b></td><td>crack + boom 120 to 32 Hz + rumble tail</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Items/Item_VentEnd.wav">Play</button></td><td><b>VentEnd</b></td><td>hiss falling away</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Items/Item_WetFloorDown.wav">Play</button></td><td><b>WetFloorDown</b></td><td>plastic clack + splash</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Items/Item_Slip.wav">Play</button></td><td><b>Slip</b></td><td>squeak 700 to 1900 Hz + scuff</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Items/Item_VentLoop.wav">Play</button></td><td><b>VentLoop</b></td><td>gas hiss, seamless loop (plays twice here to hear the seam)</td></tr>
+</table><h2>Weapons (15)</h2><table><tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Weapons/Weapon_PistolShot.wav">Play</button></td><td><b>PistolShot</b></td><td>260 ms · crack + punch 220 to 70 Hz + 0.2 s room tail</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Weapons/Weapon_AR15Shot.wav">Play</button></td><td><b>AR15Shot</b></td><td>100 ms · tighter crack, 100 ms so 10 a second stays clean</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Weapons/Weapon_DryFire.wav">Play</button></td><td><b>DryFire</b></td><td>60 ms · dull click</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Weapons/Weapon_ReloadMagOut.wav">Play</button></td><td><b>ReloadMagOut</b></td><td>110 ms · slide + release click</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Weapons/Weapon_ReloadMagIn.wav">Play</button></td><td><b>ReloadMagIn</b></td><td>140 ms · slide + solid seat</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Weapons/Weapon_ReloadSlide.wav">Play</button></td><td><b>ReloadSlide</b></td><td>130 ms · pistol slide: back click, forward clack</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Weapons/Weapon_ReloadCharge.wav">Play</button></td><td><b>ReloadCharge</b></td><td>210 ms · rifle charging handle: pull, heavy return</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Weapons/Weapon_ReloadFinished.wav">Play</button></td><td><b>ReloadFinished</b></td><td>60 ms · small settled click</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Weapons/Weapon_Swap.wav">Play</button></td><td><b>Swap</b></td><td>220 ms · swish + catch</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Weapons/Weapon_ImpactWorld.wav">Play</button></td><td><b>ImpactWorld</b></td><td>130 ms · hard tick + debris</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Weapons/Weapon_ImpactBody.wav">Play</button></td><td><b>ImpactBody</b></td><td>120 ms · dull thud 170 to 85 Hz</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Weapons/Weapon_GlassShatter.wav">Play</button></td><td><b>GlassShatter</b></td><td>700 ms · crack + 26 falling glass partials + bright wash</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Weapons/Weapon_Hurt.wav">Play</button></td><td><b>Hurt</b></td><td>220 ms · low pulse 120 to 75 Hz, 2D</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Weapons/Weapon_Death.wav">Play</button></td><td><b>Death</b></td><td>750 ms · tone falling E4 to C3 over a low drop, 2D</td></tr>
+<tr><td><button onclick="play(this)" data-src="../../../Assets/_Project/Audio/Weapons/Weapon_Respawn.wav">Play</button></td><td><b>Respawn</b></td><td>520 ms · C5 to G5 rise with air, 2D</td></tr>
+</table>
+<script>
+function play(b){const a=new Audio(b.dataset.src);a.play();if(b.dataset.src.includes('VentLoop'))a.onended=()=>new Audio(b.dataset.src).play();}
+function run(){[0,2,4,7,9].forEach((s,i)=>setTimeout(()=>{const a=new Audio('../../../Assets/_Project/Audio/UI/UI_HoverMove.wav');a.preservesPitch=false;a.playbackRate=Math.pow(2,s/12);a.play();},i*140));}
+function burst(){for(let i=0;i<10;i++)setTimeout(()=>new Audio('../../../Assets/_Project/Audio/Weapons/Weapon_AR15Shot.wav').play(),i*100);}
+</script></body></html>
