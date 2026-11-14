@@ -10,15 +10,17 @@ namespace CloseTheDeal.Items
     /// </summary>
     static class HandsCopy
     {
-        public static Transform Build(Transform root, Renderer[] renderers)
+        /// <summary>enabledInPrefab: whether each renderer was on as the prefab made it (its live flag is off while the item is out of play).</summary>
+        public static Transform Build(Transform root, Renderer[] renderers, bool[] enabledInPrefab)
         {
             var copy = new GameObject("In hands").transform;
             copy.SetParent(root, false);
 
             Vector3 rootScale = root.lossyScale;
-            foreach (Renderer renderer in renderers)
+            for (int i = 0; i < renderers.Length; i++)
             {
-                if (renderer is not MeshRenderer meshRenderer || !renderer.enabled || !renderer.gameObject.activeInHierarchy)
+                Renderer renderer = renderers[i];
+                if (renderer is not MeshRenderer meshRenderer || !enabledInPrefab[i] || !renderer.gameObject.activeInHierarchy)
                     continue;
 
                 var filter = renderer.GetComponent<MeshFilter>();
