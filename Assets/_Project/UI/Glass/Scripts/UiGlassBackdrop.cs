@@ -31,6 +31,9 @@ namespace CloseTheDeal.UI
         static readonly Vector3[] Corners = new Vector3[4];
 
         RenderTexture _half, _quarter, _out;
+        RawImage _img;          // cached: looked up once, not every frame
+        Canvas _rootCanvas;
+        static int _attachFrame = -1;
         Material _mat;
         CommandBuffer _cmd;
         bool _counted;
@@ -51,6 +54,8 @@ namespace CloseTheDeal.UI
         /// <summary>Adds a backdrop to every kit title screen's BackdropSlot (where the live sky goes).</summary>
         public static void AttachToTitles()
         {
+            if (_attachFrame == Time.frameCount) return;   // many panes enabling in one frame search once
+            _attachFrame = Time.frameCount;
             foreach (var t in FindObjectsByType<TitleScreen>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 if (t.BackdropSlot != null && t.BackdropSlot.GetComponent<UiGlassBackdrop>() == null)
                     t.BackdropSlot.gameObject.AddComponent<UiGlassBackdrop>();
@@ -77,9 +82,14 @@ namespace CloseTheDeal.UI
         /// <summary>Blur the backdrop now and publish it (also called by the capture tool outside Play Mode).</summary>
         public void Refresh()
         {
-            var img = source != null ? source : GetComponentInChildren<RawImage>();
+            if (_img == null || (source != null && _img != source))
+                _img = source != null ? source : GetComponentInChildren<RawImage>();
+            // the root canvas is cheap to read from the image's own canvas, and follows a re-parent
+            _rootCanvas = _img != null && _img.canvas != null ? _img.canvas.rootCanvas : null;
+            var img = _img;
             var tex = img != null ? img.texture : null;
             bool visible = tex != null && img.isActiveAndEnabled && img.color.a > 0.01f
+                           && _rootCanvas != null && _rootCanvas.isActiveAndEnabled   // a hidden canvas shows nothing
                            && UiGlassSettings.BlurAllowed && UiGlassBlurFeature.ActivePanes > 0;
             SetCounted(visible);
             if (!visible) return;
@@ -93,7 +103,7 @@ namespace CloseTheDeal.UI
             Graphics.ExecuteCommandBuffer(_cmd);
 
             Shader.SetGlobalTexture(BlurTex, _quarter);
-            Shader.SetGlobalVector(BlurRect, ScreenRect(img.rectTransform));
+            Shader.SetGlobalVector(BlurRect, ScreenRect(img.rectTransform, _rootCanvas));
             Shader.SetGlobalFloat(BlurOn, 1f);
         }
 
@@ -143,9 +153,9 @@ namespace CloseTheDeal.UI
         }
 
         /// <summary>The image's rectangle on screen as (x, y, width, height) in 0..1 of the canvas's pixel rect.</summary>
-        static Vector4 ScreenRect(RectTransform rt)
+        static Vector4 ScreenRect(RectTransform rt, Canvas canvas)
         {
-            var canvas = rt.GetComponentInParent<Canvas>().rootCanvas;
+            if (canvas == null) return new Vector4(0, 0, 1, 1);
             var cam = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
             Rect px = canvas.pixelRect;
             rt.GetWorldCorners(Corners);
