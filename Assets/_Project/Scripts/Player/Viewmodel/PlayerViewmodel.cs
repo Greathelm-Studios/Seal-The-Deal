@@ -43,6 +43,9 @@ namespace CloseTheDeal.Player
     /// <para><b>Posing:</b> this component decides where the gun is each frame; the arms
     /// prefab (<see cref="ViewmodelArms"/>) bends the arm so the hand stays on it. The approach
     /// and the starting numbers are NorseFPS's.</para>
+    /// <para><b>The body:</b> every player's body, local or not, also gets a
+    /// <see cref="PlayerHeldWeapon"/> at spawn, which holds the same weapon the same way for
+    /// everyone else to see.</para>
     /// <para><b>Driving it:</b> weapon code calls <see cref="Fire"/> and <see cref="Reload"/>.
     /// Until that code exists this component listens to the attack button and the R key
     /// itself; see <see cref="ReadTestInput"/>.</para>
@@ -66,8 +69,8 @@ namespace CloseTheDeal.Player
         /// <summary>Longest slice the movement spring is advanced in, in seconds. Short enough to stay stable at the stiffest setting the profile allows.</summary>
         const float SpringStep = 1f / 120f;
 
-        /// <summary>Share of the gun's movement drift that the shoulder follows, so the arm is not stretched past its reach.</summary>
-        const float ShoulderFollow = 0.5f;
+        /// <summary>Share of the gun's movement drift that the shoulder follows. All of it: the arm is held at 99% of its reach, so any drift the shoulder did not follow would pull the grip out of the hand.</summary>
+        const float ShoulderFollow = 1f;
 
         /// <summary>Most slices per frame; a frame longer than this many slices is treated as that long, so a hitch cannot fling the gun.</summary>
         const int MaxSpringSteps = 8;
@@ -152,6 +155,11 @@ namespace CloseTheDeal.Player
         {
             if (_actions != null)
                 _attack = _actions.FindAction(AttackAction, false);
+
+            // Every player's body, not only the local one: this is what the others see.
+            var body = GetComponentInChildren<PlayerAnimator>(true);
+            if (body != null && _motor != null && _profile != null && _armsPrefab != null)
+                PlayerHeldWeapon.Attach(body.gameObject, _motor, _profile, _armsPrefab);
         }
 
         void OnDisable()
@@ -318,9 +326,8 @@ namespace CloseTheDeal.Player
                     -_profile.KickPitch * kick - _profile.ReloadTilt * reload + _profile.ClimbTilt * _climb,
                     0f,
                     _profile.KickRoll * kick * _kickSide + _profile.ReloadRoll * reload);
-            // WHY the shoulder goes part of the way with the drift: at rest the wrist is about
-            // 3 cm short of the arm's full reach, and a gun drifting forward and up together
-            // (falling while backing away) would pull the grip out of the hand.
+            // WHY the shoulder goes with the drift: the arm is held almost straight, so the
+            // whole arm has to shift with the gun; there is no reach left for the gun alone.
             _arms.SetPose(position, rotation, _profile.ShoulderPosition + drift * ShoulderFollow);
         }
 

@@ -190,6 +190,17 @@ namespace CloseTheDeal.Player
         /// <summary>-1 to +1: how far this player is leaning, and which way. Moves once per tick.</summary>
         public float Lean => _lean;
 
+        /// <summary>
+        /// Where this player is aiming, as a world direction from their eye; zero until their first
+        /// input arrives. For showing the aim (the body's gun arm), never for deciding a hit.
+        /// </summary>
+        /// <remarks>
+        /// Taken from the input each tick runs on, so it is there on every machine: the owner's own
+        /// input, the input the host receives, and the input other clients are forwarded. Nothing
+        /// extra is sent for it.
+        /// </remarks>
+        public Vector3 AimDirection { get; private set; }
+
         /// <summary>Height of the eye above the feet, in metres. Shots leave from here; the first-person camera sits here.</summary>
         public float EyeHeight => _blast.EyeHeight;
 
@@ -315,7 +326,12 @@ namespace CloseTheDeal.Player
         {
             input = PredictSpectatorInput(input, state);
             if (!state.ContainsReplayed())
+            {
                 _currentTick = input.GetTick();
+                // An empty input (a tick the owner's input missed) keeps the last aim.
+                if (input.Aim != Vector3.zero)
+                    AimDirection = input.Aim;
+            }
 
             float dt = (float)TimeManager.TickDelta;
             _grounded = ProbeGround();

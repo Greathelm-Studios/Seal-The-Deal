@@ -11,6 +11,9 @@
 //  Modified  : Claude Fable 5.2, 2026-11-13 — the fingers are closed round the grip by
 //              this component (Alex: the hand "doesnt wrap around the gun well"); the clip's
 //              loose pistol hand was authored for a different gun and hung under ours.
+//  Modified  : Claude Fable 5.2, 2026-11-14 — the arm solve and finger closing moved to
+//              HandGrip so the body other players see holds the gun with the same code
+//              (Harvey: "have the actual playermodel follow the first person view model").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Sits on the first-person arms prefab. Owns the rig side of the viewmodel:
 //              where the gun mount and shoulder are, and bending the arm so the hand stays on
@@ -34,9 +37,7 @@ namespace CloseTheDeal.Player
     /// match it. Whatever moves the gun mount (sway, kick, reload) therefore moves the hand
     /// with it, and the hand can never drift off the gun.</para>
     /// <para>Local to the owning client and never synced (AGENTS.md §3).</para>
-    /// <para>WHY an analytic two-bone solve and not Humanoid IK or the Animation Rigging
-    /// package: this rig cannot use a humanoid avatar (CHARACTER_ANIMATION.md, "The clips"),
-    /// and a package would be a new dependency for two bones.</para>
+    /// <para>The bending itself is <see cref="HandGrip"/>, shared with the body.</para>
     /// <para>WHY one-handed: NorseFPS settled on it after trying two hands; a support hand
     /// needs a second target fitted to every weapon, and any loose prop can be held later.</para>
     /// </remarks>
@@ -48,18 +49,6 @@ namespace CloseTheDeal.Player
     {
         /// <summary>After default-order scripts, which place the gun mount for the frame.</summary>
         const int SolveOrder = 100;
-
-        /// <summary>Shortest reach in metres; keeps the solve defined when the target sits on the shoulder.</summary>
-        const float MinimumReach = 0.001f;
-
-        /// <summary>Share of the full arm length the solve may use; a dead-straight arm cannot choose an elbow direction.</summary>
-        const float MaximumReachShare = 0.999f;
-
-        /// <summary>Joints in one finger, base to tip.</summary>
-        const int JointsPerFinger = 3;
-
-        /// <summary>Squared length under which the three arm points count as in a line, in square metres squared.</summary>
-        const float StraightArmEpsilon = 1e-12f;
 
         [Header("Mounts (moved by PlayerViewmodel every frame)")]
         [Tooltip("What the held weapon is parented to. Its position and turn come from the viewmodel profile while playing.")]
@@ -78,46 +67,11 @@ namespace CloseTheDeal.Player
         [Tooltip("The model object that is slid about so the shoulder stays on its anchor.")]
         [SerializeField] Transform _rig;
 
-        [Tooltip("Right upper arm bone.")]
-        [SerializeField] Transform _upperArm;
-
-        [Tooltip("Right forearm bone.")]
-        [SerializeField] Transform _lowerArm;
-
-        [Tooltip("Right hand bone.")]
-        [SerializeField] Transform _hand;
-
         [Tooltip("Left upper arm bone. Shrunk to nothing so the left arm never shows.")]
         [SerializeField] Transform _foldedUpperArm;
 
-        [Tooltip("How the hand bone is turned relative to its own knuckles. Worked out by the greybox tool from the model; leave it alone.")]
-        [SerializeField] Quaternion _knuckleFrame = Quaternion.identity;
-
-        [Header("Arm")]
-        [Tooltip("How far the elbow is swung out to the side from where the idle pose hangs it, in degrees. 0 leaves the elbow under the gun, which bends the wrist sharply; higher swings it outward so the forearm lines up behind the gun.")]
-        [Range(-120f, 120f)] [SerializeField] float _elbowSwing = 50f;
-
-        [Header("Grip")]
-        [Tooltip("How far the middle, ring and little fingers close round the grip, in degrees at the knuckle, the middle joint and the last joint. 0 is a flat hand; about 90 at each is a tight fist. Raise the first two for a thinner grip.")]
-        [SerializeField] Vector3 _gripCurl = new(80f, 95f, 50f);
-
-        [Tooltip("How far the index finger closes, in degrees at the knuckle, the middle joint and the last joint. Less than the other fingers so it rests on the trigger.")]
-        [SerializeField] Vector3 _triggerCurl = new(50f, 70f, 35f);
-
-        [Tooltip("How far the thumb closes across the grip, in degrees at its three joints.")]
-        [SerializeField] Vector3 _thumbCurl = new(45f, 35f, 25f);
-
-        [Tooltip("Index finger joints, knuckle first. Filled in by the greybox tool.")]
-        [SerializeField] Transform[] _triggerFinger;
-
-        [Tooltip("Middle, ring and little finger joints, three each, knuckle first. Filled in by the greybox tool.")]
-        [SerializeField] Transform[] _gripFingers;
-
-        [Tooltip("Thumb joints, base first. Filled in by the greybox tool.")]
-        [SerializeField] Transform[] _thumb;
-
-        [Tooltip("Each finger joint's straight, open-hand turn, in the same order as the three lists above (index, grip fingers, thumb). Read from the model by the greybox tool; leave it alone.")]
-        [SerializeField] Quaternion[] _openHand;
+        [Tooltip("The gun arm: its bones, finger joints, elbow swing and how far the fingers close. The same settings are on the body other players see (PlayerHeldWeapon on the player prefab).")]
+        [SerializeField] HandGrip _grip = new();
 
         [Header("Clip")]
         [Tooltip("Looping pose under the arm solve. It supplies the finger curl and which side the elbow bends to.")]
@@ -126,6 +80,31 @@ namespace CloseTheDeal.Player
         PlayableGraph _graph;
         Renderer[] _renderers;
         bool _visible = true;
+
+        /// <summary>The gun arm's settings. The body other players see copies its finger curls and elbow swing.</summary>
+        public HandGrip Grip => _grip;
+
+        /// <summary>Where the wrist sits on the weapon, as a child of the gun mount. The body uses the same seat.</summary>
+        public Transform GripTarget => _gripTarget;
+
+        /// <summary>The weapon model in the gun mount (its first child that is not the grip target), or null when the mount is empty. The body holds a copy of it.</summary>
+        public Transform HeldModel
+        {
+            get
+            {
+                if (_gunMount == null)
+                    return null;
+
+                for (int i = 0; i < _gunMount.childCount; i++)
+                {
+                    Transform child = _gunMount.GetChild(i);
+                    if (child != _gripTarget)
+                        return child;
+                }
+
+                return null;
+            }
+        }
 
         void Awake()
         {
@@ -185,7 +164,7 @@ namespace CloseTheDeal.Player
         /// </summary>
         public void SolveArm()
         {
-            if (_rig == null || _upperArm == null || _lowerArm == null || _hand == null)
+            if (_rig == null || !_grip.IsRigged)
                 return;
 
             // WHY every frame: the Animator rewrites the bones from the clip before this runs.
@@ -193,90 +172,10 @@ namespace CloseTheDeal.Player
                 _foldedUpperArm.localScale = Vector3.zero;
 
             if (_shoulder != null)
-                _rig.position += _shoulder.position - _upperArm.position;
+                _rig.position += _shoulder.position - _grip.UpperArm.position;
 
             if (_gripTarget != null)
-                Reach(_gripTarget.position, _gripTarget.rotation);
-        }
-
-        /// <summary>
-        /// Bends the arm so the wrist reaches a point, keeping the clip's elbow side, then turns
-        /// the hand so its knuckles match the target's axes.
-        /// </summary>
-        /// <param name="target">World position the wrist should reach, in metres. Clamped to the arm's length.</param>
-        /// <param name="targetRotation">World rotation the hand's knuckle frame should take.</param>
-        /// <remarks>
-        /// Law of cosines: first open or close the elbow to the target distance, then swing the
-        /// whole arm about the shoulder onto the target. Ported from NorseFPS.
-        /// </remarks>
-        void Reach(Vector3 target, Quaternion targetRotation)
-        {
-            Vector3 a = _upperArm.position, b = _lowerArm.position, c = _hand.position;
-            float upper = Vector3.Distance(a, b), lower = Vector3.Distance(b, c);
-            float reach = Mathf.Clamp(Vector3.Distance(a, target), MinimumReach, (upper + lower) * MaximumReachShare);
-
-            Vector3 bend = Vector3.Cross(c - a, b - a);
-            if (bend.sqrMagnitude < StraightArmEpsilon)
-                bend = Vector3.Cross(c - a, _upperArm.up);
-            bend.Normalize();
-
-            float elbowNow = Vector3.Angle(a - b, c - b);
-            float elbowWanted = Mathf.Acos(Mathf.Clamp((upper * upper + lower * lower - reach * reach) / (2f * upper * lower), -1f, 1f)) * Mathf.Rad2Deg;
-            // WHY the sign: with bend = (c - a) x (b - a), a positive turn about bend at the
-            // elbow swings the forearm away from the upper arm, which opens the angle.
-            _lowerArm.rotation = Quaternion.AngleAxis(elbowWanted - elbowNow, bend) * _lowerArm.rotation;
-
-            _upperArm.rotation = Quaternion.FromToRotation(_hand.position - a, target - a) * _upperArm.rotation;
-
-            // Swing the elbow round the line from shoulder to wrist. The wrist is on that line,
-            // so it stays on the grip; only where the elbow hangs changes.
-            // WHY: the clip hangs the elbow straight under the gun, which brings the forearm up
-            // at the hand steeply and cocks the wrist. Out to the side it comes in behind the gun.
-            if (_elbowSwing != 0f)
-                _upperArm.rotation = Quaternion.AngleAxis(_elbowSwing, (target - a).normalized) * _upperArm.rotation;
-
-            _hand.rotation = targetRotation * Quaternion.Inverse(_knuckleFrame);
-
-            // The fingers close toward the palm, which is a turn about the knuckle line (the
-            // target's up axis); the thumb closes across the palm, about the finger direction.
-            Vector3 knuckleLine = targetRotation * Vector3.up;
-            Vector3 fingerLine = targetRotation * Vector3.forward;
-            int open = 0;
-            open = Curl(_triggerFinger, _triggerCurl, knuckleLine, open);
-            open = Curl(_gripFingers, _gripCurl, knuckleLine, open);
-            Curl(_thumb, _thumbCurl, fingerLine, open);
-        }
-
-        /// <summary>
-        /// Sets a run of finger joints (three per finger, base first) from the open hand to a
-        /// curl, each joint turned about one world axis.
-        /// </summary>
-        /// <param name="joints">Joints in threes; may be null or empty.</param>
-        /// <param name="curl">Degrees at the first, second and third joint of each finger.</param>
-        /// <param name="axis">World axis the joints turn about.</param>
-        /// <param name="open">Index into the open-hand list of this run's first joint.</param>
-        /// <returns>The open-hand index after this run.</returns>
-        /// <remarks>
-        /// WHY from the open hand and not on top of the clip: the clip's fingers are already
-        /// partly closed for its own gun, so adding to them would differ per clip and per frame.
-        /// </remarks>
-        int Curl(Transform[] joints, Vector3 curl, Vector3 axis, int open)
-        {
-            if (joints == null || _openHand == null)
-                return open;
-
-            for (int i = 0; i < joints.Length && open < _openHand.Length; i++, open++)
-            {
-                Transform joint = joints[i];
-                if (joint == null)
-                    continue;
-
-                // Parent before child, so each joint's turn carries the ones after it.
-                joint.localRotation = _openHand[open];
-                joint.rotation = Quaternion.AngleAxis(-curl[i % JointsPerFinger], axis) * joint.rotation;
-            }
-
-            return open;
+                _grip.Reach(_gripTarget.position, _gripTarget.rotation);
         }
     }
 }

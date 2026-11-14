@@ -15,9 +15,9 @@ MonoBehaviour:
   FieldOfView: 62
   NearDistance: 0.01
   FarDistance: 5
-  GunPosition: {x: 0.125, y: -0.135, z: 0.33}
-  GunTurn: {x: -1, y: -8, z: 16}
-  ShoulderPosition: {x: 0.19, y: -0.2, z: -0.13}
+  GunPosition: {x: 0.125, y: -0.135, z: 0.38}
+  GunTurn: {x: -1, y: -3, z: 4}
+  ShoulderPosition: {x: 0.165, y: -0.165, z: -0.1}
   LookLagSeconds: 0.03
   LookLagLimit: 5
   LookLagSettleSeconds: 0.09

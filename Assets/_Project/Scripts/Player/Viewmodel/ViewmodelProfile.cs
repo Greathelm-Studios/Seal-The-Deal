@@ -46,13 +46,13 @@ namespace CloseTheDeal.Player
 
         [Header("Framing")]
         [Tooltip("Where the gun's grip sits relative to your eye, in metres: right, up, forward. This is the main framing dial. Keep it within about 0.4 m of the shoulder below or the arm cannot reach and locks straight.")]
-        public Vector3 GunPosition = new(0.125f, -0.135f, 0.33f);
+        public Vector3 GunPosition = new(0.125f, -0.135f, 0.38f);
 
         [Tooltip("How the gun is turned at rest, in degrees: pitch (negative lifts the muzzle), yaw (negative turns the muzzle in toward the middle of the screen), roll (positive tips the top of the gun inward, for a loose, canted hold).")]
-        public Vector3 GunTurn = new(-1f, -8f, 16f);
+        public Vector3 GunTurn = new(-1f, -3f, 4f);
 
         [Tooltip("Where the shoulder of the gun arm sits relative to your eye, in metres: right, up, forward. Level with the gun and well behind it brings the forearm in straight behind the gun; lower makes the forearm come up from underneath and bends the wrist.")]
-        public Vector3 ShoulderPosition = new(0.19f, -0.20f, -0.13f);
+        public Vector3 ShoulderPosition = new(0.165f, -0.165f, -0.10f);
 
         [Header("Look sway")]
         [Tooltip("How far behind the view the gun trails when you turn, in seconds of turning. 0.03 means that at a turn of 100 degrees a second the gun trails 3 degrees. 0 locks the gun to the view.")]

@@ -6,6 +6,10 @@
 //  Modified  : Claude Fable 5.2, 2026-11-13 — the prefab is now laid out the NorseFPS way at
 //              Alex's request: a gun mount holding the pistol and a grip target, a shoulder
 //              anchor, and the arm bones the solve needs, instead of a gun on the hand bone.
+//  Modified  : Claude Fable 5.2, 2026-11-14 — the arm's bones and finger joints are now
+//              written into a HandGrip on the arms prefab, which the body other players see
+//              reads at spawn (Harvey: "have the actual playermodel follow the first person
+//              view model").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Builds the first-person arms prefab from the character's own model (same
 //              skeleton, same toon materials, arm geometry only) with a gun mount holding the pistol,
@@ -72,19 +76,19 @@ namespace CloseTheDeal.Editor.Greybox
         /// Where the right wrist sits relative to the middle of the pistol's grip, in metres
         /// (right, up, forward in the gun's space), and how the hand is turned, in degrees.
         /// The wrist is behind the grip, a little to the right and level with its lower half;
-        /// the hand is turned 12 degrees inward and 8 degrees up, so it rises to the grip the
+        /// the hand is turned 4 degrees inward and 6 degrees up, so it rises to the grip the
         /// way the forearm does, the palm lies against the grip's right side, and the fingers
         /// close round the front onto the left side with the index finger in the trigger guard.
         /// WHY these and not more inward turn: the hand has to point nearly the way the forearm
         /// does or the wrist is bent. An earlier 35 degree turn wrapped the grip well but left
         /// the wrist cocked; the wrap now comes from tighter finger curls instead. Found by
         /// rendering the pose from above, both sides, behind and the eye, and measuring the
-        /// angle between forearm and hand (about 12 degrees).
+        /// angle between forearm and hand (about 6 degrees).
         /// A starting value only: move the GripHand object in the prefab and the tool leaves
         /// the prefab alone from then on.
         /// </summary>
         static readonly Vector3 GripWristPosition = new(0.03f, 0.005f, -0.055f);
-        static readonly Vector3 GripWristTurn = new(-8f, -12f, 0f);
+        static readonly Vector3 GripWristTurn = new(-6f, -4f, 0f);
 
         /// <summary>
         /// Size of the pistol in the hand, as a fraction of the model's real size. The model
@@ -186,24 +190,12 @@ namespace CloseTheDeal.Editor.Greybox
             StripToArms(model);
 
             var animator = model.GetComponentInChildren<Animator>();
-            Transform upperArm = FindDeep(model.transform, UpperArmBone);
-            Transform lowerArm = FindDeep(model.transform, LowerArmBone);
-            Transform hand = FindDeep(model.transform, HandBone);
-            Transform index = FindDeep(model.transform, IndexKnuckleBone);
-            Transform middle = FindDeep(model.transform, MiddleKnuckleBone);
-            Transform pinky = FindDeep(model.transform, PinkyKnuckleBone);
-            if (animator == null || upperArm == null || lowerArm == null || hand == null || index == null || middle == null || pinky == null)
+            if (animator == null)
             {
-                Debug.LogError("[Greybox] The character model has no Animator or is missing right arm or knuckle bones; no viewmodel built.");
+                Debug.LogError("[Greybox] The character model has no Animator; no viewmodel built.");
                 Object.DestroyImmediate(root);
                 return null;
             }
-
-            // The hand's knuckle frame in hand-bone space, read from the bind pose: forward runs
-            // wrist to middle knuckle, up runs little-finger knuckle to index knuckle. With it
-            // the grip target's axes mean the same thing however the FBX turned the hand bone.
-            Quaternion knuckleFrame = Quaternion.Inverse(hand.rotation)
-                * Quaternion.LookRotation(middle.position - hand.position, index.position - pinky.position);
 
             // The clips are Generic (CHARACTER_ANIMATION.md, "The clips"): with the humanoid
             // avatar left on, Unity would retarget them and throw the hips metres away.
@@ -226,21 +218,15 @@ namespace CloseTheDeal.Editor.Greybox
             GreyboxSceneSetup.SetReference(serialized, "_gripTarget", grip);
             GreyboxSceneSetup.SetReference(serialized, "_animator", animator);
             GreyboxSceneSetup.SetReference(serialized, "_rig", animator.transform);
-            GreyboxSceneSetup.SetReference(serialized, "_upperArm", upperArm);
-            GreyboxSceneSetup.SetReference(serialized, "_lowerArm", lowerArm);
-            GreyboxSceneSetup.SetReference(serialized, "_hand", hand);
             GreyboxSceneSetup.SetReference(serialized, "_foldedUpperArm", FindDeep(model.transform, FoldedUpperArmBone));
             GreyboxSceneSetup.SetReference(serialized, "_idle", Clip(clips, IdleClip));
-            serialized.FindProperty("_knuckleFrame").quaternionValue = knuckleFrame;
-            // The copy is still in the model's bind pose here, which is the open hand.
-            var openHand = new List<Quaternion>();
-            SetJoints(serialized, "_triggerFinger", model.transform, openHand, "Index");
-            SetJoints(serialized, "_gripFingers", model.transform, openHand, "Middle", "Ring", "Pinky");
-            SetJoints(serialized, "_thumb", model.transform, openHand, "Thumb");
-            SerializedProperty open = serialized.FindProperty("_openHand");
-            open.arraySize = openHand.Count;
-            for (int i = 0; i < openHand.Count; i++)
-                open.GetArrayElementAtIndex(i).quaternionValue = openHand[i];
+            if (!WireGrip(serialized, model.transform))
+            {
+                Debug.LogError("[Greybox] The character model is missing right arm or knuckle bones; no viewmodel built.");
+                Object.DestroyImmediate(root);
+                return null;
+            }
+
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, ArmsPrefabPath);
@@ -250,7 +236,48 @@ namespace CloseTheDeal.Editor.Greybox
             return prefab.GetComponent<ViewmodelArms>();
         }
 
-        /// <summary>Fills a joint list on the arms component with the three joints of each named right-hand finger, and records each joint's open-hand turn.</summary>
+        /// <summary>
+        /// Fills in the <c>_grip</c> settings (a <see cref="HandGrip"/>) of a component from a
+        /// copy of the character that is still in its bind pose: the right arm bones, the
+        /// knuckle frame, the finger joints and each joint's open-hand turn. The curls and the
+        /// elbow swing keep the defaults written in <see cref="HandGrip"/>.
+        /// </summary>
+        /// <param name="owner">The component that has the <c>_grip</c> field. The caller applies it.</param>
+        /// <param name="model">Root of the character copy, in its bind pose (an open hand).</param>
+        /// <returns>False when the model lacks a right arm or knuckle bone; nothing usable was written.</returns>
+        static bool WireGrip(SerializedObject owner, Transform model)
+        {
+            Transform upperArm = FindDeep(model, UpperArmBone);
+            Transform lowerArm = FindDeep(model, LowerArmBone);
+            Transform hand = FindDeep(model, HandBone);
+            Transform index = FindDeep(model, IndexKnuckleBone);
+            Transform middle = FindDeep(model, MiddleKnuckleBone);
+            Transform pinky = FindDeep(model, PinkyKnuckleBone);
+            if (upperArm == null || lowerArm == null || hand == null || index == null || middle == null || pinky == null)
+                return false;
+
+            // The hand's knuckle frame in hand-bone space, read from the bind pose: forward runs
+            // wrist to middle knuckle, up runs little-finger knuckle to index knuckle. With it
+            // the grip target's axes mean the same thing however the FBX turned the hand bone.
+            Quaternion knuckleFrame = Quaternion.Inverse(hand.rotation)
+                * Quaternion.LookRotation(middle.position - hand.position, index.position - pinky.position);
+
+            GreyboxSceneSetup.SetReference(owner, "_grip._upperArm", upperArm);
+            GreyboxSceneSetup.SetReference(owner, "_grip._lowerArm", lowerArm);
+            GreyboxSceneSetup.SetReference(owner, "_grip._hand", hand);
+            owner.FindProperty("_grip._knuckleFrame").quaternionValue = knuckleFrame;
+            var openHand = new List<Quaternion>();
+            SetJoints(owner, "_grip._triggerFinger", model, openHand, "Index");
+            SetJoints(owner, "_grip._gripFingers", model, openHand, "Middle", "Ring", "Pinky");
+            SetJoints(owner, "_grip._thumb", model, openHand, "Thumb");
+            SerializedProperty open = owner.FindProperty("_grip._openHand");
+            open.arraySize = openHand.Count;
+            for (int i = 0; i < openHand.Count; i++)
+                open.GetArrayElementAtIndex(i).quaternionValue = openHand[i];
+            return true;
+        }
+
+        /// <summary>Fills a joint list on a component with the three joints of each named right-hand finger, and records each joint's open-hand turn.</summary>
         static void SetJoints(SerializedObject arms, string field, Transform model, List<Quaternion> openHand, params string[] fingers)
         {
             SerializedProperty list = arms.FindProperty(field);

@@ -125,6 +125,7 @@ The headers marked "procedural pose only" do nothing while the clips are assigne
 - **Sideways and backward runs are made for 4 m/s** and are played faster to cover 6 (Side clip speed, now 5); some foot slide remains.
 - **Run directions snap to eight.** A gamepad stick held between two of them uses the nearer clip, so the feet can point up to about 30 degrees off the true direction.
 - **Fidgets are hand-posed, not captured, and differ per screen.** They are simple arm and head moves with no finger work, and the hip scratch is small. Each client picks its own, so two players do not see the same fidget at the same moment.
+- **The right arm is taken over while the player holds a weapon.** `PlayerHeldWeapon` bends it onto the gun before and after the ragdoll each frame, so the clips' right arm and the ragdoll's lag on it do not show ([VIEWMODEL.md](VIEWMODEL.md)). Knocked back or climbing, it lets go and the arm follows the clip and the ragdoll again.
 - **No turn-in-place, no crouch, no climb.** Mantling players use the air clip.
 - **It cannot fall over or lie on the floor.** The hips are always held up by their spring. A true free ragdoll on knock-out would need the motor to hand control over, which is netcode work.
 - **Joint limits are generic.** They are ordinary human ranges measured from the T-pose, not fitted to this character; the shoulders have none.
