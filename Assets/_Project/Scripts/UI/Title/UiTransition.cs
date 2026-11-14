@@ -274,7 +274,8 @@ namespace CloseTheDeal.UI.Title
         {
             if (covering)
             {
-                float e = p * p * p;                                   // ease-in: the frame accelerates over the camera
+                // Moves on the first frame (the press answers at once), then accelerates over the camera.
+                float e = 0.18f * p + 0.82f * p * p * p;
                 // The hole's half-size, as the same fraction of width and height: it keeps the screen's own shape.
                 float h = Mathf.Lerp(0.62f, 0f, e);
                 const float cx = 0.5f, cy = 0.5f;
