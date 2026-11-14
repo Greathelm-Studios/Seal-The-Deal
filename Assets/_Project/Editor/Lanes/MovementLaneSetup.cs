@@ -61,6 +61,7 @@ namespace CloseTheDeal.Editor.Lanes
             EnsureCourse(tower);
             GreyboxSceneSetup.EnsurePlayRig(new Vector3(-2.8f, 0.1f, -2.5f), new Vector3(2.8f, 0.1f, -2.5f));
             EnsureMovementHud();
+            EnsureCrosshairFeed();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -321,8 +322,35 @@ namespace CloseTheDeal.Editor.Lanes
         [MenuItem("Close the Deal/Lanes/Add Movement HUD To Open Scene")]
         public static void AddMovementHudToOpenScene()
         {
-            if (EnsureMovementHud())
+            bool feed = EnsureCrosshairFeed();
+            if (EnsureMovementHud() | feed)
                 EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+        }
+
+        /// <summary>
+        /// Puts movement's crosshair feed on the HUD's crosshair (the UI kit's), so speed, air
+        /// time, spread, hits and kills move the one crosshair. Only adds when missing.
+        /// </summary>
+        public static bool EnsureCrosshairFeed()
+        {
+            var menu = UnityEngine.Object.FindAnyObjectByType<CloseTheDeal.UI.GameMenu>(FindObjectsInactive.Include);
+            GameObject hud = menu != null ? new SerializedObject(menu).FindProperty("_hudRoot").objectReferenceValue as GameObject : null;
+            UiCrosshair crosshair = hud != null ? hud.GetComponentInChildren<UiCrosshair>(true) : null;
+            if (crosshair == null)
+            {
+                Debug.LogWarning("[Movement lane] No kit crosshair under the game menu's HUD; the crosshair feed was not added.");
+                return false;
+            }
+
+            if (crosshair.GetComponent<CrosshairFeed>() != null)
+                return false;
+
+            var feed = crosshair.gameObject.AddComponent<CrosshairFeed>();
+            var so = new SerializedObject(feed);
+            so.FindProperty("_crosshair").objectReferenceValue = crosshair;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            Debug.Log("[Movement lane] Added the crosshair feed to " + crosshair.name);
+            return true;
         }
 
         /// <summary>
@@ -447,7 +475,10 @@ namespace CloseTheDeal.Editor.Lanes
             EditorSceneManager.OpenScene(at >= 0 && at + 1 < args.Length ? args[at + 1] : ScenePath, OpenSceneMode.Single);
             // -sessionAddHud puts movement's HUD into that scene for the run only; the scene is never saved.
             if (Array.IndexOf(args, "-sessionAddHud") >= 0)
+            {
                 EnsureMovementHud();
+                EnsureCrosshairFeed();
+            }
             EditorApplication.EnterPlaymode();
         }
 

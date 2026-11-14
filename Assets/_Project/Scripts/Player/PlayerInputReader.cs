@@ -48,6 +48,9 @@ namespace CloseTheDeal.Player
         void ApplyBindingOverrides()
         {
             _own.RemoveAllBindingOverrides();
+            if (IgnoreSavedBindings)
+                return;
+
             string json = InputPrefs.BindingOverridesJson;
             if (!string.IsNullOrEmpty(json))
                 _own.LoadBindingOverridesFromJson(json);
@@ -76,6 +79,13 @@ namespace CloseTheDeal.Player
         /// in. The game itself never sets it: there, a captured mouse is the only gate.
         /// </summary>
         public static bool ScriptedCapture { get; set; }
+
+        /// <summary>
+        /// Lets a scripted play session run on the default bindings whatever is saved on this
+        /// machine, without writing the saved file (it is shared by every copy of the project).
+        /// The game itself never sets it.
+        /// </summary>
+        public static bool IgnoreSavedBindings { get; set; }
 
         /// <summary>True while the game has the mouse, i.e. the menu is closed. Every input here reads idle otherwise.</summary>
         public static bool Captured => ScriptedCapture || Cursor.lockState == CursorLockMode.Locked;
