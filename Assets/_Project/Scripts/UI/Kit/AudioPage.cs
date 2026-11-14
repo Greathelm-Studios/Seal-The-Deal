@@ -64,6 +64,8 @@ namespace CloseTheDeal.UI
 
         public override void ShowSaved()
         {
+            // A page shown again before its fade-out finished never gets OnEnable, but Hidden() detached the meter.
+            AttachMeter();
             for (int i = 0; i < _buses.Length; i++)
                 _buses[i].SetDisplayWithoutNotify(Mathf.RoundToInt(UiAudio.Get(Order[i]) * 20f) * 5);
         }

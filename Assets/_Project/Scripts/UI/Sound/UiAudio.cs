@@ -22,7 +22,9 @@ namespace CloseTheDeal.UI
         {
             slider01 = Mathf.Clamp01(slider01);
             Apply(bus, slider01);
-            if (save) { PlayerPrefs.SetFloat(Key + bus, slider01); PlayerPrefs.Save(); }
+            // Stored, not flushed: a slider calls this every step, and the settings screen flushes
+            // PlayerPrefs once when it closes (Unity also flushes on quit).
+            if (save) PlayerPrefs.SetFloat(Key + bus, slider01);
         }
 
         /// <summary>Slider 0 to 1 as dB: 1 is 0 dB, 0 is silent (-80), in between is a perceptual curve.</summary>
