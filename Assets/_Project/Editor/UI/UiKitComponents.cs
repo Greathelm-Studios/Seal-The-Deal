@@ -228,7 +228,9 @@ namespace CloseTheDeal.Editor.UI
             Img(fill, UiKitArt.White, t.Cobalt);
             RectTransform handleArea = At(fx.Plate, "HandleArea", 16f, 0f, 260f, 48f);
             RectTransform handle = Node(handleArea, "Handle");
-            handle.sizeDelta = new Vector2(8f, 22f);
+            // The slider stretches its handle over the handle area's height (48): -26 leaves it 22 tall, so thumbs on
+            // neighbouring rows never meet into one bar.
+            handle.sizeDelta = new Vector2(8f, -26f);
             Image handleImage = Img(handle, UiKitArt.White, t.Navy, raycast: true);
 
             Box(fx.Plate, "FieldBox", 300f, 2f, 104f, 44f, t.Navy, UiKitArt.Outline1);

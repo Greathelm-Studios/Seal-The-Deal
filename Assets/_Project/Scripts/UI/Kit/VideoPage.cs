@@ -26,6 +26,7 @@ namespace CloseTheDeal.UI
 
         List<Vector2Int> _sizes = new();
         Vector2Int _previousSize;
+        Vector2Int _previousSaved;
         bool _hadSavedSize;
         float _countdown = -1f;
         int _shownSeconds = -1;
@@ -65,6 +66,21 @@ namespace CloseTheDeal.UI
         }
 
         public override bool AtDefaults => UiVideo.AtDefaults;
+
+        public override void DescribeChanges(List<string> lines)
+        {
+            if (UiVideo.Mode != UiVideo.DefaultMode)
+                lines.Add(ChangeLine("Display mode", UiVideo.ModeNames[UiVideo.Mode], UiVideo.ModeNames[UiVideo.DefaultMode]));
+            if (UiVideo.HasSavedResolution)
+                lines.Add(ChangeLine("Resolution", UiVideo.SizeName(UiVideo.Resolution), "the desktop's"));
+            if (UiVideo.VSync != UiVideo.DefaultVSync)
+                lines.Add(ChangeLine("Vertical sync", UiVideo.VSync ? "On" : "Off", UiVideo.DefaultVSync ? "On" : "Off"));
+            if (UiVideo.FrameCap != UiVideo.DefaultCap)
+                lines.Add(ChangeLine("Frame rate limit", UiVideo.CapNames[UiVideo.FrameCap], UiVideo.CapNames[UiVideo.DefaultCap]));
+            string[] levels = QualitySettings.names;
+            if (UiVideo.Quality != UiVideo.DefaultQuality && UiVideo.Quality < levels.Length && UiVideo.DefaultQuality < levels.Length)
+                lines.Add(ChangeLine("Graphics quality", levels[UiVideo.Quality], levels[UiVideo.DefaultQuality]));
+        }
 
         public override void ResetToDefaults()
         {
@@ -135,7 +151,8 @@ namespace CloseTheDeal.UI
         {
             if (index < 0 || index >= _sizes.Count)
                 return;
-            _previousSize = UiVideo.Resolution;
+            _previousSize = new Vector2Int(Screen.width, Screen.height); // what the screen really was, to go back to
+            _previousSaved = UiVideo.Resolution;
             _hadSavedSize = UiVideo.HasSavedResolution;
             UiVideo.Resolution = _sizes[index];
             UiScreen screen = GetComponentInParent<UiScreen>();
@@ -165,11 +182,8 @@ namespace CloseTheDeal.UI
             if (_countdown < 0f)
                 return;
             _countdown = -1f;
-            if (_hadSavedSize)
-                UiVideo.Resolution = _previousSize;
-            else
-                UiVideo.ForgetResolution(); // There was no choice before: follow the desktop again.
-            _resolution.SetWithoutNotify(Mathf.Max(0, _sizes.IndexOf(_previousSize)));
+            UiVideo.Restore(_hadSavedSize ? _previousSaved : _previousSize, _hadSavedSize);
+            _resolution.SetWithoutNotify(Mathf.Max(0, _sizes.IndexOf(UiVideo.Resolution)));
             UiScreen top = _dialog.Stack != null ? _dialog.Stack.Top : null;
             if (closeDialog && top == _dialog)
                 _dialog.Stack.Pop(false);

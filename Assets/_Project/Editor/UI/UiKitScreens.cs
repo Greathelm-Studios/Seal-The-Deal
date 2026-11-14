@@ -288,9 +288,9 @@ namespace CloseTheDeal.Editor.UI
 
         /// <summary>
         /// The window frame: sky above the sill, divided into panes by paper mullions with depth (a lit face, a silver
-        /// reveal on the shadow side), a transom with its shadow, a sill with a black edge, a halftone screen and the
-        /// trace brackets on the rival tower. The sky is drawn (Kit_TitleSky) until the title lane's live backdrop goes
-        /// into BackdropSlot, which sits behind the frame. The window rolls down as the title opens.
+        /// reveal on the shadow side), a transom with its shadow and a sill with a black edge. The sky is lane 8's live
+        /// one in BackdropSlot, behind the frame; a flat gradient stands in where it can't run. The window rolls down
+        /// as the title opens.
         /// </summary>
         static RectTransform SkyWindow(RectTransform root, out RectTransform slot, out GameObject staticSky)
         {
@@ -304,16 +304,10 @@ namespace CloseTheDeal.Editor.UI
             sky.gameObject.AddComponent<CanvasGroup>();
 
             slot = Fill(sky, "BackdropSlot");
+            // Only one sky: lane 8's live one (its own traced clouds and the towers). This flat gradient shows only
+            // where the live sky can't run (no sky material in the scene).
             RectTransform fallback = Fill(sky, "StaticSky");
             Img(fallback, UiKitArt.Sky, Color.white);
-            RectTransform drawn = DesignFrame(fallback, "Drawn");
-            drawn.anchorMin = new Vector2(0.5f, 0f);
-            drawn.anchorMax = new Vector2(0.5f, 0f);
-            drawn.pivot = new Vector2(0.5f, 0f);
-            drawn.sizeDelta = new Vector2(1920f, SillY);
-            Img(drawn, UiKitArt.TitleSky, Color.white);
-            Img(At(drawn, "Halftone", 150f, 0f, 460f, 150f), UiKitArt.Dots, UiTokens.WithAlpha(t.Paper, 0.55f), Image.Type.Tiled);
-            TowerTrace(drawn);
             staticSky = fallback.gameObject;
 
             RectTransform frame = Node(sky, "Frame");
@@ -376,17 +370,6 @@ namespace CloseTheDeal.Editor.UI
             lit.pivot = new Vector2(1f, 0.5f);
             lit.sizeDelta = new Vector2(1f, 0f);
             Img(lit, UiKitArt.White, Tokens.Hair);
-        }
-
-        /// <summary>Trace brackets and tracking squares on the rival tower, the guide's survey marks.</summary>
-        static void TowerTrace(RectTransform drawn)
-        {
-            UiTokens t = Tokens;
-            RectTransform trace = At(drawn, "TowerTrace", 1470f, 360f, 248f, 250f);
-            UiKitComponents.Brackets(trace, 0f, 18f, t.Navy);
-            float[] squares = { 1480, 370, 20, 1640, 366, 24, 1700, 440, 18, 1470, 500, 16, 1690, 570, 22, 1560, 600, 18 };
-            for (int i = 0; i < squares.Length; i += 3)
-                Box(drawn, "TraceSquare", squares[i], squares[i + 1], squares[i + 2], squares[i + 2], UiTokens.WithAlpha(t.Navy, 0.75f), UiKitArt.Outline1);
         }
 
         static void CropMarks(Transform parent)

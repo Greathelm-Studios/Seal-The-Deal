@@ -137,6 +137,9 @@ namespace CloseTheDeal.UI
 
         public override void Hidden() => CancelListening();
 
+        /// <summary>The look rows and the key list fill this tab: no room for the changes summary.</summary>
+        public override bool ShowsChanges => false;
+
         void OnSensitivity(int percent) { InputPrefs.LookSensitivity = percent / 100f; RaiseSaved(); }
 
         void OnInvert(bool on) { InputPrefs.InvertY = on; RaiseSaved(); }
@@ -289,33 +292,68 @@ namespace CloseTheDeal.UI
             string path = action.bindings[index].effectivePath;
             if (FindClash(action, index, path, out InputAction other, out int otherIndex))
             {
-                AskAboutClash(action, index, path, other, otherIndex);
+                if (HasRow(other.name))
+                    AskAboutClash(action, index, path, other, otherIndex);
+                else
+                    RefuseFixedKey(path, other, otherIndex);
                 return;
             }
 
             Commit("Saved on this PC.");
         }
 
+        bool HasRow(string actionName)
+        {
+            foreach (BindingRow row in _bindings)
+            {
+                if (string.Equals(row.Action, actionName, StringComparison.Ordinal))
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// The key belongs to something this page can't give a new key (moving, help, the slots): taking it would leave
+        /// that with no key and no row to restore it, so the press is refused and nothing changes.
+        /// </summary>
+        void RefuseFixedKey(string path, InputAction other, int otherIndex)
+        {
+            LoadWorking();
+            DrawBindings();
+            string key = UiGlyphs.Name(path, UiDeviceKind.KeyboardMouse);
+            _status.Set(key + " is kept for " + NameOfAction(other.name, other.bindings[otherIndex].name) + ". Choose another key.", UiStatusKind.Refusal);
+            UiSound.Play(UiSoundEvent.Error);
+        }
+
+        /// <summary>
+        /// Another binding already on this key. One held by an action with no row here (moving, Help, the slots) is
+        /// found first, so the press is refused rather than offered.
+        /// </summary>
         bool FindClash(InputAction action, int index, string path, out InputAction other, out int otherIndex)
         {
+            other = null;
+            otherIndex = -1;
             foreach (InputAction candidate in _working.FindActionMap("Player").actions)
             {
                 for (int i = 0; i < candidate.bindings.Count; i++)
                 {
-                    if (candidate == action && i == index)
+                    if ((candidate == action && i == index)
+                        || !string.Equals(candidate.bindings[i].effectivePath, path, StringComparison.OrdinalIgnoreCase))
                         continue;
-                    if (string.Equals(candidate.bindings[i].effectivePath, path, StringComparison.OrdinalIgnoreCase))
+                    bool fixedKey = !HasRow(candidate.name);
+                    if (other == null || fixedKey)
                     {
                         other = candidate;
                         otherIndex = i;
-                        return true;
                     }
+
+                    if (fixedKey)
+                        return true;
                 }
             }
 
-            other = null;
-            otherIndex = -1;
-            return false;
+            return other != null;
         }
 
         void AskAboutClash(InputAction action, int index, string path, InputAction other, int otherIndex)
@@ -325,7 +363,7 @@ namespace CloseTheDeal.UI
             _pendingPath = path;
             _clashAction = other;
             _clashIndex = otherIndex;
-            string key = InputControlPath.ToHumanReadableString(path, InputControlPath.HumanReadableStringOptions.OmitDevice);
+            string key = UiGlyphs.Name(path, UiDeviceKind.KeyboardMouse);
             string otherName = NameOfAction(other.name, other.bindings[otherIndex].name);
             _status.Set(key + " is already used for " + otherName + ".", UiStatusKind.Refusal);
             UiSound.Play(UiSoundEvent.Error);

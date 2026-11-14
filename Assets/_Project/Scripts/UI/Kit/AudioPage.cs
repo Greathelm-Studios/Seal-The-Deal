@@ -22,8 +22,15 @@ namespace CloseTheDeal.UI
 
         static readonly AudioBus[] Order = { AudioBus.Master, AudioBus.Music, AudioBus.Sfx, AudioBus.Voice, AudioBus.Ui };
 
-        /// <summary>The sound lane's defaults (UiAudio), in percent. Kept in step with UiAudio.Default.</summary>
-        static readonly int[] Defaults = { 100, 80, 100, 100, 100 };
+        /// <summary>The row's own name, as the player reads it beside the slider.</summary>
+        static string RowName(Component control)
+        {
+            var label = control.transform.parent != null ? control.transform.parent.Find("Name") : null;
+            return label != null && label.TryGetComponent(out TMPro.TMP_Text text) ? text.text : control.name;
+        }
+
+        /// <summary>The sound lane's shipped level for a bus, in percent.</summary>
+        static int DefaultPercent(int i) => Mathf.RoundToInt(UiAudio.DefaultOf(Order[i]) * 100f);
 
         System.Action<int>[] _handlers;
         UiSoundMeter _meter;
@@ -67,7 +74,7 @@ namespace CloseTheDeal.UI
             {
                 for (int i = 0; i < Order.Length; i++)
                 {
-                    if (Mathf.RoundToInt(UiAudio.Get(Order[i]) * 100f) != Defaults[i])
+                    if (Mathf.RoundToInt(UiAudio.Get(Order[i]) * 100f) != DefaultPercent(i))
                         return false;
                 }
 
@@ -78,11 +85,22 @@ namespace CloseTheDeal.UI
         public override void ResetToDefaults()
         {
             for (int i = 0; i < Order.Length; i++)
-                UiAudio.SetVolume(Order[i], Defaults[i] / 100f);
+                UiAudio.SetVolume(Order[i], UiAudio.DefaultOf(Order[i]));
             ShowSaved();
         }
 
         public override void Hidden() => DetachMeter();
+
+        public override void DescribeChanges(System.Collections.Generic.List<string> lines)
+        {
+            for (int i = 0; i < Order.Length; i++)
+            {
+                int now = Mathf.RoundToInt(UiAudio.Get(Order[i]) * 100f);
+                int shipped = DefaultPercent(i);
+                if (now != shipped)
+                    lines.Add(ChangeLine(RowName(_buses[i]), now + "%", shipped + "%"));
+            }
+        }
 
         public override void Tick(float dt)
         {

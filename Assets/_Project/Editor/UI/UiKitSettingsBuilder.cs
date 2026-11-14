@@ -78,6 +78,17 @@ namespace CloseTheDeal.Editor.UI
             UiKitScreens.Hint(footer, "BackHint", 1688f, 972f, "Back", "UI/Cancel", width: 120f);
             Label(footer, "Microtype", 96f, 1040f, 1400f, 20f, "SETTINGS ARE KEPT ON THIS PC AS SOON AS YOU CHANGE THEM.", t.Micro, t.Ink3);
 
+            RectTransform changesLine = RevealLine(frame, "Changes");
+            reveal.Add(changesLine.GetComponent<CanvasGroup>());
+            RectTransform changes = Fill(changesLine, "Block"); // its own group: the reveal drives the line's
+            changes.gameObject.AddComponent<CanvasGroup>();
+            Box(changes, "ChangesBullet", 96f, 676f, 8f, 8f, t.Black);
+            TextMeshProUGUI changesHeading = Label(changes, "ChangesHeading", 112f, 668f, 700f, 24f, "\u00a7 CHANGED ON THIS TAB \u00b7 0", t.Caption, t.Navy);
+            Box(changes, "ChangesRule", 96f, 696f, 1120f, 1f, t.Hair);
+            TextMeshProUGUI changesBody = Label(changes, "ChangesBody", 112f, 712f, 1088f, 200f,
+                "Nothing on this tab differs from how the game shipped.", t.Body, t.Ink2, TextAlignmentOptions.TopLeft, true);
+            changesBody.lineSpacing = 18f;
+
             var tabPages = frame.gameObject.AddComponent<UiTabPages>();
             Set(tabPages, "_tokens", t);
             SetArray(tabPages, "_tabs", tabs);
@@ -93,6 +104,9 @@ namespace CloseTheDeal.Editor.UI
             Set(screen, "_back", back);
             Set(screen, "_status", status);
             Set(screen, "_help", help);
+            Set(screen, "_changes", changes.GetComponent<CanvasGroup>());
+            Set(screen, "_changesHeading", changesHeading);
+            Set(screen, "_changesBody", changesBody);
             return root.gameObject;
         }
 

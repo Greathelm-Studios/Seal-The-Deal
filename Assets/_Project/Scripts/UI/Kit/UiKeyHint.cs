@@ -65,6 +65,9 @@ namespace CloseTheDeal.UI
             Refresh();
         }
 
+        /// <summary>The EventSystem (whose UI actions Submit and Cancel come from) may enable after this hint does.</summary>
+        void Start() => Refresh();
+
         void OnDisable()
         {
             UiGlyphs.Changed -= Refresh;
@@ -82,7 +85,12 @@ namespace CloseTheDeal.UI
                 ? (string.IsNullOrEmpty(_padControl) ? null : UiGlyphs.PadName(_padControl, kind == UiDeviceKind.PlayStation))
                 : _keyboardText;
             if (string.IsNullOrEmpty(text) && !string.IsNullOrEmpty(_action))
-                text = UiGlyphs.For(Resolve(), kind, _part);
+            {
+                InputAction action = Resolve();
+                if (action == null)
+                    return; // the EventSystem isn't up yet: keep the text as built and try again on Start
+                text = UiGlyphs.For(action, kind, _part);
+            }
             if (string.IsNullOrEmpty(text))
                 text = "\u2014"; // nothing bound on this device: a dash, never the other device's key
             if (text == _shown)
@@ -97,7 +105,11 @@ namespace CloseTheDeal.UI
             InputActionAsset asset = _actions;
             if (asset == null)
             {
-                var module = EventSystem.current != null ? EventSystem.current.currentInputModule as InputSystemUIInputModule : null;
+                EventSystem events = EventSystem.current;
+                // currentInputModule is only set on the EventSystem's first Update: read the component itself.
+                var module = events != null
+                    ? (events.currentInputModule as InputSystemUIInputModule) ?? events.GetComponent<InputSystemUIInputModule>()
+                    : null;
                 asset = module != null ? module.actionsAsset : null;
             }
             else
