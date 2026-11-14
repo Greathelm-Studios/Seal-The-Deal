@@ -23,6 +23,8 @@
 //  Modified  : Claude Opus 5.5, 2026-11-13 — Japanese corporate mix: palette, Accent_Aqua/Mist/Seal, Water_Wall,
 //              nine Japanese office props.
 //  Modified  : Claude Opus 5.5, 2026-11-13 — Water_Wall uses the Aero Water Pane shader (animated liquid).
+//  Modified  : Claude Opus 5.5, 2026-11-13 — loose monitor/keyboard, phone and tray get colliders, the lift pieces,
+//              the rooftop pool and its Pool_Water material.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 // -----------------------------------------------------------------------------
 using System.Collections.Generic;
@@ -105,6 +107,9 @@ namespace CloseTheDeal.Editor.Art
             // Japanese office props, the mix (ArtSource/Kit/concepts/Japanese_Aero/DECISION.md)
             "Water_Server", "Umbrella_Stand", "Vending_Machine", "Slipper_Cabinet", "Phone_Desk",
             "Doc_Tray", "Logo_Aonagi", "Sign_LED_Reception", "Water_Wall",
+            // Loose props split out of the bench, the lift and the rooftop pool (2026-11-13)
+            "Monitor_Flat", "Keyboard", "Lift_Door_Frame_4m_1F", "Lift_Door_Frame_4m_RF", "Lift_Door_Panel",
+            "Lift_Shaft_Wall_4m", "Lift_Car", "Pool_Raised_8x4",
         };
 
         /// <summary>Pieces that are seen but never touched, so they have no collider (kit README).</summary>
@@ -112,7 +117,7 @@ namespace CloseTheDeal.Editor.Art
         {
             "Stair_Steps", "Ceiling_LightStrip", "Sign_Zone_L", "Sign_Zone_R", "Sign_Zone_C", "Sign_Zone_H", "Sign_Zone_A",
             "Light_Pendant_Linear", "Carpet_Overlay_4x4", "Ceiling_Grid_4x4",
-            "Phone_Desk", "Doc_Tray", "Logo_Aonagi", "Sign_LED_Reception",
+            "Logo_Aonagi", "Sign_LED_Reception",
         };
 
         /// <summary>Pieces whose mesh is only a collider: the stair ramp is walked on, Stair_Steps is what is seen.</summary>
@@ -159,6 +164,7 @@ namespace CloseTheDeal.Editor.Art
             ("Accent_Mist", "A8BFD1", 0f, 0.4f, false),
             ("Accent_Seal", "C7473E", 0f, 0.35f, false),
             ("Water_Wall", "7ADAD8", 0f, 0.9f, false),
+            ("Pool_Water", "7ADAD8", 0f, 0.9f, false),
         };
 
         /// <summary>Glass_Frosted opacity. WHY 0.65 (was 0.8): the mix's aqua pearl frost (Japanese_Aero/DECISION.md)
@@ -251,7 +257,7 @@ namespace CloseTheDeal.Editor.Art
                         MakeTransparent(mat);
                     }
                 }
-                if (m.name == "Water_Wall")
+                if (m.name == "Water_Wall" || m.name == "Pool_Water")
                 {
                     // WHY skip the rest: the water shader has its own colours (tuned in the Inspector and kept
                     // across re-imports), so the Lit colour, smoothness and texture settings below don't apply.

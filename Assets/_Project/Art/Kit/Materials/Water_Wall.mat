@@ -36,6 +36,7 @@ Material:
     - _EdgePower: 4
     - _FillLevel: 2.35
     - _PaneBottom: 0.06
+    - _PoolDepth: 0.38
     - _ShaftFade: 1.4
     - _ShaftSpacing: 0.28
     - _ShaftTilt: 0.25

@@ -17,6 +17,8 @@
 //  Modified  : Claude Opus 5.5 (Claude Code), 2026-11-13 — the Japanese corporate mix (concepts/Japanese_Aero):
 //              AONAGI logo, LED reception sign, water server, umbrella stand, water wall, vending machine, slipper
 //              cabinet, phones and document trays on the benches.
+//  Modified  : Claude Opus 5.5, 2026-11-13 — the lift (shaft, landings, car, leaves), loose monitors and keyboards
+//              on the benches, the rooftop range hook (KitOfficeRoof), Mirror's-Edge-width zone graphics.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Lays out an office labyrinth from the kit prefabs, so the approved round-5 kit can be walked
 //              and lit in Unity as a space. Its own file because KitImport proves the pieces snap (a small
@@ -82,6 +84,18 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>Straight stair pivot, its foot's front-left corner: it rises 7.2 m south and lands on the upper
         /// floor at the atrium's south edge (z −16), 0.2 m clear of the void's west guard.</summary>
         static readonly Vector3 StairPivot = new Vector3(AtriumX0 + 0.2f, 0f, AtriumZ1 + 7.2f);
+        /// <summary>
+        /// The lift shaft cell, its NW corner, world metres: beside reception on the atrium's east edge (Alex, 2026-11-13:
+        /// "rooftop, elevator beside reception"; spec: side-session notes, elevator-rooftop-spec.md). Its landing
+        /// doors face west into the atrium; it stops at 1F and the roof (RF), and is glass on the upper floor.
+        /// </summary>
+        const float ShaftX = 20f, ShaftZ = -4f;
+        /// <summary>The car's centre in the shaft, metres: 0.05 m clear of the landing leaves (kit LIFT_CAR_*).</summary>
+        static readonly Vector2 CarCentre = new Vector2(22.075f, -6f);
+        /// <summary>Landing leaves' meeting edge, metres: centre of the 1.4 m opening, 0.225 m into the shaft.</summary>
+        static readonly Vector2 LeafEdge = new Vector2(20.225f, -6f);
+        /// <summary>Roof level, metres: the top of the roof slab, where the head-house stands.</summary>
+        const float RoofY = Levels * FloorHeight;
         /// <summary>Desk-top height of the kit's workstation bench, metres (kit_pieces DESK_H).</summary>
         const float DeskTop = 0.74f;
         /// <summary>Half the depth of the vending machine and the slipper cabinet, metres (kit_pieces VEND_D, SLIPPER_D):
@@ -236,6 +250,7 @@ namespace CloseTheDeal.Editor.Art
                     for (int j = 0; j < Rows; j++)
                     {
                         float x = i * Cell, z = -j * Cell;
+                        if (level > 0 && x == ShaftX && z == ShaftZ) continue;   // the lift shaft
                         if (level == 0) P(slabs, "Slab_4x4", x, z);
                         else if (level == Levels || !InAtrium(x, z)) P(slabs, "Slab_4x4_LightLine", x, z);
                     }
@@ -291,7 +306,7 @@ namespace CloseTheDeal.Editor.Art
             for (float z = AtriumZ0; z > AtriumZ1; z -= Cell)
             {
                 P(guards, "Guard_Rail_4m", AtriumX0, z, 90f);            // west edge: on the deck side
-                P(guards, "Guard_Rail_4m", AtriumX1, z - Cell, -90f);    // east edge
+                if (z != ShaftZ) P(guards, "Guard_Rail_4m", AtriumX1, z - Cell, -90f);    // east edge (the lift shaft by reception)
             }
             for (float x = AtriumX0; x < AtriumX1; x += Cell)
                 P(guards, "Guard_Rail_4m", x + Cell, AtriumZ0, 180f);   // north edge
@@ -302,7 +317,7 @@ namespace CloseTheDeal.Editor.Art
             // Each turned so its graphic faces (its +Z and +X) look into the atrium.
             foreach (var (cx, cz, yaw) in new[] { (AtriumX0, AtriumZ0, 90f), (AtriumX1, AtriumZ0, 180f), (AtriumX1, AtriumZ1, -90f) })
                 P(zoneH, "Column_Graphic_Tall", cx, cz, yaw);
-            P(zoneH, "Desk_Reception", 17.5f, -6.2f);
+            P(zoneH, "Desk_Reception", 16.5f, -6.2f);   // 1.5 m clear in front of the lift doors at x 20
             P(zoneH, "Planter_Box", 15.2f, -5.2f);
 
             // The Japanese corporate mix (ArtSource/Kit/concepts/Japanese_Aero/DECISION.md). The x 12 wall between L and
@@ -323,7 +338,6 @@ namespace CloseTheDeal.Editor.Art
             Island(zoneR, 26f, -14f, 2);
             P(zoneR, "Cover_Block_2m", 24.5f, -15f, 90f);
             P(zoneR, "Cover_Block_2m", 29f, -21f);
-            P(zoneR, "Partition_Glass_4m", AtriumX1, -4f, 90f);
             P(zoneR, "Wall_Solid_4m_Cobalt", AtriumX1, -12f, 90f);        // yaw 90 turns the cobalt face toward R (+X)
             P(zoneR, "Wall_Door_4m", AtriumX1, -16f, 90f);
             P(zoneR, "Door_Leaf", AtriumX1 + LeafZ, -16f - LeafX, 90f);
@@ -368,7 +382,7 @@ namespace CloseTheDeal.Editor.Art
             P(work, "Copier", Width - 0.6f, -23.2f, -90f);
             P(work, "Storage_Low", 0.45f, -6f, 90f);
             P(work, "Planter_Box", 10.5f, -16.5f);
-            P(work, "Planter_Box", 22f, -4.8f);
+            P(work, "Planter_Box", 26f, -4.8f);   // out of the lift shaft
             // The office's daily life against the upper floor's solid south wall: a vending machine and the
             // slipper cabinet (tall props only against opaque walls, so they make no new cover in a route).
             P(work, "Vending_Machine", 10.4f, -Depth + 0.2f + VendHalfDepth);
@@ -389,6 +403,15 @@ namespace CloseTheDeal.Editor.Art
                     P(t, "Chair_Task", x + dx, z + 1.05f, 180f);   // the +Z side's chairs face the desk, -Z
                     P(t, "Chair_Task", x + dx, z - 1.05f);         // the -Z side's face +Z
                 }
+                // Loose monitors and keyboards (their own pieces since 2026-11-13, so they can be thrown): each side's
+                // screens face its own chairs.
+                foreach (float side in new[] { 1f, -1f })
+                    foreach (float dx in new[] { -0.6f, 0.6f })
+                    {
+                        float yaw = side > 0f ? 0f : 180f;
+                        OnDesk(t, "Monitor_Flat", x + dx, z + side * 0.3f, yaw);
+                        OnDesk(t, "Keyboard", x + dx, z + side * 0.55f, yaw);
+                    }
                 // A Japanese desk island's head end: a phone and a document tray on each side's end desk, clear of
                 // the monitors and keyboards (they stop at 0.82 m from the bench centre).
                 OnDesk(t, "Phone_Desk", x + 0.98f, z + 0.42f, 180f);
@@ -406,6 +429,7 @@ namespace CloseTheDeal.Editor.Art
                 for (float x = x0; x < x1; x += Cell)
                     for (float z = z0; z > z1; z -= Cell)
                     {
+                        if (level > 0 && x == ShaftX && z == ShaftZ) continue;   // the lift shaft
                         float floorY = level * FloorHeight, soffit = floorY + FloorHeight - 0.2f;
                         P(carpets, "Carpet_Overlay_4x4", x, z).transform.localPosition = new Vector3(x, floorY, z);
                         P(carpets, "Ceiling_Grid_4x4", x, z).transform.localPosition = new Vector3(x, soffit, z);
@@ -417,6 +441,7 @@ namespace CloseTheDeal.Editor.Art
             Massing(root);
             DevMirror();
             HitDummy();
+            Lift();
             // The rooftop range (the elevator session's KitOfficeRoof.cs): roof guard rails, the dummy pad, the
             // arsenal bay and the pool; it also moves the HitDummy up there and wires the lift if one is built.
             Debug.Log(KitOfficeRoof.AddTo(root));
@@ -429,6 +454,51 @@ namespace CloseTheDeal.Editor.Art
         /// upper floor's east side, so a player can watch their own character. Skipped if the prefab is gone.
         /// </summary>
         /// <remarks>Position, turn and size copied from the scene it was placed in (KitOffice at d4cce74).</remarks>
+        /// <summary>
+        /// The lift: a shaft in the cell at (<see cref="ShaftX"/>, <see cref="ShaftZ"/>), landing frames at 1F and on the
+        /// roof facing the atrium (west), glass shaft walls everywhere else on all three levels, the roof head-house's
+        /// cap, and the car and four leaves, closed, under one "Lift" group.
+        /// </summary>
+        /// <remarks>
+        /// Only geometry: KitOfficeRoof.AddTo (run after this) finds the "Lift" group by the child names below and
+        /// adds the Elevator script, the car's kinematic body and the call spots. Leaves: A runs +Z (yaw -90), B runs
+        /// -Z (yaw 90); each opens by sliding its own +X by the kit's LIFT_LEAF_W (0.75 m). The roof's guard rails
+        /// belong to KitOfficeRoof, not here.
+        /// </remarks>
+        static void Lift()
+        {
+            var root = GameObject.Find("Kit Office").transform;
+            var lift = new GameObject("Lift").transform;
+            lift.SetParent(root, false);
+            void Put(string piece, float x, float y, float z, float yaw, string name = null)
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{PrefabFolder}/{piece}.prefab");
+                if (prefab == null) throw new FileNotFoundException($"No kit prefab {piece}; run Import Kit first.");
+                var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, lift);
+                go.transform.SetLocalPositionAndRotation(new Vector3(x, y, z), Quaternion.Euler(0f, yaw, 0f));
+                if (name != null) go.name = name;
+            }
+            float x0 = ShaftX, x1 = ShaftX + Cell, z0 = ShaftZ, z1 = ShaftZ - Cell;
+            for (int level = 0; level <= Levels; level++)
+            {
+                float y = level * FloorHeight;
+                // West: the landing at 1F and on the roof, glass on the upper floor (no stop there). Yaw -90 runs the
+                // piece +Z with its face toward -X, the atrium; every wall's thickness lands inside the shaft.
+                string west = level == 0 ? "Lift_Door_Frame_4m_1F" : level == Levels ? "Lift_Door_Frame_4m_RF" : "Lift_Shaft_Wall_4m";
+                Put(west, x0, y, z1, -90f);
+                Put("Lift_Shaft_Wall_4m", x0, y, z0, 0f);      // north
+                Put("Lift_Shaft_Wall_4m", x1, y, z0, 90f);     // east
+                Put("Lift_Shaft_Wall_4m", x1, y, z1, 180f);    // south
+            }
+            Put("Slab_4x4", x0, RoofY + FloorHeight, z0, 0f);   // the head-house cap, on the roof storey's walls
+            Put("Lift_Car", CarCentre.x, 0f, CarCentre.y, -90f, "Lift_Car");   // open side toward the doors (-X)
+            foreach (var (stop, y) in new[] { ("1F", 0f), ("RF", RoofY) })
+            {
+                Put("Lift_Door_Panel", LeafEdge.x, y, LeafEdge.y, -90f, $"Door_{stop}_A");
+                Put("Lift_Door_Panel", LeafEdge.x, y, LeafEdge.y, 90f, $"Door_{stop}_B");
+            }
+        }
+
         /// <summary>Places the hit-reaction session's HitDummy where it can be shot and seen in the DevMirror.
         /// Skipped if the prefab is gone.</summary>
         static void HitDummy()

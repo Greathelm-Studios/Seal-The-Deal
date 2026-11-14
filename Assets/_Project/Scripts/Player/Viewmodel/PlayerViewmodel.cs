@@ -12,6 +12,9 @@
 //              step bob is a smooth arc, and it has a sprint carry, a climb drop and breathing.
 //  Modified  : Claude Fable 5.2, 2026-11-14 — a weapon can be held in one hand or both
 //              (Harvey: "add a left and right hand system and a two handed system").
+//  Modified  : Claude Fable 5.2, 2026-11-14 — a Driven switch so real weapon code can turn
+//              the stand-in attack and reload input off (Adam's review lane: a shot would
+//              otherwise kick twice); the stand-in uses the Reload action when there is one.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Sits on the player prefab. For the player this client controls, and nobody
 //              else, it hangs the first-person arms on the camera, draws them with a camera
@@ -83,6 +86,9 @@ namespace CloseTheDeal.Player
         /// <summary>Input action for the attack button, in the actions asset's Player map.</summary>
         const string AttackAction = "Player/Attack";
 
+        /// <summary>Input action for reload, in the actions asset's Player map. Missing on some branches; the R key is read then.</summary>
+        const string ReloadAction = "Player/Reload";
+
         /// <summary>Below this planar speed, in metres per second, the player counts as standing still and the bob fades out. Well above the jitter of a resting body.</summary>
         const float MovingSpeed = 0.2f;
 
@@ -105,6 +111,8 @@ namespace CloseTheDeal.Player
         Camera _baseCamera;
         Camera _armsCamera;
         InputAction _attack;
+        /// <summary>The reload action, or null when the actions asset has none.</summary>
+        InputAction _reload;
 
         Quaternion _lastCameraRotation;
         Vector2 _lag;
@@ -163,6 +171,14 @@ namespace CloseTheDeal.Player
         /// <summary>True from the start of a reload move until the gun is back on aim.</summary>
         public bool IsReloading => _reloadElapsed >= 0f;
 
+        /// <summary>
+        /// Set true by weapon code that calls <see cref="Fire"/> and <see cref="Reload"/> itself.
+        /// The stand-in input (<see cref="ReadTestInput"/>) then does nothing, so one shot
+        /// cannot kick the gun twice.
+        /// </summary>
+        /// <remarks>Local to this machine and not serialized: whatever drives the arms sets it when it starts, typically once at spawn.</remarks>
+        public bool Driven { get; set; }
+
         /// <summary>Kicks the gun. Does nothing on players this client does not control, or during a reload.</summary>
         public void Fire()
         {
@@ -183,7 +199,10 @@ namespace CloseTheDeal.Player
         void Awake()
         {
             if (_actions != null)
+            {
                 _attack = _actions.FindAction(AttackAction, false);
+                _reload = _actions.FindAction(ReloadAction, false);
+            }
 
             // Every player's body, not only the local one: this is what the others see.
             var body = GetComponentInChildren<PlayerAnimator>(true);
@@ -214,7 +233,7 @@ namespace CloseTheDeal.Player
             else if (!local && _arms != null)
                 Hide();
 
-            if (_arms != null)
+            if (_arms != null && !Driven)
                 ReadTestInput();
         }
 
@@ -223,9 +242,12 @@ namespace CloseTheDeal.Player
         /// <see cref="Reload"/>: the attack button kicks, R reloads, T switches between one hand and both.
         /// </summary>
         /// <remarks>
-        /// WHY the R key is read straight from the keyboard: the actions asset has no reload
-        /// action yet, and adding one belongs with the weapon input in slice 2. Remove this
-        /// method then.
+        /// Skipped once weapon code sets <see cref="Driven"/>. Remove this method when every
+        /// build has such code.
+        /// WHY the R key is a fallback: the actions asset on this branch has no reload action;
+        /// the movement lane's asset has one (Player/Reload), and it is used when present.
+        /// Temporary limit: this reads the project's actions asset, not a player's rebound
+        /// copy, so a rebound attack or reload key is not followed here.
         /// </remarks>
         void ReadTestInput()
         {
@@ -236,7 +258,10 @@ namespace CloseTheDeal.Player
                 Fire();
 
             Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.rKey.wasPressedThisFrame)
+            bool reloadPressed = _reload != null
+                ? _reload.WasPressedThisFrame()
+                : keyboard != null && keyboard.rKey.wasPressedThisFrame;
+            if (reloadPressed)
                 Reload();
             // Stand-in until a two-handed weapon exists: T switches the pistol between one hand
             // and both. Only this machine sees the switch; remove with the rest of this method.

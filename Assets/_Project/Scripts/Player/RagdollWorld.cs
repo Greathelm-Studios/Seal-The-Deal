@@ -135,6 +135,7 @@ namespace CloseTheDeal.Player
                 return;
             _steppedFrame = Time.frameCount;
 
+            MatchSwitchedOff();
             _leftover = Mathf.Min(_leftover + dt, StepTime * MaxStepsPerFrame);
             while (_leftover >= StepTime)
             {
@@ -209,6 +210,29 @@ namespace CloseTheDeal.Player
                     break;
             }
             return proxy;
+        }
+
+        /// <summary>
+        /// Switches each level copy off or on to match the collider it copies.
+        /// </summary>
+        /// <remarks>
+        /// WHY every frame and not in the two-second sweep: a broken window pane is not
+        /// destroyed, only has its collider switched off. Its copy here used to stay solid until
+        /// the next sweep, so a body running through the gap could bump an invisible pane for up
+        /// to two seconds. The cost is one check per copy per frame, and there are only the
+        /// copies within reach of a ragdoll. A copy switched off this way comes back if the
+        /// collider does (a door that closes again).
+        /// </remarks>
+        static void MatchSwitchedOff()
+        {
+            foreach (KeyValuePair<Collider, GameObject> pair in Proxies)
+            {
+                if (pair.Key == null || pair.Value == null)
+                    continue;
+                bool solid = pair.Key.enabled && pair.Key.gameObject.activeInHierarchy;
+                if (pair.Value.activeSelf != solid)
+                    pair.Value.SetActive(solid);
+            }
         }
 
         /// <summary>Drops proxies whose collider is gone or that no ragdoll is near.</summary>

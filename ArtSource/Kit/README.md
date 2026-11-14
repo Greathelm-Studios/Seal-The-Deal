@@ -151,6 +151,23 @@ The office is now AONAGI (青凪総合サービス), a Japanese firm. The mix of
 
 Existing pieces picked up the palette (pearl walls, paler carpet, aqua frost, aqua/mist column skins with 1F/2F wayfinding, bilingual zone signs). CJK text uses Blender's bundled Noto Sans CJK (OFL). `KitImport.cs` gives `Water_Wall` the water shader and leaves its colours alone on re-import, so Inspector tuning survives.
 
+### Lift, rooftop pool and loose props, 2026-11-13
+
+Agreed with the elevator session (spec: side-session notes, `elevator-rooftop-spec.md`); Alex: "rooftop, elevator beside reception", "make sure its an open roof", "added a pool".
+
+| Piece | What | Collider |
+|---|---|---|
+| `Lift_Door_Frame_4m_1F`, `_RF` | 4 m pearl landing wall, slab line to soffit, centred 1.4 x 2.2 m opening with a silver portal, a dark indicator ("1F" / "RF 屋上") in aqua, a call panel with up/down arrows | Boxes on left, right, head |
+| `Lift_Door_Panel` | One 0.75 x 2.25 m silver leaf; pivot at the bottom of the meeting edge; opens by sliding 0.75 m along its +X. Sits 0.225 m behind the frame face, inside the shaft | Box |
+| `Lift_Shaft_Wall_4m` | Full-storey glass shaft wall (slab line to soffit) with a silver base band, head rail and end posts | Box on the frame |
+| `Lift_Car` | 3.7 x 3.55 x 2.6 m capsule car, open front (+Z), polished floor with its top at the pivot, pearl sides, glass back with a 1.0 m handrail, light-panel ceiling, header over the opening at 2.2 m | Boxes: floor, sides, back, ceiling, header |
+| `Pool_Raised_8x4` | Raised 8 x 4 m basin: 0.5 m pearl rim 0.4 m wide with silver coping, two steps on the front long side, aqua floor, water 0.4 m up (`Pool_Water`, the Aero Water Pane shader's top-down mode) | Boxes on rim and steps; none on the water |
+| `Monitor_Flat`, `Keyboard` | The bench's monitors and keyboards as their own pieces | Box |
+
+`KitOffice.unity`: the shaft is the cell x 20-24, z -4 to -8, with doors west into the atrium, stops at 1F and the roof (y 9), and glass on all four sides on the upper floor. The level-1 and roof slabs, the carpet and the ceiling are left out of that cell, the reception desk moved 1 m west and the upstairs planter moved out. `KitOfficeScene.Lift()` places the car and leaves as `Lift/Lift_Car`, `Door_1F_A/B`, `Door_RF_A/B`; the elevator session's `KitOfficeRoof.AddTo` (called at the end of the build) wires them and builds the roof range, its guard rails and the pool.
+
+**Loose (pick up and throw; convex box or hull colliders):** `Monitor_Flat`, `Keyboard`, `Phone_Desk`, `Doc_Tray`, `Chair_Task`, `Chair_Pod`. **Fixed:** everything else, including the bench, `Planter_Box`, `Copier`, `Vending_Machine`, `Storage_Low`, `Water_Server`, the lift pieces (the car and leaves are moved by code, not carried) and the pool. KitOffice places 115 loose kit props: 28 monitors, 28 keyboards, 14 phones, 14 trays, 28 task chairs, 3 pod chairs (the roof range adds its own). That is far over the 16-per-floor netcode cap in docs/systems/PROPS.md: which of them become host-simulated props is the props lane's call.
+
 ## Checks run
 
 - Every piece passes `mdl.mjs check` with no errors (2026-11-12, 26 pieces). The warnings are long thin faces: on thin boxes (rails, panes, slab edges), and where the shadow-gap cuts slice the flat-shaded walls. They are flat faces, so they shade correctly; they would only matter for automatic LODs, which the kit doesn't use. The locked door's lock plates touch its faces without a boolean union (a "faces cut through each other" warning).

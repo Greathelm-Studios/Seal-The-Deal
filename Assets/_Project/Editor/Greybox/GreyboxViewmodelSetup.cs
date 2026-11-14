@@ -13,6 +13,8 @@
 //  Modified  : Claude Fable 5.2, 2026-11-14 — wires the left arm too and adds a GripSupport
 //              seat for a two-handed hold (Harvey: "add a left and right hand system and a
 //              two handed system").
+//  Modified  : Claude Fable 5.2, 2026-11-14 — Rebuild Viewmodel no longer rebuilds the player
+//              prefab from the greybox tool; it adds the viewmodel part only when missing.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Builds the first-person arms prefab from the character's own model (same
 //              skeleton, same toon materials, arm geometry only) with a gun mount holding the pistol,
@@ -108,6 +110,12 @@ namespace CloseTheDeal.Editor.Greybox
         /// </summary>
         const float PistolHandScale = 0.75f;
 
+        /// <summary>The networked player prefab the viewmodel part is added to.</summary>
+        const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player.prefab";
+
+        /// <summary>The project's Input System actions asset, the same one the greybox player build wires in.</summary>
+        const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
+
         [MenuItem("Close the Deal/Greybox/Rebuild Viewmodel")]
         public static void RebuildViewmodel()
         {
@@ -119,8 +127,61 @@ namespace CloseTheDeal.Editor.Greybox
 
             GreyboxSceneSetup.EnsureLayers();
             Ensure(true);
-            GreyboxSceneSetup.RebuildPlayerPrefabIfOwned();
+            EnsureOnPlayerPrefab();
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// Puts <see cref="PlayerViewmodel"/> on the player prefab if it is not there, after
+        /// asking, and changes nothing else in it.
+        /// </summary>
+        /// <remarks>
+        /// WHY not rebuild the player from the greybox tool, as this menu item first did: other
+        /// people's tools add their own parts to the same prefab (weapons, health, pickups,
+        /// outfits), and a greybox rebuild writes it from scratch without them. Adam's review
+        /// lane found that one click here would have stripped them (2026-11-14). The
+        /// alternative, teaching the greybox build about every other part, would need this
+        /// file to know systems it has nothing to do with.
+        /// </remarks>
+        static void EnsureOnPlayerPrefab()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
+            if (prefab == null)
+            {
+                Debug.LogWarning("[Greybox] No player prefab at " + PlayerPrefabPath + "; build it with Close the Deal > Greybox > Rebuild Player Prefab, which adds the viewmodel itself.");
+                return;
+            }
+
+            if (prefab.GetComponent<PlayerViewmodel>() != null)
+                return;
+
+            if (!EditorUtility.DisplayDialog(
+                    "Add the first-person arms to the player?",
+                    "Player.prefab has no viewmodel part. Add it? Nothing else in the prefab is changed.",
+                    "Add it", "Leave the prefab alone"))
+            {
+                Debug.Log("[Greybox] Left " + PlayerPrefabPath + " without a viewmodel, as asked.");
+                return;
+            }
+
+            GameObject root = PrefabUtility.LoadPrefabContents(PlayerPrefabPath);
+            try
+            {
+                var motor = root.GetComponent<PlayerMotor>();
+                if (motor == null)
+                {
+                    Debug.LogWarning("[Greybox] " + PlayerPrefabPath + " has no PlayerMotor; the viewmodel was not added.");
+                    return;
+                }
+
+                AddTo(root, motor, AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath));
+                PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
+                Debug.Log("[Greybox] Added the viewmodel to " + PlayerPrefabPath + "; nothing else in it was changed.");
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         /// <summary>Names the layer the arms are drawn on.</summary>

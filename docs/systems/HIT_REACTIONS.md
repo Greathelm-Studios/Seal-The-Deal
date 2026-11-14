@@ -27,6 +27,9 @@ The body it runs on is the active ragdoll described in [CHARACTER_ANIMATION.md](
 1. `Close the Deal > Dev > Place Hit Dummy` puts one on the floor 3 m in front of the Scene view (or in front of your camera while playing), facing you. The scene is not saved.
 2. Press Play.
 3. `Close the Deal > Dev > Hit Bench`: pick a preset (pistol shot, thrown chair, thrown desk, blast near, blast far) or set the values, then press **Hit**.
+   The window says whether the dummy can be hit right now, and under the button what the last hit did (flinched, knocked down). It also writes each hit to the Console as `[HitBench]`.
+
+**If nothing happens:** read the bench's status line. The usual cause is the code being reloaded during Play (another change to a script while the game runs): every character's ragdoll loses its body and stops, with one `[PlayerRagdoll] Lost its body` error. Stop and press Play again. Setting `Edit > Preferences > General > Script Changes While Playing` to **Recompile After Finished Playing** stops it happening; in a shared Editor with several sessions writing code, that setting matters.
 
 `Close the Deal > Dev > Build Hit Dummy Prefab` rebuilds the prefab; like the greybox prefabs it is left alone once a person has edited it.
 
@@ -106,6 +109,7 @@ Wiring it to real players changes netcode authority (the host decides the trigge
 
 ## Known limitations
 
+- **A code reload during Play stops every ragdoll** (players' too) until Play is restarted. The animator has the same weakness and still throws every frame after one; it belongs to the animation work.
 - **Not judged in play.** Checked in frame strips of a hidden copy of the dummy; nobody has yet tried the bench in Play Mode.
 - **The get-up has no animation.** The body is hoisted by its hips in about a quarter of a second, arms flung, rather than climbing to its feet. A get-up clip is the natural next step.
 - **A near blast throws the dummy about 7 m** in the preview (Max kick speed 8 m/s, low ragdoll gravity). Lower Max kick speed for shorter flights.

@@ -13,6 +13,7 @@
 #  Modified  : Claude Opus 5.5, 2026-11-13 — adds zone signs, the desk and the pod chair.
 #  Modified  : Claude Opus 5.5, 2026-11-13 — adds the detail-pass pieces (columns, workstations, partitions...).
 #  Modified  : Claude Opus 5.5, 2026-11-13 — adds the Japanese office props (the mix, concepts/Japanese_Aero).
+#  Modified  : Claude Opus 5.5, 2026-11-13 — adds the loose monitor and keyboard, the lift and the rooftop pool.
 # -----------------------------------------------------------------------------
 # Usage: ArtSource/Kit/build_all.sh <path to blender-modeling skill>
 set -euo pipefail
@@ -27,7 +28,8 @@ Stair_Straight_2m Ramp_2x4 Guard_Glass_4m Guard_Glass_2m Slab_4x4_LightLine
 Sign_Zone_L Sign_Zone_R Sign_Zone_C Sign_Zone_H Sign_Zone_A Desk_Sculpt Chair_Pod
 Column_Graphic Column_Graphic_Tall Workstation_Bench Chair_Task Storage_Low Copier Desk_Reception Guard_Rail_4m
 Guard_Rail_2m Partition_Header_4m Partition_Header_2m Partition_Header_Curve_2x2 Light_Pendant_Linear Carpet_Overlay_4x4 Ceiling_Grid_4x4 Planter_Box
-Water_Server Umbrella_Stand Vending_Machine Slipper_Cabinet Phone_Desk Doc_Tray Logo_Aonagi Sign_LED_Reception Water_Wall"
+Water_Server Umbrella_Stand Vending_Machine Slipper_Cabinet Phone_Desk Doc_Tray Logo_Aonagi Sign_LED_Reception Water_Wall
+Monitor_Flat Keyboard Lift_Door_Frame_4m_1F Lift_Door_Frame_4m_RF Lift_Door_Panel Lift_Shaft_Wall_4m Lift_Car Pool_Raised_8x4"
 
 for p in $PIECES; do
   $MDL build "$HERE/kit_pieces.py" --out "$HERE/build/$p.blend" --set PIECE="$p" > "$HERE/build/$p.build.log"

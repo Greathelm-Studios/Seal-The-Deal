@@ -5,6 +5,8 @@
 //  Prompt    : Alex: "make the dummy and arsenal section be on the ceiling. to access it, you
 //              should [take] an elevator"; "open rooftop"; "what could be funny is if added a pool";
 //              "tell the elevator chat to start building the roof"
+//  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-14 — the HitDummy and its roof mirror move up only
+//              once the lift is in the scene, so a rebuild cannot strand the dummy on an unreachable roof.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Dresses KitOffice's roof as the open-air test range and wires the lift's script. Its own
 //              file, not a method in KitOfficeScene, because another session holds that file while it
@@ -28,8 +30,8 @@ namespace CloseTheDeal.Editor.Art
     /// <remarks>
     /// <para>The roof has nothing overhead: Alex asked for an open roof so the sky box shows.</para>
     /// <para>Everything it makes sits under one "Roof range" group, which it deletes and rebuilds; it touches
-    /// nothing else in the scene except the HitDummy instance, which it moves (agreed with the hit-reaction
-    /// session: nothing reads the dummy's position). Kit pieces that are not modelled yet (the pool, the lift)
+    /// nothing else in the scene except the HitDummy instance, which it moves once the lift exists (agreed with
+    /// the hit-reaction session: nothing reads the dummy's position). Kit pieces that are not modelled yet (the pool, the lift)
     /// are skipped with a line in the report, so the roof can be built before they exist.</para>
     /// <para>Layout and the reasons for each distance: docs/systems/ELEVATOR.md.</para>
     /// </remarks>
@@ -149,7 +151,11 @@ namespace CloseTheDeal.Editor.Art
             placed += ArsenalBay(roof);
             placed += Pool(roof, report);
             placed += LooseProps(roof, report);
-            Dummy(roof, report);
+            // WHY the dummy waits for the lift: without the lift nothing but a fly camera reaches the roof, and a
+            // dummy up there could not be hit or judged in play. Until the kit's "Lift" group is in the scene the
+            // dummy stays where KitOfficeScene put it, on the upper floor.
+            if (office.Find(LiftGroupName + "/" + CarName) != null) Dummy(roof, report);
+            else report.Append("HitDummy left on the upper floor: there is no lift to reach the roof yet. ");
             report.Append(placed).Append(" pieces on the roof. ");
             WireLift(office, report);
             return report.ToString();

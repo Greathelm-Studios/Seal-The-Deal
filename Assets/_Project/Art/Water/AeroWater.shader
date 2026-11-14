@@ -8,6 +8,9 @@
 //              stylised, rn it feels solid and slime like". Rewritten as a fake tank interior seen through the
 //              glass (parallax), with sharp caustic filaments, depth colour, light shafts, the underside of the
 //              surface, and glass streaks in place of the white gloss wash.
+//  Modified  : Claude Opus 5.5, 2026-11-13 — a top-down mode for the rooftop pool: an upward-facing face draws
+//              the pool seen from above (the floor's caustics through the water, surface glints, a pale rim
+//              at grazing angles) instead of the wall tank.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : The water wall's liquid: an early-2000s "Aero" water tank drawn on the flat front face of the
 //              kit's Water_Wall panel. The pane behaves like the front glass of a shallow tank: you look into
@@ -42,6 +45,7 @@ Shader "Close the Deal/Aero Water Pane"
         _TankDepth("Depth of the imaginary tank behind the glass, metres", Range(0.05, 1)) = 0.3
         _PaneBottom("Bottom of the water, metres above the piece's pivot", Float) = 0.06
         _FillLevel("Water surface, metres above the piece's pivot", Float) = 2.35
+        _PoolDepth("Pool mode (faces pointing up): water depth under the surface, metres", Range(0.05, 3)) = 0.38
 
         [Header(Surface)]
         _WaveHeight("Wave height at the surface, metres", Range(0, 0.2)) = 0.025
@@ -123,6 +127,7 @@ Shader "Close the Deal/Aero Water Pane"
                 float _TankDepth;
                 float _PaneBottom;
                 float _FillLevel;
+                float _PoolDepth;
                 float _WaveHeight;
                 float _WaveLength;
                 float _WaveSpeed;
@@ -280,6 +285,30 @@ Shader "Close the Deal/Aero Water Pane"
                 return saturate(at / pixel + 0.5) * saturate((width - at) / pixel + 0.5) * step(0.0001, width);
             }
 
+            /// The pool seen from above: the ray goes down through _PoolDepth of water to the basin floor, which
+            /// carries the caustics; the surface adds moving glints and goes pale and solid at grazing angles.
+            half4 PoolTop(float3 positionWS, half3 normalWS, half3 viewDirWS, float t, half fogFactor)
+            {
+                float3 ray = -viewDirWS;
+                float down = max(-ray.y, MIN_INWARD);
+                float2 slope = ray.xz / down;
+                float pathPerDepth = length(float3(slope, 1.0));
+                float2 floorP = positionWS.xz + slope * _PoolDepth;
+                half c = Caustic(floorP / _CausticScale, t * _CausticSpeed);
+                half c2 = Caustic(floorP / (_CausticScale * 1.7) + 3.7, -t * _CausticSpeed * 0.7);
+                half3 seen = lerp(_BackColor.rgb, _CausticColor.rgb, saturate(c + c2 * 0.6) * _CausticColor.a);
+                // WHY 0.5: a wading pool is shallow; full absorption would hide the floor that sells it as water.
+                half transmit = exp(-_PoolDepth * pathPerDepth * _Absorption * 0.5);
+                half3 col = lerp(_ShallowColor.rgb, seen, transmit);
+                half glint = Caustic(positionWS.xz / (_CausticScale * 0.6) + 11.3, t * _CausticSpeed * 1.8);
+                col = lerp(col, _SurfaceColor.rgb, glint * 0.3);
+                half edge = pow(1.0h - saturate(dot(normalWS, viewDirWS)), _EdgePower * 0.5);
+                col = lerp(col, _EdgeColor.rgb, edge * _EdgeColor.a);
+                half alpha = lerp(0.8h, 1.0h, edge);
+                col = MixFog(col, fogFactor);
+                return half4(col, alpha);
+            }
+
             half4 Frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
@@ -288,6 +317,8 @@ Shader "Close the Deal/Aero Water Pane"
                 half3 normalWS = normalize(input.normalWS);
                 half3 viewDirWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
                 float t = _Time.y;
+                if (normalWS.y >= FLAT_PANE_NORMAL_Y)
+                    return PoolTop(input.positionWS, normalWS, viewDirWS, t, input.fogFactor);
 
                 float3 along = abs(normalWS.y) < FLAT_PANE_NORMAL_Y
                     ? normalize(cross(float3(0, 1, 0), normalWS))

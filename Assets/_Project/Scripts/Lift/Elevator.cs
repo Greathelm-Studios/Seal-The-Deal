@@ -94,6 +94,8 @@ namespace CloseTheDeal.Lift
         readonly SyncVar<LiftRide> _ride = new();
         readonly Collider[] _hits = new Collider[MaxPlayers];
         readonly Vector3[] _doorClosed = new Vector3[StopCount * LeavesPerStop];
+        /// <summary>Each leaf's fully-open offset from its closed position, metres, in its parent's space. Derived, never written back.</summary>
+        readonly Vector3[] _doorOpenOffset = new Vector3[StopCount * LeavesPerStop];
 
         /// <summary>The car's authored position, world metres: the lower stop. Read once, never written back.</summary>
         Vector3 _carRest;
@@ -120,7 +122,12 @@ namespace CloseTheDeal.Lift
         {
             _carRest = _car.position;
             for (int i = 0; i < _doorLeaves.Length; i++)
+            {
                 _doorClosed[i] = _doorLeaves[i].localPosition;
+                // WHY rotated: the slide is authored in the leaf's own space (a mirrored pair both open along
+                // their own +X), but localPosition is in the parent's space.
+                _doorOpenOffset[i] = _doorLeaves[i].localRotation * _doorSlides[i];
+            }
 
             // Speed profile: speed up, hold, slow down. A ride too short to reach top speed has no hold.
             float accelDistance = 0.5f * _speed * _speed / _acceleration;
@@ -231,7 +238,7 @@ namespace CloseTheDeal.Lift
             for (int i = 0; i < _doorLeaves.Length; i++)
             {
                 float open = DoorOpen(ride, i / LeavesPerStop, hostTick + 1);
-                _doorLeaves[i].localPosition = _doorClosed[i] + _doorSlides[i] * open;
+                _doorLeaves[i].localPosition = _doorClosed[i] + _doorOpenOffset[i] * open;
             }
             _restPlaced = resting;
         }

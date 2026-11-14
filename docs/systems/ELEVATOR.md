@@ -9,7 +9,7 @@
 -->
 # ELEVATOR
 
-**Status:** Target · **Last updated:** 2026-11-13 · **Verified against:** the working tree on `Alex_Env`: both scripts compile; the roof was built once in the open scene and rendered; the lift is not in a scene and has not been ridden
+**Status:** Target · **Last updated:** 2026-11-14 · **Verified against:** the working tree on `Alex_Env`: both scripts compile; the lift and roof are in `KitOffice.unity`; ridden up and down three times as host by a script that stood the player in the car (car and rider heights matched, rider stayed grounded, doors parted 0.75 m each way, no console errors). Not walked by a person, not seen from a client, so it stays Target (AGENTS.md §3)
 
 This is dev-scene work in `KitOffice.unity` at Alex's request. It is not on the v1 list in [GDD.md](../GDD.md).
 
@@ -38,7 +38,7 @@ The rejected alternative is a closed-door ride where the host teleports the ride
 
 - [Elevator.cs](../../Assets/_Project/Scripts/Lift/Elevator.cs): the whole system. Tuning is on the component: travel (m), top speed (m/s), acceleration (m/s²), door time (s), dwell time (s), the cabin box and the call radius.
 - [KitOfficeRoof.cs](../../Assets/_Project/Editor/Art/KitOfficeRoof.cs): the roof's builder, menu `Close the Deal > Art > Add Kit Office Roof Range`. It rebuilds one "Roof range" group and, when the kit's "Lift" group is in the scene, adds the `Elevator`, its `NetworkObject`, the car's kinematic body and the call spots.
-- Planned, not yet done: [KitOfficeScene.cs](../../Assets/_Project/Editor/Art/KitOfficeScene.cs) calls `KitOfficeRoof.AddTo` at the end of its build, and places the kit pieces `Lift_Car`, `Lift_Door_Panel` and `Lift_Door_Frame_4m_1F` / `_RF` under a "Lift" group. Until that call exists, a rebuild of KitOffice loses the roof and the menu item puts it back.
+- [KitOfficeScene.cs](../../Assets/_Project/Editor/Art/KitOfficeScene.cs) places the kit's lift pieces (`Lift_Car`, four `Lift_Door_Panel` leaves, the landing frames, the glass shaft walls and the head-house) under a "Lift" group, then calls `KitOfficeRoof.AddTo` at the end of its build, so a rebuild of KitOffice keeps the roof and re-wires the lift.
 
 ## The rooftop range
 
@@ -47,12 +47,12 @@ Open to the sky: nothing is overhead except the lift's head-house. Roof-local me
 | What | Where | Why there |
 |---|---|---|
 | Glass guard rails | The whole edge | Nobody walks off |
-| Hit dummy, facing west | (27, −19) | 4 m of clear floor all round, as the hit-reaction session asked |
+| Hit dummy, facing west | (27, −19) | 4 m of clear floor all round, as the hit-reaction session asked. It and its mirror move up only once the lift is in the scene; until then the dummy stays on the upper floor, where it can be reached |
 | Full-height glass screens | East edge south of z −12, south edge east of x 20 | A blasted body must not clear a 1.1 m rail; walls within 6 m of the dummy |
 | Second DevMirror, 8 m | Inside the east screen, behind the dummy | Reactions are judged in a mirror |
 | Arsenal bay, 8 × 6 m, with a rack wall | Corner (7, −16), wall along z −22 | Its east edge is the firing line, 12 m from the dummy. Empty until weapon pickups exist; the weapons session parents racks to `ArsenalBay` |
 | Loose props: 3 monitors, 3 chairs, 2 cabinets | x 19 to 21, z −14.5 to −21.5 | Things to throw at the dummy. 8 of the 16-per-floor cap ([PROPS.md](PROPS.md)). Placed as scene objects because KitOffice has no tower for `PropSpawner` |
-| Raised pool, 8 × 4 m | Corner (6, −6) | Alex: "what could be funny is if added a pool". Skipped until the kit piece `Pool_Raised_8x4` exists; knee-deep, no swimming |
+| Raised pool, 8 × 4 m | Corner (6, −6) | Alex: "what could be funny is if added a pool". Kit piece `Pool_Raised_8x4`; knee-deep, no swimming |
 
 ## Known limitations
 

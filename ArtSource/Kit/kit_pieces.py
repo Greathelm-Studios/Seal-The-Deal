@@ -6,6 +6,8 @@
 #  Modified  : Claude Opus 5.5, 2026-11-13 — text at its true size (CAP_RATIO), bold/slant/fit options, and the
 #              zone signs redrawn as painted Mirror's-Edge-style supergraphics (Alex: lettering "larger and more
 #              character").
+#  Modified  : Claude Opus 5.5, 2026-11-13 — loose Monitor_Flat and Keyboard split out of the bench, colliders on
+#              the phone and tray, the lift (frame, leaf, shaft wall, car) and the rooftop pool.
 #  Reviewed  : NOT YET REVIEWED BY A HUMAN
 #  Summary   : Every piece of the minimum office snap kit, one piece per build, chosen with
 #              --set PIECE=<name>. One script so the grid, heights, thicknesses and materials
@@ -195,6 +197,19 @@ P = params(
     PHONE_W=0.24, PHONE_D=0.22, PHONE_H=0.1,         # white desk phone, metres
     TRAY_W=0.28, TRAY_D=0.34, TRAY_H=0.18,           # two-tier document tray, metres
     LOGO_D=0.4,            # AONAGI ring logo diameter on a wall, metres
+    # ---- Lift (elevator-rooftop-spec.md, agreed with the elevator session 2026-11-13; Alex: "rooftop, elevator beside reception")
+    LIFT_OPEN_W=1.4, LIFT_OPEN_H=2.2,   # clear landing opening, metres, centred in a 4 m frame
+    LIFT_LEAF_W=0.75, LIFT_LEAF_H=2.25, LIFT_LEAF_T=0.04,   # one bi-parting leaf, metres. WHY 0.05 wider and taller
+                           # than half the opening: the leaves sit behind the frame and overlap the jambs and head
+    LIFT_LEAF_BEHIND=0.025,  # leaf centre's distance behind the frame's shaft face, metres
+    LIFT_CAR_W=3.7, LIFT_CAR_D=3.55, LIFT_CAR_H=2.6,   # car: across the doors, front to back, inside height, metres.
+                           # WHY: fills the 3.8 x 3.65 m clear shaft leaving 0.05 m at the doors (props can't drop in)
+    LIFT_CAR_FLOOR=0.2, LIFT_CAR_WALL=0.06,   # car floor plate and wall thickness, metres
+    # ---- Rooftop pool (elevator-rooftop-spec.md "Rooftop pool"; Alex: "i think what could be funny is if added a pool")
+    POOL_L=8.0, POOL_W=4.0,   # outside size, metres
+    POOL_RIM_H=0.5, POOL_RIM_W=0.4,   # raised pearl rim, metres
+    POOL_WATER=0.4,           # water surface above the basin floor, metres: wading depth, no swimming
+    POOL_STEP_L=3.0,          # width of the two steps up to the rim on the front long side, metres
     LED_W=1.2, LED_H=0.18, LED_T=0.06, LED_Y=2.65,   # reception dot-matrix sign and its bottom height, metres
     WATER_W=1.8, WATER_T=0.08, WATER_H=2.7,          # contained water-wall cassette, metres
 )
@@ -270,6 +285,7 @@ M_AQUA = material('Accent_Aqua', hexc('45BFC7'), roughness=0.24)     # sign face
 M_MIST = material('Accent_Mist', hexc('A8BFD1'), roughness=0.6)      # quiet fields (Soft Club)
 M_SEAL = material('Accent_Seal', hexc('C7473E'), roughness=0.65)     # the hanko dot only
 M_WATER = material('Water_Wall', hexc('7ADAD8'), roughness=0.1)      # the contained water cassette
+M_POOL = material('Pool_Water', hexc('7ADAD8'), roughness=0.1)       # the rooftop pool's surface (same shader, top-down)
 
 
 def recessed(bm, cutter):
@@ -1128,27 +1144,18 @@ def workstation_bench():
     frost = u(-L / 2 + 0.04, L / 2 - 0.04, H, P.SCREEN_TOP, -0.015, 0.015)   # aqua pearl divider (the mix)
     silver = [u(-L / 2, -L / 2 + 0.04, 0, H - 0.03, -D / 2 + 0.05, D / 2 - 0.05),
               u(L / 2 - 0.04, L / 2, 0, H - 0.03, -D / 2 + 0.05, D / 2 - 0.05)]
-    dark = []
+    # Monitors and keyboards are separate loose pieces (Monitor_Flat, Keyboard) since 2026-11-13, so they can be
+    # picked up and thrown (Alex: "pick up ANY loose object"). KitOfficeScene puts them back on the desk.
     for side in (1, -1):
-        zc = side * 0.3
-        for x in (-0.6, 0.6):
-            # Silver flat panel with a dark screen face toward the user (+side), a silver foot, a pale keyboard.
-            silver.append(u(x - P.MONITOR_W / 2, x + P.MONITOR_W / 2, H + 0.12, H + 0.12 + P.MONITOR_H, zc - 0.015, zc + 0.015))
-            fz = zc + side * 0.015
-            dark.append(u(x - P.MONITOR_W / 2 + 0.02, x + P.MONITOR_W / 2 - 0.02, H + 0.14, H + 0.10 + P.MONITOR_H,
-                          min(fz, fz + side * 0.002), max(fz, fz + side * 0.002)))
-            silver.append(u(x - 0.03, x + 0.03, H, H + 0.14, zc - 0.01 - side * 0.03, zc + 0.01 - side * 0.03))
-            silver.append(u(x - 0.12, x + 0.12, H, H + 0.012, zc - 0.09, zc + 0.09))   # foot
-            white.append(u(x - 0.22, x + 0.22, H, H + 0.015, side * 0.55 - 0.07, side * 0.55 + 0.07))   # keyboard
         xc = side * 0.85
         z_out = side * (D / 2 - 0.02)
         white.append(u(xc - P.PED_W / 2, xc + P.PED_W / 2, 0.02, P.PED_H, min(z_out, z_out - side * P.PED_D),
                        max(z_out, z_out - side * P.PED_D)))
     w = join(*white)
     bevel(w, 0.006, segments=2, angle=45)
-    ob = part('Kit_Workstation_Bench', join(paint(w, 0), paint(join(*silver), 1), paint(join(*dark), 2), paint(frost, 3)),
-              [M_WALL, M_FRAME, M_TRIM, M_FROST], smooth=30)
-    expect(ob, size=(L, D, H + 0.12 + P.MONITOR_H), tol=0.002)
+    ob = part('Kit_Workstation_Bench', join(paint(w, 0), paint(join(*silver), 1), paint(frost, 2)),
+              [M_WALL, M_FRAME, M_FROST], smooth=30)
+    expect(ob, size=(L, D, P.SCREEN_TOP), tol=0.002)
     collider(ob, 'box')
 
 
@@ -1420,16 +1427,17 @@ def slipper_cabinet():
 
 
 def phone_desk():
-    """A white desk phone with a silver keypad and handset. Faces +Z. Pivot bottom centre. Visual only."""
+    """A white desk phone with a silver keypad and handset. Faces +Z. Pivot bottom centre. Loose prop, box collider."""
     w, d, h = P.PHONE_W, P.PHONE_D, P.PHONE_H
     base = prism_zy([(d / 2, 0), (d / 2, 0.035), (-d / 2, h * 0.7), (-d / 2, 0)], -w / 2, w / 2)
     handset = u(-w / 2 + 0.01, -w / 2 + 0.06, h * 0.55, h, -d / 2 + 0.01, d / 2 - 0.02)
     keys = u(-0.02, w / 2 - 0.02, 0.05, 0.06, -0.04, 0.06)
     ob = part('Kit_Phone_Desk', join(paint(base, 0), paint(handset, 0), paint(keys, 1)), [M_WALL, M_FRAME], smooth=30)
+    collider(ob, 'box')   # loose prop: can be picked up and thrown
 
 
 def doc_tray():
-    """A two-tier document tray in aqua frosted plastic, with a paper stack. Pivot bottom centre. Visual only."""
+    """A two-tier document tray in aqua frosted plastic, with a paper stack. Pivot bottom centre. Loose prop, box collider."""
     w, d, h = P.TRAY_W, P.TRAY_D, P.TRAY_H
     tiers = []
     for y in (0.0, h / 2):
@@ -1438,6 +1446,7 @@ def doc_tray():
         tiers.append(u(w / 2 - 0.006, w / 2, y, y + h / 2 - 0.01, -d / 2, d / 2))
     paper = u(-w / 2 + 0.02, w / 2 - 0.02, 0.008, 0.03, -d / 2 + 0.02, d / 2 - 0.03)
     ob = part('Kit_Doc_Tray', join(paint(join(*tiers), 0), paint(paper, 1)), [M_FROST, M_WALL], smooth=None)
+    collider(ob, 'box')   # loose prop: can be picked up and thrown
 
 
 def logo_aonagi():
@@ -1470,6 +1479,148 @@ def water_wall():
     water = u(0.06, W - 0.06, 0.06, H - 0.06, T - 0.04, T - 0.02)
     ob = part('Kit_Water_Wall', join(paint(frame, 0), paint(water, 1)), [M_FRAME, M_WATER], smooth=None)
     collider(ob, 'box')
+
+
+def monitor_flat():
+    """A silver flat-panel monitor on a neck and foot, its dark screen facing +Z. Pivot bottom centre (under the
+    foot). Loose prop: box collider, so it can be picked up and thrown (Alex, 2026-11-13)."""
+    w, h = P.MONITOR_W, P.MONITOR_H
+    silver = join(u(-w / 2, w / 2, 0.12, 0.12 + h, -0.015, 0.015),     # panel
+                  u(-0.03, 0.03, 0, 0.14, -0.04, -0.02),               # neck
+                  u(-0.12, 0.12, 0, 0.012, -0.09, 0.09))               # foot
+    screen = u(-w / 2 + 0.02, w / 2 - 0.02, 0.14, 0.10 + h, 0.015, 0.017)
+    ob = part('Kit_Monitor_Flat', join(paint(silver, 0), paint(screen, 1)), [M_FRAME, M_TRIM], smooth=None)
+    expect(ob, size=(w, 0.18, 0.12 + h), tol=0.002)
+    collider(ob, 'box')
+
+
+def keyboard():
+    """A pale low-profile keyboard. Pivot bottom centre. Loose prop: box collider."""
+    ob = part('Kit_Keyboard', u(-0.22, 0.22, 0, 0.015, -0.07, 0.07), M_WALL, smooth=None)
+    expect(ob, size=(0.44, 0.14, 0.015), tol=0.001)
+    collider(ob, 'box')
+
+
+def lift_door_frame(label):
+    """The lift's landing wall: a 4 m pearl wall, full storey from the slab line (-SLAB) to the soffit, with a
+    centred 1.4 x 2.2 m opening, a silver portal round it, a dark indicator above showing `label` in aqua, and a
+    call panel with up and down buttons beside it. Runs +X from the pivot on the landing face (+Z = the lobby);
+    the leaves slide behind it on the shaft side. Box colliders on the left, right and head parts only."""
+    W, T, ow, oh = P.BAY, P.WALL, P.LIFT_OPEN_W, P.LIFT_OPEN_H
+    x0, x1 = (W - ow) / 2, (W + ow) / 2
+    y0 = -P.SLAB   # WHY from the slab line: shaft walls stack storey on storey with no gap at the floors
+    parts = []
+    for name, b in (('Left', u(0, x0, y0, CLEAR_H, -T, 0)), ('Right', u(x1, W, y0, CLEAR_H, -T, 0)),
+                    ('Head', u(x0, x1, oh, CLEAR_H, -T, 0))):
+        ob = part(f'Kit_Lift_Door_Frame_4m_{label[:2]}_{name}', b, M_WALL, smooth=None)
+        collider(ob, 'box')
+        parts.append(ob)
+    t, pr = 0.12, 0.03   # portal band width and how far it stands proud, metres
+    portal = [u(x0 - t, x0, 0, oh + t, 0, pr), u(x1, x1 + t, 0, oh + t, 0, pr), u(x0 - t, x1 + t, oh, oh + t, 0, pr),
+              u(x0, x0 + 0.02, 0, oh, -T, 0), u(x1 - 0.02, x1, 0, oh, -T, 0), u(x0, x1, oh - 0.02, oh, -T, 0)]  # linings
+    portal = join(*portal)
+    bevel(portal, 0.008, segments=2, angle=45)
+    iy = oh + 0.3
+    panel = u(x0 + 0.1, x1 - 0.1, iy, iy + 0.32, 0, 0.04)
+    ink = placed_text(label, 0.16, x1 - 0.2, iy + 0.08, 0.04, 0.006, 0, max_width=ow - 0.4)
+    cx, cy = x1 + 0.35, 1.1   # call panel centre, metres
+    plate = u(cx - 0.09, cx + 0.09, cy - 0.18, cy + 0.18, 0, 0.015)
+    up = prism_xy([(cx - 0.04, cy + 0.04), (cx + 0.04, cy + 0.04), (cx, cy + 0.11)], 0.015, 0.022)
+    down = prism_xy([(cx - 0.04, cy - 0.04), (cx, cy - 0.11), (cx + 0.04, cy - 0.04)], 0.015, 0.022)
+    trim = part(f'Kit_Lift_Door_Frame_4m_{label[:2]}_Trim',
+                join(paint(portal, 0), paint(plate, 0), paint(panel, 1), paint(join(ink, up, down), 2)),
+                [M_FRAME, M_TRIM, M_AQUA], smooth=None)
+    expect(parts[0], size=(x0, T, CLEAR_H + P.SLAB))
+    group(f'Kit_Lift_Door_Frame_4m_{label[:2]}', *parts, trim)
+
+
+def lift_door_panel():
+    """One bi-parting landing leaf in brushed silver. Pivot at the bottom of the meeting edge, centred on its
+    thickness; the leaf runs +X, and the lift script opens it by sliding LIFT_LEAF_W along +X. Box collider."""
+    w, h, t = P.LIFT_LEAF_W, P.LIFT_LEAF_H, P.LIFT_LEAF_T
+    ob = part('Kit_Lift_Door_Panel', u(0, w, 0, h, -t / 2, t / 2), M_FRAME, smooth=None)
+    expect(ob, size=(w, t, h))
+    collider(ob, 'box')
+
+
+def lift_shaft_wall():
+    """A 4 m glass shaft wall, full storey from the slab line to the soffit, so the car is seen riding: a silver
+    base band over the slab line, clear glass, a silver head rail and end posts. Runs +X from the pivot; its
+    thickness goes -Z (the shaft side). Box collider over the frame."""
+    W, T = P.BAY, P.PART_T
+    zc = -T / 2
+    y0, r = -P.SLAB, P.PART_RAIL
+    frame = join(u(0, W, y0, r, -T, 0), u(0, W, CLEAR_H - r, CLEAR_H, -T, 0),
+                 u(0, 0.04, r, CLEAR_H - r, -T, 0), u(W - 0.04, W, r, CLEAR_H - r, -T, 0))
+    fr = part('Kit_Lift_Shaft_Wall_4m_Frame', frame, M_FRAME, smooth=None)
+    glass = part('Kit_Lift_Shaft_Wall_4m_Glass',
+                 u(0.04, W - 0.04, r, CLEAR_H - r, zc - P.GLASS_T / 2, zc + P.GLASS_T / 2), M_GLASS, smooth=None)
+    expect(fr, size=(W, T, CLEAR_H + P.SLAB))
+    collider(fr, 'box')
+    group('Kit_Lift_Shaft_Wall_4m', fr, glass)
+
+
+def lift_car():
+    """The capsule car: polished floor plate with its top at the pivot (y 0), pearl side walls with rounded edges, a
+    clear glass back with a silver handrail at 1.0 m, a ceiling with a light panel, and a header over the open
+    front (+Z) at door height. Pivot at the floor's top centre. Moving: the lift script drives its height.
+    Box colliders on the floor, both sides, the back, the ceiling and the header; none in the open front."""
+    W, D, H, F, t = P.LIFT_CAR_W, P.LIFT_CAR_D, P.LIFT_CAR_H, P.LIFT_CAR_FLOOR, P.LIFT_CAR_WALL
+    floor = part('Kit_Lift_Car_Floor', by_normal(u(-W / 2, W / 2, -F, 0, -D / 2, D / 2), 0, 1, 1), [M_FLOOR, M_FRAME],
+                 smooth=None)
+    sides = []
+    for name, (a, b) in (('Left', (-W / 2, -W / 2 + t)), ('Right', (W / 2 - t, W / 2))):
+        wall = u(a, b, 0, H, -D / 2, D / 2)
+        bevel(wall, 0.02, segments=2, angle=45)
+        bm = paint(wall, 0)
+        if name == 'Left':   # a small aqua floor indicator inside, beside the opening
+            bm = join(bm, paint(u(b, b + 0.01, 1.55, 1.85, D / 2 - 0.55, D / 2 - 0.25), 1))
+        sides.append(part(f'Kit_Lift_Car_{name}', bm, [M_WALL, M_AQUA], smooth=30))
+    back = part('Kit_Lift_Car_Back', join(u(-W / 2 + t, W / 2 - t, 0, 0.1, -D / 2, -D / 2 + t),
+                                         u(-W / 2 + t, W / 2 - t, H - 0.1, H, -D / 2, -D / 2 + t),
+                                         u(-W / 2 + 0.15, W / 2 - 0.15, 0.97, 1.03, -D / 2 + t, -D / 2 + t + 0.05)),
+                M_FRAME, smooth=None)
+    glass = part('Kit_Lift_Car_Glass', u(-W / 2 + t, W / 2 - t, 0.1, H - 0.1, -D / 2 + 0.02, -D / 2 + 0.04), M_GLASS,
+                 smooth=None)
+    ceiling = part('Kit_Lift_Car_Ceiling', join(paint(u(-W / 2, W / 2, H, H + 0.1, -D / 2, D / 2), 0),
+                                               paint(u(-1.2, 1.2, H - 0.015, H, -1.0, 1.0), 1)),
+                   [M_WALL, M_LIGHT], smooth=None)
+    header = part('Kit_Lift_Car_Header', u(-W / 2 + t, W / 2 - t, P.LIFT_OPEN_H, H, D / 2 - t, D / 2), M_WALL, smooth=None)
+    for ob in (floor, *sides, back, ceiling, header):
+        collider(ob, 'box')
+    expect(floor, size=(W, D, F))
+    group('Kit_Lift_Car', floor, *sides, back, glass, ceiling, header)
+
+
+def pool_raised():
+    """The rooftop pool: a raised 8 x 4 m pearl basin (the roof slab is too thin to sink one), a 0.5 m rim 0.4 m
+    wide with a silver coping line, two steps up the front long side, an aqua basin floor and a water surface
+    0.4 m up drawn by the Aero Water Pane shader seen from above. Pivot at the front-left outside corner at roof
+    level; runs +X and -Z. Box colliders on the rim and steps; none on the water (players wade, props sink)."""
+    L, Wd, h, r = P.POOL_L, P.POOL_W, P.POOL_RIM_H, P.POOL_RIM_W
+    rims = [('Front', u(0, L, 0, h, -r, 0)), ('Back', u(0, L, 0, h, -Wd, -Wd + r)),
+            ('Left', u(0, r, 0, h, -Wd + r, -r)), ('Right', u(L - r, L, 0, h, -Wd + r, -r))]
+    parts = []
+    for name, b in rims:
+        bevel(b, 0.03, segments=2, angle=45)
+        coping = u(*((0, L) if name in ('Front', 'Back') else (0, r) if name == 'Left' else (L - r, L)),
+                   h, h + 0.012, *((-r * 0.6, -r * 0.4) if name == 'Front' else (-Wd + r * 0.4, -Wd + r * 0.6)
+                                   if name == 'Back' else (-Wd + r, -r)))
+        ob = part(f'Kit_Pool_Raised_8x4_{name}', join(paint(b, 0), paint(coping, 1)), [M_WALL, M_FRAME], smooth=None)
+        collider(ob, 'box')
+        parts.append(ob)
+    sx0 = (L - P.POOL_STEP_L) / 2
+    for i, (top, out) in enumerate(((h / 3, 0.6), (2 * h / 3, 0.3))):
+        st = u(sx0, sx0 + P.POOL_STEP_L, 0, top, 0, out)
+        bevel(st, 0.02, segments=2, angle=45)
+        ob = part(f'Kit_Pool_Raised_8x4_Step{i + 1}', st, M_WALL, smooth=None)
+        collider(ob, 'box')
+        parts.append(ob)
+    basin = part('Kit_Pool_Raised_8x4_Basin', u(r, L - r, 0, 0.02, -Wd + r, -r), M_AQUA, smooth=None)
+    water = part('Kit_Pool_Raised_8x4_Water', u(r, L - r, P.POOL_WATER - 0.02, P.POOL_WATER, -Wd + r, -r), M_POOL,
+                 smooth=None)
+    expect(parts[0], size=(L, r, h + 0.012), tol=0.002)
+    group('Kit_Pool_Raised_8x4', *parts, basin, water)
 
 
 PIECES = {
@@ -1547,6 +1698,15 @@ PIECES = {
     'Logo_Aonagi': logo_aonagi,
     'Sign_LED_Reception': sign_led_reception,
     'Water_Wall': water_wall,
+    # Loose props split out of the bench, the lift and the rooftop pool (2026-11-13)
+    'Monitor_Flat': monitor_flat,
+    'Keyboard': keyboard,
+    'Lift_Door_Frame_4m_1F': lambda: lift_door_frame('1F'),
+    'Lift_Door_Frame_4m_RF': lambda: lift_door_frame('RF  屋上'),
+    'Lift_Door_Panel': lift_door_panel,
+    'Lift_Shaft_Wall_4m': lift_shaft_wall,
+    'Lift_Car': lift_car,
+    'Pool_Raised_8x4': pool_raised,
 }
 
 if P.PIECE not in PIECES:

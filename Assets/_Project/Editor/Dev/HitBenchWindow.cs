@@ -4,6 +4,9 @@
 //  Generated : 2026-11-13
 //  Prompt    : Alex: "a test dummy in the scene to test animations of being hit by certain
 //              powers of weapons (bullets bombs explosions props, etc)"
+//  Modified  : Claude Opus 5.5, 2026-11-14 — says whether the dummy can be hit and
+//              what each hit did (Alex: "nothing happens"; the cause was a code reload
+//              during Play, which the bench could not show)
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : An Editor window that hits the test dummy with a chosen kind and strength of
 //              hit at a chosen body part and direction, so reactions can be judged before the
@@ -77,6 +80,8 @@ namespace CloseTheDeal.Editor.Dev
         From _from = From.Front;
         float _blastDistance = NearBlastDistance;
         float _blastRadius = BlastReach;
+        /// <summary>What the last press of Hit did, shown under the button. Empty until the first hit.</summary>
+        string _lastResult = "";
 
         /// <summary>Opens the bench.</summary>
         [MenuItem("Close the Deal/Dev/Hit Bench")]
@@ -123,6 +128,45 @@ namespace CloseTheDeal.Editor.Dev
             }
             if (!Application.isPlaying)
                 EditorGUILayout.HelpBox("Press Play first: the dummy's body only exists while playing.", MessageType.Info);
+            else
+                EditorGUILayout.HelpBox(Status(FindDummy()), MessageType.None);
+            if (_lastResult.Length > 0)
+                EditorGUILayout.LabelField("Last hit", _lastResult, EditorStyles.wordWrappedLabel);
+        }
+
+        /// <summary>Redraws a few times a second while playing, so the status line follows the dummy.</summary>
+        void OnInspectorUpdate()
+        {
+            if (Application.isPlaying)
+                Repaint();
+        }
+
+        /// <summary>The chosen dummy, or the first one in the scene. Null when there is none.</summary>
+        HitDummy FindDummy()
+        {
+            if (_dummy == null)
+            {
+                HitDummy[] found = FindObjectsByType<HitDummy>(FindObjectsInactive.Exclude);
+                _dummy = found.Length > 0 ? found[0] : null;
+            }
+            return _dummy;
+        }
+
+        /// <summary>One line on whether the dummy can take a hit right now, and if not, why not and what to do.</summary>
+        static string Status(HitDummy dummy)
+        {
+            if (dummy == null)
+                return "No dummy in this scene. Place one with Close the Deal > Dev > Place Hit Dummy.";
+            PlayerRagdoll body = dummy.GetComponentInChildren<PlayerRagdoll>();
+            if (body == null)
+                return dummy.name + " has no ragdoll. Rebuild it with Close the Deal > Dev > Build Hit Dummy Prefab.";
+            if (!body.TakesHits)
+                return dummy.name + "'s ragdoll has no hit profile, so hits do nothing. Rebuild it with Close the Deal > Dev > Build Hit Dummy Prefab.";
+            if (!body.Running)
+                return dummy.name + "'s body is not running. If the code changed during this Play session, stop and press Play again "
+                    + "(Edit > Preferences > General > Script Changes While Playing > Recompile After Finished Playing stops it happening). "
+                    + "Otherwise read the Console for a [PlayerRagdoll] or [PlayerAnimator] error.";
+            return body.Down ? dummy.name + " is knocked down." : dummy.name + " is ready.";
         }
 
         /// <summary>Fills in a point hit's kind and strength.</summary>
@@ -143,14 +187,12 @@ namespace CloseTheDeal.Editor.Dev
         /// <summary>Builds the hit from the window's values and delivers it.</summary>
         void Hit()
         {
-            if (_dummy == null)
+            HitDummy dummy = FindDummy();
+            PlayerRagdoll ragdoll = dummy != null ? dummy.GetComponentInChildren<PlayerRagdoll>() : null;
+            if (ragdoll == null || !ragdoll.Running || !ragdoll.TakesHits)
             {
-                HitDummy[] found = FindObjectsByType<HitDummy>(FindObjectsInactive.Exclude);
-                _dummy = found.Length > 0 ? found[0] : null;
-            }
-            if (_dummy == null)
-            {
-                Debug.LogWarning("[HitBench] No dummy in the scene. Place one with Close the Deal > Dev > Place Hit Dummy.");
+                _lastResult = "Not hit. " + Status(dummy);
+                Debug.LogWarning("[HitBench] " + _lastResult, dummy);
                 return;
             }
 
@@ -177,7 +219,12 @@ namespace CloseTheDeal.Editor.Dev
                 Vector2 offset = SpotOffsets[_spot];
                 hit.Point = body.TransformPoint(new Vector3(offset.x, offset.y, 0f));
             }
+            bool wasDown = ragdoll.Down;
             _dummy.Hit(hit);
+            string where = _type == HitType.Blast ? _blastDistance.ToString("F1") + " m away" : "on the " + Spots[_spot].ToLowerInvariant();
+            string outcome = !wasDown && ragdoll.Down ? "knocked down" : wasDown ? "already down, pushed" : "flinched";
+            _lastResult = _type + ", " + _impulse.ToString("F0") + " N·s, from the " + _from.ToString().ToLowerInvariant() + ", " + where + ": " + outcome + ".";
+            Debug.Log("[HitBench] " + _dummy.name + ": " + _lastResult, _dummy);
         }
     }
 }
