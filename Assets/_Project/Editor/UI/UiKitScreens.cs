@@ -22,12 +22,18 @@ namespace CloseTheDeal.Editor.UI
         /// <summary>The title lane's band for the title lockup and menu starts at 64% of the frame; the sill sits above it.</summary>
         const float SillY = 664f;
 
-        internal static void Build()
+        internal static void Build(bool rebuild)
         {
-            Title = SavePrefab(BuildTitle(), ScreenFolder + "/TitleScreen.prefab");
-            Settings = SavePrefab(BuildSettings(), ScreenFolder + "/SettingsScreen.prefab");
-            Confirm = SavePrefab(BuildConfirm(), ScreenFolder + "/ConfirmDialog.prefab");
-            Canvas = SavePrefab(BuildCanvas(), ScreenFolder + "/KitCanvas.prefab");
+            Title = Ensure(ScreenFolder + "/TitleScreen.prefab", BuildTitle, rebuild);
+            Settings = Ensure(ScreenFolder + "/SettingsScreen.prefab", BuildSettings, rebuild);
+            Confirm = Ensure(ScreenFolder + "/ConfirmDialog.prefab", BuildConfirm, rebuild);
+            Canvas = Ensure(ScreenFolder + "/KitCanvas.prefab", BuildCanvas, rebuild);
+        }
+
+        static GameObject Ensure(string path, System.Func<GameObject> build, bool rebuild)
+        {
+            GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            return existing != null && !rebuild ? existing : SavePrefab(build(), path);
         }
 
         /// <summary>

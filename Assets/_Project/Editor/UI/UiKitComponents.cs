@@ -223,7 +223,7 @@ namespace CloseTheDeal.Editor.UI
 
             Box(fx.Plate, "Track", 16f, 23f, 260f, 2f, t.Hair);
             RectTransform fillArea = At(fx.Plate, "FillArea", 16f, 23f, 260f, 2f);
-            RectTransform fill = Fill(fillArea, "Fill");
+            RectTransform fill = Fill(fillArea, "Bar");
             Img(fill, UiKitArt.White, t.Cobalt);
             RectTransform handleArea = At(fx.Plate, "HandleArea", 16f, 0f, 260f, 48f);
             RectTransform handle = Node(handleArea, "Handle");

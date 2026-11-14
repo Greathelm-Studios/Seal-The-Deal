@@ -100,9 +100,9 @@ Changes apply at once (no Apply step; the mockup's Apply / unsaved-changes flow 
 
 ## Tools
 
-- **Close the Deal > Lanes > Set Up UI**: builds the tokens (once), sprites and prefabs (each left alone once a person edits it, `GeneratedAssetGuard`), and adds KitUI (an instance of `Screens/KitCanvas.prefab`) and the kit crosshair to the open scene. Only adds.
-- **Close the Deal > Lanes > Replace UI In Open Scene** (asks first): swaps the scene's KitUI for a fresh instance, for after the kit prefabs were rebuilt. Shell: `UiKitSetup.ReplaceFromCommandLine`. Shell: `-executeMethod CloseTheDeal.Editor.UI.UiKitSetup.SetUpFromCommandLine` (Lane_Integration.unity).
-- `GreyboxUiSetup.Ensure` calls the same thing, so Set Up Scene (Greybox), Set Up Integration and Make Open Scene Playable (KitOffice) get the kit when they next run. Rebuild Game UI keeps the kit and points it at the new menu.
+- **Close the Deal > Lanes > Set Up UI**: builds the tokens (once), sprites and component prefabs, and the screen prefabs when missing (each left alone once a person edits it, `GeneratedAssetGuard`), and adds KitUI (an instance of `Screens/KitCanvas.prefab`) and the kit crosshair to the open scene. Only adds.
+- **Close the Deal > Lanes > Replace UI In Open Scene** (asks first): swaps the scene's KitUI for a fresh instance of the kit canvas, dropping anything changed on it in that scene. Shell (rebuilds every untouched kit prefab, screens included, then replaces KitUI in Lane_Integration): `UiKitSetup.ReplaceFromCommandLine`; use it after changing the screen builders. Shell: `-executeMethod CloseTheDeal.Editor.UI.UiKitSetup.SetUpFromCommandLine` (Lane_Integration.unity).
+- `GreyboxUiSetup.Ensure` adds the kit too (building its assets only if they are missing), so Set Up Scene (Greybox), Set Up Integration and Make Open Scene Playable (KitOffice) get it when they next run. Rebuild Game UI keeps the kit and points it at the new menu.
 - Captures: `-executeMethod CloseTheDeal.Editor.UI.UiKitCapture.RunFromShell -uiCaptureOut <dir> -uiCaptureMode capture|persist-write|persist-read|menu-rule -local [-lanePort n]` with the Editor binary, `-batchmode`, **without** `-quit` or `-nographics`. Writes the title and settings at three sizes, a state sheet per screen, the hover → press → push strip, a 30 fps clip sequence, a sound log and PASS / FAIL lines.
 
 ## Known limitations

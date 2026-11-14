@@ -42,25 +42,36 @@ namespace CloseTheDeal.Editor.UI
         {
             if (!EditorUtility.DisplayDialog("Replace UI", "This deletes KitUI in the open scene and adds a fresh one from the kit prefabs. Changes made to KitUI in this scene are lost; the prefabs and other objects are untouched.", "Replace", "Cancel"))
                 return;
-            Replace();
-            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+            if (Replace())
+                EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         }
 
-        /// <summary>Shell variant of Replace UI for Lane_Integration.unity, no question asked.</summary>
+        /// <summary>Shell variant: rebuilds the kit's untouched assets, then Replace UI in Lane_Integration.unity, no question asked.</summary>
         public static void ReplaceFromCommandLine()
         {
-            BuildAssets();
+            BuildAssets(true);
             EditorSceneManager.OpenScene(IntegrationScene, OpenSceneMode.Single);
-            Replace();
+            if (!Replace())
+            {
+                EditorApplication.Exit(1);
+                return;
+            }
+
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
         }
 
-        static void Replace()
+        static bool Replace()
         {
+            if (Object.FindAnyObjectByType<GameMenu>(FindObjectsInactive.Include) == null)
+            {
+                Debug.LogError("[UI] No game menu in the open scene, so KitUI was left as it is.");
+                return false;
+            }
+
             UiRoot old = Object.FindAnyObjectByType<UiRoot>(FindObjectsInactive.Include);
             if (old != null)
                 Object.DestroyImmediate(old.gameObject);
-            AddToOpenScene();
+            return AddToOpenScene();
         }
 
         /// <summary>Shell entry: builds the assets and adds the kit to Lane_Integration.unity, then saves it.</summary>
@@ -73,23 +84,36 @@ namespace CloseTheDeal.Editor.UI
             AssetDatabase.SaveAssets();
         }
 
-        /// <summary>Tokens, sprites, component and screen prefabs. Safe to run again: it never overwrites edited files.</summary>
-        public static void BuildAssets()
+        /// <summary>
+        /// Tokens, sprites, component and screen prefabs; never overwrites a file a person edited. Screen prefabs nest
+        /// the component prefabs, and Unity gives a rebuilt nest new internal ids (a large diff for no change), so the
+        /// screens are rebuilt only when missing unless asked (Replace UI does).
+        /// </summary>
+        public static void BuildAssets(bool rebuildScreens = false)
         {
             UiTokens tokens = EnsureTokens();
             UiKitArt.Ensure(tokens);
             UiKitComponents.Build();
-            UiKitScreens.Build();
+            UiKitScreens.Build(rebuildScreens);
             AssetDatabase.SaveAssets();
         }
 
         /// <summary>Called by GreyboxUiSetup.Ensure whenever a scene gets its game menu, so every playable scene has the kit.</summary>
         public static void EnsureInOpenScene()
         {
-            LoadPrefabsIfNeeded();
-            if (Tokens == null || UiKitScreens.Canvas == null)
-                BuildAssets();
+            EnsureAssets();
             AddToOpenScene();
+        }
+
+        /// <summary>
+        /// Builds the kit's assets only when they are missing: other lanes' scene setups reach this through
+        /// GreyboxUiSetup.Ensure, and shouldn't rebuild the kit as a side effect. Set Up UI refreshes it.
+        /// </summary>
+        static void EnsureAssets()
+        {
+            LoadPrefabsIfNeeded();
+            if (Tokens == null || UiKitScreens.Canvas == null || UiKitComponents.Crosshair == null)
+                BuildAssets();
         }
 
         /// <summary>Adds what is missing to the open scene. True when something was added.</summary>
@@ -116,16 +140,15 @@ namespace CloseTheDeal.Editor.UI
             return true;
         }
 
+        /// <summary>Loads what earlier runs built. Unity's null (a deleted asset) counts as missing, so it reloads.</summary>
         static void LoadPrefabsIfNeeded()
         {
             if (Tokens == null)
                 Tokens = AssetDatabase.LoadAssetAtPath<UiTokens>(TokensPath);
-            UiKitScreens.Title ??= AssetDatabase.LoadAssetAtPath<GameObject>(ScreenFolder + "/TitleScreen.prefab");
-            UiKitScreens.Settings ??= AssetDatabase.LoadAssetAtPath<GameObject>(ScreenFolder + "/SettingsScreen.prefab");
-            UiKitScreens.Confirm ??= AssetDatabase.LoadAssetAtPath<GameObject>(ScreenFolder + "/ConfirmDialog.prefab");
-            UiKitScreens.Canvas ??= AssetDatabase.LoadAssetAtPath<GameObject>(ScreenFolder + "/KitCanvas.prefab");
-            UiKitComponents.FocusFrame ??= AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/FocusFrame.prefab");
-            UiKitComponents.Crosshair ??= AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Crosshair.prefab");
+            if (UiKitScreens.Canvas == null)
+                UiKitScreens.Canvas = AssetDatabase.LoadAssetAtPath<GameObject>(ScreenFolder + "/KitCanvas.prefab");
+            if (UiKitComponents.Crosshair == null)
+                UiKitComponents.Crosshair = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Crosshair.prefab");
         }
 
         static void BuildCanvas(GameMenu menu)
@@ -156,7 +179,7 @@ namespace CloseTheDeal.Editor.UI
         static bool EnsureCrosshair(GameMenu menu)
         {
             Transform hud = menu.transform.Find("Hud");
-            if (hud == null || hud.Find(CrosshairName) != null || UiKitComponents.Crosshair == null)
+            if (hud == null || hud.GetComponentInChildren<UiCrosshair>(true) != null || UiKitComponents.Crosshair == null)
                 return false;
 
             var crosshair = Instance<RectTransform>(UiKitComponents.Crosshair, hud, CrosshairName);
