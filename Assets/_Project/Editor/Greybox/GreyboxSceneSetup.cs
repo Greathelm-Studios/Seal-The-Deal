@@ -144,7 +144,7 @@ namespace CloseTheDeal.Editor.Greybox
         {
             EnsureFolder("Assets/_Project", "Prefabs");
             MovementProfile movement = EnsureAsset<MovementProfile>(ProfileFolder, MovementProfilePath);
-            BlastProfile blast = EnsureAsset<BlastProfile>(ProfileFolder, BlastProfilePath);
+            EnsureAsset<BlastProfile>(ProfileFolder, BlastProfilePath);
             PhysicsMaterial frictionless = EnsureFrictionlessMaterial();
             var actions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
             if (actions == null)
@@ -184,10 +184,7 @@ namespace CloseTheDeal.Editor.Greybox
 
             var serializedMotor = new SerializedObject(motor);
             SetReference(serializedMotor, "_profile", movement);
-            SetReference(serializedMotor, "_blast", blast);
             SetInt(serializedMotor, "_groundMask", ~(1 << PlayerLayer));
-            SetInt(serializedMotor, "_playerMask", 1 << PlayerLayer);
-            SetInt(serializedMotor, "_propMask", 1 << PropLayer);
             SetReference(serializedMotor, "_cameraTarget", graphics);
             SetReference(serializedMotor, "_leanPivot", leanPivot);
             serializedMotor.ApplyModifiedPropertiesWithoutUndo();
