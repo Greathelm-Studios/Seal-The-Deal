@@ -29,6 +29,17 @@ namespace CloseTheDeal.UI
         [Tooltip("The focused row's one-line explanation.")]
         [SerializeField] TMP_Text _help;
 
+        [Header("Changes summary (under the rows)")]
+        [Tooltip("The block under the rows listing what differs from how the game shipped. Hidden on tabs whose rows fill the page.")]
+        [SerializeField] CanvasGroup _changes;
+        [Tooltip("The block's heading, e.g. § CHANGED ON THIS TAB · 2.")]
+        [SerializeField] TMP_Text _changesHeading;
+        [Tooltip("One line per changed setting, or the line saying nothing has changed.")]
+        [SerializeField] TMP_Text _changesBody;
+
+        readonly System.Collections.Generic.List<string> _changeLines = new(8);
+        string _shownChanges;
+
         const string KeptLine = "Changes are saved on this PC as you make them.";
 
         protected override void Awake()
@@ -133,6 +144,31 @@ namespace CloseTheDeal.UI
 
             _reset.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = last, selectOnRight = _back };
             _back.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = last, selectOnLeft = _reset.interactable ? _reset : null };
+            ShowChanges();
+        }
+
+        /// <summary>Rewrites the summary under the rows: only when the tab or a value changed, never per frame.</summary>
+        void ShowChanges()
+        {
+            UiSettingsPage page = _tabs.CurrentPage;
+            if (_changes == null || page == null)
+                return;
+            bool room = page.ShowsChanges;
+            _changes.alpha = room ? 1f : 0f;
+            if (!room)
+                return;
+            _changeLines.Clear();
+            page.DescribeChanges(_changeLines);
+            string body = _changeLines.Count == 0
+                ? "Nothing on this tab differs from how the game shipped."
+                : string.Join("\n", _changeLines);
+            if (body == _shownChanges)
+                return;
+            _shownChanges = body;
+            if (_changesHeading != null)
+                _changesHeading.text = "\u00a7 CHANGED ON THIS TAB \u00b7 " + _changeLines.Count;
+            if (_changesBody != null)
+                _changesBody.text = body;
         }
 
         void OnReset()

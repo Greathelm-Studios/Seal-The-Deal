@@ -61,6 +61,20 @@ namespace CloseTheDeal.UI
         /// <summary>Puts this tab's values back to how the game shipped.</summary>
         public abstract void ResetToDefaults();
 
+        /// <summary>
+        /// Adds one line per value on this tab that differs from how the game shipped ("Music, 40%, shipped 80%", in three columns),
+        /// for the summary under the rows. Pages whose rows fill the screen (Controls) leave it empty and set
+        /// ShowsChanges false.
+        /// </summary>
+        public virtual void DescribeChanges(System.Collections.Generic.List<string> lines) { }
+
+        /// <summary>False when the rows fill the page and the changes summary has no room.</summary>
+        public virtual bool ShowsChanges => true;
+
+        /// <summary>One summary line: the setting, its value now, and what it shipped as.</summary>
+        protected static string ChangeLine(string name, string now, string shipped) =>
+            name + "<pos=320><b>" + now + "</b><pos=560>shipped " + shipped;
+
         /// <summary>Called when the page stops showing (tab change or the screen closing).</summary>
         public virtual void Hidden() { }
 

@@ -1,7 +1,7 @@
 fileFormatVersion: 2
-guid: 13184fa0660354eca88d0fdbc4232690
+guid: bf4d8c0baae6f490e86b5533e23611ca
 labels:
-- greybox-6c73fd07393d
+- greybox-4b286f0abd8b
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -36,7 +36,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 0
+    filterMode: 1
     aniso: 1
     mipBias: 0
     wrapU: 1

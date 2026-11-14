@@ -65,13 +65,18 @@ namespace CloseTheDeal.UI
             }
         }
 
-        /// <summary>The resolution saved, or the desktop's when none is.</summary>
+        /// <summary>
+        /// The resolution saved (never larger than this monitor: a size saved on a bigger one is clamped to it), or the
+        /// desktop's when none is. The desktop's comes from the display itself, not Screen.currentResolution, which in
+        /// exclusive full screen is the game's own mode.
+        /// </summary>
         public static Vector2Int Resolution
         {
             get
             {
-                Resolution desktop = Screen.currentResolution;
-                return new Vector2Int(PlayerPrefs.GetInt(WidthKey, desktop.width), PlayerPrefs.GetInt(HeightKey, desktop.height));
+                Vector2Int desktop = Desktop;
+                var saved = new Vector2Int(PlayerPrefs.GetInt(WidthKey, desktop.x), PlayerPrefs.GetInt(HeightKey, desktop.y));
+                return saved.x > desktop.x || saved.y > desktop.y ? desktop : saved; // too big for this monitor: its own size
             }
             set
             {
@@ -82,6 +87,33 @@ namespace CloseTheDeal.UI
         }
 
         public static bool HasSavedResolution => PlayerPrefs.HasKey(WidthKey);
+
+        /// <summary>The size of the monitor the game's window is on (its desktop mode), whatever the game is running at.</summary>
+        static Vector2Int Desktop
+        {
+            get
+            {
+                DisplayInfo info = Screen.mainWindowDisplayInfo;
+                if (info.width > 0 && info.height > 0)
+                    return new Vector2Int(info.width, info.height);
+                return new Vector2Int(Screen.currentResolution.width, Screen.currentResolution.height);
+            }
+        }
+
+        /// <summary>Puts the screen back to exactly this size, keeping or forgetting the saved choice as it was before.</summary>
+        public static void Restore(Vector2Int size, bool hadSaved)
+        {
+            if (hadSaved)
+            {
+                Resolution = size;
+                return;
+            }
+
+            PlayerPrefs.DeleteKey(WidthKey);
+            PlayerPrefs.DeleteKey(HeightKey);
+            if (!Application.isEditor)
+                Screen.SetResolution(size.x, size.y, Modes[Mode]); // the size it was really running at
+        }
 
         /// <summary>Back to following the desktop's resolution.</summary>
         public static void ForgetResolution()

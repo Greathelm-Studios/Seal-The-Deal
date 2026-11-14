@@ -28,7 +28,7 @@ namespace CloseTheDeal.Editor.UI
     ///         -uiCaptureOut &lt;folder&gt; -uiCaptureMode capture|persist-write|persist-read -local
     /// Nothing is saved: the scene changes only in Play Mode. The persist runs restore the player's own settings.
     /// </summary>
-    public static class UiKitCapture
+    public static partial class UiKitCapture
     {
         const string ActiveKey = "UiKitCapture.Active";
         const string OutKey = "UiKitCapture.Out";
@@ -112,7 +112,7 @@ namespace CloseTheDeal.Editor.UI
             InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
             _keyboard = InputSystem.AddDevice<Keyboard>("UI capture keyboard");
             UiSound.Played += e => { Sounds.Add($"{Time.frameCount} {e}"); Debug.Log("[UiSound] " + e); };
-            Steps.Push(_mode == "persist-write" ? PersistWrite() : _mode == "persist-read" ? PersistRead() : _mode == "menu-rule" ? MenuRuleOnly() : CaptureScript());
+            Steps.Push(_mode.StartsWith("wide") ? WideScript(_mode) : _mode == "persist-write" ? PersistWrite() : _mode == "persist-read" ? PersistRead() : _mode == "menu-rule" ? MenuRuleOnly() : CaptureScript());
         }
 
         static bool Ready()

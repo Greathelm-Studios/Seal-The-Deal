@@ -69,6 +69,22 @@ namespace CloseTheDeal.UI
             ShowSaved();
         }
 
+        public override void DescribeChanges(System.Collections.Generic.List<string> lines)
+        {
+            if (UiSettings.ReducedMotion != UiSettings.DefaultReducedMotion)
+                lines.Add(ChangeLine("Reduce motion", OnOff(UiSettings.ReducedMotion), OnOff(UiSettings.DefaultReducedMotion)));
+            if (UiSettings.CrosshairStyle != UiSettings.DefaultCrosshairStyle)
+                lines.Add(ChangeLine("Crosshair style", StyleNames[(int)UiSettings.CrosshairStyle], StyleNames[(int)UiSettings.DefaultCrosshairStyle]));
+            if (UiSettings.CrosshairColour != UiSettings.DefaultCrosshairColour)
+                lines.Add(ChangeLine("Crosshair colour", ColourNames[(int)UiSettings.CrosshairColour], ColourNames[(int)UiSettings.DefaultCrosshairColour]));
+            if (UiSettings.CrosshairSize != UiSettings.DefaultCrosshairSize)
+                lines.Add(ChangeLine("Crosshair size", UiSettings.CrosshairSize + "%", UiSettings.DefaultCrosshairSize + "%"));
+            if (UiSettings.NetworkStats != UiSettings.DefaultNetworkStats)
+                lines.Add(ChangeLine("Show network stats", OnOff(UiSettings.NetworkStats), OnOff(UiSettings.DefaultNetworkStats)));
+        }
+
+        static string OnOff(bool on) => on ? "On" : "Off";
+
         void OnReducedMotion(bool on) { UiSettings.ReducedMotion = on; RaiseSaved(); }
 
         void OnStyle(int index) { UiSettings.CrosshairStyle = (CrosshairStyle)index; RaiseSaved(); }

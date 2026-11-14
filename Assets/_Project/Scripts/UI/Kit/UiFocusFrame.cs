@@ -62,6 +62,16 @@ namespace CloseTheDeal.UI
             UiMotion.Wake(_instance);
         }
 
+        /// <summary>
+        /// Wakes the marks after a screen puts focus back by code (selecting the object that was already selected
+        /// raises no select event, so nothing else would).
+        /// </summary>
+        public static void WakeUp()
+        {
+            if (_instance != null)
+                UiMotion.Wake(_instance);
+        }
+
         /// <summary>Keeps the marks drawn above every screen (a screen moves itself to the front when it opens).</summary>
         public static void BringToFront()
         {
@@ -100,13 +110,13 @@ namespace CloseTheDeal.UI
         }
 
         /// <summary>
-        /// Ticked every frame while enabled (it is a single object): it tracks a target that may itself be sliding
-        /// with its panel, so it never sleeps. No allocation: corners go into a reused array.
+        /// Ticked while it has a target or is fading: it tracks a target that may itself be sliding with its panel.
+        /// With no target and faded out it sleeps; the next selection wakes it. No allocation.
         /// </summary>
         public bool Tick(float dt)
         {
             if (_tokens == null)
-                return true;
+                return false;
 
             GameObject selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
             bool valid = _target != null && selected == _target.gameObject && _target.gameObject.activeInHierarchy;
@@ -121,7 +131,7 @@ namespace CloseTheDeal.UI
             _group.alpha = _shown.Value;
             if (valid)
                 Track(dt);
-            return true;
+            return valid || _shown.Running;
         }
 
         void Track(float dt)

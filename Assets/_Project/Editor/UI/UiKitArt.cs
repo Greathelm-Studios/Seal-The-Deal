@@ -8,14 +8,15 @@ namespace CloseTheDeal.Editor.UI
 {
     /// <summary>
     /// The kit's small sprites, drawn by code into PNGs under Assets/_Project/UI/Kit/Sprites: keylines, the dashed
-    /// disabled outline, corner brackets, the chevron cue, the background grid, the fallback sky and a barcode.
+    /// disabled outline, corner brackets, the chevron cue, the background grid, the fallback sky, a barcode, and the
+    /// edge marker's diamond, triangle and pointer.
     /// White where they are tinted by tokens. A PNG someone edited is left alone (GeneratedAssetGuard).
     /// </summary>
     internal static class UiKitArt
     {
         internal const string Folder = "Assets/_Project/UI/Kit/Sprites";
 
-        internal static Sprite White, Outline1, Outline2, Dashed, Bracket, Chevron, Grid, Sky, Barcode, Dots, TitleSky;
+        internal static Sprite White, Outline1, Outline2, Dashed, Bracket, Chevron, Grid, Sky, Barcode, Diamond, Triangle, Pointer;
 
         internal static void Ensure(CloseTheDeal.UI.UiTokens tokens)
         {
@@ -29,8 +30,28 @@ namespace CloseTheDeal.Editor.UI
             Grid = Make("Kit_Grid", 32, 32, 0, true, (x, y) => (x == 0 || y == 0) ? 1f : 0f, wrap: true);
             Barcode = Make("Kit_Barcode", 160, 24, 0, true, BarcodeAlpha);
             Sky = MakeSky(tokens);
-            Dots = Make("Kit_Dots", 12, 12, 0, true, (x, y) => (x >= 5 && x <= 6 && y >= 5 && y <= 6) ? 1f : 0f, wrap: true);
-            TitleSky = MakeTitleSky(tokens);
+            Diamond = Make("Kit_Diamond", 64, 64, 0, false, (x, y) => Mathf.Clamp01(32.5f - (Mathf.Abs(x + 0.5f - 32f) + Mathf.Abs(y + 0.5f - 32f))));
+            Triangle = Make("Kit_Triangle", 64, 64, 0, false, TriangleAlpha);
+            Pointer = Make("Kit_Pointer", 20, 24, 0, false, PointerAlpha);
+        }
+
+        /// <summary>An upright triangle filling the square (apex at the top centre), anti-aliased.</summary>
+        static float TriangleAlpha(int x, int y)
+        {
+            float px = x + 0.5f, py = y + 0.5f;
+            const float top = 62f, bottom = 4f;
+            if (py < bottom - 1f || py > top + 1f)
+                return 0f;
+            float half = 30f * (top - py) / (top - bottom); // half width at this height
+            float side = half - Mathf.Abs(px - 32f);
+            return Mathf.Clamp01(Mathf.Min(side * 0.9f + 0.5f, py - bottom + 0.5f));
+        }
+
+        /// <summary>One bold chevron pointing right: the edge marker's direction cue.</summary>
+        static float PointerAlpha(int x, int y)
+        {
+            float d = Mathf.Min(Segment(x + 0.5f, y + 0.5f, 5f, 3f, 15f, 12f), Segment(x + 0.5f, y + 0.5f, 15f, 12f, 5f, 21f));
+            return Mathf.Clamp01(3.2f - d);
         }
 
         static float Edge(int x, int y, int size, int width)
@@ -89,98 +110,6 @@ namespace CloseTheDeal.Editor.UI
             }
 
             return Save(tex, path, 0, false, false);
-        }
-
-        // ---- The title's fallback sky -------------------------------------------------------------------
-
-        const int SkyW = 1920, SkyH = 664, Cell = 8;
-
-        /// <summary>A cumulus as discs (centre x, centre y from the top, radius) with a flat base, in sky pixels.</summary>
-        static readonly Vector3[][] Clouds =
-        {
-            new[] { new Vector3(160, 560, 150), new Vector3(330, 440, 150), new Vector3(470, 520, 120), new Vector3(560, 600, 110), new Vector3(240, 620, 120) },
-            new[] { new Vector3(330, 330, 70), new Vector3(400, 300, 50), new Vector3(260, 360, 50) },
-            new[] { new Vector3(820, 600, 90), new Vector3(960, 540, 110), new Vector3(1080, 580, 90), new Vector3(1180, 620, 70), new Vector3(900, 640, 70) },
-            new[] { new Vector3(1800, 590, 90), new Vector3(1880, 560, 70), new Vector3(1740, 630, 60) },
-        };
-
-        static readonly float[] CloudBase = { 664, 392, 664, 664 };
-
-        /// <summary>
-        /// The title's fallback sky until the title lane's live one goes in the slot: deep cobalt to a pale horizon,
-        /// stepped cel cumulus (8 px steps, lit from the upper left, shaded silver on the lower right), and the rival
-        /// tower in the right-hand pane, white with dark window bands. Drawn here; nothing is downloaded.
-        /// </summary>
-        static Sprite MakeTitleSky(CloseTheDeal.UI.UiTokens t)
-        {
-            string path = Folder + "/Kit_TitleSky.png";
-            if (!GeneratedAssetGuard.MayOverwrite(path))
-                return AssetDatabase.LoadAssetAtPath<Sprite>(path);
-
-            var tex = new Texture2D(SkyW, SkyH, TextureFormat.RGBA32, false);
-            var pixels = new Color32[SkyW * SkyH];
-            Color top = t.Cobalt;
-            Color low = Color.Lerp(t.Electric, t.Paper, 0.28f);
-            Color window = Color.Lerp(t.Navy, t.Cobalt, 0.45f);
-            for (int py = 0; py < SkyH; py++)
-            {
-                float fromTop = SkyH - 1 - py;
-                float band = Mathf.Floor(fromTop / Cell) * Cell;
-                Color sky = Color.Lerp(top, low, Mathf.SmoothStep(0f, 1f, band / SkyH));
-                for (int px = 0; px < SkyW; px++)
-                {
-                    float cx = Mathf.Floor(px / (float)Cell) * Cell + Cell * 0.5f;
-                    float cy = band + Cell * 0.5f;
-                    pixels[py * SkyW + px] = PixelAt(cx, cy, sky, t, window, px, fromTop);
-                }
-            }
-
-            tex.SetPixels32(pixels);
-            return Save(tex, path, 0, true, false);
-        }
-
-        static Color PixelAt(float cx, float cy, Color sky, CloseTheDeal.UI.UiTokens t, Color window, int px, float fromTop)
-        {
-            Color tower = Tower(px, fromTop, t, window);
-            if (tower.a > 0f)
-                return tower;
-            for (int c = 0; c < Clouds.Length; c++)
-            {
-                if (!InCloud(c, cx, cy))
-                    continue;
-                bool shade = !InCloud(c, cx + 14f, cy + 14f);
-                return shade ? t.Silver : t.Paper;
-            }
-
-            return sky;
-        }
-
-        static bool InCloud(int cloud, float x, float y)
-        {
-            if (y > CloudBase[cloud])
-                return false;
-            foreach (Vector3 disc in Clouds[cloud])
-            {
-                float dx = x - disc.x, dy = y - disc.y;
-                if (dx * dx + dy * dy <= disc.z * disc.z)
-                    return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>The rival firm's tower: white, a silver shadow side, rows of dark window bands, cut by the pane.</summary>
-        static Color Tower(int x, float y, CloseTheDeal.UI.UiTokens t, Color window)
-        {
-            const int left = 1462, right = 1726, roof = 352;
-            if (x < left || x >= right || y < roof)
-                return Color.clear;
-            if (x >= right - 30)
-                return t.Silver;
-            int row = (int)(y - roof) % 64;
-            int col = (x - left - 12) % 40;
-            bool inWindowBand = row >= 40 && row < 62 && x >= left + 12 && x < right - 42 && col < 34;
-            return inWindowBand ? window : t.Paper;
         }
 
         static Sprite Make(string name, int w, int h, int border, bool point, Func<int, int, float> alpha, bool wrap = false)

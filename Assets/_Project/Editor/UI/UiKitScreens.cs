@@ -227,26 +227,32 @@ namespace CloseTheDeal.Editor.UI
                 Box(parent, "Tick", x, y, 1f, 6f, Tokens.Black);
         }
 
-        /// <summary>The keys row: Enter / A select, Esc / B back, arrows / stick move.</summary>
+        /// <summary>The keys row: select, back and move, named for the device the player is on (Enter or A or Cross).</summary>
         static void KeyHints(Transform parent, float x, float y)
         {
-            UiTokens t = Tokens;
-            (string a, string b, string label)[] hints = { ("Enter", "A", "Select"), ("Esc", "B", "Back"), ("\u2191\u2193", "LS", "Move") };
-            foreach (var (a, b, label) in hints)
-            {
-                x = Cap(parent, x, y, a);
-                x = Cap(parent, x + 4f, y, b);
-                Label(parent, "Hint" + label, x + 8f, y, 70f, 32f, label, t.Label, t.Ink2);
-                x += 92f;
-            }
+            Hint(parent, "SelectHint", x, y, "Select", "UI/Submit");
+            Hint(parent, "BackHint", x + 150f, y, "Back", "UI/Cancel");
+            Hint(parent, "MoveHint", x + 300f, y, "Move", keyboard: "\u2191\u2193", padControl: "leftStick");
         }
 
-        internal static float Cap(Transform parent, float x, float y, string key)
+        /// <summary>
+        /// A live key hint at x, y: the key for the player's device, read from action (Map/Action), or the fixed keyboard
+        /// text and pad control given. Its cap widens to fit.
+        /// </summary>
+        internal static UiKeyHint Hint(Transform parent, string name, float x, float y, string label, string action = "",
+            string keyboard = "", string padControl = "", float width = 160f)
         {
-            float w = key.Length > 2 ? 56f : 36f;
-            Box(parent, "Cap" + key, x, y, w, 32f, Tokens.Navy, UiKitArt.Outline1);
-            Label(parent, "Key" + key, x, y, w, 32f, key, Tokens.Caption, Tokens.Navy, TextAlignmentOptions.Center).characterSpacing = 0f;
-            return x + w;
+            var hint = Place<UiKeyHint>(UiKitComponents.KeyHint, parent, name, x, y);
+            ((RectTransform)hint.transform).sizeDelta = new Vector2(width, 40f);
+            SetText(hint, "Label", label);
+            var labelRect = (RectTransform)hint.transform.Find("Label");
+            labelRect.sizeDelta = new Vector2(Mathf.Max(40f, width - 58f), labelRect.sizeDelta.y);
+            string usage = action == "UI/Cancel" ? "*/{Cancel}" : action == "UI/Submit" ? "*/{Submit}" : string.Empty;
+            SetText(hint, "Key", keyboard.Length > 0 ? keyboard : UiGlyphs.Name(usage, UiDeviceKind.KeyboardMouse));
+            SetString(hint, "_action", action);
+            SetString(hint, "_keyboardText", keyboard);
+            SetString(hint, "_padControl", padControl);
+            return hint;
         }
 
         /// <summary>
@@ -282,9 +288,9 @@ namespace CloseTheDeal.Editor.UI
 
         /// <summary>
         /// The window frame: sky above the sill, divided into panes by paper mullions with depth (a lit face, a silver
-        /// reveal on the shadow side), a transom with its shadow, a sill with a black edge, a halftone screen and the
-        /// trace brackets on the rival tower. The sky is drawn (Kit_TitleSky) until the title lane's live backdrop goes
-        /// into BackdropSlot, which sits behind the frame. The window rolls down as the title opens.
+        /// reveal on the shadow side), a transom with its shadow and a sill with a black edge. The sky is lane 8's live
+        /// one in BackdropSlot, behind the frame; a flat gradient stands in where it can't run. The window rolls down
+        /// as the title opens.
         /// </summary>
         static RectTransform SkyWindow(RectTransform root, out RectTransform slot, out GameObject staticSky)
         {
@@ -298,16 +304,10 @@ namespace CloseTheDeal.Editor.UI
             sky.gameObject.AddComponent<CanvasGroup>();
 
             slot = Fill(sky, "BackdropSlot");
+            // Only one sky: lane 8's live one (its own traced clouds and the towers). This flat gradient shows only
+            // where the live sky can't run (no sky material in the scene).
             RectTransform fallback = Fill(sky, "StaticSky");
             Img(fallback, UiKitArt.Sky, Color.white);
-            RectTransform drawn = DesignFrame(fallback, "Drawn");
-            drawn.anchorMin = new Vector2(0.5f, 0f);
-            drawn.anchorMax = new Vector2(0.5f, 0f);
-            drawn.pivot = new Vector2(0.5f, 0f);
-            drawn.sizeDelta = new Vector2(1920f, SillY);
-            Img(drawn, UiKitArt.TitleSky, Color.white);
-            Img(At(drawn, "Halftone", 150f, 0f, 460f, 150f), UiKitArt.Dots, UiTokens.WithAlpha(t.Paper, 0.55f), Image.Type.Tiled);
-            TowerTrace(drawn);
             staticSky = fallback.gameObject;
 
             RectTransform frame = Node(sky, "Frame");
@@ -372,17 +372,6 @@ namespace CloseTheDeal.Editor.UI
             Img(lit, UiKitArt.White, Tokens.Hair);
         }
 
-        /// <summary>Trace brackets and tracking squares on the rival tower, the guide's survey marks.</summary>
-        static void TowerTrace(RectTransform drawn)
-        {
-            UiTokens t = Tokens;
-            RectTransform trace = At(drawn, "TowerTrace", 1470f, 360f, 248f, 250f);
-            UiKitComponents.Brackets(trace, 0f, 18f, t.Navy);
-            float[] squares = { 1480, 370, 20, 1640, 366, 24, 1700, 440, 18, 1470, 500, 16, 1690, 570, 22, 1560, 600, 18 };
-            for (int i = 0; i < squares.Length; i += 3)
-                Box(drawn, "TraceSquare", squares[i], squares[i + 1], squares[i + 2], squares[i + 2], UiTokens.WithAlpha(t.Navy, 0.75f), UiKitArt.Outline1);
-        }
-
         static void CropMarks(Transform parent)
         {
             RectTransform left = At(parent, "CropLeft", 48f, 1004f, 28f, 28f);
@@ -416,9 +405,7 @@ namespace CloseTheDeal.Editor.UI
 
             RectTransform actions = RevealLine(frame, "Actions");
             reveal.Add(actions.GetComponent<CanvasGroup>());
-            var hint = Place<RectTransform>(UiKitComponents.KeyHint, actions, "EscHint", 1200f, 876f);
-            SetText(hint, "Key", "Esc");
-            SetText(hint, "Label", "Stay");
+            RectTransform hint = (RectTransform)Hint(actions, "EscHint", 1200f, 876f, "Stay", "UI/Cancel").transform;
             var confirm = Place<UiButton>(UiKitComponents.Secondary, actions, "Confirm", 1328f, 868f);
             ((RectTransform)confirm.transform).sizeDelta = new Vector2(188f, t.SecondaryHeight);
             SetLabel(confirm, "Quit to desktop");

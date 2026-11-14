@@ -61,11 +61,14 @@ namespace CloseTheDeal.UI
 
         public RectTransform BackdropSlot => _backdropSlot;
 
-        /// <summary>The title lane calls this with true once its live sky is in BackdropSlot.</summary>
+        /// <summary>
+        /// The title lane calls this with true once its live sky is in BackdropSlot. A scene with no sky material has
+        /// nothing for the live view to draw, so the flat fallback stays over it there.
+        /// </summary>
         public void SetLiveBackdrop(bool live)
         {
             if (_staticSky != null)
-                _staticSky.SetActive(!live);
+                _staticSky.SetActive(!(live && RenderSettings.skybox != null));
         }
 
         /// <summary>Given by the UI root before the title first shows: the game menu whose lobby this screen drives.</summary>
