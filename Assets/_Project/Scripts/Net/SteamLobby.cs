@@ -52,7 +52,7 @@ namespace CloseTheDeal.Net
 
         /// <summary>Hosting or joined, by either route. False until Start has found the NetworkManager,
         /// because UI can ask during its own OnEnable, which Unity runs before any Start.</summary>
-        public bool IsActive => InLobby || (_net != null && (_net.ServerManager.Started || _net.ClientManager.Started));
+        public bool IsActive => _creatingLobby || InLobby || (_net != null && (_net.ServerManager.Started || _net.ClientManager.Started));
 
         public bool IsHosting => _net != null && _net.ServerManager.Started;
 
@@ -98,6 +98,12 @@ namespace CloseTheDeal.Net
         bool _joined;
         bool _connected;
         bool _leaving;
+
+        /// <summary>True between asking Steam for a lobby and its answer, so a second Host press can't ask again.</summary>
+        bool _creatingLobby;
+
+        /// <summary>A lobby Steam created after the player had already left; its enter callback is ignored.</summary>
+        CSteamID _abandonedLobby = CSteamID.Nil;
         bool _hostClosedLink;
         Callback<LobbyCreated_t> _lobbyCreated;
         Callback<LobbyEnter_t> _lobbyEntered;
@@ -193,6 +199,8 @@ namespace CloseTheDeal.Net
             }
 
             Status("Creating a Steam lobby...");
+            _creatingLobby = true;
+            OnChanged?.Invoke();
             SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, _maxPlayers);
         }
 
@@ -221,6 +229,7 @@ namespace CloseTheDeal.Net
                 return;
 
             _leaving = true;
+            _creatingLobby = false;
             _connectDeadline = -1f;
             _joined = false;
             _connected = false;
@@ -269,6 +278,10 @@ namespace CloseTheDeal.Net
         void StartHosting()
         {
             _multipass.StartConnection(true, _transportIndex);
+            // The transport applies the client cap serialized on its component when the server
+            // starts (FishySteamworks ships 4), so set it afterwards from the lobby size.
+            // FishySteamworks keeps the host's own client off its count; Tugboat counts it.
+            _multipass.SetMaximumClients(LocalMode ? _maxPlayers : _maxPlayers - 1, _transportIndex);
             _net.ClientManager.StartConnection();
             OnChanged?.Invoke();
         }
@@ -288,9 +301,29 @@ namespace CloseTheDeal.Net
 
         void OnLobbyCreated(LobbyCreated_t cb)
         {
+            // False when the player left while Steam was still creating it: leave that lobby.
+            bool wanted = _creatingLobby;
+            _creatingLobby = false;
             if (cb.m_eResult != EResult.k_EResultOK)
             {
-                Status($"Steam couldn't create a lobby ({cb.m_eResult}). Check Steam is online and try again.");
+                if (wanted)
+                    Status($"Steam couldn't create a lobby ({cb.m_eResult}). Check Steam is online and try again.");
+                OnChanged?.Invoke();
+                return;
+            }
+
+            if (!wanted)
+            {
+                _abandonedLobby = new CSteamID(cb.m_ulSteamIDLobby);
+                SteamMatchmaking.LeaveLobby(_abandonedLobby);
+                // Steam may have delivered this lobby's enter callback first.
+                if (LobbyId == _abandonedLobby)
+                {
+                    LobbyId = CSteamID.Nil;
+                    _hostId = CSteamID.Nil;
+                    SteamFriends.ClearRichPresence();
+                    OnChanged?.Invoke();
+                }
                 return;
             }
 
@@ -304,6 +337,9 @@ namespace CloseTheDeal.Net
 
         void OnLobbyEntered(LobbyEnter_t cb)
         {
+            if (cb.m_ulSteamIDLobby == _abandonedLobby.m_SteamID)
+                return;
+
             var response = (EChatRoomEnterResponse)cb.m_EChatRoomEnterResponse;
             if (response != EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
             {

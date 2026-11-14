@@ -32,6 +32,14 @@ namespace CloseTheDeal.MatchMode
         /// <summary>The beacon's column is this wide, metres.</summary>
         const float BeaconWidth = 0.6f;
 
+        /// <summary>Picked up or let go, the case squashes a little and settles: how much bigger it starts, and how long it takes, seconds.</summary>
+        const float PopScale = 0.18f;
+
+        /// <summary>The rival-held beacon breathes this many times a second, down to this fraction of full strength.</summary>
+        const float RivalPulseRate = 1.5f;
+        const float RivalPulseLow = 0.35f;
+        const float PopSeconds = 0.18f;
+
         /// <summary>Over the last this-fraction of the beacon range it fades out rather than popping.</summary>
         const float BeaconFadeBand = 0.25f;
 
@@ -44,6 +52,7 @@ namespace CloseTheDeal.MatchMode
         MaterialPropertyBlock _block;
         Vector3 _centreLocal;
 
+        float _popStarted = -1f;
         Renderer _beacon;
         MaterialPropertyBlock _beaconBlock;
         float _shownFade = -1f;
@@ -129,6 +138,9 @@ namespace CloseTheDeal.MatchMode
         {
             BriefcaseState previous = _state;
             _state = status.State;
+            bool handsChanged = (previous == BriefcaseState.Carried) != (status.State == BriefcaseState.Carried);
+            if (handsChanged && status.State != BriefcaseState.Returning)
+                _popStarted = Time.unscaledTime;
             _collider.enabled = status.State == BriefcaseState.Dropped;
             _visual.gameObject.SetActive(status.State != BriefcaseState.Returning);
             _tintFirm = status.State == BriefcaseState.Carried ? status.CarrierFirm : MatchDirector.NoFirm;
@@ -164,6 +176,8 @@ namespace CloseTheDeal.MatchMode
         {
             if (_state == BriefcaseState.Carried)
                 FollowCarrier();
+            if (_popStarted >= 0f)
+                PopStep();
             UpdateBeacon();
         }
 
@@ -189,6 +203,19 @@ namespace CloseTheDeal.MatchMode
             }
 
             _visual.SetPositionAndRotation(position, rotation);
+        }
+
+        /// <summary>A quick squash and settle on the visual when it changes hands: wide and short first, then back to its own shape.</summary>
+        void PopStep()
+        {
+            float t = Mathf.Clamp01((Time.unscaledTime - _popStarted) / PopSeconds);
+            float amount = PopScale * Mathf.Sin(t * Mathf.PI) * (1f - t * 0.5f);
+            _visual.localScale = new Vector3(1f + amount, 1f - amount * 0.6f, 1f + amount);
+            if (t < 1f)
+                return;
+
+            _visual.localScale = Vector3.one;
+            _popStarted = -1f;
         }
 
         // ---- Beacon (every machine, local only) ------------------------------------------------
@@ -234,7 +261,7 @@ namespace CloseTheDeal.MatchMode
                 return;
 
             Vector3 foot = _visual.position;
-            float fade = BeaconFade(match, view.transform.position, foot);
+            float fade = BeaconFade(match, view.transform.position, foot) * RivalPulse();
             _beacon.enabled = fade > 0f;
             if (!_beacon.enabled)
                 return;
@@ -254,6 +281,20 @@ namespace CloseTheDeal.MatchMode
             _beacon.GetPropertyBlock(_beaconBlock);
             _beaconBlock.SetFloat(Fade, fade);
             _beacon.SetPropertyBlock(_beaconBlock);
+        }
+
+        /// <summary>
+        /// A second cue besides colour, for players who can't tell cyan from amber: while the
+        /// rival firm holds the case its beacon breathes; your own firm's and a loose one stay steady.
+        /// </summary>
+        float RivalPulse()
+        {
+            FirmMember local = FirmMember.Local;
+            if (_tintFirm == MatchDirector.NoFirm || local == null || local.Firm == _tintFirm)
+                return 1f;
+
+            float wave = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * RivalPulseRate * 2f * Mathf.PI);
+            return Mathf.Lerp(RivalPulseLow, 1f, wave);
         }
 
         /// <summary>1 near, fading to 0 toward the profile's range; 0 while away or for the carrier themself.</summary>

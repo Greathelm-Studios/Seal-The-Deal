@@ -100,6 +100,7 @@ GDD mismatches (the GDD is the authority on design; your 2026-11-12 words win fo
 - **A late joiner is not shown news from before they arrived** (no "Floor 4 opened" on join); they read the current state. Seen on a late joiner.
 - **Shots pass through shut gates** (`Let Shots Through` on `MatchGates`, on): a weapon-mask ray passes the panel, bodies are still held. Not checked with a client pressing fire.
 - **Doorways:** the middle reception bay lets players out to the plaza and back over the sill on physics; a glazed bay holds. The kit glass's diagonal streaks are strong now that every window has glass: a look call for the glass owner.
+- **Every match input answers (2026-11-13):** a shut gate pulses brighter the moment you walk into it and plays the refusal sound; the case squashes and settles when it changes hands; the countdown, a floor opening, the case taken or dropped, a checkpoint, the cap warning and the result each play their sound from lane 9's set (`MatchSounds`). Sounds were seen starting in a headless run (the sound player's focus check bypassed for the test); nobody has heard them. After merge, run **Add GameMode To Open Scene** on `Lane_Integration.unity` to give its Match object `MatchSounds`.
 - The UI contract a HUD reads (state, events, types, when they fire, sound mapping) is in [MATCH.md](systems/MATCH.md). The current greybox `MatchHud` / `MatchMenuPanel` are replaced once the UI foundation lands.
 
 ## Gates or locked doors (your call)

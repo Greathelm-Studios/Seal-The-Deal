@@ -232,6 +232,7 @@ namespace CloseTheDeal.Tower
                     // by building order) must see only the new buildings, as a fresh client does.
                     _buildings[team].SetActive(false);
                     _buildings[team].transform.SetParent(null, false);
+                    DestroyMergedMeshes(_buildings[team]);
                     Destroy(_buildings[team]);
                 }
                 _buildings[team] = null;
@@ -240,6 +241,27 @@ namespace CloseTheDeal.Tower
 
             _built = false;
         }
+
+        /// <summary>
+        /// The meshes StaticBatchingUtility.Combine made for a building belong to no asset, so
+        /// destroying the building leaves them behind; without this every rematch would leak a
+        /// tower's worth of mesh.
+        /// </summary>
+        void DestroyMergedMeshes(GameObject building)
+        {
+            building.GetComponentsInChildren(true, _meshes);
+            foreach (MeshFilter filter in _meshes)
+            {
+                Mesh mesh = filter.sharedMesh;
+                if (mesh != null && mesh.name.StartsWith("Combined Mesh") && _freed.Add(mesh))
+                    Destroy(mesh);
+            }
+
+            _meshes.Clear();
+            _freed.Clear();
+        }
+
+        readonly HashSet<Mesh> _freed = new();
 
         static uint PickSeed()
         {

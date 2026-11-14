@@ -61,6 +61,9 @@ namespace CloseTheDeal.Editor.Lanes
         [MenuItem("Close the Deal/Lanes/Set Up GameMode")]
         public static void SetUp()
         {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+
             MatchProfile profile = EnsureAssets();
             EnsurePlayerPrefab();
             TowerProfile laneTower = EnsureLaneTower();
@@ -452,6 +455,10 @@ namespace CloseTheDeal.Editor.Lanes
                 gates = match.gameObject.AddComponent<MatchGates>();
             FillIfEmpty(gates, "_gateMaterial", EnsureGateMaterial());
             FillIfEmpty(match, "_gates", gates);
+
+            // The match's sounds, from the shared UI sound set.
+            if (match.GetComponent<MatchSounds>() == null)
+                match.gameObject.AddComponent<MatchSounds>();
 
             GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
             if (menu == null)

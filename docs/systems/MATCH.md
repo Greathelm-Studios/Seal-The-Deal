@@ -10,7 +10,7 @@ Everyone waits in their firm's reception until the host presses **Start the matc
 
 The briefcase starts on the **plaza**, the street between the two towers, the same distance from both receptions. Step over your reception's window sill to reach it.
 
-A soft column of light rises from the briefcase and shows through floors and walls within 30 m, so you can find it from anywhere nearby. Press **F** near it to pick it up: anyone can. Everyone sees it hanging at your hip; you see it low on the right of your view. It shows in **cyan** while your firm holds it, **amber `#FF9E1B`** while the rival does, and leather brown while it lies loose, on each player's own screen. Press **G** to drop it ahead of you for a teammate.
+A soft column of light rises from the briefcase and shows through floors and walls within 30 m, so you can find it from anywhere nearby. While the rival firm holds it, the column breathes (a cue that doesn't rely on telling cyan from amber); your own firm's stays steady. Press **F** near it to pick it up: anyone can. Everyone sees it hanging at your hip; you see it low on the right of your view. It shows in **cyan** while your firm holds it, **amber `#FF9E1B`** while the rival does, and leather brown while it lies loose, on each player's own screen. Press **G** to drop it ahead of you for a teammate.
 
 The carrier drops it if they are knocked down, fall out of the building, or leave the game. A loose briefcase can be taken by anyone, so the rival can steal it.
 
@@ -92,7 +92,7 @@ Everything below is on `MatchDirector.Instance` (namespace `CloseTheDeal.MatchMo
 
 | Event | Args | Fires when |
 |---|---|---|
-| `OnStarted` / `OnClosed` | | The match becomes live / goes away on this machine (join, leave, host gone). |
+| `OnStarted` / `OnClosed` | | The match becomes live / goes away on this machine (join, leave, host gone). A joining client raises `OnStarted` on its first tick after the current values arrive, and is not shown phase, result or briefcase changes that happened before it joined. |
 | `OnPhaseChanged` | `MatchPhase previous, MatchPhase next` | Any phase change. |
 | `OnCountdownChanged` | `int secondsLeft` | Each whole second of the countdown (5, 4, … 0). |
 | `OnClockChanged` | `int secondsLeft` | Each whole second of the match clock. |
@@ -109,6 +109,7 @@ Everything below is on `MatchDirector.Instance` (namespace `CloseTheDeal.MatchMo
 | `FirmMember.OnNotice` | `MatchNotice` | Local player only: `RoofNeedsBriefcase`, `FellOut`, `BriefcaseKnockedLoose`, `FirstGateRefusal` (first shut gate of the match: explain the rule), `GateRefused` (later ones: a short line). |
 | `FirmMember.OnPromptChanged` | `MatchPrompt` | Local player only: `PickUpBriefcase` / `DropBriefcase` / `None`, only on change. |
 | `FirmMember.OnLocalChanged`, `OnRosterChanged`, `OnFellOut` | | The local player or the roster changed; someone fell out (for sound). |
+| `MatchGates.OnGateTouched` (static) | `int floor` | Local player only, the moment their body hits a shut gate, before the host's refusal arrives; the gate itself pulses brighter for 0.3 s. |
 
 Sounds (lane 5/9's frozen `UiSoundEvent` list): `OnCountdownChanged` → `CountdownTick`, Running → `CountdownGo`, `OnFloorOpened` → `FloorOpened`, `OnBriefcasePickedUp` / `OnBriefcaseStolen` → `BriefcaseTaken`, `OnBriefcaseDropped` → `BriefcaseDropped`, `GateRefused` / `FirstGateRefusal` / `RoofNeedsBriefcase` → `Error`, `OnCapWarning` and checkpoint lines → `Notification`, `OnMatchEnded` → `MatchWon` or `MatchLost` by the local firm.
 
@@ -141,6 +142,7 @@ Under [Assets/_Project/Scripts/Match/](../../Assets/_Project/Scripts/Match/), na
 - `MatchReferee.cs`: host-only, once per tick after physics: falls (in every phase), knocks, where the briefcase is, checkpoints, the roof and the clock.
 - `MatchRules.cs`: the clock rule as a pure function.
 - `MatchArena.cs`: floor, building and neutral-ground maths from the built towers; no trigger volumes.
+- `MatchSounds.cs`: on the Match object; plays the sound table above through `UiSoundPlayer` on each player's own machine (refusals at most one per 0.6 s).
 - `MatchGates.cs`: on the Match object; builds a gate at each stair exit above the ground floor in both towers, opens them up to the open floor and lets the carrier's body through (`Physics.IgnoreCollision`).
 - `MatchCrossings.cs`: on the Match object; builds the plaza and a skybridge on each checkpoint floor locally after every tower build.
 - `FirmMember.cs`: on `Player.prefab`; firm, slot, the two keys, host teleport, notices.
@@ -166,6 +168,6 @@ Outside the folder: `Tower/TeamSpawner.cs` (balanced teams, a spawn hook and ove
 - **Getting on the plaza or a bridge means climbing the 0.6 m sill** (a mantle, 0.4–1.6 m in the movement profile).
 - **Blasts don't move the briefcase.** `Knockback.Explode` only throws `Prop`s; wire `Briefcase.Throw` in when weapons land.
 - **The gap counts as outside** except the plaza and the bridges. A zipline crossing over 1.2 s would send its rider back.
-- **A briefcase wedged unreachably inside a building** has no recovery; only leaving the buildings sends it back.
+- **A briefcase wedged unreachably inside a building** has no recovery, except one lodged on a floor above the open floor (a knocked-loose case on a shut slab), which is sent back.
 - **Outside `Lane_Integration.unity` the host starts the match from the menu.** In that scene the lobby desk starts it through `HostStartRun` ([INTEGRATION.md](INTEGRATION.md)).
 - The client's player is put back by the host's correction, so a teleport shows as one corrected tick on the owner's screen.
