@@ -282,6 +282,35 @@ def b_kill(b):  # two rising ticks, a ring, then a tiny air snap (~200 ms; plays
     air(b, 0.06, 0.03, 0.2, 4000, 9000, decay=0.007, seed=14)
 
 
+def b_title(b):    # the title appears: a soft chord blooms upward, C E G then D6, with a breath of air
+    for n, t, a in (("C5", 0.00, 0.6), ("E5", 0.08, 0.6), ("G5", 0.16, 0.65), ("D6", 0.30, 0.55)):
+        note(b, t, hz(n), 1.05 - t, a, 0.32, "sine", glass=0.18, attack=0.03)
+    note(b, 0.0, hz("C4"), 0.9, 0.35, 0.3, "sine", attack=0.05)
+    swell(b, 0.0, 0.6, 0.25, 1500, 4000, 3000, 9000, seed=71)
+
+
+def b_tr_cloud(b):   # cloud wipe: a soft swish across, a faint high tone riding it
+    swell(b, 0.0, 0.28, 0.9, 900, 3500, 2200, 8000, seed=72)
+    note(b, 0.06, hz("A5"), 0.2, 0.12, 0.08, "sine", glide=(hz("G5"), hz("A5")))
+
+
+def b_tr_pane(b):    # pane slide: three glass panes shut in quick taps, then slide away
+    for k, n in enumerate(("E6", "D6", "C6")):
+        note(b, k * 0.035, hz(n), 0.06, 0.6, 0.014, "tri", glass=0.45, attack=0.0008)
+    swell(b, 0.1, 0.16, 0.5, 2000, 6000, 1200, 4000, seed=73)
+
+
+def b_tr_zoom(b):    # frame zoom = the game starting: a rising whoosh that lands on a bright C chord
+    swell(b, 0.0, 0.6, 1.0, 300, 1500, 2500, 9000, seed=74)
+    note(b, 0.0, hz("C4"), 0.55, 0.25, 0.4, "sine", glide=(hz("C4") * 0.75, hz("C4")), attack=0.2)
+    for n, t in (("C5", 0.52), ("G5", 0.55), ("C6", 0.58), ("E6", 0.62)):
+        note(b, t, hz(n), 0.85 - t, 0.75, 0.12, "sine", glass=0.3, attack=0.004)
+
+
+def b_tr_fade(b):    # reduced-motion fade: a small puff of air, nothing more
+    swell(b, 0.0, 0.12, 0.6, 1500, 5000, 2500, 7000, seed=75)
+
+
 EVENTS = {
     # name: length s, class, relation, builder
     "HoverMove": E(0.10, "ui", "G5; run steps up C D E G A", b_hover),
@@ -315,6 +344,11 @@ EVENTS = {
     "HitMarker": E(0.055, "combat", "G7 tick (3.1 kHz), very short (full auto: 10 per second)", b_hit),
     "HitMarkerHead": E(0.055, "combat", "C8 tick (4.2 kHz) over G7: brighter, precision hit", b_hit_head),
     "KillConfirm": E(0.20, "combat", "E7 to B7 ticks + B6 ring (2.6 to 3.9 kHz)", b_kill),
+    "TitleAppear": E(1.10, "sting", "C5 E5 G5 bloom to D6 over C4, airy", b_title),
+    "TransitionCloudWipe": E(0.30, "ui", "soft swish across + A5", b_tr_cloud),
+    "TransitionPaneSlide": E(0.28, "ui", "three glass taps E6 D6 C6 + slide", b_tr_pane),
+    "TransitionFrameZoom": E(0.86, "sting", "rising whoosh landing on C5 G5 C6 E6: the game starts", b_tr_zoom),
+    "TransitionFade": E(0.13, "ui", "small puff of air (reduced motion)", b_tr_fade),
 }
 PEAK = {"ui": 0.70, "sting": 0.80, "combat": 0.90}      # peak ceiling per class (linear full scale)
 LOUD = {"ui": -14.0, "sting": -11.0, "combat": -11.0}    # target perceived level per class, dB (A-weighted, loudest 46 ms)
@@ -677,6 +711,76 @@ def write_wav(path, samples):
         w.writeframes(b"".join(struct.pack("<h", int(round(x * 32767))) for x in samples))
 
 
+# --------------------------------------------------------------------------------------------- ambient bed
+# One quiet bed for the title and the lobby (Music bus, ships at level 0: the owner raises it). Seamless: every tone is
+# snapped to a whole number of cycles over the loop, every slow movement's period divides the loop, the bell tails
+# wrap round the end, and only the noise layer is crossfaded. Rendered only with --bed or when the file is missing
+# (it takes about a minute in pure Python).
+BED_SECONDS = 64
+BED_OUT = os.path.normpath(os.path.join(OUT, "..", "Ambience", "Ambience_MenuBed.wav"))
+
+
+def render_bed():
+    n = BED_SECONDS * SR
+    out = [0.0] * n
+    L = float(BED_SECONDS)
+
+    def snap(f):       # a whole number of cycles in the loop: no step at the seam
+        return round(f * L) / L
+
+    chords = [("C4", "G4", "E5", "D5"), ("A3", "E4", "C5", "G5"), ("G3", "D4", "A4", "E5"), ("C4", "E4", "G4", "A4")]
+    section = L / len(chords)
+    for ci, chord in enumerate(chords):
+        centre = (ci + 0.5) * section
+        for vi, name in enumerate(chord):
+            f = snap(hz(name))
+            f2 = snap(f * 2.0)
+            amp = 0.16 if vi == 0 else 0.10
+            for i in range(n):
+                t = i / SR
+                d = (t - centre + L / 2) % L - L / 2                       # cyclic distance from the chord's centre
+                if abs(d) > section:
+                    continue
+                w = 0.5 + 0.5 * math.cos(math.pi * d / section)           # raised cosine, overlaps its neighbours
+                trem = 1.0 + 0.06 * math.sin(2 * math.pi * t / 8.0 + vi)   # 8 s divides the loop
+                out[i] += amp * w * trem * (math.sin(2 * math.pi * f * t) + 0.25 * math.sin(2 * math.pi * f2 * t))
+    # sparse glass bells, pentatonic, high and soft; tails wrap round the loop end
+    rng = random.Random(81)
+    bells = ["C6", "D6", "E6", "G6", "A6"]
+    t = 1.5
+    while t < L:
+        f = hz(bells[rng.randrange(len(bells))])
+        m = int(2.5 * SR)
+        s0 = int(t * SR)
+        for k in range(m):
+            tt = k / SR
+            env = math.exp(-tt / 0.6) * min(1.0, tt / 0.004)
+            v = math.sin(2 * math.pi * f * tt) + 0.3 * math.sin(2 * math.pi * f * 2.76 * tt) * math.exp(-tt / 0.15)
+            out[(s0 + k) % n] += 0.05 * env * v
+        t += rng.uniform(3.0, 6.5)
+    # air: band-limited noise, slow swell (period 16 s), crossfaded seam
+    x = int(2.0 * SR)
+    rng2 = Rng(82)
+    a = b = 0.0
+    ca, cb = 1 - math.exp(-2 * math.pi * 6000 / SR), 1 - math.exp(-2 * math.pi * 1200 / SR)
+    raw = [0.0] * (n + x)
+    for i in range(n + x):
+        v = rng2.noise()
+        a += ca * (v - a)
+        b += cb * (v - b)
+        raw[i] = (a - b) * (0.5 + 0.5 * math.sin(2 * math.pi * (i % n) / SR / 16.0)) * 0.06
+    for i in range(n):
+        if i < x:
+            k = i / x
+            out[i] += raw[i] * math.sqrt(k) + raw[n + i] * math.sqrt(1 - k)
+        else:
+            out[i] += raw[i]
+    m = sum(out) / n
+    out = [v - m for v in out]
+    pk = max(abs(v) for v in out)
+    return [v * (0.5 / pk) for v in out]
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     print(f"{'event':18s} {'len ms':>7s} {'peak dBFS':>10s} {'rms dBFS':>9s}  class  relation")
@@ -723,6 +827,16 @@ def main():
         bad |= not ok
         print(f"{name:18s} {len(smp) / SR * 1000:7.0f} {20 * math.log10(pk):10.1f} {20 * math.log10(rms):9.1f}" + ("" if ok else "  << CHECK"))
     print(f"{len(weapons)} files in {os.path.relpath(WEAPON_OUT)}")
+    if "--bed" in sys.argv or not os.path.exists(BED_OUT):
+        os.makedirs(os.path.dirname(BED_OUT), exist_ok=True)
+        bed = render_bed()
+        write_wav(BED_OUT, bed)
+        seam = abs(bed[0] - bed[-1])
+        typical = max(abs(bed[i + 1] - bed[i]) for i in list(range(0, 2000)) + list(range(len(bed) - 2001, len(bed) - 1)))
+        rms = math.sqrt(sum(v * v for v in bed) / len(bed))
+        print(f"ambient bed: {BED_SECONDS} s, peak -6.0 dBFS, rms {20 * math.log10(rms):.1f} dBFS, seam step {seam:.4f} vs largest step near it {typical:.4f}"
+              + ("" if seam <= typical else "  << CHECK"))
+        bad |= seam > typical
     print("audition page:", os.path.relpath(write_audition()))
     if "--analyse" in sys.argv:
         analysis_report()
@@ -774,37 +888,115 @@ def analysis_report():
     return warn
 
 
+# Where each sound plays in the game, for the audition page: (heading, [(clip prefix, name, what the player did)]).
+PLACES = [
+    ("Title and menus", [("UI", "TitleAppear", "the title appears (once, not when a dialog closes)"),
+                         ("UI", "HoverMove", "mouse over a button (a run climbs C D E G A)"),
+                         ("UI", "Focus", "arrow keys or pad move focus"),
+                         ("UI", "Select", "button pressed down"), ("UI", "Confirm", "button released: it does its thing"),
+                         ("UI", "Back", "Back, Esc, Stay in a dialog"), ("UI", "Error", "a greyed-out control pressed"),
+                         ("UI", "PanelOpen", "a dialog opens (Quit to desktop?)"), ("UI", "PanelClose", "a dialog closes"),
+                         ("UI", "Transition", "a screen opens over another (Settings)"),
+                         ("UI", "Notification", "Settings > Audio test button; match warnings")]),
+    ("Settings", [("UI", "TabChange", "Q / E or a tab clicked"), ("UI", "ToggleOn", "a toggle turned on"),
+                  ("UI", "ToggleOff", "a toggle turned off"), ("UI", "SliderTick", "a slider or stepper step (pitch follows the value)"),
+                  ("UI", "KeyBindListen", "Controls: a key cell waits for a key"), ("UI", "KeyBindSet", "Controls: the new key is saved")]),
+    ("Screen transitions", [("UI", "TransitionCloudWipe", "cloud wipe: an ordinary screen change"),
+                            ("UI", "TransitionPaneSlide", "pane slide: back and forward"),
+                            ("UI", "TransitionFrameZoom", "frame zoom: the game starts"),
+                            ("UI", "TransitionFade", "the plain fade used when Reduce motion is on")]),
+    ("Lobby reception", [("UI", "LobbyReady", "you are ready"), ("UI", "LobbyUnready", "you are not ready")]),
+    ("Match HUD", [("UI", "CountdownTick", "3, 2, 1"), ("UI", "CountdownGo", "go"), ("UI", "FloorOpened", "a floor opens"),
+                   ("UI", "BriefcaseTaken", "the briefcase is taken"), ("UI", "BriefcaseDropped", "the briefcase is dropped"),
+                   ("UI", "HandsFull", "can't pick up: hands full"), ("UI", "MatchWon", "your firm wins"), ("UI", "MatchLost", "your firm loses")]),
+    ("Combat feedback", [("UI", "HitMarker", "your shot hit"), ("UI", "HitMarkerHead", "your shot hit the head"),
+                         ("UI", "KillConfirm", "your shot downed them")]),
+    ("Not played anywhere yet", [("UI", "DropdownOpen", "the kit has no dropdown control"),
+                                 ("UI", "DropdownClose", "the kit has no dropdown control")]),
+]
+
+# "Walk through the menu": a player's first minute, timed like play: (seconds, prefix, name, semitones, note).
+WALK = [(0.0, "UI", "TitleAppear", 0, "The title appears; the ambient bed fades in under it"),
+        (1.7, "UI", "HoverMove", 0, "Mouse over Host game"), (1.95, "UI", "HoverMove", 2, "over the next button"),
+        (2.2, "UI", "HoverMove", 4, "over Settings"),
+        (2.9, "UI", "Focus", 0, "Arrow down"), (3.3, "UI", "Focus", 0, "Arrow down"),
+        (3.9, "UI", "Select", 0, "Press Settings"), (4.05, "UI", "Confirm", 0, "Release"),
+        (4.05, "UI", "Transition", 0, "Settings opens"),
+        (5.1, "UI", "TabChange", 0, "E: next tab")] + \
+       [(5.9 + k * 0.09, "UI", "SliderTick", -5 + 17 * (0.5 + 0.08 * k), "Drag a volume slider up" if k == 0 else "")
+        for k in range(6)] + \
+       [(7.0, "UI", "ToggleOff", 0, "Turn a toggle off"), (7.6, "UI", "ToggleOn", 0, "and on again"),
+        (8.4, "UI", "TabChange", 0, "Q: Controls"), (9.1, "UI", "Select", 0, "Press the Jump key cell"),
+        (9.25, "UI", "KeyBindListen", 0, "It waits for a key"), (10.4, "UI", "Error", 0, "G is already used: the clash"),
+        (10.4, "UI", "PanelOpen", 0, "The clash dialog opens"), (11.5, "UI", "KeyBindSet", 0, "Assign: the key is saved"),
+        (12.5, "UI", "Back", 0, "Esc: back to the title"),
+        (13.4, "UI", "Focus", 0, "Arrow up to Host game"), (13.9, "UI", "Select", 0, "Press Host game"),
+        (14.05, "UI", "Confirm", 0, "Release"),
+        (14.1, "UI", "TransitionFrameZoom", 0, "The game starts: the frame zooms in and the bed fades out"),
+        (16.0, "UI", "CountdownTick", 0, "3"), (17.0, "UI", "CountdownTick", 0, "2"), (18.0, "UI", "CountdownTick", 0, "1"),
+        (19.0, "UI", "CountdownGo", 0, "Go")]
+
+
 def write_audition():
-    """ArtSource/UI/review/10_sound_audition.html: every clip with a play button, for judging by ear.
-    Opens straight from disk; the clips are referenced by relative path, nothing is embedded."""
+    """ArtSource/UI/review/10_sound_audition.html: every clip grouped by where it plays, a "walk through the menu" that
+    plays them in the order and timing a player meets them, the ambient bed, and the item and weapon sounds.
+    Clips are <audio> elements on relative paths, so the page also works opened straight from disk."""
     page = os.path.normpath(os.path.join(HERE, "..", "..", "UI", "review", "10_sound_audition.html"))
     os.makedirs(os.path.dirname(page), exist_ok=True)
+    folder = {"UI": OUT, "Item": ITEM_OUT, "Weapon": WEAPON_OUT}
 
-    def rows(folder, prefix, table, describe):
-        out = ""
-        for name in table:
-            src = os.path.relpath(os.path.join(folder, f"{prefix}_{name}.wav"), os.path.dirname(page)).replace(os.sep, "/")
-            out += (f'<tr><td><button onclick="play(this)" data-src="{src}">Play</button></td>'
-                    f"<td><b>{name}</b></td><td>{describe(name)}</td></tr>\n")
-        return out
-    item_desc = dict({k: v[2] for k, v in ITEMS.items()}, VentLoop="gas hiss, seamless loop (plays twice here to hear the seam)")
-    body = "<h2>UI (31)</h2><table>" + rows(OUT, "UI", EVENTS, lambda n: f"{EVENTS[n]['length'] * 1000:.0f} ms · {EVENTS[n]['rel']}") + "</table>"
-    body += "<h2>Items (12)</h2><table>" + rows(ITEM_OUT, "Item", item_desc, lambda n: item_desc[n]) + "</table>"
-    body += "<h2>Weapons (15)</h2><table>" + rows(WEAPON_OUT, "Weapon", WEAPONS, lambda n: f"{WEAPONS[n][0] * 1000:.0f} ms · {WEAPONS[n][2]}") + "</table>"
+    def src(prefix, name):
+        return os.path.relpath(os.path.join(folder[prefix], f"{prefix}_{name}.wav"), os.path.dirname(page)).replace(os.sep, "/")
+
+    def esc(t):
+        return t.replace("&", "&amp;").replace("<", "&lt;").replace('"', "&quot;")
+
+    def section(title, rows, extra=""):
+        out = f"<h2>{esc(title)}</h2>{extra}<table>"
+        for prefix, name, what in rows:
+            out += (f'<tr><td><button class="p" data-src="{src(prefix, name)}">Play</button></td>'
+                    f"<td><b>{name}</b></td><td>{esc(what)}</td></tr>\n")
+        return out + "</table>"
+
+    bed = os.path.relpath(BED_OUT, os.path.dirname(page)).replace(os.sep, "/")
+    body = ""
+    for title, rows in PLACES:
+        body += section(title, rows)
+    body += ('<h2>Ambient bed (title and lobby)</h2><p>64 s, seamless, on the Music bus. <b>It ships switched off</b> '
+             '(level 0 in UiSoundSet); this is how it would sound raised to a quiet level.</p>'
+             f'<p><button id="bed" data-src="{bed}">Play the bed (loops)</button></p>')
+    item_desc = dict({k: v[2] for k, v in ITEMS.items()}, VentLoop="gas hiss, seamless loop")
+    body += section("Items in the world", [("Item", n, d) for n, d in item_desc.items()])
+    body += section("Weapons in the world", [("Weapon", n, f"{WEAPONS[n][0] * 1000:.0f} ms · {WEAPONS[n][2]}") for n in WEAPONS],
+                    '<p><button id="burst">Play AR-15 at 10 a second</button></p>')
+    walk = ",".join(f'[{t:.2f},"{src(p, n)}",{semi:.2f},"{esc(note)}"]' for t, p, n, semi, note in WALK)
+    burst = src("Weapon", "AR15Shot")
     html = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Seal the Deal: sound audition</title>
-<style>body{{font:16px/1.5 -apple-system,sans-serif;color:#111B38;background:#F3F4F4;max-width:900px;margin:32px auto;padding:0 16px}}
+<style>body{{font:16px/1.5 -apple-system,sans-serif;color:#111B38;background:#F3F4F4;max-width:920px;margin:32px auto;padding:0 16px}}
 h1{{font-weight:300;letter-spacing:.06em}}h2{{margin-top:32px;border-bottom:1px solid #C9CED3}}table{{border-collapse:collapse;width:100%}}
 td{{padding:4px 12px 4px 0;vertical-align:middle}}button{{font:inherit;padding:4px 14px;border:1px solid #111B38;background:#fff;color:#111B38;border-radius:4px;cursor:pointer}}
-button:hover{{background:#244FB9;color:#F3F4F4}}p{{max-width:70ch}}</style></head><body>
+button:hover{{background:#244FB9;color:#F3F4F4}}p{{max-width:70ch}}#now{{min-height:1.5em;font-weight:600;color:#244FB9}}</style></head><body>
 <h1>SEAL THE DEAL · sound audition</h1>
-<p>Every clip the generator makes. <b>Nobody has listened to these yet</b>: they were synthesised and measured only. Press Play, or use
-"Play the hover run" to hear five hovers climb the scale as they do in the menu. Note any that are harsh, too long, too alike or wrong for the event.</p>
-<p><button onclick="run()">Play the hover run</button> <button onclick="burst()">Play AR-15 at 10 a second</button></p>
+<p><b>Nobody has listened to these yet</b>: they were synthesised and measured only. Start with the walk: it plays the menu
+the way a player meets it in their first minute, with the ambient bed under the title. Then play any group on its own.
+Note any that are harsh, too long, too alike, or wrong for what the player just did.</p>
+<p><button id="walk">Walk through the menu (20 s)</button> <button id="stop">Stop</button></p><p id="now"></p>
 {body}
 <script>
-function play(b){{const a=new Audio(b.dataset.src);a.play();if(b.dataset.src.includes('VentLoop'))a.onended=()=>new Audio(b.dataset.src).play();}}
-function run(){{[0,2,4,7,9].forEach((s,i)=>setTimeout(()=>{{const a=new Audio('{os.path.relpath(os.path.join(OUT, "UI_HoverMove.wav"), os.path.dirname(page)).replace(os.sep, "/")}');a.preservesPitch=false;a.playbackRate=Math.pow(2,s/12);a.play();}},i*140));}}
-function burst(){{for(let i=0;i<10;i++)setTimeout(()=>new Audio('{os.path.relpath(os.path.join(WEAPON_OUT, "Weapon_AR15Shot.wav"), os.path.dirname(page)).replace(os.sep, "/")}').play(),i*100);}}
+const WALK=[{walk}];
+const BED="{bed}";
+let timers=[],bedAudio=null;
+function clip(path,semi){{const a=new Audio(path);if(semi){{a.preservesPitch=false;a.mozPreservesPitch=false;a.webkitPreservesPitch=false;a.playbackRate=Math.pow(2,semi/12);}}a.play();return a;}}
+function stopAll(){{timers.forEach(clearTimeout);timers=[];if(bedAudio){{bedAudio.pause();bedAudio=null;}}document.getElementById('now').textContent='';document.getElementById('bed').textContent='Play the bed (loops)';}}
+function fade(a,to,ms){{const from=a.volume,t0=performance.now();(function step(){{const k=Math.min(1,(performance.now()-t0)/ms);a.volume=from+(to-from)*k;if(k<1)requestAnimationFrame(step);}})();}}
+document.querySelectorAll('button.p').forEach(b=>b.onclick=()=>clip(b.dataset.src,0));
+document.getElementById('bed').onclick=function(){{if(bedAudio){{stopAll();return;}}bedAudio=new Audio(this.dataset.src);bedAudio.loop=true;bedAudio.volume=0.35;bedAudio.play();this.textContent='Stop the bed';}};
+document.getElementById('burst').onclick=()=>{{for(let i=0;i<10;i++)setTimeout(()=>clip('{burst}',0),i*100);}};
+document.getElementById('stop').onclick=stopAll;
+document.getElementById('walk').onclick=()=>{{stopAll();bedAudio=new Audio(BED);bedAudio.loop=true;bedAudio.volume=0;bedAudio.play();fade(bedAudio,0.3,1500);
+ WALK.forEach(([t,path,semi,note])=>timers.push(setTimeout(()=>{{clip(path,semi);if(note)document.getElementById('now').textContent=t.toFixed(1)+' s · '+note;
+  if(note.indexOf('bed fades out')>=0&&bedAudio)fade(bedAudio,0,1500);}},t*1000)));
+ timers.push(setTimeout(()=>{{document.getElementById('now').textContent='End of the walk.';if(bedAudio){{bedAudio.pause();bedAudio=null;}}}},21000));}};
 </script></body></html>
 """
     with open(page, "w", encoding="utf-8") as fh:

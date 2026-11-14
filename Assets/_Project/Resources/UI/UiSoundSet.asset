@@ -169,6 +169,31 @@ MonoBehaviour:
     volume: 1
     pitchVariance: 0
     minGap: 0.15
+  - evt: 32
+    clip: {fileID: 8300000, guid: 6443206c5c8dc40b9865f0a86d51111d, type: 3}
+    volume: 1
+    pitchVariance: 0
+    minGap: 1
+  - evt: 33
+    clip: {fileID: 8300000, guid: dd4565a558e9f40b3a8d6a2cf97527f6, type: 3}
+    volume: 1
+    pitchVariance: 0.015
+    minGap: 0.15
+  - evt: 34
+    clip: {fileID: 8300000, guid: 18d3d6c2aecfd47459ceccdab7939436, type: 3}
+    volume: 1
+    pitchVariance: 0
+    minGap: 0.15
+  - evt: 35
+    clip: {fileID: 8300000, guid: ba5ade65e14484744874472eda8c9374, type: 3}
+    volume: 1
+    pitchVariance: 0
+    minGap: 0.5
+  - evt: 36
+    clip: {fileID: 8300000, guid: ceccf50a922034f09801fa9881195dd8, type: 3}
+    volume: 1
+    pitchVariance: 0
+    minGap: 0.1
   maxVoices: 8
   globalMinGap: 0.012
   hoverSemitones:
@@ -178,5 +203,9 @@ MonoBehaviour:
   - 7
   - 9
   hoverRunResetSeconds: 0.6
+  ambience: {fileID: 8300000, guid: f2e7333662cff45b1be3169908a23bdb, type: 3}
+  ambienceOutput: {fileID: -4698893596300985599, guid: 6737b27e57e4d4e709fbdb02f079a21f, type: 2}
+  ambienceLevel: 0
+  ambienceFade: 1.5
   sliderMinSemitones: -5
   sliderMaxSemitones: 12
