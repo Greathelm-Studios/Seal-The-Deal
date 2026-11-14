@@ -39,6 +39,7 @@ namespace CloseTheDeal.UI
         {
             base.OnEnable();
             UiGlassBlurFeature.ActivePanes++;
+            if (Application.isPlaying) UiGlassBackdrop.AttachToTitles();   // a title built after scene load
             Apply();
         }
 

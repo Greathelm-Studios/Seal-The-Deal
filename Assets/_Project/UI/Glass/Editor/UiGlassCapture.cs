@@ -90,6 +90,7 @@ namespace CloseTheDeal.Editor.UI
                 var cam = camGo.AddComponent<Camera>();
                 cam.fieldOfView = 70; cam.nearClipPlane = 0.05f;
                 camGo.transform.SetPositionAndRotation(new Vector3(F(a[0]), F(a[1]), F(a[2])), Quaternion.Euler(F(a[3]), F(a[4]), 0));
+                UiGlassBlurFeature.SourceCamera = cam;
                 foreach (var other in UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsSortMode.None))
                     if (other != cam) other.enabled = false;
                 var sb = new StringBuilder("| resolution | blur on ms/frame | no blur ms/frame | blur cost ms | GPU ms (recorders) |\n|---|---|---|---|---|\n");
@@ -150,6 +151,7 @@ namespace CloseTheDeal.Editor.UI
             cam.clearFlags = CameraClearFlags.Skybox;
             var rt = new RenderTexture(W, H, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
             cam.targetTexture = rt;
+            UiGlassBlurFeature.SourceCamera = cam;   // it renders into a texture, so name it as the glass's source
             foreach (var other in UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsSortMode.None))
                 if (other != cam) other.enabled = false;
 
@@ -180,6 +182,44 @@ namespace CloseTheDeal.Editor.UI
                     UnityEngine.Object.DestroyImmediate(canvasGo);
                     UnityEngine.Object.DestroyImmediate(bgTex); UnityEngine.Object.DestroyImmediate(txtTex);
                 }
+            }
+            // Backdrop source: a full-screen RawImage showing the first pose's plain scene, with UiGlassBackdrop on it.
+            // The blurred pane must line up with the image behind it (orientation and rect mapping).
+            if (poses.Count > 0)
+            {
+                var (bname, bpos, bpitch, byaw) = poses[0];
+                camGo.transform.SetPositionAndRotation(bpos, Quaternion.Euler(bpitch, byaw, 0));
+                var sceneTex = Grab(cam, rt);
+                UiGlassSettings.Current = UiGlassSettings.Quality.Auto;
+                var canvasGo = BuildCanvas(cam, false, out var panes);
+                var bd = new GameObject("Backdrop", typeof(RectTransform), typeof(RawImage), typeof(UiGlassBackdrop));
+                bd.transform.SetParent(canvasGo.transform, false);
+                bd.transform.SetAsFirstSibling();
+                var brt = (RectTransform)bd.transform;
+                brt.anchorMin = Vector2.zero; brt.anchorMax = Vector2.one; brt.offsetMin = brt.offsetMax = Vector2.zero;
+                bd.GetComponent<RawImage>().texture = sceneTex;
+                Canvas.ForceUpdateCanvases();
+                bd.GetComponent<UiGlassBackdrop>().Refresh();
+                var bgTex = Grab(cam, rt);
+                UnityEngine.Object.DestroyImmediate(canvasGo);
+                canvasGo = BuildCanvas(cam, true, out panes);
+                bd = new GameObject("Backdrop", typeof(RectTransform), typeof(RawImage), typeof(UiGlassBackdrop));
+                bd.transform.SetParent(canvasGo.transform, false);
+                bd.transform.SetAsFirstSibling();
+                brt = (RectTransform)bd.transform;
+                brt.anchorMin = Vector2.zero; brt.anchorMax = Vector2.one; brt.offsetMin = brt.offsetMax = Vector2.zero;
+                bd.GetComponent<RawImage>().texture = sceneTex;
+                Canvas.ForceUpdateCanvases();
+                bd.GetComponent<UiGlassBackdrop>().Refresh();
+                var txtTex = Grab(cam, rt);
+                Save(txtTex, Path.Combine(outDir, $"{bname}_glass_backdrop.png"));
+                foreach (var p in panes)
+                {
+                    var (tPx, bgPx, ratio) = Measure(bgTex, txtTex, p.textBox);
+                    report.AppendLine($"| {bname} | {p.preset} | UI backdrop (UiGlassBackdrop) | {Hex(tPx)} | {Hex(bgPx)} | {ratio:0.00}:1 |");
+                }
+                UnityEngine.Object.DestroyImmediate(canvasGo);
+                UnityEngine.Object.DestroyImmediate(bgTex); UnityEngine.Object.DestroyImmediate(txtTex); UnityEngine.Object.DestroyImmediate(sceneTex);
             }
             // a scene with no panes must not run the passes
             UiGlassSettings.Current = UiGlassSettings.Quality.Auto;

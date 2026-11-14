@@ -106,6 +106,10 @@ namespace CloseTheDeal.Customisation
             Instance = this;
             int player = LayerMask.NameToLayer("Player");
             _wallMask = player >= 0 ? ~(1 << player) : ~0;
+            _screen.SlotFocused += FocusSlotAt;
+            _screen.OptionChosen += ChooseOption;
+            _screen.KeepPressed += () => Leave(true);
+            _screen.PutBackPressed += () => Leave(false);
         }
 
         void OnDestroy()
@@ -124,6 +128,8 @@ namespace CloseTheDeal.Customisation
         {
             if (_phase != Phase.Closed || PlayerOutfit.Local == null || PlayerMotor.Local == null || PlayerCamera.Instance == null)
                 return;
+            if (LobbyRoster.Instance != null && LobbyRoster.Instance.RunInProgress)
+                return; // The host would refuse the fitting request; the run is about to move everyone.
 
             _outfit = PlayerOutfit.Local;
             _camera = PlayerCamera.Instance;
@@ -176,6 +182,8 @@ namespace CloseTheDeal.Customisation
         /// <summary>Keep (true) saves and wears the browsed outfit; false puts back what was worn.</summary>
         void Leave(bool keep)
         {
+            if (_phase != Phase.Open)
+                return; // A second keep (the button and the Enter shortcut on one press) or a press mid-swing.
             if (keep && !_outfit.Catalog.IsWearable(_working, _outfit.RunsStarted))
             {
                 _screen.ShowLockedNotice();
@@ -309,16 +317,8 @@ namespace CloseTheDeal.Customisation
                 return;
             }
 
-            if (LobbyInput.NextSlot.WasPressedThisFrame())
-                FocusSlot(1);
-            else if (LobbyInput.PreviousSlot.WasPressedThisFrame())
-                FocusSlot(-1);
-
-            if (LobbyInput.NextOption.WasPressedThisFrame())
-                StepOption(1);
-            else if (LobbyInput.PreviousOption.WasPressedThisFrame())
-                StepOption(-1);
-
+            // Moving between categories and choices is the kit form's own navigation (the
+            // EventSystem): the steppers report back through FocusSlotAt and ChooseOption.
             ReadTurn();
         }
 
@@ -348,31 +348,28 @@ namespace CloseTheDeal.Customisation
             }
         }
 
-        void FocusSlot(int step)
+        /// <summary>The form's focus moved to a category's row.</summary>
+        void FocusSlotAt(int slot)
         {
-            int count = _outfit.Catalog.SlotCount;
-            if (count == 0)
+            if (_phase == Phase.Closed || slot == _slot)
                 return;
-            _slot = (_slot + step + count) % count;
+            _slot = slot;
             _returnOrbit = true; // Turn back from wherever the player spun it, to show this category.
             Refresh();
             OnSlotFocused?.Invoke(_slot);
         }
 
-        void StepOption(int step)
+        /// <summary>The player stepped a category's choice on the form: show it on the character at once.</summary>
+        void ChooseOption(int slot, int option)
         {
-            OutfitSlot slot = _outfit.Catalog.Slot(_slot);
-            int count = slot.OptionCount;
-            if (count < 2)
+            if (_phase == Phase.Closed)
                 return;
-
-            int option = (_working.Get(_slot) + step + count) % count;
-            _working = _working.With(_slot, option);
+            _slot = slot;
+            _working = _working.With(slot, option);
             _outfit.Preview(_working);
             _punch = 1f;
-            _screen.NudgeOption(step);
             Refresh();
-            OnOptionShown?.Invoke(_slot, option);
+            OnOptionShown?.Invoke(slot, option);
         }
 
         void Refresh()

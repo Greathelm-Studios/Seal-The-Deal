@@ -7,8 +7,8 @@
 In reception, a glass-walled tailor's corner holds a full-length mirror, a plinth and a rail of suits.
 Looking at the mirror and pressing **F** swings the camera out of first person (0.45 s, eased) into a three-quarter view of your own character, and a white form slides in on the left: **Form F-1 · Wardrobe amendment**, with one row per outfit category.
 
-- **A / D** (or d-pad left/right) changes the focused category's choice; the character changes at once and gives a small tailor's bob, and the choice name kicks sideways.
-- **W / S** (or d-pad up/down) moves between categories; the focused row has a cobalt bar.
+- **Left / Right** (arrows or D-pad; the kit form's own navigation) changes the focused category's choice; the character changes at once and gives a small tailor's bob, and the choice name kicks sideways.
+- **Up / Down** moves between categories and down to **Keep outfit** and **Put back** (kit buttons); the focused row has the kit's highlight, cobalt rule and focus frame.
 - **Mouse, Q / R or the right stick** walks the view round the character.
 - **Enter** (pad A) keeps the outfit; **Backspace** (pad B) puts back what you were wearing. Either swings the camera back into first person (0.35 s).
 - Esc still opens the game menu; the fitting room waits underneath until it closes.
@@ -109,6 +109,10 @@ State and events a screen reads. The outfit itself is decided by the host (`Play
 ### Requests (send)
 
 `PlayerOutfit.Preview(loadout)` shows a choice locally; `Commit(loadout)` saves it and asks the host; `Revert()` puts back what is worn. The fitting room calls these; a replacement screen should drive `FittingRoom`, not these directly.
+
+### Built from the UI kit
+
+`FittingRoomScreen` is a kit `UiScreen` with one kit `UiStepper` row per category, kit `UiButton`s for Keep outfit and Put back, a kit `UiStatusLine`, on the lobby canvas's own `UiScreenStack` (so it slides and reveals with the kit's motion, and its controls sound and move like every other kit control). It reports `SlotFocused(int)`, `OptionChosen(int, int)`, `KeepPressed`, `PutBackPressed` to `FittingRoom`, which decides. Enter / Space (pad A) and Backspace (pad B) still keep and put back from anywhere on the form. The mouse turns the character; it does not click the form, because the cursor stays captured (a free cursor means the game menu).
 
 ### Feel
 

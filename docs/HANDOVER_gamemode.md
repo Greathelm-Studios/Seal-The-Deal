@@ -109,8 +109,18 @@ The greybox HUD and the menu's match section are rebuilt from the UI kit (lane 5
 - Results: lane 5 owns the full results screen; this lane keeps the data (`Snapshot`, `ReasonLine`, `OnMatchEnded`) and the menu's result section until that screen lands; lane 11's `MatchRecords` holds per-player stats. Agreed on AgentHub (#460, #471).
 - The off-screen half of the briefcase marker is the kit's shared edge marker (lane 5, not landed); this lane's marker shows only while the case is on screen.
 - A player who joins while a result is up is shown the result card (quietly, no win sound).
-- Not seen: the cap warning (it needs a match run down to 1:00; a test shortcut to move the clock underflowed); 21:9; reduced motion; a person judging motion or sound.
+- Contrast, measured from capture pixels with the HUD rendered without post-processing (as the overlay canvas is in game): every line passes 4.5:1 on the 0.9 Paper plate (Navy 14–15:1, Ink2 captions and "Floor 1, your tower" 7.2:1, shut ladder floors in Ink3 5.5:1). The pale look in earlier captures was the capture method (HUD through the post-processed camera), not the tokens.
+- The cap warning was amber text on white (1.7:1); it is now an amber plate with Navy text (8.2:1), with "QUARTER CLOSING" in words. Seen on host and client with a 75 s runtime profile copy (the asset is untouched).
+- Seen at 21:9 (2560×1080) and with reduced motion (the banner placed without its slide).
+- The carried briefcase sits small (0.55) in the lower left; the gun keeps the lower right (lane 2, AgentHub #492).
+- Still not seen: a person judging motion or sound.
 - At 720p the kit's smallest captions (13 px at 1080p) render about 9 px: legibility is borderline; that is the kit's type scale (lane 5).
+
+### Assumptions made while Adam was away (2026-11-14)
+- The briefcase seats on the left, so it never overlaps the gun; no shared held-object socket exists yet. If Harvey's `PlayerViewmodel.GunMount` becomes one, move onto it.
+- `Lane_Integration.unity` is committed from this lane for the spawn fix (asked by the orchestrator). It was rebuilt with Set Up Integration, then Add GameMode To Open Scene. The gaps lane's objects are left out on purpose: they install themselves at run time once that lane's installer is merged (AgentHub #504).
+- `MatchHud` and `MatchMenuPanel` check their slots on wake. On a scene whose match UI predates the code they log one error naming the empty slots and the menu to run, then switch off; the player still spawns (seen on buffer's stale scene). The roster events reach each listener separately, so one faulty listener can't abort `FirmMember.OnStartClient`.
+- Set Up Integration rewrites `Player.prefab` through the greybox generator and drops other lanes' fields (input dead zones, blast profile, masks, the viewmodel). That rewrite was discarded and is not part of this commit; the builder needs fixing (integration owner).
 
 ## Gates or locked doors (your call)
 
