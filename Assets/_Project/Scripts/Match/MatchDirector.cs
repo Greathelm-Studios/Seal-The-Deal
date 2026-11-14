@@ -106,6 +106,7 @@ namespace CloseTheDeal.MatchMode
         int _secondsLeft = -1;
         bool _capWarned;
         int _announceFromFrame = int.MaxValue;
+        bool _startPending;
 
         /// <summary>
         /// Whether a change is news. A client receives the match as it stands while it joins;
@@ -310,7 +311,7 @@ namespace CloseTheDeal.MatchMode
                 Briefcase.Current.Register();
             // FishNet hands a joiner the current values after the start callbacks, in this same frame.
             _announceFromFrame = Time.frameCount + 1;
-            OnStarted?.Invoke();
+            _startPending = true;
         }
 
         public override void OnStopNetwork()
@@ -318,6 +319,7 @@ namespace CloseTheDeal.MatchMode
             base.OnStopNetwork();
             _live = false;
             _announceFromFrame = int.MaxValue;
+            _startPending = false;
             _snapshot.OnChange -= OnSnapshotChanged;
             _briefcase.OnChange -= OnBriefcaseStatusChanged;
             _checkpointA.OnChange -= OnCheckpointAChanged;
@@ -380,6 +382,9 @@ namespace CloseTheDeal.MatchMode
             if (previous.Phase == next.Phase)
                 return;
 
+            if (!Announce)
+                return;
+
             OnPhaseChanged?.Invoke(previous.Phase, next.Phase);
             if (next.Phase == MatchPhase.Ended)
                 OnMatchEnded?.Invoke(next);
@@ -402,7 +407,9 @@ namespace CloseTheDeal.MatchMode
 
         void RaiseBriefcaseEvent(BriefcaseStatus previous, BriefcaseStatus next)
         {
-            if (previous.State == BriefcaseState.Carried && previous.CarrierFirm != NoFirm)
+            // A new round puts the case back with nobody as its last carrier: that is a reset, not a drop.
+            bool reset = next.LastCarrierFirm == NoFirm;
+            if (previous.State == BriefcaseState.Carried && previous.CarrierFirm != NoFirm && !reset)
                 OnBriefcaseDropped?.Invoke(previous.CarrierFirm);
 
             switch (next.State)
@@ -467,11 +474,6 @@ namespace CloseTheDeal.MatchMode
             return tick > began ? tick - began : 0u;
         }
 
-        /// <summary>
-        /// Once a tick: the host applies the rules, then every machine works the clock out
-        /// from the synced start tick and raises an event when a whole second passes. The
-        /// clock itself is never sent.
-        /// </summary>
         /// <summary>Picked up, and a steal when the other firm carried it last.</summary>
         void RaisePickUp(byte lastCarrierFirm, byte carrierFirm)
         {
@@ -480,8 +482,20 @@ namespace CloseTheDeal.MatchMode
                 OnBriefcaseStolen?.Invoke(carrierFirm, lastCarrierFirm);
         }
 
+        /// <summary>
+        /// Once a tick: the host applies the rules, then every machine works the clock out
+        /// from the synced start tick and raises an event when a whole second passes. The
+        /// clock itself is never sent. A joining client says it has started only here, once
+        /// the match's current values have arrived, so the HUD reads them rather than defaults.
+        /// </summary>
         void OnPostTick()
         {
+            if (_startPending && Time.frameCount >= _announceFromFrame)
+            {
+                _startPending = false;
+                OnStarted?.Invoke();
+            }
+
             uint tick = TimeManager.Tick;
             if (IsServerStarted && _referee != null)
                 _referee.Step(tick);
