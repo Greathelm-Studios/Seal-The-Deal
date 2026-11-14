@@ -103,6 +103,15 @@ GDD mismatches (the GDD is the authority on design; your 2026-11-12 words win fo
 - **Every match input answers (2026-11-13):** a shut gate pulses brighter the moment you walk into it and plays the refusal sound; the case squashes and settles when it changes hands; the countdown, a floor opening, the case taken or dropped, a checkpoint, the cap warning and the result each play their sound from lane 9's set (`MatchSounds`). Sounds were seen starting in a headless run (the sound player's focus check bypassed for the test); nobody has heard them. After merge, run **Add GameMode To Open Scene** on `Lane_Integration.unity` to give its Match object `MatchSounds`.
 - The UI contract a HUD reads (state, events, types, when they fire, sound mapping) is in [MATCH.md](systems/MATCH.md). The current greybox `MatchHud` / `MatchMenuPanel` are replaced once the UI foundation lands.
 
+## Match HUD on the UI kit (2026-11-14)
+
+The greybox HUD and the menu's match section are rebuilt from the UI kit (lane 5's Plate, StatusLine, KeyHint and Button prefabs, `UiTokens`, `UiMotion`, `UiSound`). Ready for review; seen headless in `Lane_Integration.unity` at 1920×1080 and 1280×720 on the host, a client and a late joiner (captures: `gamemode-hud-captures/` in the lane sessions' shared notes folder).
+- Results: lane 5 owns the full results screen; this lane keeps the data (`Snapshot`, `ReasonLine`, `OnMatchEnded`) and the menu's result section until that screen lands; lane 11's `MatchRecords` holds per-player stats. Agreed on AgentHub (#460, #471).
+- The off-screen half of the briefcase marker is the kit's shared edge marker (lane 5, not landed); this lane's marker shows only while the case is on screen.
+- A player who joins while a result is up is shown the result card (quietly, no win sound).
+- Not seen: the cap warning (it needs a match run down to 1:00; a test shortcut to move the clock underflowed); 21:9; reduced motion; a person judging motion or sound.
+- At 720p the kit's smallest captions (13 px at 1080p) render about 9 px: legibility is borderline; that is the kit's type scale (lane 5).
+
 ## Gates or locked doors (your call)
 
 Both now hold a team on a floor: the GDD's breakable locked door on each flight, and the floor gate that only the briefcase opens.
