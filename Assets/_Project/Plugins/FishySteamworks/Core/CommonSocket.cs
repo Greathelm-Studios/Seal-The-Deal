@@ -179,12 +179,27 @@ namespace FishySteamworks
         /// </summary>
         /// <param name="ptr"></param>
         /// <param name="buffer"></param>
-        /// <returns></returns>
-        protected void GetMessage(IntPtr ptr, byte[] buffer, out ArraySegment<byte> segment, out byte channel)
+        /// <returns>False when the message was dropped as malformed; segment and channel are then unset.</returns>
+        protected bool GetMessage(IntPtr ptr, byte[] buffer, out ArraySegment<byte> segment, out byte channel)
         {
             SteamNetworkingMessage_t data = Marshal.PtrToStructure<SteamNetworkingMessage_t>(ptr);
 
             int packetLength = data.m_cbSize;
+            /* Close the Deal patch (FORK.md): the original copied any size into the MTU-sized
+             * buffer and read the channel from byte packetLength - 1. A peer sending an empty
+             * message, or one larger than the buffer (Steam allows reliable messages far above
+             * the MTU), threw inside the receive loop every frame: later connections were never
+             * read and the remaining Steam messages were never released. FishNet keeps every
+             * honest packet at least two bytes under the MTU, so these are only ever hostile. */
+            if (packetLength < 1 || packetLength > buffer.Length)
+            {
+                SteamNetworkingMessage_t.Release(ptr);
+                segment = default;
+                channel = 0;
+                Transport.NetworkManager.LogWarning($"Dropped a malformed Steam message of {packetLength} bytes.");
+                return false;
+            }
+
             Marshal.Copy(data.m_pData, buffer, 0, packetLength);
 
             //data.Release();
@@ -193,6 +208,7 @@ namespace FishySteamworks
             channel = buffer[packetLength - 1];
             //Set segment to length - 1 to exclude channel.
             segment = new ArraySegment<byte>(buffer, 0, packetLength - 1);
+            return true;
         }
     }
 

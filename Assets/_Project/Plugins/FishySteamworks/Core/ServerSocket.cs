@@ -406,7 +406,9 @@ namespace FishySteamworks.Server
                 {
                     for (int i = 0; i < messageCount; i++)
                     {
-                        base.GetMessage(base.MessagePointers[i], InboundBuffer, out ArraySegment<byte> segment, out byte channel);
+                        // Close the Deal patch (FORK.md): skip a message GetMessage dropped as malformed.
+                        if (!base.GetMessage(base.MessagePointers[i], InboundBuffer, out ArraySegment<byte> segment, out byte channel))
+                            continue;
                         base.Transport.HandleServerReceivedDataArgs(new ServerReceivedDataArgs(segment, (Channel)channel, connectionId, Transport.Index));
                     }
                 }
