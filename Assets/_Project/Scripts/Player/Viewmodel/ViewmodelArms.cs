@@ -14,6 +14,9 @@
 //  Modified  : Claude Fable 5.2, 2026-11-14 — the arm solve and finger closing moved to
 //              HandGrip so the body other players see holds the gun with the same code
 //              (Harvey: "have the actual playermodel follow the first person view model").
+//  Modified  : Claude Fable 5.2, 2026-11-14 — the left arm can now hold the weapon too, for
+//              a two-handed hold (Harvey: "add a left and right hand system and a two handed
+//              system").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Sits on the first-person arms prefab. Owns the rig side of the viewmodel:
 //              where the gun mount and shoulder are, and bending the arm so the hand stays on
@@ -70,8 +73,18 @@ namespace CloseTheDeal.Player
         [Tooltip("Left upper arm bone. Shrunk to nothing so the left arm never shows.")]
         [SerializeField] Transform _foldedUpperArm;
 
-        [Tooltip("The gun arm: its bones, finger joints, elbow swing and how far the fingers close. The same settings are on the body other players see (PlayerHeldWeapon on the player prefab).")]
+        [Tooltip("The gun arm (right): its bones, finger joints, elbow swing and how far the fingers close. The body other players see copies these settings.")]
         [SerializeField] HandGrip _grip = new();
+
+        [Header("Second hand")]
+        [Tooltip("Where the left wrist goes when the weapon is held in both hands, as a child of the gun mount. Same axes as the grip target: blue is where the fingers point, green runs from the little finger to the index finger.")]
+        [SerializeField] Transform _supportTarget;
+
+        [Tooltip("The left arm: its bones, finger joints, elbow swing and how far the fingers close.")]
+        [SerializeField] HandGrip _supportGrip = new();
+
+        [Tooltip("Ticked when the weapon in this prefab is held in both hands. Unticked, the left arm is folded away and never shows.")]
+        [SerializeField] bool _twoHanded;
 
         [Header("Clip")]
         [Tooltip("Looping pose under the arm solve. It supplies the finger curl and which side the elbow bends to.")]
@@ -87,7 +100,20 @@ namespace CloseTheDeal.Player
         /// <summary>Where the wrist sits on the weapon, as a child of the gun mount. The body uses the same seat.</summary>
         public Transform GripTarget => _gripTarget;
 
-        /// <summary>The weapon model in the gun mount (its first child that is not the grip target), or null when the mount is empty. The body holds a copy of it.</summary>
+        /// <summary>The left arm's settings. The body copies its finger curls and elbow swing.</summary>
+        public HandGrip SupportGrip => _supportGrip;
+
+        /// <summary>Where the left wrist sits on the weapon for a two-handed hold, as a child of the gun mount, or null when the prefab has none.</summary>
+        public Transform SupportTarget => _supportTarget;
+
+        /// <summary>Whether the weapon is held in both hands. Starts as the prefab says; the viewmodel sets it on its own copy while playing.</summary>
+        public bool TwoHanded
+        {
+            get => _twoHanded;
+            set => _twoHanded = value;
+        }
+
+        /// <summary>The weapon model in the gun mount (its first child that is not a hand seat), or null when the mount is empty. The body holds a copy of it.</summary>
         public Transform HeldModel
         {
             get
@@ -98,7 +124,7 @@ namespace CloseTheDeal.Player
                 for (int i = 0; i < _gunMount.childCount; i++)
                 {
                     Transform child = _gunMount.GetChild(i);
-                    if (child != _gripTarget)
+                    if (child != _gripTarget && child != _supportTarget)
                         return child;
                 }
 
@@ -158,8 +184,9 @@ namespace CloseTheDeal.Player
         }
 
         /// <summary>
-        /// Puts the shoulder on its anchor, folds the left arm and bends the right arm onto the
-        /// grip. Runs every frame from LateUpdate; public so an editor preview can pose the
+        /// Puts the right shoulder on its anchor and bends the right arm onto the grip. Held in
+        /// both hands, the left arm is bent onto its seat as well; held in one, it is folded
+        /// away. Runs every frame from LateUpdate; public so an editor preview can pose the
         /// prefab without playing.
         /// </summary>
         public void SolveArm()
@@ -167,15 +194,23 @@ namespace CloseTheDeal.Player
             if (_rig == null || !_grip.IsRigged)
                 return;
 
+            bool both = _twoHanded && _supportTarget != null && _supportGrip.IsRigged;
+
             // WHY every frame: the Animator rewrites the bones from the clip before this runs.
+            // WHY set to one as well as zero: the clip does not key the arm's scale, so once
+            // folded it would stay folded.
             if (_foldedUpperArm != null)
-                _foldedUpperArm.localScale = Vector3.zero;
+                _foldedUpperArm.localScale = both ? Vector3.one : Vector3.zero;
 
             if (_shoulder != null)
                 _rig.position += _shoulder.position - _grip.UpperArm.position;
 
             if (_gripTarget != null)
                 _grip.Reach(_gripTarget.position, _gripTarget.rotation);
+
+            // After the slide above, so the left shoulder is where it will be drawn.
+            if (both)
+                _supportGrip.Reach(_supportTarget.position, _supportTarget.rotation);
         }
     }
 }

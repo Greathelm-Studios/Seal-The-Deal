@@ -3,6 +3,8 @@
 //  Generator : Claude Fable 5.2 (Claude Code)
 //  Generated : 2026-11-14
 //  Prompt    : Harvey: "have the actual playermodel follow the first person view model"
+//  Modified  : Claude Fable 5.2, 2026-11-14 — an arm can now be the left one (Harvey: "add a
+//              left and right hand system and a two handed system").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : One right arm holding one grip: the bones, the finger joints and the tuning,
 //              and the solve that bends the arm onto a grip point and closes the hand. Lifted
@@ -15,7 +17,7 @@ using UnityEngine;
 namespace CloseTheDeal.Player
 {
     /// <summary>
-    /// A right arm and hand that can be bent onto a grip. Serialized inside whichever
+    /// One arm and hand, left or right, that can be bent onto a grip. Serialized inside whichever
     /// component owns the skeleton (<see cref="ViewmodelArms"/> for the first-person arm,
     /// <see cref="PlayerHeldWeapon"/> for the body).
     /// </summary>
@@ -44,13 +46,16 @@ namespace CloseTheDeal.Player
         const float StraightArmEpsilon = 1e-12f;
 
         [Header("Arm (filled in by the greybox tool)")]
-        [Tooltip("Right upper arm bone.")]
+        [Tooltip("Ticked when this is the left arm. The fingers, thumb and elbow swing then close the mirrored way.")]
+        [SerializeField] bool _left;
+
+        [Tooltip("This arm's upper arm bone.")]
         [SerializeField] Transform _upperArm;
 
-        [Tooltip("Right forearm bone.")]
+        [Tooltip("This arm's forearm bone.")]
         [SerializeField] Transform _lowerArm;
 
-        [Tooltip("Right hand bone.")]
+        [Tooltip("This arm's hand bone.")]
         [SerializeField] Transform _hand;
 
         [Tooltip("How the hand bone is turned relative to its own knuckles. Worked out by the greybox tool from the model; leave it alone.")]
@@ -84,13 +89,13 @@ namespace CloseTheDeal.Player
         /// <summary>True when the three arm bones are assigned, so <see cref="Reach"/> can run.</summary>
         public bool IsRigged => _upperArm != null && _lowerArm != null && _hand != null;
 
-        /// <summary>The right upper arm bone; the shoulder joint is at its position.</summary>
+        /// <summary>This arm's upper arm bone; the shoulder joint is at its position.</summary>
         public Transform UpperArm => _upperArm;
 
-        /// <summary>The right hand bone.</summary>
+        /// <summary>This arm's hand bone.</summary>
         public Transform Hand => _hand;
 
-        /// <summary>The three joints of each finger, base first, as the humanoid avatar names them: index, then middle, ring and little, then thumb.</summary>
+        /// <summary>The three joints of each finger, base first, as the humanoid avatar names them: index, then middle, ring and little, then thumb. Right hand, then left.</summary>
         static readonly HumanBodyBones[] TriggerBones =
         {
             HumanBodyBones.RightIndexProximal, HumanBodyBones.RightIndexIntermediate, HumanBodyBones.RightIndexDistal,
@@ -108,24 +113,49 @@ namespace CloseTheDeal.Player
             HumanBodyBones.RightThumbProximal, HumanBodyBones.RightThumbIntermediate, HumanBodyBones.RightThumbDistal,
         };
 
+        static readonly HumanBodyBones[] LeftTriggerBones =
+        {
+            HumanBodyBones.LeftIndexProximal, HumanBodyBones.LeftIndexIntermediate, HumanBodyBones.LeftIndexDistal,
+        };
+
+        static readonly HumanBodyBones[] LeftGripBones =
+        {
+            HumanBodyBones.LeftMiddleProximal, HumanBodyBones.LeftMiddleIntermediate, HumanBodyBones.LeftMiddleDistal,
+            HumanBodyBones.LeftRingProximal, HumanBodyBones.LeftRingIntermediate, HumanBodyBones.LeftRingDistal,
+            HumanBodyBones.LeftLittleProximal, HumanBodyBones.LeftLittleIntermediate, HumanBodyBones.LeftLittleDistal,
+        };
+
+        static readonly HumanBodyBones[] LeftThumbBones =
+        {
+            HumanBodyBones.LeftThumbProximal, HumanBodyBones.LeftThumbIntermediate, HumanBodyBones.LeftThumbDistal,
+        };
+
+        /// <summary>True when this is the left arm.</summary>
+        public bool IsLeft => _left;
+
+        /// <summary>+1 for the right arm, -1 for the left: the way this hand's fingers, thumb and elbow swing turn. WHY: a left hand is a right hand mirrored, so every turn that closes it runs the other way about the same axis.</summary>
+        float Side => _left ? -1f : 1f;
+
         /// <summary>
         /// Finds the arm and finger bones on a humanoid model and measures the hand, for a
         /// skeleton that was not wired by the greybox tool (the player's body).
         /// </summary>
         /// <param name="humanoid">The model's Animator, with its humanoid avatar still on. The model must be in its T-pose: the open hand is read from it.</param>
-        /// <returns>False when the model has no right arm or no index, middle and little finger knuckles; nothing usable was found.</returns>
+        /// <param name="left">True to take the left arm, false the right.</param>
+        /// <returns>False when the model has no such arm or no index, middle and little finger knuckles on it; nothing usable was found.</returns>
         /// <remarks>Call once at spawn, never per frame: it asks the avatar for bones and allocates the joint lists.</remarks>
-        public bool Bind(Animator humanoid)
+        public bool Bind(Animator humanoid, bool left = false)
         {
             if (humanoid == null || humanoid.avatar == null || !humanoid.avatar.isHuman)
                 return false;
 
-            _upperArm = humanoid.GetBoneTransform(HumanBodyBones.RightUpperArm);
-            _lowerArm = humanoid.GetBoneTransform(HumanBodyBones.RightLowerArm);
-            _hand = humanoid.GetBoneTransform(HumanBodyBones.RightHand);
-            Transform index = humanoid.GetBoneTransform(HumanBodyBones.RightIndexProximal);
-            Transform middle = humanoid.GetBoneTransform(HumanBodyBones.RightMiddleProximal);
-            Transform little = humanoid.GetBoneTransform(HumanBodyBones.RightLittleProximal);
+            _left = left;
+            _upperArm = humanoid.GetBoneTransform(left ? HumanBodyBones.LeftUpperArm : HumanBodyBones.RightUpperArm);
+            _lowerArm = humanoid.GetBoneTransform(left ? HumanBodyBones.LeftLowerArm : HumanBodyBones.RightLowerArm);
+            _hand = humanoid.GetBoneTransform(left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
+            Transform index = humanoid.GetBoneTransform(left ? HumanBodyBones.LeftIndexProximal : HumanBodyBones.RightIndexProximal);
+            Transform middle = humanoid.GetBoneTransform(left ? HumanBodyBones.LeftMiddleProximal : HumanBodyBones.RightMiddleProximal);
+            Transform little = humanoid.GetBoneTransform(left ? HumanBodyBones.LeftLittleProximal : HumanBodyBones.RightLittleProximal);
             if (!IsRigged || index == null || middle == null || little == null)
                 return false;
 
@@ -134,9 +164,9 @@ namespace CloseTheDeal.Player
             _knuckleFrame = Quaternion.Inverse(_hand.rotation)
                 * Quaternion.LookRotation(middle.position - _hand.position, index.position - little.position);
 
-            _triggerFinger = Joints(humanoid, TriggerBones);
-            _gripFingers = Joints(humanoid, GripBones);
-            _thumb = Joints(humanoid, ThumbBones);
+            _triggerFinger = Joints(humanoid, left ? LeftTriggerBones : TriggerBones);
+            _gripFingers = Joints(humanoid, left ? LeftGripBones : GripBones);
+            _thumb = Joints(humanoid, left ? LeftThumbBones : ThumbBones);
             _openHand = new Quaternion[_triggerFinger.Length + _gripFingers.Length + _thumb.Length];
             int open = 0;
             open = ReadOpen(_triggerFinger, open);
@@ -180,12 +210,18 @@ namespace CloseTheDeal.Player
         /// </summary>
         /// <param name="target">World position the wrist should reach, in metres. Clamped to the arm's length.</param>
         /// <param name="targetRotation">World rotation the hand's knuckle frame should take: its forward is where the fingers point, its up runs from the little finger to the index finger.</param>
+        /// <param name="elbowToward">
+        /// World direction the elbow should hang toward, or zero to keep the elbow side of the
+        /// pose already on the bones and apply the elbow swing. Give one when that pose cannot be
+        /// trusted to hold still (a ragdoll's arm, a run clip's pumping arm): the elbow then sits
+        /// on that side of the shoulder-to-wrist line whatever the bones were doing.
+        /// </param>
         /// <remarks>
         /// Law of cosines: first open or close the elbow to the target distance, then swing the
         /// whole arm about the shoulder onto the target. Ported from NorseFPS. Call it after
         /// whatever poses the skeleton this frame, or that pose overwrites it.
         /// </remarks>
-        public void Reach(Vector3 target, Quaternion targetRotation)
+        public void Reach(Vector3 target, Quaternion targetRotation, Vector3 elbowToward = default)
         {
             if (!IsRigged)
                 return;
@@ -212,8 +248,19 @@ namespace CloseTheDeal.Player
             // WHY: the poses underneath hang the elbow straight under the gun, which brings the
             // forearm up at the hand steeply and cocks the wrist. Out to the side it comes in
             // behind the gun.
-            if (_elbowSwing != 0f)
-                _upperArm.rotation = Quaternion.AngleAxis(_elbowSwing, (target - a).normalized) * _upperArm.rotation;
+            Vector3 line = (target - a).normalized;
+            if (elbowToward != Vector3.zero)
+            {
+                // Turn the arm about that same line until the elbow is on the wanted side.
+                Vector3 elbowNowSide = Vector3.ProjectOnPlane(_lowerArm.position - a, line);
+                Vector3 elbowWantedSide = Vector3.ProjectOnPlane(elbowToward, line);
+                if (elbowNowSide.sqrMagnitude > StraightArmEpsilon && elbowWantedSide.sqrMagnitude > StraightArmEpsilon)
+                    _upperArm.rotation = Quaternion.AngleAxis(Vector3.SignedAngle(elbowNowSide, elbowWantedSide, line), line) * _upperArm.rotation;
+            }
+            else if (_elbowSwing != 0f)
+            {
+                _upperArm.rotation = Quaternion.AngleAxis(_elbowSwing * Side, line) * _upperArm.rotation;
+            }
 
             _hand.rotation = targetRotation * Quaternion.Inverse(_knuckleFrame);
 
@@ -253,7 +300,7 @@ namespace CloseTheDeal.Player
 
                 // Parent before child, so each joint's turn carries the ones after it.
                 joint.localRotation = _openHand[open];
-                joint.rotation = Quaternion.AngleAxis(-curl[i % JointsPerFinger], axis) * joint.rotation;
+                joint.rotation = Quaternion.AngleAxis(-curl[i % JointsPerFinger] * Side, axis) * joint.rotation;
             }
 
             return open;

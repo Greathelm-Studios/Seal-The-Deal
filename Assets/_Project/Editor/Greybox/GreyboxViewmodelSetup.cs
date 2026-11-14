@@ -10,6 +10,9 @@
 //              written into a HandGrip on the arms prefab, which the body other players see
 //              reads at spawn (Harvey: "have the actual playermodel follow the first person
 //              view model").
+//  Modified  : Claude Fable 5.2, 2026-11-14 — wires the left arm too and adds a GripSupport
+//              seat for a two-handed hold (Harvey: "add a left and right hand system and a
+//              two handed system").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Builds the first-person arms prefab from the character's own model (same
 //              skeleton, same toon materials, arm geometry only) with a gun mount holding the pistol,
@@ -55,13 +58,10 @@ namespace CloseTheDeal.Editor.Greybox
 
         const string IdleClip = "Pistol_Idle_Loop";
         const string BonePrefix = "mixamorig:";
-        const string UpperArmBone = BonePrefix + "RightArm";
-        const string LowerArmBone = BonePrefix + "RightForeArm";
-        const string HandBone = BonePrefix + "RightHand";
         const string FoldedUpperArmBone = BonePrefix + "LeftArm";
-        const string IndexKnuckleBone = BonePrefix + "RightHandIndex1";
-        const string MiddleKnuckleBone = BonePrefix + "RightHandMiddle1";
-        const string PinkyKnuckleBone = BonePrefix + "RightHandPinky1";
+
+        /// <summary>A Mixamo arm bone's name: the prefix, the side, then the part ("Arm", "ForeArm", "Hand", "HandIndex1" and so on).</summary>
+        static string ArmBone(bool left, string part) => BonePrefix + (left ? "Left" : "Right") + part;
 
         /// <summary>Joints in one finger of the Mixamo skeleton, numbered 1 to 3 from the base.</summary>
         const int JointsPerFinger = 3;
@@ -89,6 +89,17 @@ namespace CloseTheDeal.Editor.Greybox
         /// </summary>
         static readonly Vector3 GripWristPosition = new(0.03f, 0.005f, -0.055f);
         static readonly Vector3 GripWristTurn = new(-6f, -4f, 0f);
+
+        /// <summary>
+        /// Where the left wrist sits for a two-handed hold, relative to the middle of the
+        /// pistol's grip, in metres (right, up, forward in the gun's space), and how that hand
+        /// is turned, in degrees. The left hand comes in from the left and below and cups the
+        /// front of the grip over the right hand's fingers. Found by rendering the pose from
+        /// above, the left and the eye. A starting value only: move the GripSupport object in
+        /// the prefab and the tool leaves the prefab alone from then on.
+        /// </summary>
+        static readonly Vector3 SupportWristPosition = new(-0.04f, -0.02f, -0.045f);
+        static readonly Vector3 SupportWristTurn = new(-12f, 28f, 0f);
 
         /// <summary>
         /// Size of the pistol in the hand, as a fraction of the model's real size. The model
@@ -177,6 +188,8 @@ namespace CloseTheDeal.Editor.Greybox
             Transform shoulder = AddChild(root.transform, "Shoulder");
             Transform grip = AddChild(gunMount, "GripHand");
             grip.SetLocalPositionAndRotation(GripWristPosition, Quaternion.Euler(GripWristTurn));
+            Transform support = AddChild(gunMount, "GripSupport");
+            support.SetLocalPositionAndRotation(SupportWristPosition, Quaternion.Euler(SupportWristTurn));
             var profile = GreyboxSceneSetup.EnsureAsset<ViewmodelProfile>(ProfileFolder, ProfilePath);
             gunMount.SetLocalPositionAndRotation(profile.GunPosition, Quaternion.Euler(profile.GunTurn));
             shoulder.localPosition = profile.ShoulderPosition;
@@ -220,9 +233,10 @@ namespace CloseTheDeal.Editor.Greybox
             GreyboxSceneSetup.SetReference(serialized, "_rig", animator.transform);
             GreyboxSceneSetup.SetReference(serialized, "_foldedUpperArm", FindDeep(model.transform, FoldedUpperArmBone));
             GreyboxSceneSetup.SetReference(serialized, "_idle", Clip(clips, IdleClip));
-            if (!WireGrip(serialized, model.transform))
+            GreyboxSceneSetup.SetReference(serialized, "_supportTarget", support);
+            if (!WireGrip(serialized, "_grip", model.transform, false) || !WireGrip(serialized, "_supportGrip", model.transform, true))
             {
-                Debug.LogError("[Greybox] The character model is missing right arm or knuckle bones; no viewmodel built.");
+                Debug.LogError("[Greybox] The character model is missing arm or knuckle bones; no viewmodel built.");
                 Object.DestroyImmediate(root);
                 return null;
             }
@@ -237,48 +251,52 @@ namespace CloseTheDeal.Editor.Greybox
         }
 
         /// <summary>
-        /// Fills in the <c>_grip</c> settings (a <see cref="HandGrip"/>) of a component from a
-        /// copy of the character that is still in its bind pose: the right arm bones, the
+        /// Fills in one arm's settings (a <see cref="HandGrip"/> field) on a component from a
+        /// copy of the character that is still in its bind pose: that side's arm bones, the
         /// knuckle frame, the finger joints and each joint's open-hand turn. The curls and the
         /// elbow swing keep the defaults written in <see cref="HandGrip"/>.
         /// </summary>
-        /// <param name="owner">The component that has the <c>_grip</c> field. The caller applies it.</param>
+        /// <param name="owner">The component that has the field. The caller applies it.</param>
+        /// <param name="field">Name of the <see cref="HandGrip"/> field on that component.</param>
         /// <param name="model">Root of the character copy, in its bind pose (an open hand).</param>
-        /// <returns>False when the model lacks a right arm or knuckle bone; nothing usable was written.</returns>
-        static bool WireGrip(SerializedObject owner, Transform model)
+        /// <param name="left">True for the left arm, false for the right.</param>
+        /// <returns>False when the model lacks that arm or a knuckle bone on it; nothing usable was written.</returns>
+        static bool WireGrip(SerializedObject owner, string field, Transform model, bool left)
         {
-            Transform upperArm = FindDeep(model, UpperArmBone);
-            Transform lowerArm = FindDeep(model, LowerArmBone);
-            Transform hand = FindDeep(model, HandBone);
-            Transform index = FindDeep(model, IndexKnuckleBone);
-            Transform middle = FindDeep(model, MiddleKnuckleBone);
-            Transform pinky = FindDeep(model, PinkyKnuckleBone);
+            Transform upperArm = FindDeep(model, ArmBone(left, "Arm"));
+            Transform lowerArm = FindDeep(model, ArmBone(left, "ForeArm"));
+            Transform hand = FindDeep(model, ArmBone(left, "Hand"));
+            Transform index = FindDeep(model, ArmBone(left, "HandIndex1"));
+            Transform middle = FindDeep(model, ArmBone(left, "HandMiddle1"));
+            Transform pinky = FindDeep(model, ArmBone(left, "HandPinky1"));
             if (upperArm == null || lowerArm == null || hand == null || index == null || middle == null || pinky == null)
                 return false;
 
             // The hand's knuckle frame in hand-bone space, read from the bind pose: forward runs
             // wrist to middle knuckle, up runs little-finger knuckle to index knuckle. With it
-            // the grip target's axes mean the same thing however the FBX turned the hand bone.
+            // the grip target's axes mean the same thing however the FBX turned the hand bone,
+            // and on either hand.
             Quaternion knuckleFrame = Quaternion.Inverse(hand.rotation)
                 * Quaternion.LookRotation(middle.position - hand.position, index.position - pinky.position);
 
-            GreyboxSceneSetup.SetReference(owner, "_grip._upperArm", upperArm);
-            GreyboxSceneSetup.SetReference(owner, "_grip._lowerArm", lowerArm);
-            GreyboxSceneSetup.SetReference(owner, "_grip._hand", hand);
-            owner.FindProperty("_grip._knuckleFrame").quaternionValue = knuckleFrame;
+            owner.FindProperty(field + "._left").boolValue = left;
+            GreyboxSceneSetup.SetReference(owner, field + "._upperArm", upperArm);
+            GreyboxSceneSetup.SetReference(owner, field + "._lowerArm", lowerArm);
+            GreyboxSceneSetup.SetReference(owner, field + "._hand", hand);
+            owner.FindProperty(field + "._knuckleFrame").quaternionValue = knuckleFrame;
             var openHand = new List<Quaternion>();
-            SetJoints(owner, "_grip._triggerFinger", model, openHand, "Index");
-            SetJoints(owner, "_grip._gripFingers", model, openHand, "Middle", "Ring", "Pinky");
-            SetJoints(owner, "_grip._thumb", model, openHand, "Thumb");
-            SerializedProperty open = owner.FindProperty("_grip._openHand");
+            SetJoints(owner, field + "._triggerFinger", model, left, openHand, "Index");
+            SetJoints(owner, field + "._gripFingers", model, left, openHand, "Middle", "Ring", "Pinky");
+            SetJoints(owner, field + "._thumb", model, left, openHand, "Thumb");
+            SerializedProperty open = owner.FindProperty(field + "._openHand");
             open.arraySize = openHand.Count;
             for (int i = 0; i < openHand.Count; i++)
                 open.GetArrayElementAtIndex(i).quaternionValue = openHand[i];
             return true;
         }
 
-        /// <summary>Fills a joint list on a component with the three joints of each named right-hand finger, and records each joint's open-hand turn.</summary>
-        static void SetJoints(SerializedObject arms, string field, Transform model, List<Quaternion> openHand, params string[] fingers)
+        /// <summary>Fills a joint list on a component with the three joints of each named finger of one hand, and records each joint's open-hand turn.</summary>
+        static void SetJoints(SerializedObject arms, string field, Transform model, bool left, List<Quaternion> openHand, params string[] fingers)
         {
             SerializedProperty list = arms.FindProperty(field);
             list.arraySize = fingers.Length * JointsPerFinger;
@@ -287,9 +305,10 @@ namespace CloseTheDeal.Editor.Greybox
             {
                 for (int joint = 1; joint <= JointsPerFinger; joint++, slot++)
                 {
-                    Transform bone = FindDeep(model, HandBone + finger + joint);
+                    string name = ArmBone(left, "Hand" + finger + joint);
+                    Transform bone = FindDeep(model, name);
                     if (bone == null)
-                        Debug.LogWarning($"[Greybox] The character model has no bone '{HandBone + finger + joint}'; that finger joint will not close.");
+                        Debug.LogWarning($"[Greybox] The character model has no bone '{name}'; that finger joint will not close.");
                     list.GetArrayElementAtIndex(slot).objectReferenceValue = bone;
                     openHand.Add(bone != null ? bone.localRotation : Quaternion.identity);
                 }

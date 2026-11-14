@@ -3,6 +3,9 @@
 //  Generator : Claude Fable 5.2 (Claude Code)
 //  Generated : 2026-11-14
 //  Prompt    : Harvey: "have the actual playermodel follow the first person view model"
+//  Modified  : Claude Fable 5.2, 2026-11-14 — the body's left arm joins the hold when the
+//              weapon is held in both hands (Harvey: "add a left and right hand system and a
+//              two handed system").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Added to the player's smoothed visual when the player spawns. Makes the body
 //              everyone else sees (and the player's own shadow and mirror image) hold the
@@ -32,10 +35,17 @@ namespace CloseTheDeal.Player
     /// has written the clip pose and before <see cref="PlayerRagdoll"/> reads that pose as its
     /// target, so the ragdoll's arm is trying to hold the gun out and its bodies are where the
     /// arm is drawn. Then again straight after the ragdoll (<see cref="HeldWeaponSettle"/>),
-    /// from the shoulder the ragdoll actually produced, so the gun ends the frame exactly where
-    /// the view has it. WHY the second pass: left to the ragdoll alone the arm sagged about
-    /// 15 cm and the muzzle drooped some 25 degrees (seen in play), so the body's gun pointed
-    /// at the floor in front of what the player was aiming at.</para>
+    /// reading how far the ragdoll left the hand and the gun from the aimed pose. That gap is
+    /// split in two: the part that stays put (the arm's steady sag under its own weight) is
+    /// taken out, so at rest the arm is straight and the gun is on the aim; the part that
+    /// changes (the lag, swing and bounce from moving) is kept and made bigger by the profile's
+    /// swing value, so the arm flips about more than the ragdoll alone would throw it. WHY not
+    /// leave it to the ragdoll alone: the arm sagged about 15 cm and the muzzle drooped some
+    /// 25 degrees (seen in play). WHY not put it exactly on the aim: that pinned the wrist dead
+    /// still in the air while the elbow and shoulder flopped round it, which Harvey rejected.</para>
+    /// <para><b>The elbow is pinned:</b> both passes hang it down and a little out, in the
+    /// direction the player aims, so the arm keeps one shape and only the hand moves, by the
+    /// small limited swing.</para>
     /// <para><b>What differs from the view:</b> the body's shoulder is where the skeleton has
     /// it, not where the view pretends it is, so the elbow is more bent than in first person.
     /// The view's sway, bob, kick and reload are not shown; they are a few centimetres of
@@ -54,17 +64,50 @@ namespace CloseTheDeal.Player
         /// <summary>After PlayerAnimator (100), which writes the pose this overrides; before PlayerRagdoll (110), which reads it.</summary>
         const int HoldOrder = 105;
 
+        /// <summary>
+        /// The furthest the swing may carry the hand from the aimed wrist, in metres: sideways,
+        /// up or down, and forward or back. WHY these: uncapped, a hard strafe reversal threw the
+        /// hand 42 cm (measured in play), and at 30 and then 15 cm Harvey still found it swinging
+        /// too far out. Sideways is the tightest, because that is the way the gun leaves the
+        /// body's outline and pokes into walls and other players beside it; nothing checks the
+        /// arm's final pose against the level, so the limit is what keeps it in.
+        /// </summary>
+        static readonly Vector3 MaxSwing = new(0.04f, 0.07f, 0.06f);
+
+        /// <summary>
+        /// Which way the body's elbow hangs, in aim space (right, up, forward): down and a little
+        /// out to the gun's side. WHY fixed: left to follow the ragdoll's arm (after it) or the
+        /// run clip's pumping arm (before it), the elbow flipped out wide and up over the
+        /// shoulder from frame to frame while the hand hardly moved, which is what Harvey saw
+        /// swinging in the mirror.
+        /// </summary>
+        static readonly Vector3 ElbowSide = new(0.45f, -1f, 0f);
+
+        /// <summary>The furthest the swing may turn the gun away from the aim, in degrees. WHY 12: uncapped, the same strafe reversal turned the muzzle 114 degrees, back toward the player; 50 and then 25 were still too much.</summary>
+        const float MaxTurn = 12f;
+
         PlayerMotor _motor;
+        PlayerViewmodel _view;
         ViewmodelProfile _profile;
         ViewmodelArms _source;
 
         readonly HandGrip _grip = new();
+        /// <summary>The left arm, used when the weapon is held in both hands.</summary>
+        readonly HandGrip _support = new();
+        Vector3 _supportPosition;
+        Quaternion _supportRotation;
+        /// <summary>True when the arms prefab has a seat for the left hand and the body has a left arm to put on it.</summary>
+        bool _hasSupport;
         Transform _leanPivot;
         Transform _gun;
         Renderer[] _gunRenderers;
         Vector3 _gripPosition;
         Quaternion _gripRotation;
         float _pivotHeight;
+        /// <summary>The steady part of the gap between the ragdoll's hand and the aimed wrist, in metres in aim space (right, up, forward). Followed slowly, so only what stays put ends up in it.</summary>
+        Vector3 _restOffset;
+        /// <summary>The steady part of the gun's turn away from the aimed turn.</summary>
+        Quaternion _restTurn = Quaternion.identity;
         bool _ready;
         /// <summary>Whether the weapon is currently drawn as a shadow only, as the owner's own body is.</summary>
         bool _shadowOnly;
@@ -74,13 +117,15 @@ namespace CloseTheDeal.Player
         /// </summary>
         /// <param name="graphics">The player's smoothed visual, the object <see cref="PlayerAnimator"/> is on.</param>
         /// <param name="motor">That player's motor.</param>
+        /// <param name="view">That player's viewmodel: says where the gun rests and whether it is held in both hands.</param>
         /// <param name="profile">The first-person view's tuning.</param>
         /// <param name="source">The first-person arms prefab the weapon, hand seat and grip settings are read from.</param>
         /// <returns>The new component. It finishes setting itself up in its own <c>Start</c>.</returns>
-        public static PlayerHeldWeapon Attach(GameObject graphics, PlayerMotor motor, ViewmodelProfile profile, ViewmodelArms source)
+        public static PlayerHeldWeapon Attach(GameObject graphics, PlayerMotor motor, PlayerViewmodel view, ViewmodelProfile profile, ViewmodelArms source)
         {
             var held = graphics.AddComponent<PlayerHeldWeapon>();
             held._motor = motor;
+            held._view = view;
             held._profile = profile;
             held._source = source;
             return held;
@@ -97,7 +142,7 @@ namespace CloseTheDeal.Player
             var avatar = GetComponentInChildren<Animator>();
             Transform seat = _source != null ? _source.GripTarget : null;
             Transform weapon = _source != null ? _source.HeldModel : null;
-            if (_motor == null || _profile == null || avatar == null || seat == null || weapon == null || !_grip.Bind(avatar))
+            if (_motor == null || _view == null || _profile == null || avatar == null || seat == null || weapon == null || !_grip.Bind(avatar))
             {
                 Debug.LogWarning("[Viewmodel] The body cannot hold the weapon: the player, the view's tuning, the arms prefab's weapon and grip, or the model's right arm bones are missing.", this);
                 enabled = false;
@@ -105,6 +150,16 @@ namespace CloseTheDeal.Player
             }
 
             _grip.CopyTuning(_source.Grip);
+
+            // The left hand's seat is optional: a prefab without one is simply one-handed.
+            Transform supportSeat = _source.SupportTarget;
+            _hasSupport = supportSeat != null && _support.Bind(avatar, true);
+            if (_hasSupport)
+            {
+                _support.CopyTuning(_source.SupportGrip);
+                _supportPosition = supportSeat.localPosition;
+                _supportRotation = supportSeat.localRotation;
+            }
             _gripPosition = seat.localPosition;
             _gripRotation = seat.localRotation;
 
@@ -142,14 +197,18 @@ namespace CloseTheDeal.Player
             if (own != _shadowOnly)
                 SetShadowOnly(own);
 
-            Hold();
+            Hold(false);
         }
 
         /// <summary>
-        /// Bends the right arm onto the weapon's grip in front of the eye and seats the weapon
-        /// in the hand. Safe to call more than once a frame: it works from wherever the arm is.
+        /// Bends the right arm onto the weapon's grip and seats the weapon in the hand.
         /// </summary>
-        internal void Hold()
+        /// <param name="afterRagdoll">
+        /// False before the ragdoll runs: the arm is put exactly on the aimed grip, as the
+        /// target the ragdoll chases. True after it: the hand starts where the ragdoll left it
+        /// and is only brought part of the way back, by the profile's body shares.
+        /// </param>
+        internal void Hold(bool afterRagdoll)
         {
             if (!_ready)
                 return;
@@ -168,15 +227,61 @@ namespace CloseTheDeal.Player
                 aim = transform.forward;
             Quaternion look = Quaternion.LookRotation(aim, up);
 
-            Quaternion gunRotation = look * Quaternion.Euler(_profile.GunTurn);
-            Vector3 gunPosition = eye + look * _profile.GunPosition;
+            Quaternion gunRotation = look * _view.RestTurn;
+            Vector3 gunPosition = eye + look * _view.RestPosition;
 
-            _grip.Reach(gunPosition + gunRotation * _gripPosition, gunRotation * _gripRotation);
+            Vector3 wrist = gunPosition + gunRotation * _gripPosition;
+
+            // Hold the gun a little further out than the view does. WHY: the body's real
+            // shoulder is nearer the gun than the one the view pretends to have, so at the
+            // view's distance the elbow hung bent.
+            // WHY a fixed distance along the aim and not "until the arm is straight": that was
+            // measured from the ragdoll's shoulder, and the ragdoll's whole torso sways, so the
+            // hand was dragged up to 21 cm about with it (measured) however tight the limits
+            // below were. From the eye, the hand stays put and the elbow takes up the sway.
+            wrist += look * (Vector3.forward * _profile.BodyGunForward);
+
+            if (afterRagdoll)
+            {
+                // Where the ragdoll left the hand and the gun, measured from the aimed pose.
+                // The weapon rode the ragdoll's arm as a child of the hand, so its turn now is
+                // where that arm carried the muzzle.
+                Vector3 offset = Quaternion.Inverse(look) * (_grip.Hand.position - wrist);
+                Quaternion turn = Quaternion.Inverse(gunRotation) * _gun.rotation;
+
+                // Followed slowly: what stays put (the sag) collects here, what moves does not.
+                float follow = 1f - Mathf.Exp(-Time.deltaTime / _profile.BodySwingSettleSeconds);
+                _restOffset = Vector3.Lerp(_restOffset, offset, follow);
+                _restTurn = Quaternion.Slerp(_restTurn, turn, follow);
+
+                float swing = _profile.BodyArmSwing;
+                Vector3 thrownBy = (offset - _restOffset) * swing;
+                thrownBy.x = Mathf.Clamp(thrownBy.x, -MaxSwing.x, MaxSwing.x);
+                thrownBy.y = Mathf.Clamp(thrownBy.y, -MaxSwing.y, MaxSwing.y);
+                thrownBy.z = Mathf.Clamp(thrownBy.z, -MaxSwing.z, MaxSwing.z);
+                wrist += look * thrownBy;
+                (Quaternion.Inverse(_restTurn) * turn).ToAngleAxis(out float thrown, out Vector3 about);
+                // ToAngleAxis gives 0 to 360; past 180 it is the short way round the other side.
+                if (thrown > 180f)
+                    thrown -= 360f;
+                if (!float.IsNaN(about.x) && !float.IsInfinity(about.x))
+                    gunRotation *= Quaternion.AngleAxis(Mathf.Clamp(thrown * swing, -MaxTurn, MaxTurn), about);
+            }
+
+            _grip.Reach(wrist, gunRotation * _gripRotation, look * ElbowSide);
 
             // Seat the weapon on the hand, not on the point the hand was sent to: looking
             // steeply up or down can put that point out of the arm's reach, and the weapon
             // must not float.
             _gun.SetPositionAndRotation(_grip.Hand.position - gunRotation * _gripPosition, gunRotation);
+
+            // Held in both hands, the left hand goes to its seat on the weapon wherever the
+            // right hand ended up carrying it. Held in one, the left arm is left to the clips.
+            if (_hasSupport && _view.TwoHanded)
+            {
+                Vector3 leftElbow = look * new Vector3(-ElbowSide.x, ElbowSide.y, ElbowSide.z);
+                _support.Reach(_gun.position + gunRotation * _supportPosition, gunRotation * _supportRotation, leftElbow);
+            }
         }
 
         void SetShadowOnly(bool shadowOnly)

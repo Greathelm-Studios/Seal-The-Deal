@@ -4,9 +4,12 @@
 //  Generated : 2026-11-14
 //  Prompt    : Harvey: "have the actual playermodel follow the first person view model"
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
+//  Modified  : Claude Fable 5.2, 2026-11-14 — the second pass now only brings the arm part
+//              of the way back (Harvey: the wrist "just floats around static while the rest
+//              of the arm flops").
 //  Summary   : Runs PlayerHeldWeapon's arm hold a second time each frame, after the ragdoll
-//              has shown its bodies, so the body's gun ends the frame where the first-person
-//              view has it instead of where the ragdoll's sagging arm left it.
+//              has shown its bodies, so the body's gun is steadied toward the aim without
+//              being pinned to it.
 // -----------------------------------------------------------------------------
 using UnityEngine;
 
@@ -19,8 +22,8 @@ namespace CloseTheDeal.Player
     /// <remarks>
     /// WHY a second component and not a second call: Unity runs each component once per
     /// frame at its own place in the order, and the hold has to happen on both sides of
-    /// <see cref="PlayerRagdoll"/> (before, so the ragdoll chases it; after, so the result is
-    /// exact). Local to each client and synced by nothing (AGENTS.md §3).
+    /// <see cref="PlayerRagdoll"/> (before, so the ragdoll chases it; after, so the gun is
+    /// steadied). Local to each client and synced by nothing (AGENTS.md §3).
     /// </remarks>
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(SettleOrder)]
@@ -40,7 +43,7 @@ namespace CloseTheDeal.Player
         void LateUpdate()
         {
             if (_held != null && _held.isActiveAndEnabled)
-                _held.Hold();
+                _held.Hold(true);
         }
     }
 }

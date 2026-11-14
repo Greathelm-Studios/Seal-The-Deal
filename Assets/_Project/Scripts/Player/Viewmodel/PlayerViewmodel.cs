@@ -10,6 +10,8 @@
 //              it "in line with the movement and more clean". The gun now carries weight from
 //              the player's own movement (starts, stops, strafes, jumps, landings, leans), the
 //              step bob is a smooth arc, and it has a sprint carry, a climb drop and breathing.
+//  Modified  : Claude Fable 5.2, 2026-11-14 — a weapon can be held in one hand or both
+//              (Harvey: "add a left and right hand system and a two handed system").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Sits on the player prefab. For the player this client controls, and nobody
 //              else, it hangs the first-person arms on the camera, draws them with a camera
@@ -122,6 +124,10 @@ namespace CloseTheDeal.Player
         float _climb;
         float _climbVelocity;
         float _breathPhase;
+        bool _twoHanded;
+        /// <summary>0 held in one hand, 1 held in both; eased between so the gun slides across.</summary>
+        float _twoHand;
+        float _twoHandVelocity;
         float _kick;
         /// <summary>Signed -1 or +1, picked per shot, so the kick's twist alternates sides.</summary>
         float _kickSide = 1f;
@@ -130,6 +136,29 @@ namespace CloseTheDeal.Player
 
         /// <summary>True while this client is showing arms for this player.</summary>
         public bool IsShown => _arms != null;
+
+        /// <summary>
+        /// Whether the weapon is held in both hands. Starts as the arms prefab says. Weapon code
+        /// sets it when the held weapon changes; the gun then moves to the two-handed place and
+        /// the left arm comes up, in the view and on the body.
+        /// </summary>
+        /// <remarks>Local to this machine: nothing sends it. It belongs with whatever syncs which weapon a player holds.</remarks>
+        public bool TwoHanded
+        {
+            get => _twoHanded;
+            set
+            {
+                _twoHanded = value;
+                if (_arms != null)
+                    _arms.TwoHanded = value;
+            }
+        }
+
+        /// <summary>Where the gun's grip rests relative to the eye right now, in metres: the one-handed place, the two-handed place, or part way between while it moves.</summary>
+        public Vector3 RestPosition => Vector3.Lerp(_profile.GunPosition, _profile.TwoHandedPosition, _twoHand);
+
+        /// <summary>How the gun is turned at rest right now, blended the same way as <see cref="RestPosition"/>.</summary>
+        public Quaternion RestTurn => Quaternion.Slerp(Quaternion.Euler(_profile.GunTurn), Quaternion.Euler(_profile.TwoHandedTurn), _twoHand);
 
         /// <summary>True from the start of a reload move until the gun is back on aim.</summary>
         public bool IsReloading => _reloadElapsed >= 0f;
@@ -159,7 +188,11 @@ namespace CloseTheDeal.Player
             // Every player's body, not only the local one: this is what the others see.
             var body = GetComponentInChildren<PlayerAnimator>(true);
             if (body != null && _motor != null && _profile != null && _armsPrefab != null)
-                PlayerHeldWeapon.Attach(body.gameObject, _motor, _profile, _armsPrefab);
+            {
+                _twoHanded = _armsPrefab.TwoHanded;
+                _twoHand = _twoHanded ? 1f : 0f;
+                PlayerHeldWeapon.Attach(body.gameObject, _motor, this, _profile, _armsPrefab);
+            }
         }
 
         void OnDisable()
@@ -169,6 +202,10 @@ namespace CloseTheDeal.Player
 
         void Update()
         {
+            // For every player, not only the local one: the body's gun follows the same place.
+            if (_profile != null)
+                _twoHand = Mathf.SmoothDamp(_twoHand, _twoHanded ? 1f : 0f, ref _twoHandVelocity, _profile.TwoHandedBlendSeconds, Mathf.Infinity, Time.deltaTime);
+
             // PlayerMotor.Local is set and cleared by the motor as ownership starts and stops;
             // comparing a reference each frame is cheaper than a second network callback here.
             bool local = _motor != null && PlayerMotor.Local == _motor;
@@ -183,7 +220,7 @@ namespace CloseTheDeal.Player
 
         /// <summary>
         /// Stand-in trigger until slice 2's weapon code calls <see cref="Fire"/> and
-        /// <see cref="Reload"/>: the attack button kicks, R reloads.
+        /// <see cref="Reload"/>: the attack button kicks, R reloads, T switches between one hand and both.
         /// </summary>
         /// <remarks>
         /// WHY the R key is read straight from the keyboard: the actions asset has no reload
@@ -201,6 +238,10 @@ namespace CloseTheDeal.Player
             Keyboard keyboard = Keyboard.current;
             if (keyboard != null && keyboard.rKey.wasPressedThisFrame)
                 Reload();
+            // Stand-in until a two-handed weapon exists: T switches the pistol between one hand
+            // and both. Only this machine sees the switch; remove with the rest of this method.
+            if (keyboard != null && keyboard.tKey.wasPressedThisFrame)
+                TwoHanded = !TwoHanded;
         }
 
         void Show()
@@ -230,6 +271,7 @@ namespace CloseTheDeal.Player
             // from the profile every frame.
             _arms = Instantiate(_armsPrefab, cameraObject.transform);
             _arms.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            _arms.TwoHanded = _twoHanded;
 
             _lastCameraRotation = _baseCamera.transform.rotation;
             _lag = Vector2.zero;
@@ -302,7 +344,7 @@ namespace CloseTheDeal.Player
             float breath = Mathf.Sin(_breathPhase) * _profile.BreathHeight * (1f - _bobAmount);
             Vector3 drift = -_carry * _profile.MoveLagSeconds;
 
-            Vector3 position = _profile.GunPosition + bob
+            Vector3 position = RestPosition + bob
                 // Trailing a turn slides the gun the way it is turned, not only twists it.
                 + new Vector3(_lag.y, -_lag.x, 0f) * _profile.LookLagShift
                 + drift
@@ -320,7 +362,7 @@ namespace CloseTheDeal.Player
                 - leanTilt * _profile.LeanCounterRoll;
 
             Quaternion rotation = Quaternion.Euler(_lag.x + _carry.y * _profile.AirTilt, _lag.y, roll)
-                * Quaternion.Euler(_profile.GunTurn)
+                * RestTurn
                 * Quaternion.Euler(_profile.SprintTurn * _sprint)
                 * Quaternion.Euler(
                     -_profile.KickPitch * kick - _profile.ReloadTilt * reload + _profile.ClimbTilt * _climb,

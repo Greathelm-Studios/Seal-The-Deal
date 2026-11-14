@@ -54,6 +54,26 @@ namespace CloseTheDeal.Player
         [Tooltip("Where the shoulder of the gun arm sits relative to your eye, in metres: right, up, forward. Level with the gun and well behind it brings the forearm in straight behind the gun; lower makes the forearm come up from underneath and bends the wrist.")]
         public Vector3 ShoulderPosition = new(0.165f, -0.165f, -0.10f);
 
+        [Header("Two-handed hold")]
+        [Tooltip("Where the gun's grip sits when it is held in both hands, in metres from your eye: right, up, forward. Nearer the middle and closer in than the one-handed place, because the left arm has to reach it from the other shoulder.")]
+        public Vector3 TwoHandedPosition = new(0.055f, -0.10f, 0.33f);
+
+        [Tooltip("How the gun is turned when it is held in both hands, in degrees: pitch, yaw, roll, as for Gun turn.")]
+        public Vector3 TwoHandedTurn = new(-1f, -1f, 0f);
+
+        [Tooltip("How long the gun takes to move between the one-handed and two-handed place, in seconds.")]
+        [Min(0.01f)] public float TwoHandedBlendSeconds = 0.18f;
+
+        [Header("Body (what other players see)")]
+        [Tooltip("How much further out the body holds the gun than your own view does, in metres along the aim. 0 leaves the body's elbow visibly bent; about 0.06 straightens the arm. Too far and the arm locks straight and the hand falls short of the gun when the body sways back.")]
+        [Range(0f, 0.15f)] public float BodyGunForward = 0.06f;
+
+        [Tooltip("How much the body's gun arm flips about when you move, as a multiple of what the ragdoll throws it. 0 holds the arm and gun dead still on the aim; 1 is the ragdoll's own lag, swing and bounce; 2 doubles it. The gun's muzzle swings by the same multiple. However high this is, the hand is never thrown more than 4 cm sideways, 7 cm up or down or 6 cm forward or back from the aimed spot, or the muzzle more than 12 degrees off the aim. Standing still the arm always comes back to straight on the aim.")]
+        [Range(0f, 4f)] public float BodyArmSwing = 0.5f;
+
+        [Tooltip("How long the body's gun arm takes to come back to straight on the aim after being thrown about, in seconds. Shorter recovers sooner and cuts slow swings short; longer lets a swing play out and leaves the arm off the aim for longer.")]
+        [Min(0.05f)] public float BodySwingSettleSeconds = 0.35f;
+
         [Header("Look sway")]
         [Tooltip("How far behind the view the gun trails when you turn, in seconds of turning. 0.03 means that at a turn of 100 degrees a second the gun trails 3 degrees. 0 locks the gun to the view.")]
         [Min(0f)] public float LookLagSeconds = 0.03f;

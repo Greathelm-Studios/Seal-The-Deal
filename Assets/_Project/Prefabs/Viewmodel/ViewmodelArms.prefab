@@ -220,6 +220,7 @@ MonoBehaviour:
   _rig: {fileID: 183293150244039096}
   _foldedUpperArm: {fileID: 8384019534309585257}
   _grip:
+    _left: 0
     _upperArm: {fileID: 5130932358024588049}
     _lowerArm: {fileID: 3169180341339329207}
     _hand: {fileID: 3372645192027545258}
@@ -262,6 +263,52 @@ MonoBehaviour:
     - {x: -0.2646083, y: 0.14785364, z: 0.22742923, w: 0.9254176}
     - {x: 0.013767606, y: 0.012815882, z: -0.024087794, w: 0.9995329}
     - {x: 0.0024757928, y: 0.038506802, z: 0.0067950473, w: 0.9992322}
+  _supportTarget: {fileID: 6438695084678707442}
+  _supportGrip:
+    _left: 1
+    _upperArm: {fileID: 8384019534309585257}
+    _lowerArm: {fileID: 7761140430107100735}
+    _hand: {fileID: 260228050282348410}
+    _knuckleFrame: {x: 0.69610614, y: 0.16803022, z: 0.17229302, w: -0.67640054}
+    _elbowSwing: 20
+    _gripCurl: {x: 80, y: 95, z: 50}
+    _triggerCurl: {x: 50, y: 70, z: 35}
+    _thumbCurl: {x: 45, y: 35, z: 25}
+    _triggerFinger:
+    - {fileID: 6088958756597409407}
+    - {fileID: 2169358376358452113}
+    - {fileID: 8266115730551547938}
+    _gripFingers:
+    - {fileID: 6474319814189239984}
+    - {fileID: 3870413554408968407}
+    - {fileID: 4746320336496181302}
+    - {fileID: 2517967995251686897}
+    - {fileID: 6536155052576264241}
+    - {fileID: 6974986266894686845}
+    - {fileID: 1908554449803640737}
+    - {fileID: 2551558232487785226}
+    - {fileID: 8063340043089097689}
+    _thumb:
+    - {fileID: 8569317015613753214}
+    - {fileID: 4559449327595601440}
+    - {fileID: 7070434628932719368}
+    _openHand:
+    - {x: 0.015272259, y: 0.00109972, z: 0.068298176, w: 0.99754745}
+    - {x: -0.034515716, y: 0.017163767, z: 0.008373577, w: 0.9992217}
+    - {x: -0.011436755, y: -0.0012990669, z: -0.0228476, w: 0.9996727}
+    - {x: 0.003376976, y: -0.0085114585, z: 0.04354325, w: 0.9990096}
+    - {x: -0.009789694, y: 0.00500088, z: 0.0023592631, w: 0.9999368}
+    - {x: -0.016971638, y: -0.013879216, z: -0.020010712, w: 0.9995594}
+    - {x: 0.018897599, y: -0.021929553, z: -0.0022755635, w: 0.99957836}
+    - {x: -0.03478693, y: 0.012775453, z: 0.03251408, w: 0.998784}
+    - {x: -0.025961872, y: -0.009857439, z: -0.01156244, w: 0.9995475}
+    - {x: 0.0009349787, y: -0.056449674, z: -0.031434968, w: 0.99791}
+    - {x: -0.043709725, y: 0.016328635, z: 0.0754974, w: 0.99605376}
+    - {x: -0.08454964, y: -0.011085216, z: -0.027916797, w: 0.99596643}
+    - {x: -0.14979967, y: -0.09092921, z: -0.20035733, w: 0.9639237}
+    - {x: 0.016845617, y: -0.06486613, z: 0.06883668, w: 0.9953744}
+    - {x: 0.019033562, y: -0.06844384, z: -0.017379643, w: 0.997322}
+  _twoHanded: 0
   _idle: {fileID: -4708846537797790282, guid: b0a381ee78eeb824d95019924002d5a9, type: 3}
 --- !u!1 &715052488649148459
 GameObject:
@@ -649,6 +696,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4891433911507581492}
+  - {fileID: 6438695084678707442}
   - {fileID: 4033888226806357821}
   m_Father: {fileID: 381714655038743569}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1663,6 +1711,37 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 9035567253276021025}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &6089786989393933201
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6438695084678707442}
+  m_Layer: 8
+  m_Name: GripSupport
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6438695084678707442
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6089786989393933201}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.101423524, y: 0.24059664, z: 0.025287725, w: 0.96498036}
+  m_LocalPosition: {x: -0.04, y: -0.02, z: -0.045}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 823640872655053259}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6451398944230788302
 GameObject:
