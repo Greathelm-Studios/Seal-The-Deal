@@ -875,6 +875,7 @@ namespace CloseTheDeal.Player.Dev
         {
             yield return Wait(0.5f);
             yield return LookChecks();
+            yield return PlayerPrefsChecks();
             yield return WalkSprintChecks();
             yield return JumpChecks();
             yield return CrouchChecks();
@@ -921,6 +922,51 @@ namespace CloseTheDeal.Player.Dev
             InputSystem.QueueStateEvent(_pad, new GamepadState());
             Note($"MEASURE stick pitch at full tilt {pitchRate:0} deg/s, pitch {before:0.0} to {View.Pitch:0.0} (profile {Me.Profile.StickPitchSpeed:0})");
             yield return Face(0f);
+        }
+
+        /// <summary>
+        /// The settings screen's controls, end to end: sensitivity and invert change the view as
+        /// stated, and a rebind of Jump to J makes J jump and Space not. The player's saved
+        /// settings are put back afterwards.
+        /// </summary>
+        IEnumerator PlayerPrefsChecks()
+        {
+            float sens = CloseTheDeal.UI.InputPrefs.LookSensitivity;
+            bool invert = CloseTheDeal.UI.InputPrefs.InvertY;
+            string binds = CloseTheDeal.UI.InputPrefs.BindingOverridesJson;
+            yield return Face(0f);
+
+            CloseTheDeal.UI.InputPrefs.LookSensitivity = 2f;
+            CloseTheDeal.UI.InputPrefs.InvertY = true;
+            float before = View.Pitch;
+            MoveMouse(new Vector2(0f, 50f));
+            yield return Wait(0.05f);
+            MoveMouse(Vector2.zero);
+            yield return Frames(2);
+            float moved = View.Pitch - before;
+            float expected = 50f * Me.Profile.MouseSensitivity * 2f;
+            Check("sensitivity 2 and invert look turn the view as set", Mathf.Abs(moved - expected) < 0.5f, $"mouse up 50 counts moved pitch {moved:0.0} deg (expected +{expected:0.0}, down because inverted)");
+            CloseTheDeal.UI.InputPrefs.LookSensitivity = sens;
+            CloseTheDeal.UI.InputPrefs.InvertY = invert;
+            yield return Face(0f);
+
+            var reader = Me.GetComponent<PlayerInputReader>();
+            var scratch = Instantiate(reader.Actions);
+            scratch.RemoveAllBindingOverrides();
+            scratch.FindAction("Player/Jump").ApplyBindingOverride(0, "<Keyboard>/j");
+            CloseTheDeal.UI.InputPrefs.BindingOverridesJson = scratch.SaveBindingOverridesAsJson();
+            Destroy(scratch);
+            yield return Wait(0.2f);
+
+            int jumps = _localJumps, lands = _localLands;
+            yield return Tap(Key.Space);
+            yield return Wait(0.3f);
+            bool spaceIgnored = _localJumps == jumps;
+            yield return Tap(Key.J);
+            yield return Until(() => _localLands > lands, 2f, "lands after the rebound jump");
+            Check("a rebind of Jump to J takes effect at once", spaceIgnored && _localJumps == jumps + 1, $"space ignored {spaceIgnored}, jumps +{_localJumps - jumps}; help card reads {reader.BindingText("Jump", false)}");
+            CloseTheDeal.UI.InputPrefs.BindingOverridesJson = binds;
+            yield return Wait(0.2f);
         }
 
         IEnumerator StickRate(Vector2 stick, string label)
