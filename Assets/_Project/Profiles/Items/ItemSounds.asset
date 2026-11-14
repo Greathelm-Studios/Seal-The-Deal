@@ -12,19 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60942715289994fa8928d5ba8227e891, type: 3}
   m_Name: ItemSounds
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Items.ItemSoundSet
-  Output: {fileID: 0}
-  PickUp: {fileID: 0}
-  Drop: {fileID: 0}
-  Throw: {fileID: 0}
-  ImpactLight: {fileID: 0}
-  ImpactHeavy: {fileID: 0}
+  Output: {fileID: 4781412786198489561, guid: 6737b27e57e4d4e709fbdb02f079a21f, type: 2}
+  PickUp: {fileID: 8300000, guid: 65370832d050e4a29a21170fdeafd4c2, type: 3}
+  Drop: {fileID: 8300000, guid: 5b43433cb6fba4f2693ba3ce4fd4f2a7, type: 3}
+  Throw: {fileID: 8300000, guid: 227a4dd31893f4b29babb48d5c569295, type: 3}
+  ImpactLight: {fileID: 8300000, guid: d7640e43bcfd344bdaeee39612cd6dcf, type: 3}
+  ImpactHeavy: {fileID: 8300000, guid: da0b472ebeb2a468db7f4140bf90a742, type: 3}
   HeavyFromKg: 6
   FullVolumeImpactSpeed: 14
-  Arm: {fileID: 0}
-  Beep: {fileID: 0}
-  Explosion: {fileID: 0}
-  VentLoop: {fileID: 0}
-  VentEnd: {fileID: 0}
-  WetFloorDown: {fileID: 0}
-  Slip: {fileID: 0}
+  Arm: {fileID: 8300000, guid: ed33d91f20c664319907dcbf2dd13c49, type: 3}
+  Beep: {fileID: 8300000, guid: 038c71c2517dc489abdb29f170e6a1c8, type: 3}
+  Explosion: {fileID: 8300000, guid: 5d7ee58ecca6c4ae39e4082a6d8bf631, type: 3}
+  VentLoop: {fileID: 8300000, guid: 3adcf573e9ff442b9846d73bf29da7d0, type: 3}
+  VentEnd: {fileID: 8300000, guid: 4897bd966510e442c864f7852978e949, type: 3}
+  WetFloorDown: {fileID: 8300000, guid: aeb2f1edbfbe84812acfd9a0047606f9, type: 3}
+  Slip: {fileID: 8300000, guid: ee321d6fbc6be4877a2386360f2c9023, type: 3}
   Volume: 0.9

@@ -44,6 +44,7 @@ namespace CloseTheDeal.Editor.Lanes
         const string LaneTowerPath = ProfileFolder + "/LaneTowerFrame.asset";
         const string EmptyFloorPath = PrefabFolder + "/LaneEmptyFloor.prefab";
         const int PropsPerFloorCap = 16; // docs/systems/PROPS.md
+        const float LaneTowerGap = 60f;
 
         // The test floor: a slice of office 12 m up, so things can be thrown out of it.
         const float FloorTop = 12f;
@@ -962,6 +963,10 @@ namespace CloseTheDeal.Editor.Lanes
             var profile = ScriptableObject.CreateInstance<TowerProfile>();
             profile.Lobby = profile.Checkpoint = profile.Boardroom = profile.Roof = empty;
             profile.Offices = new[] { empty };
+            // The two empty towers stand well apart, so the hand-built slice and the ground
+            // under its windows are street, not inside a tower: things thrown out of it are
+            // out of the building (Pickup's fall rule) yet still inside Switchboard's box.
+            profile.Gap = LaneTowerGap;
             AssetDatabase.CreateAsset(profile, LaneTowerPath);
             Debug.Log("[Pickups] Created " + LaneTowerPath);
             return profile;
@@ -1337,7 +1342,11 @@ namespace CloseTheDeal.Editor.Lanes
         static int _frame;
 
         [MenuItem("Close the Deal/Lanes/Run Pickups Check")]
-        static void RunFromMenu() => Begin("solo", "Temp/PickupsRun");
+        static void RunFromMenu()
+        {
+            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                Begin("solo", "Temp/PickupsRun");
+        }
 
         public static void RunFromShell() => Begin(Arg("-pickupsRole") ?? "solo", Arg("-pickupsOut") ?? "Temp/PickupsRun");
 
@@ -1367,8 +1376,26 @@ namespace CloseTheDeal.Editor.Lanes
         [InitializeOnLoadMethod]
         static void Resume()
         {
+            EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeChanged;
             if (SessionState.GetBool(ActiveKey, false))
                 EditorApplication.update += Pump;
+        }
+
+        /// <summary>
+        /// Stopping Play in the middle of a check ends the check: otherwise the next Play, in any
+        /// scene, would pick the script up again and drive the player.
+        /// </summary>
+        static void OnPlayModeChanged(PlayModeStateChange change)
+        {
+            if (change != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool(ActiveKey, false))
+                return;
+
+            EditorApplication.update -= Pump;
+            SessionState.SetBool(ActiveKey, false);
+            _script = null;
+            Stack.Clear();
+            Debug.Log("[Pickups] Run Pickups Check stopped before it finished; nothing was reported.");
         }
 
         static void Pump()
@@ -1624,6 +1651,7 @@ namespace CloseTheDeal.Editor.Lanes
         {
             SteamLobby lobby = UnityEngine.Object.FindAnyObjectByType<SteamLobby>();
             yield return new Until(() => lobby.Ready, 20f, "the lobby to be ready");
+            UseOwnPort();
             if (host)
             {
                 lobby.Host();
@@ -1646,8 +1674,24 @@ namespace CloseTheDeal.Editor.Lanes
             }
 
             yield return new Until(() => Me != null, 30f, "this machine's player to spawn");
+            if (host)
+                Check("this machine is the host (it did not join someone else's game on the same port)", InstanceFinder.IsServerStarted);
             Cursor.lockState = CursorLockMode.Locked;
             yield return 1.5f;
+        }
+
+        /// <summary>
+        /// Other copies of the game on this Mac (an open editor pressing Host, other lanes' runs)
+        /// use the default local port; this lane's runs keep to their own, 17783 unless
+        /// -pickupsPort says otherwise, so a host here never joins someone else's game.
+        /// </summary>
+        static void UseOwnPort()
+        {
+            ushort port = ushort.TryParse(Arg("-pickupsPort"), out ushort chosen) ? chosen : (ushort)17783;
+            var tugboat = UnityEngine.Object.FindAnyObjectByType<FishNet.Transporting.Tugboat.Tugboat>();
+            if (tugboat != null)
+                tugboat.SetPort(port);
+            Note($"local port {port}");
         }
 
         // ---- Solo: every feature and edge case on one machine (host with its own player) -----
@@ -1699,12 +1743,26 @@ namespace CloseTheDeal.Editor.Lanes
             Stand(me, new Vector3(-2.5f, FloorY, -2f), -90f);
             yield return 0.5f;
             float healthBefore = dummyC.Health;
+            int landedBy = -2;
+            float landedDamage = -1f;
+            Action<Pickup, int, GameObject, float> onLanded = (item, thrower, hit, damage) =>
+            {
+                if (item == chairA) { landedBy = thrower; landedDamage = damage; }
+            };
+            Pickup.ServerThrowLanded += onLanded;
             me.LocalThrow(AimAt(me, dummyC.transform.position + Vector3.up * 1.1f, 0.08f));
             yield return 0.15f;
             FirstPersonStill("03_chair_in_flight");
+            denied = null;
+            me.LocalTake(chairA);
+            yield return 0.1f;
+            Check("the thrower cannot snatch a chair straight back mid-throw", me.Held == null && denied == DenyReason.TooSoon, $"refusal: {denied}");
             yield return 1.6f;
             Check("a thrown chair leaves the hands", me.Held == null && chairA.State == PickupState.InWorld);
             Check("a thrown chair damages what it hits", dummyC.Health < healthBefore, $"dummy {healthBefore:0} -> {dummyC.Health:0}");
+            Pickup.ServerThrowLanded -= onLanded;
+            Check("the host reports the throw landing, with who threw it and the damage", landedBy == me.OwnerId && landedDamage > 0f,
+                $"thrower {landedBy} (me {me.OwnerId}), damage {landedDamage:0.0}");
             Check("walking speed is back after letting go", Mathf.Approximately(me.Motor.Profile.WalkSpeed, fullWalk));
 
             // 2. Cubicle panel as moving cover, and the slowdown measured by walking.

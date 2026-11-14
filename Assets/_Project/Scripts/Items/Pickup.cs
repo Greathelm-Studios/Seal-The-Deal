@@ -2,6 +2,7 @@ using System;
 using CloseTheDeal.Core;
 using CloseTheDeal.Player;
 using CloseTheDeal.Props;
+using CloseTheDeal.Tower;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using UnityEngine;
@@ -96,6 +97,8 @@ namespace CloseTheDeal.Items
         float _throwerSafeUntil;
         PlayerMotor _thrower;
         int _lastHolderClientId = -1;
+        ItemCarrier _letGoBy;
+        float _retakeAt;
         Vector3 _lastVelocity;
         float _returnAt;
 
@@ -108,6 +111,14 @@ namespace CloseTheDeal.Items
         static CarryProfile _defaultRules;
         bool _quiet;
 
+        // Drawn only: the ease from where it lay into the hands, and the owner's view lag.
+        float _takeLeft;
+        float _takeSeconds;
+        Vector3 _takeFromPosition;
+        Quaternion _takeFromRotation;
+        Quaternion _swayFrame;
+        bool _swaying;
+
         /// <summary>Every machine. A player took the item.</summary>
         public event Action<Pickup, ItemCarrier> Taken;
         /// <summary>Every machine. The item left a player's hands, and how.</summary>
@@ -116,6 +127,13 @@ namespace CloseTheDeal.Items
         public event Action<Pickup, float> Impact;
         /// <summary>Every machine. The item is back where it started.</summary>
         public event Action<Pickup> Returned;
+
+        /// <summary>
+        /// Host only, static. A thrown item landed on a player or on something that takes damage:
+        /// the item, the thrower's client id (-1 if unknown), what it hit, and the damage done
+        /// (0 for a shove alone). For match records ("throws landed"). Fires once per throw.
+        /// </summary>
+        public static event Action<Pickup, int, GameObject, float> ServerThrowLanded;
 
         /// <summary>The hand-made definition if this prefab has one, otherwise one worked out from the prop itself (LooseItemDefinition).</summary>
         public ItemDefinition Definition => _definition != null ? _definition : _derivedDefinition != null ? _derivedDefinition : Derive();
@@ -131,6 +149,9 @@ namespace CloseTheDeal.Items
         public Rigidbody Body => _body;
         public ItemCarrier Holder => _carrier;
         public PickupState State => _away.Value ? PickupState.Away : _holder.Value != null ? PickupState.Held : PickupState.InWorld;
+
+        /// <summary>Host only. True while the player who just let go of it must wait before taking it back.</summary>
+        public bool ServerTooSoonFor(ItemCarrier carrier) => carrier == _letGoBy && Time.time < _retakeAt;
 
         /// <summary>Host only. The client id of whoever held it last, or -1 if nobody has.</summary>
         public int LastHolderClientId => _lastHolderClientId;
@@ -252,6 +273,8 @@ namespace CloseTheDeal.Items
                 return;
 
             PlayerMotor releasedBy = _carrier.Motor;
+            _letGoBy = _carrier;
+            _retakeAt = Time.time + Rules.RetakeSeconds;
             _holder.Value = null;
             ApplyState();
 
@@ -296,6 +319,9 @@ namespace CloseTheDeal.Items
         void ServerSendAway(float returnAfterSeconds, bool announce)
         {
             ServerDropFromHands(announce);
+            // An armed case or a venting extinguisher stops: nothing goes on happening out of play.
+            if (_behaviour != null)
+                _behaviour.ServerOnSentAway();
             _live = false;
             _away.Value = true;
             ApplyState();
@@ -370,8 +396,35 @@ namespace CloseTheDeal.Items
                     _live = false;
             }
 
-            if (_body.position.y < _homePosition.y - Rules.FallReturnDistance)
+            if (OutOfTheBuilding(_body.position))
                 ServerSendAway(Rules.FallReturnSeconds, false);
+        }
+
+        /// <summary>
+        /// Host only. Gone from the building: below the ground, or outside both towers' footprints
+        /// and fallen below where it started (out of a window, into the street). Carried down
+        /// a stairwell or left on a skybridge at its own level, it stays. With no tower built
+        /// (a test scene), anything far below where it started counts.
+        /// The footprint is the same two-tower layout Switchboard's TowerFrame packs into:
+        /// tower-local X within half the width, |Z| from half the gap to the back of the spine.
+        /// </summary>
+        bool OutOfTheBuilding(Vector3 position)
+        {
+            CarryProfile rules = Rules;
+            TowerBuilder tower = TowerBuilder.Instance;
+            if (tower == null || !tower.IsBuilt || tower.Profile == null)
+                return position.y < _homePosition.y - rules.FallReturnDistance;
+
+            Vector3 local = tower.transform.InverseTransformPoint(position);
+            if (local.y < -rules.BelowGroundMetres)
+                return true;
+
+            TowerProfile shape = tower.Profile;
+            float side = Mathf.Abs(local.z);
+            bool inside = Mathf.Abs(local.x) <= shape.Width * 0.5f
+                && side >= shape.Gap * 0.5f
+                && side <= shape.Gap * 0.5f + shape.MainDepth + shape.SpineDepth;
+            return !inside && position.y < _homePosition.y - rules.OutsideDropMetres;
         }
 
         /// <summary>Keeps the solid part at the carrier's hands. A carrier that has gone (left the game) drops it where it is.</summary>
@@ -403,16 +456,23 @@ namespace CloseTheDeal.Items
             if (motor != null && motor == _thrower && Time.time < _throwerSafeUntil)
                 return;
 
+            LandOn(collision, motor, speed);
+            ObserversImpact(speed);
+        }
+
+        /// <summary>Shoves a player it hit and hurts anything that takes damage. One throw lands once: after that it is furniture again.</summary>
+        void LandOn(Collision collision, PlayerMotor motor, float speed)
+        {
             ContactPoint contact = collision.GetContact(0);
             Vector3 direction = _lastVelocity.sqrMagnitude > 0.01f ? _lastVelocity.normalized : -contact.normal;
             bool shoved = Shove(motor, speed, direction);
-            bool hurt = Hurt(collision.collider.GetComponentInParent<IDamageable>(), speed, contact.point, direction);
+            float damage = Hurt(collision.collider.GetComponentInParent<IDamageable>(), speed, contact.point, direction);
+            if (!shoved && damage < 0f)
+                return;
 
-            // One throw hurts once: after it lands on someone it is furniture again.
-            if (shoved || hurt)
-                _live = false;
-
-            ObserversImpact(speed);
+            _live = false;
+            Rigidbody struck = collision.collider.attachedRigidbody;
+            ServerThrowLanded?.Invoke(this, _lastHolderClientId, struck != null ? struck.gameObject : collision.collider.gameObject, Mathf.Max(0f, damage));
         }
 
         bool Shove(PlayerMotor motor, float speed, Vector3 direction)
@@ -425,14 +485,15 @@ namespace CloseTheDeal.Items
             return true;
         }
 
-        bool Hurt(IDamageable target, float speed, Vector3 point, Vector3 direction)
+        /// <summary>The damage done, or -1 when what it hit takes no damage.</summary>
+        float Hurt(IDamageable target, float speed, Vector3 point, Vector3 direction)
         {
             if (target == null)
-                return false;
+                return -1f;
 
             float damage = (speed - Rules.MinImpactSpeed) * _body.mass * Rules.DamagePerKgMps;
             target.ApplyDamage(damage, point, direction, _lastHolderClientId);
-            return true;
+            return damage;
         }
 
         // ---- Every machine: showing the state -------------------------------------------------
@@ -513,6 +574,7 @@ namespace CloseTheDeal.Items
             {
                 _blend = 0f;
                 next.NotifyHeld(this);
+                StartTake(next);
                 if (!_quiet)
                     ItemAudio.PlayAt(Sounds, Sounds?.PickUp, transform.position);
                 Taken?.Invoke(this, next);
@@ -637,6 +699,69 @@ namespace CloseTheDeal.Items
             return _defaultRules;
         }
 
+        /// <summary>Starts the ease from where the item lay into the hands. Not for a joiner seeing an item already held.</summary>
+        void StartTake(ItemCarrier carrier)
+        {
+            _swaying = false;
+            _takeLeft = 0f;
+            if (_quiet)
+                return;
+
+            CarryProfile rules = Rules;
+            _takeSeconds = Mathf.Lerp(rules.TakeSecondsLight, rules.TakeSecondsHeavy, carrier.Load);
+            _takeLeft = _takeSeconds;
+            _takeFromPosition = transform.TransformPoint(_visualRestPosition);
+            _takeFromRotation = transform.rotation * _visualRestRotation;
+        }
+
+        /// <summary>
+        /// Where the item is drawn in the hands this frame. For the carrier's own view, it trails
+        /// a fast turn by up to a few degrees, further for heavier things; just after a take it
+        /// eases in from where it lay.
+        /// </summary>
+        void ShowInHands(Transform shown)
+        {
+            _carrier.GetHoldPose(Definition, true, out Vector3 position, out Quaternion rotation);
+            Vector3 targetPosition = position + rotation * _visualRestPosition;
+            Quaternion targetRotation = rotation * _visualRestRotation;
+
+            PlayerCamera cam = _carrier.IsOwner ? PlayerCamera.Instance : null;
+            if (cam != null)
+                Sway(cam.transform, ref targetPosition, ref targetRotation);
+
+            if (_takeLeft > 0f)
+            {
+                _takeLeft = Mathf.Max(0f, _takeLeft - Time.deltaTime);
+                float t = 1f - _takeLeft / _takeSeconds;
+                float eased = 1f - (1f - t) * (1f - t) * (1f - t);
+                targetPosition = Vector3.LerpUnclamped(_takeFromPosition, targetPosition, eased);
+                targetRotation = Quaternion.SlerpUnclamped(_takeFromRotation, targetRotation, eased);
+            }
+
+            shown.SetPositionAndRotation(targetPosition, targetRotation);
+        }
+
+        /// <summary>Swings the held pose round the eye so it lags the view's turn, heavier things more.</summary>
+        void Sway(Transform view, ref Vector3 position, ref Quaternion rotation)
+        {
+            CarryProfile rules = Rules;
+            Quaternion frame = view.rotation;
+            if (!_swaying)
+            {
+                _swayFrame = frame;
+                _swaying = true;
+            }
+
+            float follow = Mathf.Lerp(rules.SwayFollowLight, rules.SwayFollowHeavy, _carrier.Load);
+            _swayFrame = Quaternion.Slerp(_swayFrame, frame, 1f - Mathf.Exp(-follow * Time.deltaTime));
+            _swayFrame = Quaternion.RotateTowards(frame, _swayFrame, rules.MaxSwayDegrees);
+
+            Quaternion lag = _swayFrame * Quaternion.Inverse(frame);
+            Vector3 eye = view.position;
+            position = eye + lag * (position - eye);
+            rotation = lag * rotation;
+        }
+
         /// <summary>
         /// Visual only, and only running while there is something to show: the item in a
         /// player's hands, the short ease from the hands back onto the solid part after
@@ -648,10 +773,7 @@ namespace CloseTheDeal.Items
             if (_carrier != null)
             {
                 if (shown != null)
-                {
-                    _carrier.GetHoldPose(Definition, true, out Vector3 position, out Quaternion rotation);
-                    shown.SetPositionAndRotation(position + rotation * _visualRestPosition, rotation * _visualRestRotation);
-                }
+                    ShowInHands(shown);
                 return;
             }
 
