@@ -20,6 +20,7 @@ namespace CloseTheDeal.Editor.Lanes
     {
         public const string ClipFolder = "Assets/_Project/Audio/UI";
         public const string ItemClipFolder = "Assets/_Project/Audio/Items";   // world sounds for the pickups lane, same generator
+        public const string WeaponClipFolder = "Assets/_Project/Audio/Weapons"; // gun, impact and glass sounds for the shooting lane
         public const string MixerPath = ClipFolder + "/GameMixer.mixer";
         public const string SetPath = "Assets/_Project/Resources/UI/UiSoundSet.asset";
 
@@ -41,7 +42,7 @@ namespace CloseTheDeal.Editor.Lanes
         // ----------------------------------------------------------------------------------- import settings
         static void ApplyImportSettings()
         {
-            foreach (string guid in AssetDatabase.FindAssets("t:AudioClip", new[] { ClipFolder, ItemClipFolder }))
+            foreach (string guid in AssetDatabase.FindAssets("t:AudioClip", new[] { ClipFolder, ItemClipFolder, WeaponClipFolder }))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 var imp = AssetImporter.GetAtPath(path) as AudioImporter;

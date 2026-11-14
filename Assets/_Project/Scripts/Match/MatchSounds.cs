@@ -6,8 +6,8 @@ namespace CloseTheDeal.MatchMode
     /// <summary>
     /// Gives the briefcase match's events their sounds from the shared UI sound set (lane 9's
     /// clips, UI bus), on each player's own machine: the countdown, a floor opening, the case
-    /// changing hands, a refusal, a warning, the result. Listens only; plays through
-    /// UiSoundPlayer, which the UI kit's UiSound hub also routes to. Lives on the Match
+    /// changing hands, a refusal, a warning, the result. Listens only; plays through the
+    /// UI kit's UiSound hub (lane 9's player behind it). Lives on the Match
     /// object. The mapping is the table in docs/systems/MATCH.md, UI contract.
     /// </summary>
     [DisallowMultipleComponent]
@@ -56,32 +56,32 @@ namespace CloseTheDeal.MatchMode
         void OnCountdown(int secondsLeft)
         {
             if (secondsLeft > 0)
-                UiSoundPlayer.Play(UiSoundEvent.CountdownTick);
+                UiSound.Play(UiSoundEvent.CountdownTick);
         }
 
         void OnPhase(MatchPhase previous, MatchPhase next)
         {
             if (next == MatchPhase.Running)
-                UiSoundPlayer.Play(UiSoundEvent.CountdownGo);
+                UiSound.Play(UiSoundEvent.CountdownGo);
         }
 
-        void OnFloorOpened(int floor, int byFirm) => UiSoundPlayer.Play(UiSoundEvent.FloorOpened);
-        void OnPickedUp(int firm) => UiSoundPlayer.Play(UiSoundEvent.BriefcaseTaken);
-        void OnDropped(int firm) => UiSoundPlayer.Play(UiSoundEvent.BriefcaseDropped);
-        void OnWarning(int secondsLeft) => UiSoundPlayer.Play(UiSoundEvent.Notification);
+        void OnFloorOpened(int floor, int byFirm) => UiSound.Play(UiSoundEvent.FloorOpened);
+        void OnPickedUp(int firm) => UiSound.Play(UiSoundEvent.BriefcaseTaken);
+        void OnDropped(int firm) => UiSound.Play(UiSoundEvent.BriefcaseDropped);
+        void OnWarning(int secondsLeft) => UiSound.Play(UiSoundEvent.Notification);
 
         void OnCheckpoint(int firm, int floor)
         {
             FirmMember local = FirmMember.Local;
             if (local != null && local.Firm == firm)
-                UiSoundPlayer.Play(UiSoundEvent.Notification);
+                UiSound.Play(UiSoundEvent.Notification);
         }
 
         void OnEnded(MatchSnapshot result)
         {
             FirmMember local = FirmMember.Local;
             bool won = local != null && result.Winner == local.Firm;
-            UiSoundPlayer.Play(won ? UiSoundEvent.MatchWon : UiSoundEvent.MatchLost);
+            UiSound.Play(won ? UiSoundEvent.MatchWon : UiSoundEvent.MatchLost);
         }
 
         void OnNotice(MatchNotice notice)
@@ -94,7 +94,7 @@ namespace CloseTheDeal.MatchMode
                     Refuse();
                     break;
                 case MatchNotice.FellOut:
-                    UiSoundPlayer.Play(UiSoundEvent.Notification);
+                    UiSound.Play(UiSoundEvent.Notification);
                     break;
             }
         }
@@ -107,7 +107,7 @@ namespace CloseTheDeal.MatchMode
                 return;
 
             _lastRefusal = Time.unscaledTime;
-            UiSoundPlayer.Play(UiSoundEvent.Error);
+            UiSound.Play(UiSoundEvent.Error);
         }
     }
 }

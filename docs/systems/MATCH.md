@@ -57,7 +57,7 @@ The result opens the menu: who sealed the deal and how. The host gets **Rematch*
 - **One briefcase, always.** Spawned once when the host starts and only ever moved after; never despawned during a session.
 - **Never lost.** Outside the buildings, plaza and skybridges for 2 s, below the street, or its carrier gone without a word: the host puts it back.
 - **Deterministic ends.** One briefcase means one carrier, so two roofs can never be claimed in the same tick. The host checks players in one fixed order per tick.
-- **Events, never polling.** `MatchDirector` raises an event for every change (phase, countdown second, clock second, briefcase status, picked up, dropped, returning, returned, checkpoint, end, towers rebuilt). The HUD and menu redraw only on those; `MatchHud.Update` only fades and pops what is already up.
+- **Events, never polling.** `MatchDirector` raises an event for every change (phase, countdown second, clock second, briefcase status, picked up, dropped, returning, returned, checkpoint, end, towers rebuilt). The HUD and menu redraw only on those; motion runs on the UI kit's driver only while something moves, and the on-screen briefcase marker is placed each frame from local positions (no network).
 - **Menu rule kept.** The match opens the menu through `GameMenu.Open()` when it ends; the menu still owns mouse-free and player-idle. Keys only act while the mouse is captured.
 - **Host leaving ends it.** `MatchDirector.OnClosed` hides the match HUD and the menu takes over.
 
@@ -113,7 +113,7 @@ Everything below is on `MatchDirector.Instance` (namespace `CloseTheDeal.MatchMo
 
 Sounds (lane 5/9's frozen `UiSoundEvent` list): `OnCountdownChanged` → `CountdownTick`, Running → `CountdownGo`, `OnFloorOpened` → `FloorOpened`, `OnBriefcasePickedUp` / `OnBriefcaseStolen` → `BriefcaseTaken`, `OnBriefcaseDropped` → `BriefcaseDropped`, `GateRefused` / `FirstGateRefusal` / `RoofNeedsBriefcase` → `Error`, `OnCapWarning` and checkpoint lines → `Notification`, `OnMatchEnded` → `MatchWon` or `MatchLost` by the local firm.
 
-Lines the current greybox HUD uses (`MatchHud.cs`) are the copy to keep or improve: corporate, played straight, refusals say why.
+The HUD's lines (`MatchHud.cs`) are the copy to keep or improve: corporate, played straight, refusals say why.
 
 ## Hooks for other systems
 
@@ -147,7 +147,8 @@ Under [Assets/_Project/Scripts/Match/](../../Assets/_Project/Scripts/Match/), na
 - `MatchCrossings.cs`: on the Match object; builds the plaza and a skybridge on each checkpoint floor locally after every tower build.
 - `FirmMember.cs`: on `Player.prefab`; firm, slot, the two keys, host teleport, notices.
 - `Briefcase.cs`: on `Prefabs/Match/Briefcase.prefab`; shows the state, eases into the hand, tints by holder.
-- `MatchHud.cs`, `MatchMenuPanel.cs`: clock, briefcase row, firm rows, countdown, prompt and notices; the menu's match section and the host's Start / Rematch.
+- `MatchHud.cs`: the in-match HUD, built from the UI kit (Plate, StatusLine and KeyHint prefabs, `UiTokens`, `UiMotion`): the clock (amber and "QUARTER CLOSING", and a slow swell, once the cap warning fires), the briefcase tracker (holder in words, where, a bar in the holder's colour, the return countdown), the open-floor ladder (filled squares for open floors, hollow for shut, a mark on the briefcase's floor, "you respawn here" on your checkpoint), the countdown (pop), the floor-opened banner (slides in under the clock, names the opening firm), one line for notices and refusals (the kit's status line: amber mark and shake for a refusal; a floor opening clears a showing refusal), the F / G key prompt, and a square over the briefcase on screen, pinned to the edge when it is off screen or behind.
+- `MatchMenuPanel.cs`: the match's section on the game menu card, on a kit plate: headline, the result sentence (`MatchDirector.ReasonLine`) as a status line, and the kit's primary button: Start before the first match, Rematch after a result. Everyone sees it; only the host can press it, and anyone else is told why (the kit's refusal). Its words are per-scene Inspector values. Lane 5's results screen replaces this section once it lands; lane 11's `MatchRecords` holds the per-player stats it will show.
 - `MatchProfile.cs`, `FirmDefinition.cs`, `MatchTypes.cs`.
 
 Outside the folder: `Tower/TeamSpawner.cs` (balanced teams, a spawn hook and override, `AssignTeam` for a lobby, seats freed on leave), `Tower/TowerBuilder.cs` (`Rebuild()`, floor queries, building roots, clients follow a new seed), `UI/GameMenu.cs` (`Open()`).

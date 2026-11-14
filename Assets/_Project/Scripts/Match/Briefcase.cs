@@ -228,7 +228,9 @@ namespace CloseTheDeal.MatchMode
 
             GameObject column = GameObject.CreatePrimitive(PrimitiveType.Quad);
             column.name = "Beacon";
-            Destroy(column.GetComponent<Collider>());
+            // At once, not at the end of the frame: a concave mesh collider under the briefcase's
+            // moving rigidbody is refused by physics on every step until it is gone.
+            DestroyImmediate(column.GetComponent<Collider>());
             column.transform.SetParent(transform, false);
             _beacon = column.GetComponent<Renderer>();
             _beacon.sharedMaterial = match.Profile.BeaconMaterial;

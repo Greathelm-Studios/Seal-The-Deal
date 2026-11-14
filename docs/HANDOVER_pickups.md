@@ -85,7 +85,7 @@ Open `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`, press Play, then **Host 
 - **Owner words vs GDD:** the GDD's v1 weapon table lists "throwable explosive" but no furniture carrying, gun pickups or office gadgets. Built to the owner's 2026-11-12 words; GDD not edited (only Adam changes design).
 - **Carry slowdown uses reflection** on `PlayerMotor._profile` (labelled workaround, ITEMS.md known limitations). If the movement lane renames that field, carrying stops slowing players and logs one error.
 - **Gun pickups:** a taken gun goes into the weapon slots and its pickup is despawned (`GunPickups`, integration). The weapon holder keeps its guns through death, so none are lost.
-- **Fixed from the review lane (AgentHub #429):** the fall-return rule is now "outside the building" (below the ground, or outside both towers' footprints and 2.5 m below where it started), so stairwells no longer take items away and a ground-floor window throw comes back. **Open:** a carried item moves every tick, so Switchboard streams it at the full near rate although every client draws it from the carrier; marking held bodies as not needing poses is a Switchboard change (Harvey's).
+- **Fixed from the review lane (AgentHub #429):** the fall-return rule is now "outside the building" (below the ground, or outside both towers' footprints and 2.5 m below where it started), so stairwells no longer take items away and a ground-floor window throw comes back. **Also closed:** a plain carried item no longer streams (its solid part stays still on the host; shields and gadgets still follow the hands), and a prop marked `NotThrowable` is left out of Set Up Pickups.
 - **Setup reaches FishNet's scene id call by name** (`NetworkObject.CreateSceneId` is internal). Without it networked items placed in a freshly built scene never spawn. If a FishNet update renames it, the tool logs an error and the fix is FishNet's own Reserialize NetworkObjects menu.
 - Running the setup menu also re-applies the office look, which rewrites `Assets/_Project/Art/Look/OfficeLook_Volume.asset` and its `.meta`. Those files were left uncommitted in this worktree; they are not lane changes.
 - A carried panel is an immovable wall on the host and pushes other players aside. Fun or exploit needs a playtest.
@@ -97,9 +97,19 @@ Open `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`, press Play, then **Host 
 - Item sounds go through `ItemAudio` (pooled 3D sources on the set's bus); the explosion no longer bypasses the mixer.
 - The Grenade Case, extinguisher and wet floor sign events used to fire twice on the host; they now fire once, so their sounds are not doubled. A joining player hears no grab for items already carried.
 
+## Item HUD (2026-11-14)
+
+- Built from the UI kit only (`ItemHud`): prompt under the crosshair, too-heavy, refusals with the kit shake and `HandsFull` / `Error` sounds, and the hands slot at the bottom left, above the network-stats panel. Design table in [ITEMS.md](systems/ITEMS.md), "The item HUD (built)".
+- **Captured in `Lane_Integration.unity`** ([docs/handover/pickups/item_hud/](handover/pickups/item_hud/): 9/9 checks; prompt, too heavy, the hands slot sliding in over 250 ms, hands full with its shake, dropped) at 1920×1080 and 1280×720 by `-pickupsRole hud` (the HUD is added to the scene for that run only; the scene file is not saved). To put it in the saved scene: open `Lane_Integration.unity`, **Close the Deal > Lanes > Add Item HUD To Open Scene**, save. Until then that scene holds the deleted `ItemPromptLabel` as a missing script.
+- **The pistol viewmodel stays drawn while the hands carry a chair** (seen in every capture): the viewmodel / shooting lane should hide or lower the gun while `ItemCarrier.Held` is not null (ItemCarrier already blocks firing then).
+- Not seen: a person playing with it, gamepad glyphs (the keys read F / LMB / G / RMB only), and a client's view of the HUD (the capture is the host's own player).
+- Hand seats for Harvey's posing layer: `ItemDefinition` main and support seats, `Pickup.TryGetHandSeats` (AgentHub #464).
+
 ### Assumptions made while Adam was away (overnight 2026-11-13)
 
 - **The extinguisher keeps hissing after it is dropped**, or its carrier dies or leaves: it is still venting and driving itself round the floor until empty (6 s), and the design says it "cannot be stopped". The loop stops when it runs empty, comes back, is despawned (new match) or this machine leaves. Say if you want it silenced on drop.
+- **No throw cue.** One throw strength per item, so no charge; an arc left out as clutter.
+- **Hands slot at the bottom left**, above the network-stats panel; the weapon slots are expected bottom right.
 - **Carried items trail the view a little** (up to 10°, more for heavier things) and **ease into the hands** over 0.12–0.24 s when taken, so taking and turning have weight. Tuning is on `DefaultCarry.asset` under "Feel in the hands"; set the sway follow speeds very high to turn it off.
 
 ## The one thing that still makes pickups feel like a demo

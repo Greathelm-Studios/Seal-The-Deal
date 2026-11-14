@@ -8,6 +8,7 @@ using CloseTheDeal.Props;
 using System.Reflection;
 using CloseTheDeal.Net;
 using CloseTheDeal.Tower;
+using CloseTheDeal.UI;
 using FishNet.Component.Transforming;
 using FishNet.Object;
 using TMPro;
@@ -1054,47 +1055,174 @@ namespace CloseTheDeal.Editor.Lanes
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>The two lines of item text: the prompt under the crosshair, and what is carried at the bottom of the screen.</summary>
-        internal static void BuildPromptCanvas()
+        /// <summary>The item HUD in the open scene (Set Up Integration calls this).</summary>
+        internal static void BuildPromptCanvas() => ItemHudSetup.AddToOpenScene();
+
+        /// <summary>
+        /// The item HUD (prompt, refusals, hands slot), built from the UI kit's Plate and
+        /// KeyHint prefabs and tokens, under the game menu's Hud so it hides with the rest of the
+        /// HUD. A scene with no game menu gets its own overlay canvas. Replaces the old
+        /// two-line ItemPromptLabel canvas if the scene still has one.
+        /// </summary>
+        internal static class ItemHudSetup
         {
-            var canvasGo = new GameObject("Item Prompts");
-            var canvas = canvasGo.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 5; // Under the game menu (10).
-            var scaler = canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
-            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
+            const string OldCanvasName = "Item Prompts";
+            const string HudName = "ItemHud";
+            const string TokensPath = "Assets/_Project/UI/Tokens/UiTokens.asset";
+            const string PlatePath = "Assets/_Project/UI/Kit/Plate.prefab";
+            const string KeyHintPath = "Assets/_Project/UI/Kit/KeyHint.prefab";
+            const float PromptBelowCrosshair = 90f; // the same spot the briefcase prompt uses; the two never show at once
+            const float PromptHeight = 48f;
+            const float Padding = 16f;
+            const float HandsWidth = 440f;
+            const float HandsHeight = 124f;
+            const float ScreenMargin = 32f;
+            const float AboveNetworkStats = 120f; // the network-stats panel (on by default while netcode is tested) holds the corner below
+            const float HintLabelWidth = 72f;
 
-            TMP_Text prompt = Line(canvasGo.transform, "Prompt", 30f, Ink, new Vector2(0.5f, 0.5f), new Vector2(0f, -90f));
-            TMP_Text carried = Line(canvasGo.transform, "Carried", 26f, InkMuted, new Vector2(0.5f, 0f), new Vector2(0f, 90f));
+            [MenuItem("Close the Deal/Lanes/Add Item HUD To Open Scene")]
+            public static void AddToOpenScene()
+            {
+                var tokens = AssetDatabase.LoadAssetAtPath<UiTokens>(TokensPath);
+                var plate = AssetDatabase.LoadAssetAtPath<GameObject>(PlatePath);
+                var keyHint = AssetDatabase.LoadAssetAtPath<GameObject>(KeyHintPath);
+                if (tokens == null || plate == null || keyHint == null)
+                {
+                    Debug.LogError("[Pickups] The UI kit is missing (UiTokens, Plate, KeyHint). Run Close the Deal > Lanes > Set Up UI first.");
+                    return;
+                }
 
-            var label = canvasGo.AddComponent<ItemPromptLabel>();
-            var so = new SerializedObject(label);
-            GreyboxSceneSetup.SetReference(so, "_prompt", prompt);
-            GreyboxSceneSetup.SetReference(so, "_carried", carried);
-            so.ApplyModifiedPropertiesWithoutUndo();
-        }
+                GameObject old = GameObject.Find(OldCanvasName);
+                if (old != null && old.GetComponent<ItemHud>() == null)
+                    Object.DestroyImmediate(old);
 
-        static TMP_Text Line(Transform parent, string name, float size, Color colour, Vector2 anchor, Vector2 offset)
-        {
-            var go = new GameObject(name, typeof(RectTransform));
-            go.transform.SetParent(parent, false);
-            var rect = (RectTransform)go.transform;
-            rect.anchorMin = rect.anchorMax = anchor;
-            rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = offset;
-            rect.sizeDelta = new Vector2(1200f, 90f);
+                Transform parent = HudParent();
+                Transform existing = parent.Find(HudName);
+                if (existing != null)
+                    Object.DestroyImmediate(existing.gameObject);
 
-            var text = go.AddComponent<TextMeshProUGUI>();
-            text.text = "";
-            text.fontSize = size;
-            text.color = colour;
-            text.fontStyle = FontStyles.Bold;
-            text.alignment = TextAlignmentOptions.Center;
-            text.raycastTarget = false;
-            text.textWrappingMode = TextWrappingModes.NoWrap;
-            return text;
+                Build(parent, tokens, plate, keyHint);
+                EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+                Debug.Log($"[Pickups] Added the item HUD under {parent.name}.");
+            }
+
+            static Transform HudParent()
+            {
+                var menu = Object.FindAnyObjectByType<CloseTheDeal.UI.GameMenu>(FindObjectsInactive.Include);
+                Transform hud = menu != null ? menu.transform.Find("Hud") : null;
+                if (hud != null)
+                    return hud;
+
+                GameObject own = GameObject.Find(OldCanvasName);
+                if (own != null)
+                    return own.transform;
+
+                var canvasGo = new GameObject(OldCanvasName);
+                var canvas = canvasGo.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 5; // Under the game menu (10).
+                var scaler = canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
+                scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920f, 1080f);
+                scaler.matchWidthOrHeight = 0.5f;
+                return canvasGo.transform;
+            }
+
+            static void Build(Transform parent, UiTokens t, GameObject platePrefab, GameObject keyHintPrefab)
+            {
+                var root = new GameObject(HudName, typeof(RectTransform)) { layer = 5 };
+                var rootRect = (RectTransform)root.transform;
+                rootRect.SetParent(parent, false);
+                rootRect.anchorMin = Vector2.zero;
+                rootRect.anchorMax = Vector2.one;
+                rootRect.offsetMin = rootRect.offsetMax = Vector2.zero;
+
+                // Prompt: a plate under the crosshair holding a key hint, F and the words.
+                RectTransform prompt = Group(rootRect, "Prompt", new Vector2(0.5f, 0.5f), new Vector2(0f, -PromptBelowCrosshair), new Vector2(380f, PromptHeight), out CanvasGroup promptGroup);
+                RectTransform promptPlate = Kit(platePrefab, prompt, "Plate");
+                promptPlate.anchorMin = promptPlate.anchorMax = promptPlate.pivot = new Vector2(0.5f, 0.5f);
+                promptPlate.anchoredPosition = Vector2.zero;
+                promptPlate.sizeDelta = new Vector2(380f, PromptHeight);
+                RectTransform hint = Kit(keyHintPrefab, promptPlate, "KeyHint");
+                hint.anchorMin = hint.anchorMax = hint.pivot = new Vector2(0f, 0.5f);
+                hint.anchoredPosition = new Vector2(Padding, 0f);
+                TMP_Text promptKey = hint.Find("Key").GetComponent<TMP_Text>();
+                TMP_Text promptLabel = hint.Find("Label").GetComponent<TMP_Text>();
+                promptLabel.color = t.Navy;
+                promptKey.text = "F";
+
+                // Hands slot: bottom left, clear of the briefcase notice (bottom centre) and the
+                // weapon slots' usual corner (bottom right).
+                RectTransform hands = Group(rootRect, "Hands", Vector2.zero, new Vector2(ScreenMargin, ScreenMargin + AboveNetworkStats), new Vector2(HandsWidth, HandsHeight), out CanvasGroup handsGroup);
+                hands.pivot = Vector2.zero;
+                RectTransform handsPlate = Kit(platePrefab, hands, "Plate");
+                handsPlate.anchorMin = Vector2.zero;
+                handsPlate.anchorMax = Vector2.one;
+                handsPlate.offsetMin = handsPlate.offsetMax = Vector2.zero;
+                CloseTheDeal.Editor.UI.UiKitAssets.Label(handsPlate, "Caption", Padding, 12f, 300f, 18f, "IN HANDS", t.Caption, t.Ink3);
+                TMP_Text handsName = CloseTheDeal.Editor.UI.UiKitAssets.Label(handsPlate, "Name", Padding, 30f, HandsWidth - Padding * 2f, 30f, "", t.Item, t.Navy);
+                var track = CloseTheDeal.Editor.UI.UiKitAssets.Box(handsPlate, "Load", Padding, 66f, HandsWidth - Padding * 2f, 3f, t.Hair);
+                RectTransform fill = CloseTheDeal.Editor.UI.UiKitAssets.Node(track.transform, "Fill");
+                fill.anchorMin = new Vector2(0f, 0f);
+                fill.anchorMax = new Vector2(0f, 1f);
+                fill.pivot = new Vector2(0f, 0.5f);
+                fill.anchoredPosition = Vector2.zero;
+                fill.sizeDelta = new Vector2(2f, 0f);
+                CloseTheDeal.Editor.UI.UiKitAssets.Img(fill, null, t.Cobalt);
+                const float hintStep = 48f + 10f + HintLabelWidth + 12f; // key cap, gap, label, gap
+                KeyRow(keyHintPrefab, handsPlate, "Throw", "LMB", "Throw", Padding);
+                KeyRow(keyHintPrefab, handsPlate, "Drop", "G", "Drop", Padding + hintStep);
+                RectTransform use = KeyRow(keyHintPrefab, handsPlate, "Use", "RMB", "Use", Padding + hintStep * 2f);
+
+                var hud = root.AddComponent<ItemHud>();
+                var so = new SerializedObject(hud);
+                GreyboxSceneSetup.SetReference(so, "_tokens", t);
+                GreyboxSceneSetup.SetReference(so, "_prompt", prompt);
+                GreyboxSceneSetup.SetReference(so, "_promptGroup", promptGroup);
+                GreyboxSceneSetup.SetReference(so, "_promptPlate", promptPlate);
+                GreyboxSceneSetup.SetReference(so, "_promptEdge", promptPlate.Find("Edge").GetComponent<UnityEngine.UI.Image>());
+                GreyboxSceneSetup.SetReference(so, "_promptKeyCap", hint.Find("KeyCap").gameObject);
+                GreyboxSceneSetup.SetReference(so, "_promptKey", promptKey);
+                GreyboxSceneSetup.SetReference(so, "_promptLabel", promptLabel);
+                GreyboxSceneSetup.SetReference(so, "_hands", hands);
+                GreyboxSceneSetup.SetReference(so, "_handsGroup", handsGroup);
+                GreyboxSceneSetup.SetReference(so, "_handsName", handsName);
+                GreyboxSceneSetup.SetReference(so, "_handsLoadFill", fill);
+                GreyboxSceneSetup.SetReference(so, "_useHint", use.gameObject);
+                GreyboxSceneSetup.SetReference(so, "_useLabel", use.Find("Label").GetComponent<TMP_Text>());
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            static RectTransform Group(RectTransform parent, string name, Vector2 anchor, Vector2 position, Vector2 size, out CanvasGroup group)
+            {
+                RectTransform rect = CloseTheDeal.Editor.UI.UiKitAssets.Node(parent, name);
+                rect.anchorMin = rect.anchorMax = rect.pivot = anchor;
+                rect.anchoredPosition = position;
+                rect.sizeDelta = size;
+                group = rect.gameObject.AddComponent<CanvasGroup>();
+                group.alpha = 0f;
+                group.interactable = false;
+                group.blocksRaycasts = false;
+                return rect;
+            }
+
+            static RectTransform Kit(GameObject prefab, Transform parent, string name)
+            {
+                return CloseTheDeal.Editor.UI.UiKitAssets.Instance<RectTransform>(prefab, parent, name);
+            }
+
+            static RectTransform KeyRow(GameObject keyHintPrefab, RectTransform plate, string name, string key, string label, float x)
+            {
+                RectTransform hint = Kit(keyHintPrefab, plate, name);
+                hint.anchorMin = hint.anchorMax = hint.pivot = new Vector2(0f, 1f);
+                hint.anchoredPosition = new Vector2(x, -76f);
+                hint.Find("Key").GetComponent<TMP_Text>().text = key;
+                TMP_Text text = hint.Find("Label").GetComponent<TMP_Text>();
+                text.text = label;
+                text.rectTransform.sizeDelta = new Vector2(HintLabelWidth, text.rectTransform.sizeDelta.y);
+                hint.sizeDelta = new Vector2(48f + 10f + HintLabelWidth, hint.sizeDelta.y);
+                return hint;
+            }
         }
 
         static void EnsureFolder(string parent, string name)
@@ -1195,7 +1323,8 @@ namespace CloseTheDeal.Editor.Lanes
                 {
                     string path = AssetDatabase.GUIDToAssetPath(guid);
                     var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                    if (prefab == null || prefab.GetComponent<Prop>() == null || prefab.GetComponent<Pickup>() != null)
+                    if (prefab == null || prefab.GetComponent<Prop>() == null || prefab.GetComponent<Pickup>() != null
+                        || prefab.GetComponent<NotThrowable>() != null)
                         continue;
 
                     EditPrefab(path, root => root.AddComponent<Pickup>());
@@ -1366,7 +1495,18 @@ namespace CloseTheDeal.Editor.Lanes
             _failures = 0;
             _frame = 0;
             _recording = false;
-            EditorSceneManager.OpenScene(PickupsLaneSetup.ScenePath, OpenSceneMode.Single);
+            if (role == "hud")
+            {
+                // The item HUD as players will see it: in the integration scene, put in for this run
+                // only (the scene file is not saved).
+                EditorSceneManager.OpenScene(IntegrationLaneSetup.ScenePath, OpenSceneMode.Single);
+                PickupsLaneSetup.ItemHudSetup.AddToOpenScene();
+            }
+            else
+            {
+                EditorSceneManager.OpenScene(PickupsLaneSetup.ScenePath, OpenSceneMode.Single);
+            }
+
             SessionState.SetBool(ActiveKey, true);
             SessionState.SetString(RoleKey, role);
             SessionState.SetString(OutKey, outFolder);
@@ -1410,7 +1550,7 @@ namespace CloseTheDeal.Editor.Lanes
                 Directory.CreateDirectory(_out);
                 Application.targetFrameRate = 60;
                 Application.runInBackground = true;
-                _script = _role == "client" ? ClientScript() : _role == "host" ? HostScript() : SoloScript();
+                _script = _role == "client" ? ClientScript() : _role == "host" ? HostScript() : _role == "hud" ? HudScript() : SoloScript();
                 Stack.Push(_script);
             }
 
@@ -1506,7 +1646,7 @@ namespace CloseTheDeal.Editor.Lanes
             EditorApplication.update -= Pump;
             SessionState.SetBool(ActiveKey, false);
             int passes = CountPasses();
-            int minimum = _role == "solo" ? 28 : _role == "host" ? 4 : 6;
+            int minimum = _role == "solo" ? 28 : _role == "host" ? 4 : _role == "hud" ? 5 : 6;
             if (passes < minimum)
                 Check($"the run got far enough to mean something (at least {minimum} passed checks)", false, $"{passes} passed");
             if (_role != "client" && _frame == 0)
@@ -1580,6 +1720,210 @@ namespace CloseTheDeal.Editor.Lanes
             File.WriteAllBytes(path, _readback.EncodeToJPG(85));
         }
 
+        // ---- The item HUD, captured in the integration scene ----------------------------------------
+
+        static readonly (int Width, int Height)[] HudSizes = { (1920, 1080), (1280, 720) };
+
+        /// <summary>
+        /// The kit item HUD in Lane_Integration: the prompt on a chair, "too heavy" on a desk, the
+        /// hands slot sliding in, and the hands-full refusal, each at 1920x1080 and 1280x720,
+        /// plus the UI sounds asked for. Hosts on this lane's own port.
+        /// </summary>
+        static IEnumerator HudScript()
+        {
+            Note("ROLE hud: Lane_Integration hosting with its own player; the item HUD is added for this run only.");
+            yield return StartGame(true);
+            StartRecording();
+            PlayerInputReader.ScriptedCapture = true;
+            ItemCarrier me = Me;
+            ItemHud hud = UnityEngine.Object.FindAnyObjectByType<ItemHud>(FindObjectsInactive.Include);
+            Check("the integration scene has the kit item HUD", me != null && hud != null);
+            if (me == null || hud == null)
+                yield break;
+
+            int handsFullSounds = 0, errorSounds = 0, focusSounds = 0;
+            Action<CloseTheDeal.UI.UiSoundEvent> onSound = e =>
+            {
+                if (e == CloseTheDeal.UI.UiSoundEvent.HandsFull) handsFullSounds++;
+                else if (e == CloseTheDeal.UI.UiSoundEvent.Error) errorSounds++;
+                else if (e == CloseTheDeal.UI.UiSoundEvent.Focus) focusSounds++;
+            };
+            CloseTheDeal.UI.UiSound.Played += onSound;
+            ShowHudForCapture(hud);
+
+            Pickup chair = FindLoose(p => p.Definition.DisplayName == "Chair", me);
+            Pickup heavy = FindLoose(p => p.Definition.WeightKg > me.Profile.MaxCarryWeight, me);
+            Pickup other = FindLoose(p => p != chair && p.Definition.WeightKg <= me.Profile.MaxCarryWeight, me);
+            Check("the scene has a loose chair, something too heavy and a second liftable thing", chair != null && heavy != null && other != null,
+                $"chair {(chair != null ? chair.name : "none")}, heavy {(heavy != null ? heavy.name : "none")}, other {(other != null ? other.name : "none")}");
+            if (chair == null)
+                yield break;
+
+            HudShots("hud_00_empty");
+            yield return LookFromNear(me, chair);
+            Check("looking at a chair shows the kit prompt", hud.PromptReading == "F · Pick up Chair", $"prompt reads \"{hud.PromptReading}\"");
+            HudShots("hud_01_prompt_chair");
+
+            if (heavy != null)
+            {
+                yield return LookFromNear(me, heavy, chair.transform.position);
+                Check("looking at something too heavy says so, with no key", hud.PromptReading == heavy.Definition.DisplayName + " · Too heavy", $"prompt reads \"{hud.PromptReading}\"");
+                HudShots("hud_02_too_heavy");
+            }
+
+            yield return LookFromNear(me, chair);
+            me.LocalTake(chair);
+            yield return new Until(() => me.Held == chair, 3f, "the chair to reach the hands");
+            for (int ms = 0; ms <= 250; ms += 50)
+            {
+                HudShot($"hud_03_hands_in_{ms:000}ms", 1920, 1080);
+                yield return 0.05f;
+            }
+
+            yield return 0.3f;
+            Check("the hands slot names what is carried", hud.HandsReading == "Chair", $"slot reads \"{hud.HandsReading}\"");
+            HudShots("hud_04_hands_chair");
+
+            if (other != null)
+            {
+                yield return LookFromNear(me, other);
+                me.LocalTake(other);
+                yield return 0.12f;
+                HudShot("hud_05_hands_full_shake", 1920, 1080);
+                yield return 0.25f;
+                Check("taking with full hands says why, in the prompt's place", hud.PromptReading == "Hands full · G to drop", $"prompt reads \"{hud.PromptReading}\"");
+                HudShots("hud_06_hands_full");
+                Check("the hands-full refusal asks for its sound", handsFullSounds > 0, $"HandsFull requested {handsFullSounds} time(s)");
+            }
+
+            me.LocalDrop();
+            yield return 0.6f;
+            Check("letting go empties the hands slot", hud.HandsReading == "", $"slot reads \"{hud.HandsReading}\"");
+            HudShots("hud_07_dropped");
+            Note($"UI sounds asked for: Focus {focusSounds}, HandsFull {handsFullSounds}, Error {errorSounds}");
+            CloseTheDeal.UI.UiSound.Played -= onSound;
+        }
+
+        /// <summary>The loose item nearest this player that matches, or null.</summary>
+        static Pickup FindLoose(Func<Pickup, bool> match, ItemCarrier near)
+        {
+            Pickup best = null;
+            float bestDistance = float.MaxValue;
+            foreach (Pickup p in UnityEngine.Object.FindObjectsByType<Pickup>())
+            {
+                if (p.State != PickupState.InWorld || !match(p))
+                    continue;
+                float d = (p.transform.position - near.transform.position).sqrMagnitude;
+                if (d < bestDistance)
+                {
+                    bestDistance = d;
+                    best = p;
+                }
+            }
+
+            return best;
+        }
+
+        /// <summary>Stands the player 1.3 m from the item on its floor, on the side facing the room's middle, looking at it.</summary>
+        static IEnumerator LookFromNear(ItemCarrier me, Pickup item, Vector3? awayFrom = null)
+        {
+            Bounds bounds = item.Body.GetComponentInChildren<Collider>().bounds;
+            Vector3 at = bounds.center;
+            // Stand on the far side from awayFrom (so nothing else is in the way), else in front of it.
+            Vector3 away = awayFrom.HasValue ? at - awayFrom.Value : item.transform.forward;
+            away.y = 0f;
+            if (away.sqrMagnitude < 0.01f)
+                away = Vector3.forward;
+            away.Normalize();
+            Vector3 stand = new(at.x + away.x * 1.4f, bounds.min.y + 0.05f, at.z + away.z * 1.4f);
+            // On the floor, not on the desk the item stands on.
+            if (Physics.Raycast(new Vector3(stand.x, at.y + 0.5f, stand.z), Vector3.down, out RaycastHit floor, 4f, ItemLayers.WorldMask, QueryTriggerInteraction.Ignore))
+                stand.y = floor.point.y + 0.05f;
+            Vector3 toItem = at - stand;
+            Stand(me, stand, Mathf.Atan2(toItem.x, toItem.z) * Mathf.Rad2Deg);
+            yield return 0.3f;
+            Vector3 eye = Eye(me);
+            Vector3 look = (at - eye).normalized;
+            Look(Mathf.Atan2(look.x, look.z) * Mathf.Rad2Deg, -Mathf.Asin(look.y) * Mathf.Rad2Deg);
+            yield return 0.5f;
+        }
+
+        /// <summary>
+        /// Batchmode cannot lock the mouse, so the game menu stays open over the HUD. For the
+        /// captures only: the HUD is shown and the menu's other panels hidden.
+        /// </summary>
+        static void ShowHudForCapture(ItemHud hud)
+        {
+            var menu = UnityEngine.Object.FindAnyObjectByType<CloseTheDeal.UI.GameMenu>(FindObjectsInactive.Include);
+            Transform hudRoot = menu != null ? menu.transform.Find("Hud") : hud.transform.parent;
+            if (hudRoot == null)
+                return;
+
+            hudRoot.gameObject.SetActive(true);
+            foreach (Transform sibling in hudRoot.parent)
+            {
+                if (sibling != hudRoot)
+                    sibling.gameObject.SetActive(false);
+            }
+        }
+
+        static void HudShots(string name)
+        {
+            foreach ((int width, int height) in HudSizes)
+                HudShot($"{name}_{height}p", width, height);
+        }
+
+        /// <summary>The player's view with the HUD on it: the HUD's canvas is drawn by the player's camera for this one frame.</summary>
+        static void HudShot(string name, int width, int height)
+        {
+            Camera cam = Camera.main;
+            ItemHud hud = UnityEngine.Object.FindAnyObjectByType<ItemHud>();
+            if (cam == null || hud == null)
+                return;
+
+            Canvas canvas = hud.GetComponentInParent<Canvas>().rootCanvas;
+            RenderMode mode = canvas.renderMode;
+            Camera before = canvas.worldCamera;
+            float distance = canvas.planeDistance;
+            var scaler = canvas.GetComponent<UnityEngine.UI.CanvasScaler>();
+
+            var still = RenderTexture.GetTemporary(width, height, 24);
+            cam.targetTexture = still;
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = cam;
+            canvas.planeDistance = cam.nearClipPlane + 0.02f;
+            if (scaler != null)
+            {
+                scaler.enabled = false;
+                scaler.enabled = true;
+            }
+
+            Canvas.ForceUpdateCanvases();
+            cam.Render();
+            cam.targetTexture = null;
+
+            var shot = new Texture2D(width, height, TextureFormat.RGB24, false);
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = still;
+            shot.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+            shot.Apply();
+            RenderTexture.active = previous;
+            File.WriteAllBytes(Path.Combine(_out, name + ".png"), shot.EncodeToPNG());
+            UnityEngine.Object.DestroyImmediate(shot);
+            RenderTexture.ReleaseTemporary(still);
+
+            canvas.renderMode = mode;
+            canvas.worldCamera = before;
+            canvas.planeDistance = distance;
+            if (scaler != null)
+            {
+                scaler.enabled = false;
+                scaler.enabled = true;
+            }
+
+            Note($"wrote {name}.png");
+        }
+
         /// <summary>A still from the player's own eyes.</summary>
         static void FirstPersonStill(string name)
         {
@@ -1641,10 +1985,11 @@ namespace CloseTheDeal.Editor.Lanes
             InputSystem.QueueStateEvent(keyboard, new KeyboardState(keys));
         }
 
+        /// <summary>What the item HUD's prompt reads, key first, as "F · Pick up Chair"; empty while it is hidden.</summary>
         static string PromptText()
         {
-            GameObject go = GameObject.Find("Item Prompts/Prompt");
-            return go != null ? go.GetComponent<TMP_Text>().text : "(no prompt label)";
+            ItemHud hud = UnityEngine.Object.FindAnyObjectByType<ItemHud>();
+            return hud != null ? hud.PromptReading : "(no item HUD)";
         }
 
         static IEnumerator StartGame(bool host)
