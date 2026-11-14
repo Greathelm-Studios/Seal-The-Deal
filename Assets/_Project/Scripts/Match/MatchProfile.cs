@@ -73,8 +73,11 @@ namespace CloseTheDeal.MatchMode
         [Tooltip("Seconds the briefcase takes to move into the hand when picked up. Keep it short: 0.15 reads as a grab.")]
         [Min(0f)] public float CarryBlendSeconds = 0.15f;
 
-        [Tooltip("Where the carrier sees the briefcase, in metres from their eye: X right, Y up, Z forward. The default sits low on the right of the view.")]
-        public Vector3 FirstPersonOffset = new(0.42f, -0.5f, 0.95f);
+        [Tooltip("Where the carrier sees the briefcase, in metres from their eye: X right, Y up, Z forward. The default tucks it into the lower LEFT corner, mostly below the view, so the stairs ahead stay clear and the gun (lower right) keeps its side.")]
+        public Vector3 FirstPersonOffset = new(-0.34f, -0.5f, 0.8f);
+
+        [Tooltip("How big the carrier sees their own briefcase, as a fraction of its real size. Smaller blocks less of the view; 1 is true size, which fills a corner of the screen.")]
+        [Range(0.2f, 1f)] public float FirstPersonScale = 0.55f;
 
         [Header("Beacon")]
         [Tooltip("The see-through-walls marker above the briefcase. Leave empty for no beacon.")]

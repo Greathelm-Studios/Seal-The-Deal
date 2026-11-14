@@ -189,7 +189,11 @@ namespace CloseTheDeal.Tower
             // sees them: without this every box is its own draw call, again per shadow cascade.
             // Only what each template lists as never moving is merged, since merging freezes it.
             if (_stillParts.Count > 0)
+            {
+                NoteOwnMeshes();
                 StaticBatchingUtility.Combine(_stillParts.ToArray(), root);
+                RecordMergedMeshes();
+            }
             _stillParts.Clear();
         }
 
@@ -232,36 +236,53 @@ namespace CloseTheDeal.Tower
                     // by building order) must see only the new buildings, as a fresh client does.
                     _buildings[team].SetActive(false);
                     _buildings[team].transform.SetParent(null, false);
-                    DestroyMergedMeshes(_buildings[team]);
                     Destroy(_buildings[team]);
                 }
                 _buildings[team] = null;
                 _spawns[team] = null;
             }
 
+            DestroyMergedMeshes();
             _built = false;
         }
 
         /// <summary>
-        /// The meshes StaticBatchingUtility.Combine made for a building belong to no asset, so
-        /// destroying the building leaves them behind; without this every rematch would leak a
-        /// tower's worth of mesh.
+        /// The meshes StaticBatchingUtility.Combine just made belong to no asset, so destroying
+        /// the building leaves them behind; they are noted here, straight after the merge, and
+        /// freed with the building, or every rematch would leak a tower's worth of mesh.
         /// </summary>
-        void DestroyMergedMeshes(GameObject building)
+        void NoteOwnMeshes()
         {
-            building.GetComponentsInChildren(true, _meshes);
-            foreach (MeshFilter filter in _meshes)
+            _ownMeshes.Clear();
+            foreach (GameObject part in _stillParts)
+                _ownMeshes.Add(part.TryGetComponent(out MeshFilter filter) ? filter.sharedMesh : null);
+        }
+
+        /// <summary>Only meshes Combine swapped in: a part it skipped keeps its asset mesh, which must never be destroyed.</summary>
+        void RecordMergedMeshes()
+        {
+            for (int i = 0; i < _stillParts.Count; i++)
             {
-                Mesh mesh = filter.sharedMesh;
-                if (mesh != null && mesh.name.StartsWith("Combined Mesh") && _freed.Add(mesh))
+                GameObject part = _stillParts[i];
+                if (part != null && part.TryGetComponent(out MeshFilter filter) && filter.sharedMesh != null && filter.sharedMesh != _ownMeshes[i])
+                    _merged.Add(filter.sharedMesh);
+            }
+            _ownMeshes.Clear();
+        }
+
+        void DestroyMergedMeshes()
+        {
+            foreach (Mesh mesh in _merged)
+            {
+                if (mesh != null)
                     Destroy(mesh);
             }
 
-            _meshes.Clear();
-            _freed.Clear();
+            _merged.Clear();
         }
 
-        readonly HashSet<Mesh> _freed = new();
+        readonly HashSet<Mesh> _merged = new();
+        readonly List<Mesh> _ownMeshes = new();
 
         static uint PickSeed()
         {

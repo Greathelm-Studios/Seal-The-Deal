@@ -438,7 +438,8 @@ namespace CloseTheDeal.MatchMode
         {
             // A new round puts the case back with nobody as its last carrier: that is a reset, not a drop.
             bool reset = next.LastCarrierFirm == NoFirm;
-            if (previous.State == BriefcaseState.Carried && previous.CarrierFirm != NoFirm && !reset)
+            // After a result the lobby takes the case off the winner: that is tidying up, not a drop.
+            if (previous.State == BriefcaseState.Carried && previous.CarrierFirm != NoFirm && !reset && Phase != MatchPhase.Ended)
                 OnBriefcaseDropped?.Invoke(previous.CarrierFirm);
 
             switch (next.State)

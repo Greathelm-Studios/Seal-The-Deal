@@ -222,7 +222,7 @@ namespace CloseTheDeal.MatchMode
             // Knocked loose and lodged on a floor nobody may reach yet (a slab above the open
             // floor): only a carrier could fetch it, and nobody can carry it there. Send it back.
             int floor = Arena.FloorOf(position);
-            if (floor > _match.OpenFloor && Arena.OnFloorSurface(position, floor))
+            if (floor > _match.OpenFloor && Arena.OnFloorSurface(position, floor) && briefcase.Resting)
             {
                 _match.ServerBeginReturn(tick);
                 return;
