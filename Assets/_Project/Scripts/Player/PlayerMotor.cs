@@ -1,4 +1,3 @@
-using CloseTheDeal.Combat;
 using FishNet.Managing.Timing;
 using FishNet.Object;
 using FishNet.Object.Prediction;
@@ -32,12 +31,10 @@ namespace CloseTheDeal.Player
         public struct OneShots
         {
             public bool Jump;
-            public bool Attack;
 
             public void Clear()
             {
                 Jump = false;
-                Attack = false;
             }
         }
 
@@ -46,8 +43,6 @@ namespace CloseTheDeal.Player
         {
             public Vector2 Move;
             public float Yaw;
-            /// <summary>Unit direction from the player's eye to whatever was under the crosshair. Only shots use it.</summary>
-            public Vector3 Aim;
             public bool Sprint;
             public bool Crouch;
             /// <summary>Jump is held down; letting go while rising cuts the jump short.</summary>
@@ -144,20 +139,8 @@ namespace CloseTheDeal.Player
         [Tooltip("Designer tuning for walking, jumping and climbing. Read at runtime, never written.")]
         [SerializeField] MovementProfile _profile;
 
-        [Tooltip("Tuning for the greybox test blast on left click. A placeholder until real weapons exist.")]
-        [SerializeField] BlastProfile _blast;
-
-        [Tooltip("Tick to fire the greybox test blast on the Attack button. Untick once a real weapon is on the player, so the weapon gets the button instead.")]
-        [SerializeField] bool _testBlast = true;
-
         [Tooltip("What counts as floor, wall and ledge: everything solid in the level, but not players.")]
         [SerializeField] LayerMask _groundMask = ~0;
-
-        [Tooltip("What the test blast can throw: the Player layer.")]
-        [SerializeField] LayerMask _playerMask;
-
-        [Tooltip("Furniture the test blast can throw: the Prop layer.")]
-        [SerializeField] LayerMask _propMask;
 
         [Tooltip("The smoothed visual the camera follows. FishNet moves this child between ticks so motion never steps.")]
         [SerializeField] Transform _cameraTarget;
@@ -183,10 +166,20 @@ namespace CloseTheDeal.Player
         /// <summary>A gap under the feet smaller than this is left to physics, metres.</summary>
         const float SnapSlack = 0.005f;
 
-        static readonly Collider[] BlastBuffer = new Collider[32];
 
         /// <summary>The body this client controls, for local readouts. Null on a pure host with no player.</summary>
         public static PlayerMotor Local { get; private set; }
+
+        /// <summary>Raised when the local player's body arrives (the new one) or leaves (null). A HUD subscribes here instead of polling <see cref="Local"/>.</summary>
+        public static event System.Action<PlayerMotor> LocalChanged;
+
+        /// <summary>
+        /// How many ticks past another player's last known input this machine keeps repeating
+        /// it (presses left out) while it runs that body ahead. About a third of a second covers
+        /// a 100 ms round trip with FishNet's interpolation; beyond it the body is assumed to
+        /// have let go of everything, so a player who drops out coasts to a stop.
+        /// </summary>
+        const uint SpectatorRepeatTicks = 20;
 
         readonly PredictionRigidbody _body = new();
         Vector3 _tipBeforeReconcile;
@@ -205,13 +198,29 @@ namespace CloseTheDeal.Player
         FeedbackCounters _counters;
         SlideData _slide;
         uint _currentTick;
-        MoveInput _lastTickedInput;
+        MoveInput _lastRealInput;
+        bool _countersSeeded;
         GroundHit _ground;
 
         public MoveState State => _state;
         public bool Grounded => _ground.Found;
         public float PlanarSpeed => Planar(_rigidbody.linearVelocity).magnitude;
         public MovementProfile Profile => _profile;
+
+        /// <summary>The designer's profile from the prefab, kept while a runtime copy is in use.</summary>
+        MovementProfile _authoredProfile;
+
+        /// <summary>
+        /// Moves with a runtime copy of the profile instead of the designer's asset (a heavy
+        /// carried load's slower numbers), or with the designer's again when given null. Never
+        /// pass the designer's asset after changing it: copy it (AGENTS.md §4). The owner and the
+        /// host must make the same call on the same tick, or prediction and host disagree.
+        /// </summary>
+        public void UseProfile(MovementProfile runtimeCopy)
+        {
+            _profile = runtimeCopy != null ? runtimeCopy : _authoredProfile;
+            _input.Profile = _profile;
+        }
 
         /// <summary>-1 to +1: how far this player is leaning, and which way. Moves once per tick.</summary>
         public float Lean => _lean;
@@ -220,7 +229,7 @@ namespace CloseTheDeal.Player
         public float Crouch => _crouch;
 
         /// <summary>Height of the eye above the feet when standing, in metres.</summary>
-        public float StandingEyeHeight => _blast.EyeHeight;
+        public float StandingEyeHeight => _profile.EyeHeight;
 
         /// <summary>How far the eye comes down at full crouch, in metres.</summary>
         public float CrouchEyeDrop => _standHeight - CrouchedHeight;
@@ -244,6 +253,8 @@ namespace CloseTheDeal.Player
             _rigidbody = GetComponent<Rigidbody>();
             _capsule = GetComponent<CapsuleCollider>();
             _input = GetComponent<PlayerInputReader>();
+            _authoredProfile = _profile;
+            _input.Profile = _profile;
             _input.enabled = false;
             _standHeight = _capsule.height;
             _body.Initialize(_rigidbody);
@@ -262,6 +273,8 @@ namespace CloseTheDeal.Player
             _crouch = 0f;
             _counters = default;
             _slide = default;
+            _lastRealInput = default;
+            _countersSeeded = false;
             _ground = default;
             LastCorrectionMetres = 0f;
             CorrectionCount = 0;
@@ -277,6 +290,7 @@ namespace CloseTheDeal.Player
                 return;
 
             Local = this;
+            LocalChanged?.Invoke(this);
             _input.enabled = true;
             if (!IsServerStarted)
             {
@@ -295,7 +309,10 @@ namespace CloseTheDeal.Player
                 return;
 
             if (Local == this)
+            {
                 Local = null;
+                LocalChanged?.Invoke(null);
+            }
             PredictionManager.OnPreReconcile -= NoteTipBeforeReconcile;
             PredictionManager.OnPostReconcile -= MeasureCorrection;
             _input.enabled = false;
@@ -323,22 +340,16 @@ namespace CloseTheDeal.Player
 
             PlayerCamera cam = PlayerCamera.Instance;
             float yaw = cam != null ? cam.Yaw : _rigidbody.rotation.eulerAngles.y;
-            Vector3 eye = EyePosition(yaw);
             return new MoveInput
             {
                 Move = _input.Move,
                 Yaw = yaw,
-                Aim = cam != null ? cam.AimDirectionFrom(eye) : Quaternion.Euler(0f, yaw, 0f) * Vector3.forward,
                 Sprint = _input.Sprint,
                 Crouch = _input.Crouch,
                 JumpHeld = _input.JumpHeld,
                 Lean = _input.Lean,
-                OneShots = new OneShots
-                {
-                    Jump = _input.Consume(PlayerPress.Jump),
-                    // Left alone when the test blast is off, so the weapon that replaces it gets the press.
-                    Attack = _testBlast && _input.Consume(PlayerPress.Attack)
-                }
+                // Attack and the other buttons belong to the weapon and item systems; movement only takes Jump.
+                OneShots = new OneShots { Jump = _input.Consume(PlayerPress.Jump) }
             };
         }
 
@@ -362,7 +373,7 @@ namespace CloseTheDeal.Player
         [Replicate]
         void RunMove(MoveInput input, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable)
         {
-            input = PredictSpectatorInput(input, state);
+            input = FillMissingInput(input, state);
             if (!state.ContainsReplayed())
                 _currentTick = input.GetTick();
 
@@ -380,10 +391,6 @@ namespace CloseTheDeal.Player
             // After any velocity write: setting velocity clears queued forces, and this must survive.
             float yaw = Mathf.MoveTowardsAngle(_rigidbody.rotation.eulerAngles.y, input.Yaw, _profile.TurnSpeed * dt);
             _body.MoveRotation(Quaternion.Euler(0f, yaw, 0f));
-
-            // Fires from the lean the owner aimed with, before this tick moves it.
-            if (input.OneShots.Attack && IsServerStarted)
-                FireTestBlast(input.Aim, input.Yaw);
 
             LeanStep(input, dt);
             CrouchStep(input, dt);
@@ -452,6 +459,13 @@ namespace CloseTheDeal.Player
             _crouch = data.Crouch;
             _counters = data.Counters;
             _slide = data.Slide;
+
+            // A player who joins late must not hear every jump and landing the others made before.
+            if (!IsOwner && !_countersSeeded)
+            {
+                _seenCounters = data.Counters;
+                _countersSeeded = true;
+            }
             ApplyCrouchToCapsule();
         }
 
@@ -477,24 +491,31 @@ namespace CloseTheDeal.Player
         }
 
         /// <summary>
-        /// On clients that don't own this body, guess one tick ahead by repeating the last
-        /// real input (minus presses), as FishNet's own demos do. Beyond that, no input.
+        /// Ticks of a body this machine doesn't control that carry no real input: on other
+        /// clients, the few ticks FishNet runs past the last input that has arrived; on the host,
+        /// a client's tick whose input hasn't arrived yet. FishNet hands those over as empty input
+        /// (still flagged Ticked, but not Created). Run as empty, a held crouch, lean, slide or
+        /// sprint lets go and the body faces north until the next real input or host state puts
+        /// it back, which is what other players used to see. Instead the last real input is
+        /// repeated, presses left out, for up to <see cref="SpectatorRepeatTicks"/>; after that
+        /// the body lets go of everything but keeps its facing.
         /// </summary>
-        MoveInput PredictSpectatorInput(MoveInput input, ReplicateState state)
+        MoveInput FillMissingInput(MoveInput input, ReplicateState state)
         {
-            if (IsServerStarted || IsOwner)
+            if (IsOwner)
                 return input;
 
-            if (state.ContainsTicked())
+            if (state.ContainsCreated())
             {
-                _lastTickedInput = input;
+                _lastRealInput = input;
                 return input;
             }
 
-            if (!state.IsFuture())
-                return input;
-
-            MoveInput guess = input.GetTick() - _lastTickedInput.GetTick() > 1 ? default : _lastTickedInput;
+            MoveInput guess = _lastRealInput;
+            // Signed: a replay can reach a tick older than the newest real input already stored.
+            long sinceReal = (long)input.GetTick() - _lastRealInput.GetTick();
+            if (sinceReal > SpectatorRepeatTicks)
+                guess = new MoveInput { Yaw = _lastRealInput.Yaw };
             guess.OneShots.Clear();
             guess.SetTick(input.GetTick());
             return guess;
@@ -735,8 +756,11 @@ namespace CloseTheDeal.Player
             _capsule.center = new Vector3(0f, height * 0.5f, 0f);
         }
 
-        /// <summary>The eye, slid sideways by the current lean but never through a wall. Shots leave from here.</summary>
-        Vector3 EyePosition(float yaw)
+        /// <summary>
+        /// Where shots should leave from: the eye, slid sideways by the current lean but never
+        /// through a wall. <paramref name="yaw"/> is the facing, in degrees around the vertical.
+        /// </summary>
+        public Vector3 LeanedEyePosition(float yaw)
         {
             Vector3 head = _rigidbody.position + Vector3.up * EyeHeight;
             float reach = _profile.LeanDistance * Mathf.Abs(_lean);
@@ -748,22 +772,6 @@ namespace CloseTheDeal.Player
                 reach = wall.distance;
 
             return head + direction * reach;
-        }
-
-        // ---- Blast ---------------------------------------------------------------------------
-
-        /// <summary>Fires from the eye toward what the owner had under the crosshair; a missing aim falls back to straight ahead.</summary>
-        void FireTestBlast(Vector3 aim, float yaw)
-        {
-            Vector3 origin = EyePosition(yaw);
-            Vector3 direction = aim.sqrMagnitude > 0.5f ? aim.normalized : Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
-            int mask = _groundMask | _playerMask;
-
-            Vector3 point = Physics.Raycast(origin, direction, out RaycastHit hit, _blast.Range, mask, QueryTriggerInteraction.Ignore)
-                ? hit.point
-                : origin + direction * _blast.Range;
-
-            Knockback.Explode(point, _blast, _playerMask, _propMask, BlastBuffer);
         }
 
         // ---- Helpers -------------------------------------------------------------------------

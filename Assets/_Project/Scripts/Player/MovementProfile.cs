@@ -128,6 +128,10 @@ namespace CloseTheDeal.Player
         [Tooltip("How far below the feet still counts as touching the floor, in metres. Keep about 0.1: higher and the player 'lands' before reaching it.")]
         public float GroundProbe = 0.1f;
 
+        [Header("Body")]
+        [Tooltip("Height of the eye above the feet when standing, in metres. The first-person camera sits here and shots leave from here. 1.6 on the 1.8 m body; the crouch lowers it by the difference between standing and crouched height.")]
+        public float EyeHeight = 1.6f;
+
         [Header("Look")]
         [Tooltip("Mouse look speed in degrees per mouse count. 0.12 is a typical shooter feel; higher turns faster.")]
         public float MouseSensitivity = 0.12f;
@@ -162,5 +166,27 @@ namespace CloseTheDeal.Player
 
         [Tooltip("How fast the speed widening comes in and goes out, in degrees per second.")]
         public float SpeedFovRate = 30f;
+
+        [Tooltip("How far the view rolls while sliding, in degrees, leaning away from the slide's sideways drift and slightly into the slide when it runs straight. Rolling never moves the crosshair, so aim is untouched. 0 = no roll; 2 reads as weight; above 5 is seasick.")]
+        public float SlideRoll = 2f;
+
+        [Tooltip("How fast the slide roll comes in and goes out, in degrees per second.")]
+        public float SlideRollRate = 20f;
+
+        [Header("Gamepad")]
+        [Tooltip("Smallest push of the move stick that counts, as a fraction of full tilt. 0.1 ignores stick drift; raise it if a pad creeps.")]
+        [Range(0f, 0.5f)] public float MoveStickDeadZone = 0.1f;
+
+        [Tooltip("Smallest push of the look stick that turns the view, as a fraction of full tilt. 0.15 stops a worn stick drifting the aim; raise it if the view creeps on its own.")]
+        [Range(0f, 0.5f)] public float LookStickDeadZone = 0.15f;
+
+        [Tooltip("Extra turning speed added when the look stick is held right at the edge, in degrees per second. Lets a pad player turn round quickly without making fine aim twitchy. 0 = off; 160 takes a full-tilt turn from 240 to 400.")]
+        public float StickTurnBoost = 160f;
+
+        [Tooltip("How long the look stick must sit at the edge before the extra turn starts, in seconds. Shorter = quicker to kick in, but flicks that overshoot start turning faster too.")]
+        public float StickTurnBoostDelay = 0.15f;
+
+        [Tooltip("How long the extra turn takes to build up to full once it starts, in seconds.")]
+        public float StickTurnBoostRamp = 0.25f;
     }
 }

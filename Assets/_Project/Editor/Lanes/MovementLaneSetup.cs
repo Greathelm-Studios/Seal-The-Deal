@@ -295,7 +295,10 @@ namespace CloseTheDeal.Editor.Lanes
         /// </summary>
         public static void RunSession()
         {
-            EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            // -sessionScene opens another scene instead (the tower check uses the greybox tower); it is only read, never saved.
+            string[] args = Environment.GetCommandLineArgs();
+            int at = Array.IndexOf(args, "-sessionScene");
+            EditorSceneManager.OpenScene(at >= 0 && at + 1 < args.Length ? args[at + 1] : ScenePath, OpenSceneMode.Single);
             EditorApplication.EnterPlaymode();
         }
 

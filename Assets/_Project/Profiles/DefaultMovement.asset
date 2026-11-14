@@ -60,3 +60,11 @@ MonoBehaviour:
   LandingDipRecover: 0.25
   SpeedFovKick: 6
   SpeedFovRate: 30
+  EyeHeight: 1.6
+  SlideRoll: 2
+  SlideRollRate: 20
+  MoveStickDeadZone: 0.1
+  LookStickDeadZone: 0.15
+  StickTurnBoost: 160
+  StickTurnBoostDelay: 0.15
+  StickTurnBoostRamp: 0.25

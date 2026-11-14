@@ -28,11 +28,14 @@ namespace CloseTheDeal.Player
         [Tooltip("The Input System actions asset. Uses its Player map; the full binding table is in docs/systems/PLAYER_MOVEMENT.md.")]
         [SerializeField] InputActionAsset _actions;
 
-        [Tooltip("Smallest stick push that counts as movement, as a fraction of full tilt. 0.1 ignores stick drift; raise it if a pad creeps.")]
-        [Range(0f, 0.5f)] [SerializeField] float _deadZone = 0.1f;
+        /// <summary>Stick dead zones come from the player's movement profile; the motor hands it over on wake. Until then these defaults apply.</summary>
+        public MovementProfile Profile { get; set; }
 
-        [Tooltip("Smallest push of the look stick that turns the view, as a fraction of full tilt. 0.15 stops a worn stick drifting the aim; raise it if the view creeps on its own.")]
-        [Range(0f, 0.5f)] [SerializeField] float _lookDeadZone = 0.15f;
+        const float DefaultMoveDeadZone = 0.1f;
+        const float DefaultLookDeadZone = 0.15f;
+
+        float MoveDeadZone => Profile != null ? Profile.MoveStickDeadZone : DefaultMoveDeadZone;
+        float LookDeadZone => Profile != null ? Profile.LookStickDeadZone : DefaultLookDeadZone;
 
         const int PressCount = 6;
         const int SlotCount = 4;
@@ -68,13 +71,13 @@ namespace CloseTheDeal.Player
         public event Action<int> WeaponSlotPressed;
 
         /// <summary>Movement stick with the dead zone removed and the rest rescaled to 0–1.</summary>
-        public Vector2 Move => Captured ? WithDeadZone(_move.ReadValue<Vector2>(), _deadZone) : Vector2.zero;
+        public Vector2 Move => Captured ? WithDeadZone(_move.ReadValue<Vector2>(), MoveDeadZone) : Vector2.zero;
 
         /// <summary>Mouse movement this frame, in mouse counts. Scale by the mouse sensitivity for degrees.</summary>
         public Vector2 LookDelta => Captured ? _look.ReadValue<Vector2>() : Vector2.zero;
 
         /// <summary>Look stick, dead zone removed and rescaled to 0–1. A rate, not a distance: scale by degrees per second and frame time.</summary>
-        public Vector2 LookStick => Captured ? WithDeadZone(_lookStick.ReadValue<Vector2>(), _lookDeadZone) : Vector2.zero;
+        public Vector2 LookStick => Captured ? WithDeadZone(_lookStick.ReadValue<Vector2>(), LookDeadZone) : Vector2.zero;
 
         public bool Sprint => Captured && _sprint.IsPressed();
         public bool Crouch => Captured && _crouch.IsPressed();

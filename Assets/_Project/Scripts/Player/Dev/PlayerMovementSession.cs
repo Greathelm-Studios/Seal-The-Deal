@@ -130,6 +130,7 @@ namespace CloseTheDeal.Player.Dev
                 case "solo": return Solo();
                 case "host": return Host();
                 case "client": return Client();
+                case "tower": return Tower();
                 default:
                     Check("known session role", false, _role);
                     return Wait(0f);
@@ -221,6 +222,26 @@ namespace CloseTheDeal.Player.Dev
 
             WatchLocal();
             WatchRemote();
+            if (_role != "solo")
+            {
+                LogPose("own", Me.AnimState, ref _lastOwnPose);
+                if (_remote != null)
+                    LogPose("other", _remote.AnimState, ref _lastOtherPose);
+            }
+        }
+
+        int _lastOwnPose = -1, _lastOtherPose = -1;
+
+        /// <summary>One line whenever a body's crouch, lean, slide, sprint, grounded or climb state changes, for lining one machine's view of a body up with the other's.</summary>
+        void LogPose(string who, in PlayerAnimState a, ref int last)
+        {
+            int packed = Mathf.RoundToInt(a.Crouch * 4f) | (Mathf.RoundToInt((a.Lean + 1f) * 2f) << 4) | ((a.Sliding ? 1 : 0) << 8)
+                | ((a.Sprinting ? 1 : 0) << 9) | ((a.Grounded ? 1 : 0) << 10) | ((a.Mantling ? 1 : 0) << 11);
+            if (packed == last)
+                return;
+
+            last = packed;
+            Note($"pose {who}: crouch {a.Crouch:0.00} lean {a.Lean:0.00} slide {a.Sliding} sprint {a.Sprinting} grounded {a.Grounded} climbing {a.Mantling} speed {a.PlanarSpeed:0.0}");
         }
 
         void Finish()
@@ -277,7 +298,7 @@ namespace CloseTheDeal.Player.Dev
             motor.Landed += speed => { _localLands++; _lastLandSpeed = speed; };
             motor.MantleStarted += kind => { _localMantles++; _lastMantleKind = kind; };
             motor.MantleRefused += why => { _localRefusals++; _lastRefusal = why; };
-            motor.KnockedDown += () => _localKnocks++;
+            motor.KnockedDown += () => { _localKnocks++; Note($"event: knocked down at {Feet}, state {Me.State}"); };
         }
 
         void HookRemote(PlayerMotor motor)
@@ -653,24 +674,56 @@ namespace CloseTheDeal.Player.Dev
             return bounds;
         }
 
-        /// <summary>The lobby's stair column: the lowest object called Stairs.</summary>
+        /// <summary>The ground floor's stair column: the lowest object called Stairs, the nearest one when there are two towers.</summary>
         static Vector3 StairCentre()
         {
             Transform lowest = null;
+            Vector3 feet = Me != null ? Feet : Vector3.zero;
             foreach (Transform t in FindObjectsByType<Transform>(FindObjectsSortMode.None))
-                if (t.name == "Stairs" && (lowest == null || t.position.y < lowest.position.y))
+            {
+                if (t.name != "Stairs")
+                    continue;
+                bool lower = lowest == null || t.position.y < lowest.position.y - 0.1f;
+                bool sameLevelNearer = lowest != null && Mathf.Abs(t.position.y - lowest.position.y) <= 0.1f
+                    && (t.position - feet).sqrMagnitude < (lowest.position - feet).sqrMagnitude;
+                if (lower || sameLevelNearer)
                     lowest = t;
+            }
             if (lowest == null)
                 throw new InvalidOperationException("Lane scene has no 'Stairs'.");
             return lowest.position;
         }
 
+        /// <summary>The rise of one flight: to the lane slice's upper floor, or in a tower to the next stair column up.</summary>
         static float FloorHeight()
         {
             GameObject upper = GameObject.Find("Upper floor");
-            if (upper == null)
-                throw new InvalidOperationException("Lane scene has no 'Upper floor'.");
-            return upper.transform.position.y - StairCentre().y;
+            if (upper != null)
+                return upper.transform.position.y - StairCentre().y;
+
+            if (CloseTheDeal.Tower.TowerBuilder.Instance != null)
+                return CloseTheDeal.Tower.TowerBuilder.Instance.Profile.FloorHeight;
+
+            Vector3 lowest = StairCentre();
+            float next = float.MaxValue;
+            foreach (Transform t in FindObjectsByType<Transform>(FindObjectsSortMode.None))
+            {
+                Vector3 p = t.position;
+                if (t.name == "Stairs" && p.y > lowest.y + 0.5f && Mathf.Abs(p.x - lowest.x) < 0.5f && Mathf.Abs(p.z - lowest.z) < 0.5f)
+                    next = Mathf.Min(next, p.y);
+            }
+            if (next == float.MaxValue)
+                throw new InvalidOperationException("No stairs above the lowest flight.");
+            return next - lowest.y;
+        }
+
+        /// <summary>The real tower from the floor templates: the same sprint up and down its lobby flight.</summary>
+        IEnumerator Tower()
+        {
+            yield return Wait(1f);
+            Note($"tower: lowest stairs at {StairCentre()}, flight rises {FloorHeight():0.00} m; player at {Feet}");
+            yield return StairsUpCheck();
+            yield return StairsDownCheck();
         }
 
         // ---- Solo: every move, measured ------------------------------------------------------
@@ -698,7 +751,6 @@ namespace CloseTheDeal.Player.Dev
             yield return StairSlideMeasure();
             yield return MenuMidJumpCheck();
             yield return KnockMidMantleCheck();
-            yield return BlastClickCheck();
             yield return RespawnCheck();
         }
 
@@ -1372,31 +1424,6 @@ namespace CloseTheDeal.Player.Dev
             yield return Wait(0.4f);
         }
 
-        IEnumerator BlastClickCheck()
-        {
-            yield return Place(new Vector3(0f, 0.05f, -4f), 0f);
-            yield return Face(0f, 80f);
-            int knocks = _localKnocks;
-            _leftMouse = true;
-            MoveMouse(Vector2.zero);
-            yield return Frames(3);
-            _leftMouse = false;
-            MoveMouse(Vector2.zero);
-            OpenWindow();
-            yield return Wait(0.4f);
-            float top = _topY;
-            yield return Until(() => Me.State == MoveState.Grounded, 3f, "lands after its own blast");
-            CloseWindow();
-            Check("left click fires the test blast through Knockback", _localKnocks == knocks + 1 && top > 0.5f, $"knock events +{_localKnocks - knocks}, thrown {top:0.0} m up");
-
-            // Enter used to fire as well.
-            knocks = _localKnocks;
-            yield return Tap(Key.Enter);
-            yield return Wait(0.3f);
-            Check("Enter no longer fires", _localKnocks == knocks, $"knock events +{_localKnocks - knocks}");
-            yield return Face(0f);
-        }
-
         IEnumerator RespawnCheck()
         {
             Press(Key.W, Key.LeftShift);
@@ -1434,11 +1461,12 @@ namespace CloseTheDeal.Player.Dev
 
             HookRemote(other);
             Note("client joined; host showcase starts");
+            StartCoroutine(ThrowTheClientWhenItLeans());
             Section("host showing off, client watching");
             StartCoroutine(FilmRemote());
 
-            // Things for the client to see this body do.
-            yield return Wait(1.5f);
+            // Things for the client to see this body do, once it has had time to start watching.
+            yield return Wait(3.5f);
             Press(Key.LeftCtrl);
             yield return Wait(1f);
             ReleaseAll();
@@ -1492,6 +1520,17 @@ namespace CloseTheDeal.Player.Dev
             Check("the client's body left with it", _remote == null || !_remote.IsSpawned, "despawned on the host");
             ReportRemote("host saw the client");
             yield return Wait(1f);
+        }
+
+        /// <summary>The client's control check: a throw the host decides that the client could not have predicted.</summary>
+        IEnumerator ThrowTheClientWhenItLeans()
+        {
+            yield return Until(() => _remote == null || !_remote.IsSpawned || _remote.AnimState.Lean > 0.9f, 220f, null);
+            if (_remote == null || !_remote.IsSpawned)
+                yield break;
+
+            Note("host sees the client lean fully; throwing it");
+            _remote.ApplyKnockback(new Vector3(0f, 6f, 8f), 0.7f);
         }
 
         IEnumerator FilmRemote()
@@ -1569,13 +1608,11 @@ namespace CloseTheDeal.Player.Dev
             int routeBacksteps = _cameraBacksteps;
             int routeCorrections = Me.CorrectionCount;
             Section("control: a blast the client cannot predict");
-            yield return Face(View.Yaw, 70f);
-            _leftMouse = true;
-            MoveMouse(Vector2.zero);
-            yield return Wait(0.1f);
-            _leftMouse = false;
-            MoveMouse(Vector2.zero);
-            yield return Wait(2f);
+            // Leaning is the signal: the client leans nowhere else, and the host throws it when it sees it.
+            Press(Key.E);
+            yield return Until(() => _localKnocks > 0, 4f, "the host threw the leaning client");
+            ReleaseAll();
+            yield return Wait(1.5f);
             float control = _sectionWorst;
             Check("the correction measure sees a snap when the host throws the body", control > 0.3f, $"largest snap {control * 100f:0.0} cm");
             Section("end");
