@@ -117,6 +117,7 @@ GameObject:
   - component: {fileID: 6163017632449043247}
   - component: {fileID: 2651652440932133130}
   - component: {fileID: 7561311699683670329}
+  - component: {fileID: 4965708203051928064}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -260,8 +261,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Player.PlayerInputReader
   _actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-  _deadZone: 0.1
-  _lookDeadZone: 0.15
 --- !u!114 &7581206824313403346
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -279,17 +278,9 @@ MonoBehaviour:
   _networkObjectCache: {fileID: 0}
   _tickCallbacks: 6
   _profile: {fileID: 11400000, guid: 9a42daef68078df4f84533e8f7508ec6, type: 2}
-  _blast: {fileID: 11400000, guid: 41dd2e2ae9dfd457095e727535776d12, type: 2}
-  _testBlast: 1
   _groundMask:
     serializedVersion: 2
     m_Bits: 4294967231
-  _playerMask:
-    serializedVersion: 2
-    m_Bits: 0
-  _propMask:
-    serializedVersion: 2
-    m_Bits: 0
   _cameraTarget: {fileID: 4165610245162811838}
   _leanPivot: {fileID: 1549759532965773935}
   _squashBodyWhenCrouched: 1
@@ -422,6 +413,19 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 4680666766096500643}
   _networkObjectCache: {fileID: 0}
   _view: {fileID: 4407393111931332995}
+--- !u!114 &4965708203051928064
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4715390566021658440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18b4105a3756846c89a4a08020cfcbdb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Combat.CombatSounds
+  _set: {fileID: 11400000, guid: 9917cc49426d446ea91f9c0835b1ecbe, type: 2}
 --- !u!1 &7111191965594976901
 GameObject:
   m_ObjectHideFlags: 0
@@ -489,6 +493,7 @@ MonoBehaviour:
   _solid:
     serializedVersion: 2
     m_Bits: 4294967231
+  _hitProfile: {fileID: 0}
 --- !u!1001 &866435181686766489
 PrefabInstance:
   m_ObjectHideFlags: 0

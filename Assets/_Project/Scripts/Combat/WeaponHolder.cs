@@ -156,6 +156,7 @@ namespace CloseTheDeal.Combat
         readonly WeaponDefinition[] _weapons = new WeaponDefinition[SlotCount];
         Health _health;
         PlayerMotor _motor;
+        Rigidbody _rigidbody;
 
         // Host side.
         readonly byte[] _hostAmmo = new byte[SlotCount];
@@ -249,6 +250,7 @@ namespace CloseTheDeal.Combat
         {
             _health = GetComponent<Health>();
             _motor = GetComponent<PlayerMotor>();
+            _rigidbody = GetComponent<Rigidbody>();
             _slot0.OnChange += OnSlotChanged;
             _slot1.OnChange += OnSlotChanged;
             _active.OnChange += OnActiveChanged;
@@ -781,13 +783,22 @@ namespace CloseTheDeal.Combat
         Vector3 TrustedOrigin(Vector3 claimed, uint lagTicks)
         {
             Vector3 eye = HostEye();
-            float speed = _motor != null ? _motor.PlanarSpeed : 0f;
-            float reach = _originTolerance + speed * (float)(lagTicks * TimeManager.TickDelta);
-            Vector3 offset = claimed - eye;
-            if (offset.sqrMagnitude > reach * reach)
+            // The shooter's own game is ahead of the host's copy of the body along its movement, not in
+            // any direction: allow the tolerance around the path the body travels in the shooter's lag.
+            Vector3 velocity = _rigidbody != null ? _rigidbody.linearVelocity : Vector3.zero;
+            Vector3 ahead = eye + velocity * (float)(lagTicks * TimeManager.TickDelta);
+            if (DistanceToSegment(claimed, eye, ahead) > _originTolerance)
                 return eye;
 
             return ShotResolver.ClearPath(eye, claimed, _solidMask) ? claimed : eye;
+        }
+
+        static float DistanceToSegment(Vector3 point, Vector3 a, Vector3 b)
+        {
+            Vector3 ab = b - a;
+            float lengthSqr = ab.sqrMagnitude;
+            float t = lengthSqr > 0.0001f ? Mathf.Clamp01(Vector3.Dot(point - a, ab) / lengthSqr) : 0f;
+            return Vector3.Distance(point, a + ab * t);
         }
 
         /// <summary>The tick to test targets at: the one the shooter says it was looking at, never in the future and never further back than the lag allowance.</summary>
@@ -1039,6 +1050,12 @@ namespace CloseTheDeal.Combat
 
             public WeaponInput()
             {
+                // Pad: right trigger fires, Y reloads, d-pad left and right pick the slots.
+                // A, B, X and d-pad down belong to jump, crouch, interact and drop.
+                _fire.AddBinding("<Gamepad>/rightTrigger");
+                _reload.AddBinding("<Gamepad>/buttonNorth");
+                _slot1.AddBinding("<Gamepad>/dpad/left");
+                _slot2.AddBinding("<Gamepad>/dpad/right");
                 _fire.Enable();
                 _reload.Enable();
                 _slot1.Enable();
