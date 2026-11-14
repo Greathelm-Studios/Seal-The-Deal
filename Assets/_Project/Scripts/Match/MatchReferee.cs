@@ -216,8 +216,19 @@ namespace CloseTheDeal.MatchMode
                 return;
             }
 
-            if (place != MatchArena.Outside)
-                _match.ServerTrackBriefcase(place, Arena.FloorOf(position));
+            if (place == MatchArena.Outside)
+                return;
+
+            // Knocked loose and lodged on a floor nobody may reach yet (a slab above the open
+            // floor): only a carrier could fetch it, and nobody can carry it there. Send it back.
+            int floor = Arena.FloorOf(position);
+            if (floor > _match.OpenFloor && Arena.OnFloorSurface(position, floor))
+            {
+                _match.ServerBeginReturn(tick);
+                return;
+            }
+
+            _match.ServerTrackBriefcase(place, floor);
         }
 
         // ---- The result ----------------------------------------------------------------------

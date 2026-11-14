@@ -3,9 +3,11 @@ using UnityEngine;
 namespace CloseTheDeal.Lobby
 {
     /// <summary>
-    /// The reception desk. Press interact to ready up or take it back. When everyone is ready
-    /// and the start rule is met, the host instead holds interact to start the run; a tap still
-    /// takes the host's ready back. The desk asks the host; the roster decides.
+    /// The reception desk. Press interact to ready up or take it back. When everyone is ready the
+    /// host instead holds interact to start the run; a quick tap still takes the host's ready
+    /// back. If a firm is empty or the firms are uneven, the first hold arms a confirm (the
+    /// prompt says why) and a second hold within a few seconds starts the run anyway, when the
+    /// lobby rules allow a short-handed start. The desk asks the host; the roster decides.
     /// </summary>
     public sealed class ReceptionDesk : LobbyInteractable
     {
@@ -15,7 +17,10 @@ namespace CloseTheDeal.Lobby
         [Tooltip("How far the bell dips when pressed, in metres.")]
         [Range(0f, 0.05f)] [SerializeField] float _bellDip = 0.012f;
 
-        enum Mode { None, Ready, Unready, HostStart, RunStarted }
+        /// <summary>Raised when the host's first hold arms a short-handed confirm (the reason). For a sound and the board.</summary>
+        public static event System.Action<StartBlock> OnConfirmArmed;
+
+        enum Mode { None, Ready, Unready, HostStart, WaitForHost, RunStarted }
 
         // Prompts are fixed strings so nothing is built per frame (AGENTS.md §6).
         const string KeyReady = "F   Ready up";
@@ -24,6 +29,8 @@ namespace CloseTheDeal.Lobby
         const string PadReady = "Y   Ready up";
         const string PadUnready = "Y   Take back your ready";
         const string PadStart = "Hold Y   Start the run";
+        const string KeyWaiting = "F   Take back your ready   (waiting for the host)";
+        const string PadWaiting = "Y   Take back your ready   (waiting for the host)";
         const string Started = "The run has started";
         const float BellSeconds = 0.12f;
         const float TapSeconds = 0.25f;
@@ -33,12 +40,17 @@ namespace CloseTheDeal.Lobby
         float _held;
         float _bellTime = -1f;
         Vector3 _bellRest;
+        float _confirmUntil = -1f;
+        string _confirmKeyPrompt;
+        string _confirmPadPrompt;
 
         void Awake()
         {
             if (_bell != null)
                 _bellRest = _bell.localPosition;
         }
+
+        bool ConfirmArmed => _confirmUntil > Time.unscaledTime;
 
         Mode Current()
         {
@@ -51,21 +63,21 @@ namespace CloseTheDeal.Lobby
                 return Mode.None;
             if (me.State != MemberState.Ready)
                 return Mode.Ready;
-            if (roster.IsLocalHost && roster.WhyNotStart() == StartBlock.None)
-                return Mode.HostStart;
-            return Mode.Unready;
+            if (!roster.IsLocalHost)
+                return roster.Evaluate(out _) == StartState.Unavailable ? Mode.Unready : Mode.WaitForHost;
+            return roster.Evaluate(out _) != StartState.Unavailable ? Mode.HostStart : Mode.Unready;
         }
+
+        // Indexed by Mode, so the prompt is a lookup, not a branch per state.
+        static readonly string[] KeyPrompts = { null, KeyReady, KeyUnready, KeyStart, KeyWaiting, Started };
+        static readonly string[] PadPrompts = { null, PadReady, PadUnready, PadStart, PadWaiting, Started };
 
         public override string Prompt(bool gamepad)
         {
-            switch (Current())
-            {
-                case Mode.Ready: return gamepad ? PadReady : KeyReady;
-                case Mode.Unready: return gamepad ? PadUnready : KeyUnready;
-                case Mode.HostStart: return gamepad ? PadStart : KeyStart;
-                case Mode.RunStarted: return Started;
-                default: return null;
-            }
+            Mode mode = Current();
+            if (mode == Mode.HostStart && ConfirmArmed)
+                return gamepad ? _confirmPadPrompt : _confirmKeyPrompt;
+            return (gamepad ? PadPrompts : KeyPrompts)[(int)mode];
         }
 
         public override float HoldProgress
@@ -85,7 +97,7 @@ namespace CloseTheDeal.Lobby
             _startSent = false;
             Mode mode = Current();
             _holdingStart = mode == Mode.HostStart;
-            if (mode == Mode.Ready || mode == Mode.Unready)
+            if (mode == Mode.Ready || mode == Mode.Unready || mode == Mode.WaitForHost)
             {
                 LobbyRoster.Instance.RequestReady(mode == Mode.Ready);
                 Ring();
@@ -104,8 +116,43 @@ namespace CloseTheDeal.Lobby
 
             _startSent = true;
             _holdingStart = false;
-            roster.RequestStart();
+            StartOrArm(roster);
             Ring();
+        }
+
+        /// <summary>A full hold: start now, or (short-handed) arm the confirm, or on the second hold start anyway.</summary>
+        void StartOrArm(LobbyRoster roster)
+        {
+            StartState state = roster.Evaluate(out StartBlock reason);
+            if (state == StartState.Ready)
+            {
+                roster.RequestStart(false);
+                return;
+            }
+
+            if (state != StartState.NeedsConfirm)
+                return;
+
+            if (ConfirmArmed)
+            {
+                _confirmUntil = -1f;
+                roster.RequestStart(true);
+                return;
+            }
+
+            ArmConfirm(roster, reason);
+        }
+
+        void ArmConfirm(LobbyRoster roster, StartBlock reason)
+        {
+            // Built once per arm, not per frame.
+            string why = reason == StartBlock.NeedBothFirms
+                ? roster.Rules.FirmName(roster.SmallerFirm()) + " has nobody."
+                : "The firms are uneven.";
+            _confirmKeyPrompt = why + "   Hold F again to start anyway";
+            _confirmPadPrompt = why + "   Hold Y again to start anyway";
+            _confirmUntil = Time.unscaledTime + roster.Rules.ConfirmSeconds;
+            OnConfirmArmed?.Invoke(reason);
         }
 
         public override void OnRelease(float heldSeconds)
@@ -114,6 +161,7 @@ namespace CloseTheDeal.Lobby
             // start the host thought better of, and changes nothing.
             if (_holdingStart && !_startSent && heldSeconds < TapSeconds && LobbyRoster.Instance != null)
             {
+                _confirmUntil = -1f;
                 LobbyRoster.Instance.RequestReady(false);
                 Ring();
             }

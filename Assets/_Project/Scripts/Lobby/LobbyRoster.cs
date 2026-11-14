@@ -30,6 +30,38 @@ namespace CloseTheDeal.Lobby
         NotAllReady
     }
 
+    /// <summary>Whether the host can start the run now.</summary>
+    public enum StartState : byte
+    {
+        /// <summary>Not yet: see the reason.</summary>
+        Unavailable,
+        /// <summary>Yes: one hold at the desk.</summary>
+        Ready,
+        /// <summary>Everyone is ready but a firm is empty or the firms are uneven: allowed, with a second hold to confirm.</summary>
+        NeedsConfirm
+    }
+
+    /// <summary>What the local player should do next, for the guidance line.</summary>
+    public enum LobbyStep : byte
+    {
+        /// <summary>Not in the roster yet.</summary>
+        Arriving,
+        /// <summary>Ready up at the desk.</summary>
+        ReadyUp,
+        /// <summary>Ready; others are not.</summary>
+        WaitForOthers,
+        /// <summary>The host can start.</summary>
+        StartRun,
+        /// <summary>The host can start short-handed after a confirm.</summary>
+        StartShortHanded,
+        /// <summary>Everyone is ready; the host has not started.</summary>
+        WaitForHost,
+        /// <summary>In the fitting room.</summary>
+        Fitting,
+        /// <summary>The run has started.</summary>
+        RunStarting
+    }
+
     /// <summary>One player in reception, as everyone sees it.</summary>
     public struct LobbyMember
     {
@@ -99,6 +131,9 @@ namespace CloseTheDeal.Lobby
         /// <summary>The host only: a start was refused, and why.</summary>
         public event Action<StartBlock> OnStartBlocked;
 
+        /// <summary>The host only: everyone is ready but a firm is empty or uneven, so the start needs a second, confirming hold (the reason).</summary>
+        public event Action<StartBlock> OnStartNeedsConfirm;
+
         /// <summary>Every machine: the run is starting.</summary>
         public event Action OnRunStarting;
 
@@ -111,6 +146,8 @@ namespace CloseTheDeal.Lobby
         readonly SyncVar<bool> _runInProgress = new();
 
         bool _listening;
+        float _listenAfter;
+        const float InitialSyncSeconds = 1f;
         bool _nameSent;
 
         public LobbyRules Rules => _rules;
@@ -168,7 +205,10 @@ namespace CloseTheDeal.Lobby
         {
             base.OnStartClient();
             // From here on, additions are arrivals. Everything before was already in the room.
-            _listening = true;
+            // FishNet can replay the initial list just after this call, so arrivals count from
+            // a moment later; someone joining in that moment simply isn't greeted.
+            _listening = false;
+            _listenAfter = Time.unscaledTime + InitialSyncSeconds;
             _nameSent = false;
             SendNameOnce();
             OnChanged?.Invoke();
@@ -240,20 +280,70 @@ namespace CloseTheDeal.Lobby
             }
         }
 
-        /// <summary>The start rule (a proposal): every player ready, nobody in the fitting room, at least one per firm, and the firms within the fairness limit.</summary>
-        public StartBlock WhyNotStart()
+        /// <summary>
+        /// The start rule (a proposal): every player ready and nobody in the fitting room, then at
+        /// least one per firm and the firms within the fairness limit. When only the firm check
+        /// fails and Rules.AllowShortHandedStart is on, the host may still start after a second
+        /// hold (NeedsConfirm).
+        /// </summary>
+        public StartState Evaluate(out StartBlock reason)
         {
+            reason = StartBlock.None;
             if (_runInProgress.Value)
-                return StartBlock.RunInProgress;
+            {
+                reason = StartBlock.RunInProgress;
+                return StartState.Unavailable;
+            }
 
+            if (_members.Count == 0 || ReadyCount < _members.Count)
+            {
+                reason = StartBlock.NotAllReady;
+                return StartState.Unavailable;
+            }
+
+            reason = FirmProblem();
+            if (reason == StartBlock.None)
+                return StartState.Ready;
+            return _rules.AllowShortHandedStart ? StartState.NeedsConfirm : StartState.Unavailable;
+        }
+
+        /// <summary>None, NeedBothFirms or Unbalanced, whatever the ready states are.</summary>
+        public StartBlock FirmProblem()
+        {
             int a = FirmSize(0), b = FirmSize(1);
             if (_rules.RequireBothFirms && (a == 0 || b == 0))
                 return StartBlock.NeedBothFirms;
             if (Mathf.Abs(a - b) > _rules.MaxImbalance)
                 return StartBlock.Unbalanced;
-            if (_members.Count == 0 || ReadyCount < _members.Count)
-                return StartBlock.NotAllReady;
             return StartBlock.None;
+        }
+
+        /// <summary>Compatibility: None only when a single hold starts the run.</summary>
+        public StartBlock WhyNotStart()
+        {
+            StartState state = Evaluate(out StartBlock reason);
+            return state == StartState.Ready ? StartBlock.None : reason;
+        }
+
+        /// <summary>The smaller firm (the one a new sign-in would help), or 0 on a tie.</summary>
+        public int SmallerFirm() => FirmSize(1) < FirmSize(0) ? 1 : 0;
+
+        /// <summary>The player's next step, for the guidance line. Cheap; call on roster changes, not per frame.</summary>
+        public LobbyStep StepFor(LobbyMember me, bool isHost)
+        {
+            if (_runInProgress.Value)
+                return LobbyStep.RunStarting;
+            if (me.State == MemberState.Fitting)
+                return LobbyStep.Fitting;
+            if (me.State != MemberState.Ready)
+                return LobbyStep.ReadyUp;
+
+            StartState state = Evaluate(out _);
+            if (state == StartState.Unavailable)
+                return LobbyStep.WaitForOthers;
+            if (!isHost)
+                return LobbyStep.WaitForHost;
+            return state == StartState.Ready ? LobbyStep.StartRun : LobbyStep.StartShortHanded;
         }
 
         // ---- Requests (any player) -----------------------------------------------------------
@@ -261,7 +351,7 @@ namespace CloseTheDeal.Lobby
         public void RequestFirm(int firm) => CmdChooseFirm((byte)firm);
         public void RequestReady(bool ready) => CmdSetReady(ready);
         public void RequestFitting(bool fitting) => CmdSetFitting(fitting);
-        public void RequestStart() => CmdStart();
+        public void RequestStart(bool confirmed = false) => CmdStart(confirmed);
 
         [ServerRpc(RequireOwnership = false)]
         void CmdSetName(string name, NetworkConnection conn = null)
@@ -336,6 +426,8 @@ namespace CloseTheDeal.Lobby
                 return;
 
             LobbyMember member = _members[index];
+            if (fitting && _runInProgress.Value)
+                return; // A fitting request that lands after the start would never be cleared.
             MemberState next = fitting ? MemberState.Fitting : MemberState.Browsing;
             if (member.State == next)
                 return;
@@ -345,15 +437,21 @@ namespace CloseTheDeal.Lobby
         }
 
         [ServerRpc(RequireOwnership = false)]
-        void CmdStart(NetworkConnection conn = null)
+        void CmdStart(bool confirmed, NetworkConnection conn = null)
         {
             if (!conn.IsHost)
                 return;
 
-            StartBlock block = WhyNotStart();
-            if (block != StartBlock.None)
+            StartState state = Evaluate(out StartBlock reason);
+            if (state == StartState.Unavailable)
             {
-                TargetStartBlocked(conn, block);
+                TargetStartBlocked(conn, reason);
+                return;
+            }
+
+            if (state == StartState.NeedsConfirm && !confirmed)
+            {
+                TargetStartNeedsConfirm(conn, reason);
                 return;
             }
 
@@ -363,7 +461,7 @@ namespace CloseTheDeal.Lobby
             for (int i = 0; i < _members.Count; i++)
                 entrants.Add(new RunEntrant(_members[i].ClientId, _members[i].Firm, _members[i].Name));
 
-            Debug.Log($"[Lobby] Run start requested with {entrants.Count} players.");
+            Debug.Log($"[Lobby] Run start requested with {entrants.Count} players{(state == StartState.NeedsConfirm ? " (short-handed, confirmed)" : string.Empty)}.");
             RpcRunStarting();
             RunStartRequested?.Invoke(entrants);
         }
@@ -381,8 +479,8 @@ namespace CloseTheDeal.Lobby
             for (int i = 0; i < _members.Count; i++)
             {
                 LobbyMember member = _members[i];
-                if (member.State != MemberState.Ready)
-                    continue;
+                if (member.State == MemberState.Browsing)
+                    continue; // Ready and Fitting both go back to Browsing: a fresh decision, and nobody stuck in a fitting room they left.
                 member.State = MemberState.Browsing;
                 _members[i] = member;
             }
@@ -395,6 +493,9 @@ namespace CloseTheDeal.Lobby
 
         [TargetRpc]
         void TargetFirmRefused(NetworkConnection target, byte firm) => OnFirmRefused?.Invoke(firm);
+
+        [TargetRpc]
+        void TargetStartNeedsConfirm(NetworkConnection target, StartBlock block) => OnStartNeedsConfirm?.Invoke(block);
 
         [TargetRpc]
         void TargetStartBlocked(NetworkConnection target, StartBlock block) => OnStartBlocked?.Invoke(block);
@@ -478,6 +579,10 @@ namespace CloseTheDeal.Lobby
             if (asServer)
                 return;
 
+            if (!_listening && _listenAfter > 0f && Time.unscaledTime >= _listenAfter)
+                _listening = true;
+            if (op == SyncListOperation.Add)
+                SendNameOnce();
             if (_listening)
                 ReportMoment(op, previous, next);
             OnChanged?.Invoke();
@@ -488,7 +593,6 @@ namespace CloseTheDeal.Lobby
         {
             if (op == SyncListOperation.Add)
             {
-                SendNameOnce();
                 OnArrived?.Invoke(next);
                 return;
             }

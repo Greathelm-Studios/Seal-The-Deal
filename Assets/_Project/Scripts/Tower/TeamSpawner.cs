@@ -113,8 +113,19 @@ namespace CloseTheDeal.Tower
             if (args.ConnectionState != RemoteConnectionState.Stopped || !_seats.Remove(conn.ClientId, out Seat seat))
                 return;
 
-            _playersPerTeam[seat.Team]--;
-            _slotsInUse[seat.Team] &= ~(1 << seat.Slot);
+            Released(seat.Team);
+        }
+
+        /// <summary>One fewer in the team; the slots still in use are worked out again from who is seated, so a slot two players share is never freed under one of them.</summary>
+        void Released(int team)
+        {
+            _playersPerTeam[team]--;
+            _slotsInUse[team] = 0;
+            foreach (Seat other in _seats.Values)
+            {
+                if (other.Team == team)
+                    _slotsInUse[team] |= 1 << other.Slot;
+            }
         }
 
         /// <summary>The host stopped: nobody is seated any more, so the next session starts from team A again.</summary>
@@ -138,20 +149,36 @@ namespace CloseTheDeal.Tower
         /// </summary>
         public int AssignTeam(int clientId, int team)
         {
-            if (_seats.Remove(clientId, out Seat old))
-            {
-                if (old.Team == team)
-                {
-                    _seats[clientId] = old;
-                    return old.Slot;
-                }
+            if (_seats.TryGetValue(clientId, out Seat old) && old.Team == team)
+                return old.Slot;
 
-                _playersPerTeam[old.Team]--;
-                _slotsInUse[old.Team] &= ~(1 << old.Slot);
-            }
-
+            if (_seats.Remove(clientId, out old))
+                Released(old.Team);
             return SitDown(clientId, team).Slot;
         }
+
+        /// <summary>
+        /// Host only. Seats a whole lobby's choice at once (client id → team): everyone listed
+        /// leaves their seat first, then sits down in their team, so two players swapping teams
+        /// can never be handed the same slot. Players not listed keep their seats.
+        /// </summary>
+        public void AssignTeams(IReadOnlyDictionary<int, int> teamByClientId)
+        {
+            foreach (KeyValuePair<int, int> pair in teamByClientId)
+            {
+                if (_seats.Remove(pair.Key, out Seat old))
+                    Released(old.Team);
+            }
+
+            foreach (KeyValuePair<int, int> pair in teamByClientId)
+            {
+                if (pair.Value >= 0 && pair.Value < TowerBuilder.TeamCount)
+                    SitDown(pair.Key, pair.Value);
+            }
+        }
+
+        /// <summary>The player's slot in their team, or -1 when they have no seat.</summary>
+        public int SlotOf(int clientId) => _seats.TryGetValue(clientId, out Seat seat) ? seat.Slot : -1;
 
         /// <summary>The team with fewer players (A on a tie) and the lowest free slot in it.</summary>
         Seat TakeSeat(int clientId)
@@ -164,9 +191,13 @@ namespace CloseTheDeal.Tower
 
         Seat SitDown(int clientId, int team)
         {
+            // The lowest free slot; a fifth player in a team (only possible when a lobby chooses
+            // the teams) shares a spawn point, picked round-robin, rather than corrupting the set.
             int slot = 0;
-            while (slot < SlotsPerTeam - 1 && (_slotsInUse[team] & (1 << slot)) != 0)
+            while (slot < SlotsPerTeam && (_slotsInUse[team] & (1 << slot)) != 0)
                 slot++;
+            if (slot == SlotsPerTeam)
+                slot = _playersPerTeam[team] % SlotsPerTeam;
 
             var seat = new Seat { Team = team, Slot = slot };
             _seats[clientId] = seat;

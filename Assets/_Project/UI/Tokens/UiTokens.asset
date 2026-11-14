@@ -1,0 +1,130 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eedaa75701342450ebe08e3d13dec587, type: 3}
+  m_Name: UiTokens
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.UI.UiTokens
+  Paper: {r: 0.9529412, g: 0.95686275, b: 0.95686275, a: 1}
+  Silver: {r: 0.7882353, g: 0.80784315, b: 0.827451, a: 1}
+  Navy: {r: 0.06666667, g: 0.105882354, b: 0.21960784, a: 1}
+  Cobalt: {r: 0.14117648, g: 0.30980393, b: 0.7254902, a: 1}
+  CobaltDeep: {r: 0.105882354, g: 0.23529412, b: 0.56078434, a: 1}
+  Electric: {r: 0.15686275, g: 0.4745098, b: 0.9372549, a: 1}
+  Cyan: {r: 0.1254902, g: 0.83137256, b: 0.9019608, a: 1}
+  Black: {r: 0.0627451, g: 0.06666667, b: 0.08627451, a: 1}
+  Amber: {r: 1, g: 0.61960787, b: 0.105882354, a: 1}
+  Ink2: {r: 0.2627451, g: 0.29411766, b: 0.38039216, a: 1}
+  Ink3: {r: 0.34901962, g: 0.3764706, b: 0.45490196, a: 1}
+  Disabled: {r: 0.5529412, g: 0.57254905, b: 0.62352943, a: 1}
+  Hair: {r: 0.7411765, g: 0.7529412, b: 0.78039217, a: 1}
+  Grid: {r: 0.8901961, g: 0.8980392, b: 0.9098039, a: 1}
+  HoverTint: {r: 0.89411765, g: 0.90588236, b: 0.91764706, a: 1}
+  PlateAlpha: 0.9
+  FrostedAlpha: 0.86
+  ClearAlpha: 0.4
+  VeilAlpha: 0.6
+  ShadowAlpha: 0.22
+  Title:
+    Font: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+    Size: 64
+    Tracking: 18
+    Style: 0
+    TargetFace: Saira Expanded Light
+  Heading:
+    Font: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+    Size: 40
+    Tracking: 15
+    Style: 0
+    TargetFace: Saira Expanded Light
+  Item:
+    Font: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+    Size: 20
+    Tracking: 0
+    Style: 0
+    TargetFace: Archivo SemiExpanded Medium
+  Body:
+    Font: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+    Size: 18
+    Tracking: 0
+    Style: 0
+    TargetFace: Archivo SemiExpanded
+  Label:
+    Font: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+    Size: 16
+    Tracking: 0
+    Style: 0
+    TargetFace: Archivo SemiExpanded Medium
+  Section:
+    Font: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+    Size: 16
+    Tracking: 18
+    Style: 0
+    TargetFace: IBM Plex Mono
+  Caption:
+    Font: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+    Size: 13
+    Tracking: 10
+    Style: 0
+    TargetFace: IBM Plex Mono
+  Micro:
+    Font: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+    Size: 11
+    Tracking: 8
+    Style: 0
+    TargetFace: IBM Plex Mono Light
+  SpaceS: 12
+  SpaceM: 16
+  SpaceL: 24
+  SpaceXL: 48
+  PrimaryHeight: 64
+  SecondaryHeight: 56
+  RowHeight: 64
+  Radius: 0
+  HitPadding: 8
+  HoverIn: 0.1
+  HoverOut: 0.07
+  HoverBracketGap: 6
+  LiftOffset: 2
+  PressDown: 0.04
+  PressShift: 2
+  PressRelease:
+    Damping: 1
+    Response: 0.16
+  ConfirmTick: 0.12
+  FocusTravel:
+    Damping: 1
+    Response: 0.12
+  FocusRingGap: 3
+  BreatheDelay: 3
+  BreathePeriod: 2.4
+  BreatheDistance: 1
+  EdgeBump: 4
+  ErrorShake:
+    Damping: 0.25
+    Response: 0.08
+  ErrorShakeDistance: 6
+  ErrorHold: 0.24
+  PanelIn: 0.2
+  PanelOut: 0.14
+  PanelSlideIn: 24
+  PanelSlideOut: 16
+  RevealStagger: 0.016
+  RevealMaxLines: 6
+  RevealDuration: 0.16
+  RevealRise: 8
+  ReducedFade: 0.16
+  EaseOut: {x: 0.2, y: 0, z: 0, w: 1}
+  EaseOutExpo: {x: 0.16, y: 1, z: 0.3, w: 1}
+  EaseIn: {x: 0.4, y: 0, z: 1, w: 1}
+  EaseInOut: {x: 0.65, y: 0, z: 0.35, w: 1}
+  RepeatDelay: 0.4
+  RepeatInterval: 0.1
+  HoverSound: 1

@@ -20,6 +20,9 @@ namespace CloseTheDeal.Combat
         [Tooltip("Where the gun sits on the body as other players see it: a point at the hand, facing forward. Leave empty and other players see tracers but no gun.")]
         [SerializeField] Transform _thirdPersonAnchor;
 
+        [Tooltip("Tick to draw the gun model in the shooter's own view. Untick when a first-person arms model (PlayerViewmodel) shows the gun instead: tracers, impacts and the view's kick, shake and FOV punch stay; the muzzle flash and its light go with the gun model, so the arms model shows its own. Other players still see the gun on this player's body either way.")]
+        [SerializeField] bool _drawHeldGun = true;
+
         [Header("Reload and draw")]
         [Tooltip("How far the gun drops out of view while reloading or being drawn, in metres.")]
         [Range(0f, 0.6f)] [SerializeField] float _dipDistance = 0.3f;
@@ -80,6 +83,7 @@ namespace CloseTheDeal.Combat
         WeaponDefinition _weapon;
         GameObject _view;
         Transform _muzzle;
+        Transform _externalMuzzle;
         GameObject _flash;
         Vector3 _flashScale;
         bool _inFirstPerson;
@@ -157,8 +161,22 @@ namespace CloseTheDeal.Combat
             _dipTarget = 0f;
 
             Transform parent = firstPerson ? PlayerCamera.Instance.transform : _thirdPersonAnchor;
-            if (weapon != null && weapon.ViewPrefab != null && parent != null)
+            bool drawn = _drawHeldGun || !firstPerson;
+            if (drawn && weapon != null && weapon.ViewPrefab != null && parent != null)
                 SpawnView(weapon, parent, firstPerson);
+        }
+
+        /// <summary>Whether this view draws the gun model in the shooter's own view. Off when an arms model does it.</summary>
+        public bool DrawsHeldGun => _drawHeldGun;
+
+        /// <summary>
+        /// For an arms model that draws the gun itself: where its muzzle is, so tracers leave from
+        /// the gun the player sees rather than the eye. Pass null to clear. Only used while this
+        /// view isn't drawing its own gun.
+        /// </summary>
+        public void SetExternalMuzzle(Transform muzzle)
+        {
+            _externalMuzzle = muzzle;
         }
 
         void SpawnView(WeaponDefinition weapon, Transform parent, bool firstPerson)
@@ -187,7 +205,8 @@ namespace CloseTheDeal.Combat
         void OnFired(ShotInfo shot)
         {
             WeaponDefinition weapon = shot.Weapon;
-            Vector3 from = _muzzle != null ? _muzzle.position : shot.Origin;
+            Transform muzzle = _muzzle != null ? _muzzle : _externalMuzzle;
+            Vector3 from = muzzle != null ? muzzle.position : shot.Origin;
             if (weapon == null)
                 return;
 

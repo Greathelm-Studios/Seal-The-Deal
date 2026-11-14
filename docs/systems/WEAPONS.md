@@ -118,7 +118,7 @@ The catalog names guns on the network by their place in the list. **Add new guns
 
 | Event | Where it fires | For |
 |---|---|---|
-| `WeaponHolder.Fired(ShotInfo)` | Every machine (`Predicted` on the shooter's) | Gunshot, tracer, casing |
+| `WeaponHolder.Fired(ShotInfo)` | Every machine (`Predicted` on the shooter's) | Gunshot, tracer, casing; `ShotInfo.Surface` says what it stopped on (nothing, world, body) |
 | `WeaponHolder.DryFired` | Shooter | Empty click |
 | `WeaponHolder.ReloadStarted(seconds)` | Every machine | Reload sound and animation |
 | `WeaponHolder.ReloadFinished` / `ReloadCancelled` | Shooter | Reload end, HUD |
@@ -128,6 +128,58 @@ The catalog names guns on the network by their place in the list. **Add new guns
 | `WeaponHolder.KillConfirmed(point)` | Shooter | Kill sound and marker |
 | `Health.Damaged` / `Died` / `Respawned` (and static `Any…`) | Host and every client | Hurt sound, ragdoll, kill feed, the secretary |
 | `Health.HealthChanged(current, max)` | Every machine | Health bar |
+
+## Combat HUD contract
+
+What a combat HUD reads. Everything is an event or a property read when an event says it changed; nothing needs polling every frame except the two countdowns, which a HUD reads only while it is showing them. The HUD never decides anything: a hit marker appears only when the host says the hit landed.
+
+All of these are on the local player's own `WeaponHolder` and `Health` (find them on `PlayerMotor.Local`).
+
+| HUD element | Source | Type | When it fires or changes | Owner |
+|---|---|---|---|---|
+| Ammo in the magazine | `WeaponHolder.AmmoChanged(inMagazine, magazineSize)`; `AmmoInMagazine` | `int, int` | On the shooter's game at the press (predicted), and again when the host's count arrives; only when the number changes | Host's count, owner's prediction on top |
+| Reserve ammo | none | — | There is no reserve: a reload always fills the magazine. Show nothing, not "∞" | Design (Adam) |
+| Slot contents | `WeaponHolder.WeaponChanged(definition, slot)`; `WeaponInSlot(0/1)`, `ActiveSlot` | `WeaponDefinition, int` | On a switch (at the press on the shooter's game), a pickup or an unequip; `DisplayName` for the label | Host (slots), owner (switch) |
+| Reloading and its progress | `ReloadStarted(seconds)`, `ReloadFinished`, `ReloadCancelled`; `State` and `StateProgress` (0–1) | `float`; `WeaponState`, `float` | Started at the press; finished when the host's full magazine arrives; cancelled by a switch, death or the host refusing | Owner shows, host fills |
+| Drawing a gun | `State == Equipping`, `StateProgress` | — | After `WeaponChanged` on the shooter's game | Owner |
+| Low ammo, empty | `AmmoChanged` (compare with the size; low = a quarter or less is the suggested rule); `DryFired` | `int, int`; none | `DryFired` at each press on an empty magazine | Owner |
+| Hit marker | `WeaponHolder.HitConfirmed(point, damage, killed, precision)` | `Vector3, float, bool, bool` | Only when the host confirms a hit; never at the press. `precision` = head hit | Host |
+| Kill confirm | `WeaponHolder.KillConfirmed(point)` | `Vector3` | Straight after the `HitConfirmed` with `killed` | Host |
+| Damage taken, with direction | `Health.Damaged(health, DamageInfo)` on your own `Health` | `DamageInfo`: `Amount`, `Point`, `Direction` (from the attacker toward you, world space), `AttackerClientId` (−1 = the world) | Each hit the host applies to you (sent unreliably: a lost one still shows in the health number) | Host |
+| Health | `Health.HealthChanged(current, max)`; `Current`, `Max` | `float, float` | When the host's value arrives | Host |
+| Who hit you last | `Health.LastAttackerClientId` | `int` | Synced with health | Host |
+| Death and respawn countdown | `Health.Died(health, DamageInfo)`, `Respawned(health)`; `IsDead`, `SecondsUntilRespawn`, `RespawnSeconds` | events; `bool`, `float` | Death and respawn when the host says; the countdown runs on this machine from the moment the death arrived | Host |
+| Crosshair spread | `WeaponHolder.CurrentSpreadDegrees` | `float`, degrees | Read each frame while the crosshair shows it (it changes with every shot, the stance and time) | Owner, same numbers the host uses |
+| Can't fire right now | `WeaponHolder.FireHeld` (hands full, reception) | hook | The integration's rule; a HUD may grey the ammo while it holds | Integration |
+
+## Sounds the guns still need
+
+**Nothing plays a sound yet.** Every sound below has its event; a sound pass only has to listen. Timings are from the event. The three UI sounds come from the UI sound set (lane 9); every gun, reload, impact and glass sound is for a later weapons sound pass.
+
+| Sound | Event | When | Notes |
+|---|---|---|---|
+| Pistol shot | `Fired`, `Weapon == Pistol.asset` | At the event, on every machine | Shooter's own copy at once (`Predicted`); others when the host's tracer arrives. A close, sharp crack with a short room tail; others hear it in 3D at the muzzle |
+| AR-15 shot | `Fired`, `Weapon == AR15.asset` | Each shot, up to 10 a second | Short enough not to smear at 600 rpm; no tail stacking |
+| Dry fire | `DryFired` | At the press | Shooter only. A dull click |
+| Reload: magazine out | `ReloadStarted(seconds)` | 15 % into `seconds` | Every machine (others hear it in 3D) |
+| Reload: magazine in | `ReloadStarted(seconds)` | 60 % into `seconds` | |
+| Reload: slide or charge | `ReloadStarted(seconds)` | 85 % into `seconds` | Stop the scheduled stages on `ReloadCancelled` |
+| Reload finished | `ReloadFinished` | At the event | Shooter only; optional |
+| Weapon swap | `WeaponChanged` | At the event | Holster-and-draw, about the draw time (`EquipSeconds`, 0.2–0.3 s) |
+| Impact: world | `Fired` with `Surface == World` | At `End` | 3D at the hit point; one surface sound for now (no per-material types yet) |
+| Impact: body | `Fired` with `Surface == Body` | At `End` | The dull body thud everyone hears; separate from the hit marker |
+| Glass shatter | `GlassPane.AnyBroken(pane, direction)` | At the event, at `pane.Centre` | Every machine; not played for panes already broken when you join |
+| Hit marker tick | `HitConfirmed` (`precision` false) | At the event | Shooter only, 2D. From the UI sound set: `UiSound.Play(UiSoundEvent.HitMarker)` (55 ms, never stacks closer than 40 ms) |
+| Head-hit tick | `HitConfirmed` (`precision` true) | At the event | `UiSoundEvent.HitMarkerHead` |
+| Kill confirm | `KillConfirmed` | At the event | `UiSoundEvent.KillConfirm` (200 ms), on top of the hit tick |
+| Hurt | `Health.Damaged` on your own `Health` | At the event | Your own body; 2D |
+| Death, respawn | `Health.Died`, `Respawned` | At the event | Your own; 2D |
+
+## For a first-person arms model (viewmodel)
+
+`WeaponView` draws a simple gun in the hand. When an arms model draws the gun instead, untick **Draw Held Gun** on the player's `WeaponView`: tracers, impacts and the view's kick, shake and FOV punch stay; the first-person gun model goes (other players still see the gun on the body), **and its muzzle flash and flash light with it** (they are parts of the gun model), so the arms model shows its own flash. Call `WeaponView.SetExternalMuzzle(muzzleTransform)` so tracers leave from the gun the player sees.
+
+An arms model listens to the local player's `WeaponHolder`: `WeaponChanged` (show that gun, play the draw), `Fired` with `Predicted` (play the shot; `ShotInBurst` gives the recoil step), `DryFired`, `ReloadStarted(seconds)` (play the reload over that time), `ReloadFinished` and `ReloadCancelled` (end it early on a cancel), and `Health.Died` and `Respawned`. It decides nothing.
 
 ## Lane-local inputs
 
