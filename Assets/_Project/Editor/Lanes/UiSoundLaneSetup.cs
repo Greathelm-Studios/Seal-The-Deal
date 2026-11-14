@@ -183,6 +183,7 @@ namespace CloseTheDeal.Editor.Lanes
 
         // ------------------------------------------------------------------- scripted run (batch mode)
         const string FlagKey = "UiSoundSelfTest.Run";
+        const string SavedUiKey = "UiSoundSelfTest.SavedUi";
         const string ReportPath = "UiSoundSelfTest.json";
 
         /// <summary>-executeMethod CloseTheDeal.Editor.Lanes.UiSoundLaneSetup.RunSelfTest: enters play mode, fires every
@@ -190,13 +191,28 @@ namespace CloseTheDeal.Editor.Lanes
         public static void RunSelfTest()
         {
             Run();
+            // Stand in for "the player set Interface volume to 50 % and quit": the play session below starts fresh and must
+            // come up at that level from PlayerPrefs alone. The player's real value is put back at the end.
+            RestoreInterruptedTest();
+            EditorPrefs.SetFloat(SavedUiKey, UiAudio.Get(AudioBus.Ui));   // survives a crash, unlike SessionState
+            UiAudio.SetVolume(AudioBus.Ui, 0.5f);
             SessionState.SetBool(FlagKey, true);
             EditorApplication.EnterPlaymode();
+        }
+
+        // Puts back the Interface volume the self-test borrowed. Also runs when the editor next loads, so a test that was
+        // killed half way cannot leave the machine's real setting at 50 %.
+        static void RestoreInterruptedTest()
+        {
+            if (!EditorPrefs.HasKey(SavedUiKey)) return;
+            UiAudio.SetVolume(AudioBus.Ui, EditorPrefs.GetFloat(SavedUiKey, 1f));
+            EditorPrefs.DeleteKey(SavedUiKey);
         }
 
         [InitializeOnLoadMethod]
         static void HookSelfTest()
         {
+            if (!SessionState.GetBool(FlagKey, false) && !EditorApplication.isPlayingOrWillChangePlaymode) RestoreInterruptedTest();
             if (!SessionState.GetBool(FlagKey, false)) return;
             EditorApplication.playModeStateChanged += s =>
             {
@@ -211,7 +227,7 @@ namespace CloseTheDeal.Editor.Lanes
             readonly List<UiSoundEvent> queue = new List<UiSoundEvent>();
             UiSoundEvent current;
             double until;
-            int stage;               // 0 events, 1 mute test, 2 level test, 3 sfx-bus test, 4 rapid hover, 5 done
+            int stage = 10;          // 10 unfocused, 11 saved volume, then 0 events, 1 mute test, 2 level test, 3 sfx-bus test, 4 rapid hover, 5 done
             double stageStart;
             readonly List<string> lines = new List<string>();
             bool started;
@@ -224,7 +240,6 @@ namespace CloseTheDeal.Editor.Lanes
                 var go = new GameObject("SelfTestListener");
                 go.AddComponent<AudioListener>();
                 go.AddComponent<UiSoundMeter>();
-                UiSoundPlayer.IgnoreFocus = true;
                 foreach (UiSoundEvent e in Enum.GetValues(typeof(UiSoundEvent))) if (e != UiSoundEvent.None) queue.Add(e);
                 lines.Add($"audioConfig: sampleRate={AudioSettings.outputSampleRate} speakerMode={AudioSettings.speakerMode} dspTime={AudioSettings.dspTime:F3}");
                 lines.Add($"hub: UiSound.Player is {(UiSound.Player is UiSoundPlayerAdapter ? "the sound lane's adapter OK" : "not registered FAIL")}");
@@ -239,7 +254,9 @@ namespace CloseTheDeal.Editor.Lanes
                 if (now < until) return;
                 try
                 {
-                    if (stage == 0) StageEvents();
+                    if (stage == 10) StageUnfocused(now);
+                    else if (stage == 11) StageSaved(now);
+                    else if (stage == 0) StageEvents();
                     else if (stage == 1) StageMute(now);
                     else if (stage == 2) StageLevel(now);
                     else if (stage == 3) StageSfx(now);
@@ -247,6 +264,34 @@ namespace CloseTheDeal.Editor.Lanes
                     else Finish(0);
                 }
                 catch (Exception ex) { lines.Add("EXCEPTION " + ex); Finish(2); }
+            }
+
+            // Batch mode has no focused window, so this is the real "player clicked away" state.
+            void StageUnfocused(double now)
+            {
+                if (probeStep == 0)
+                {
+                    UiSoundPlayer.IgnoreFocus = false;
+                    UiSoundMeter.Reset();
+                    bool played = UiSoundPlayer.Play(UiSoundEvent.Confirm, 0f);
+                    lines.Add($"unfocused: Application.isFocused={Application.isFocused}, Play returned {played}");
+                    probeStep = 1; until = now + 0.5; return;
+                }
+                float pk = UiSoundMeter.Peak;
+                string verdict = Application.isFocused ? "NOT TESTED (the editor reports focus)" : pk < 0.0005f ? "OK silent" : "FAIL sound played";
+                lines.Add($"unfocused: output peak={pk:F5} {verdict}");
+                UiSoundPlayer.IgnoreFocus = true;
+                probeStep = 0; stage = 11; until = now + 0.1;
+            }
+
+            // Nothing has called SetVolume in this play session: the level heard is what was restored from PlayerPrefs.
+            void StageSaved(double now)
+            {
+                if (probeStep == 0) { UiSoundMeter.Reset(); UiSoundPlayer.Play(UiSoundEvent.Confirm, 0f); probeStep = 1; until = now + 0.5; return; }
+                float pk = UiSoundMeter.Peak;
+                float db = 20f * Mathf.Log10(Mathf.Max(pk, 1e-6f) / 0.318f);
+                lines.Add($"saved volume: Interface saved at 0.5 before this session, first sound peak={pk:F3} ({db:F1} dB against full, expect about -6) {(Mathf.Abs(db + 6f) < 1.5f ? "OK restored" : "FAIL not restored")}");
+                probeStep = 0; stage = 0; until = now + 0.1;
             }
 
             void StageEvents()
@@ -324,6 +369,7 @@ namespace CloseTheDeal.Editor.Lanes
             void Finish(int code)
             {
                 EditorApplication.update -= Tick;
+                RestoreInterruptedTest();   // the player's own value back
                 File.WriteAllText(ReportPath, string.Join("\n", lines) + "\n");
                 foreach (string l in lines) Debug.Log("UiSoundSelfTest: " + l);
                 bool fail = code != 0 || lines.Exists(l => l.Contains("FAIL") || l.Contains("SILENT"));

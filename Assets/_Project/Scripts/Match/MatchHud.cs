@@ -26,6 +26,8 @@ namespace CloseTheDeal.MatchMode
         [SerializeField] RectTransform _clockPlate;
         [SerializeField] TMP_Text _clockText;
         [SerializeField] TMP_Text _clockCaption;
+        [Tooltip("Amber fill behind the clock's text, shown once the cap warning fires. The text stays Navy on it: amber text on the white plate is unreadable (1.7:1).")]
+        [SerializeField] Image _clockWarning;
 
         [Header("Briefcase tracker")]
         [SerializeField] Image _trackerBar;
@@ -97,11 +99,18 @@ namespace CloseTheDeal.MatchMode
         bool _awake;
         RectTransform _canvasRect;
         Camera _uiCamera;
+        bool _wired;
 
         // ---- Lifecycle ---------------------------------------------------------------------------
 
         void Awake()
         {
+            // An empty slot means the scene's HUD predates this script: say so once and stand down.
+            // Switching off from here runs OnDisable at once, before anything was subscribed.
+            _wired = MatchWiring.Complete(this, nameof(_clockWarning), nameof(_markerEdgeImage), nameof(_openSprite), nameof(_shutSprite));
+            if (!_wired)
+                return;
+
             _bannerHome = _banner.anchoredPosition;
             _noticeHome = _notice.anchoredPosition;
             _ladderRow.gameObject.SetActive(false);
@@ -112,6 +121,13 @@ namespace CloseTheDeal.MatchMode
 
         void OnEnable()
         {
+            // Switched back on by something else while still unwired: stay off.
+            if (!_wired)
+            {
+                enabled = false;
+                return;
+            }
+
             _match.OnStarted += RefreshAll;
             _match.OnClosed += Hide;
             _match.OnPhaseChanged += OnPhaseChanged;
@@ -137,6 +153,9 @@ namespace CloseTheDeal.MatchMode
 
         void OnDisable()
         {
+            if (!_wired)
+                return;
+
             _match.OnStarted -= RefreshAll;
             _match.OnClosed -= Hide;
             _match.OnPhaseChanged -= OnPhaseChanged;
@@ -197,7 +216,11 @@ namespace CloseTheDeal.MatchMode
         void ShowClock(int secondsLeft)
         {
             _clockText.text = FormatClock(secondsLeft);
-            _clockText.color = _capWarning ? _tokens.Amber : _tokens.Navy;
+            // Warned by an amber plate, never amber text: Navy reads at 8:1 on amber, amber at 1.7:1 on white.
+            _clockText.color = _tokens.Navy;
+            _clockCaption.color = _capWarning ? _tokens.Navy : _tokens.Ink2;
+            if (_clockWarning != null)
+                _clockWarning.enabled = _capWarning;
             // Said in words as well as colour.
             _clockCaption.text = _capWarning ? "QUARTER CLOSING" : "QUARTER";
             // A returning case's own countdown ticks with the clock rather than every frame.

@@ -520,6 +520,7 @@ namespace CloseTheDeal.Editor.Lanes
                 Transform edge = hud.Find(HudName + "/Marker/Edge");
                 if (edge != null)
                     FillIfEmpty(existing, "_markerEdgeImage", edge.GetComponent<UnityEngine.UI.Image>());
+                AddClockWarningIfMissing(existing, hud);
                 return;
             }
 
@@ -551,6 +552,7 @@ namespace CloseTheDeal.Editor.Lanes
             Wire("_clockPlate", clock);
             Wire("_clockCaption", UiKitAssets.Label(clock, "Caption", 0f, 8f, 240f, 18f, "QUARTER", t.Caption, t.Ink2, TextAlignmentOptions.Center));
             Wire("_clockText", UiKitAssets.Label(clock, "Time", 0f, 26f, 240f, 52f, "15:00", t.Heading, t.Navy, TextAlignmentOptions.Center));
+            Wire("_clockWarning", ClockWarning(kit, clock));
 
             // Briefcase tracker: top right, a bar in the holder's colour down its left edge.
             RectTransform tracker = PlateAt(kit, root, "Tracker", new Vector2(1f, 1f), new Vector2(-24f, -20f), new Vector2(460f, 88f));
@@ -722,6 +724,35 @@ namespace CloseTheDeal.Editor.Lanes
         }
 
         // ---- Small helpers -------------------------------------------------------------------
+
+        /// <summary>The clock's amber cap-warning fill, laid behind its caption and time, hidden until the warning.</summary>
+        static UnityEngine.UI.Image ClockWarning(Kit kit, Transform clock)
+        {
+            Transform caption = clock.Find("Caption");
+            RectTransform fill = UiKitAssets.Fill(clock, "Warning");
+            if (caption != null)
+                fill.SetSiblingIndex(caption.GetSiblingIndex());
+            UnityEngine.UI.Image image = UiKitAssets.Img(fill, kit.White, kit.Tokens.Amber);
+            image.enabled = false;
+            return image;
+        }
+
+        /// <summary>A kit HUD from before the cap warning moved onto an amber plate: add only that fill.</summary>
+        static void AddClockWarningIfMissing(MatchHud hud, Transform hudRoot)
+        {
+            var serialized = new SerializedObject(hud);
+            if (serialized.FindProperty("_clockWarning").objectReferenceValue != null)
+                return;
+
+            Transform clock = hudRoot.Find(HudName + "/Clock");
+            Kit kit = Kit.Load();
+            if (clock == null || kit == null)
+                return;
+
+            Transform stale = clock.Find("Warning");
+            UnityEngine.UI.Image image = stale != null ? stale.GetComponent<UnityEngine.UI.Image>() : ClockWarning(kit, clock);
+            FillIfEmpty(hud, "_clockWarning", image);
+        }
 
         /// <summary>Sets an object slot only when nobody has filled it (AGENTS.md §4).</summary>
         static void FillIfEmpty(Object target, string field, Object value)

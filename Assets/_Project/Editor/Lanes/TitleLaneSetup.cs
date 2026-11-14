@@ -136,7 +136,12 @@ namespace CloseTheDeal.Editor.Lanes
         // ---- Capture ---------------------------------------------------------------------------
 
         [MenuItem("Close the Deal/Lanes/Capture Title Screen")]
-        public static void CaptureFromMenu() => Capture();
+        public static void CaptureFromMenu()
+        {
+            // Capture opens Lane_Title on its own: let the person save the scene they have open first.
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            Capture();
+        }
 
         /// <summary>Batch entry: -executeMethod CloseTheDeal.Editor.Lanes.TitleLaneSetup.CaptureFromCommandLine</summary>
         public static void CaptureFromCommandLine()

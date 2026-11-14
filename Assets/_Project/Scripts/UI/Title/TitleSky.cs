@@ -15,8 +15,8 @@ namespace CloseTheDeal.UI.Title
     public sealed class TitleSky : MonoBehaviour
     {
         [Header("View")]
-        [Tooltip("Degrees the view is turned from the sun's direction. 0 = looking straight into the sun; 40 keeps the sun's glow at the frame edge.")]
-        [SerializeField, Range(-180f, 180f)] float _yawFromSun = 38f;
+        [Tooltip("Degrees the view is turned from the sun. 0 = into the sun (its glare washes the panes pale); 150 to 180 = deep blue with the sunlit side of the clouds.")]
+        [SerializeField, Range(-180f, 180f)] float _yawFromSun = 155f;
         [Tooltip("Degrees the view looks above the horizon. Higher = more deep blue, less city.")]
         [SerializeField, Range(-10f, 40f)] float _pitchUp = 20f;
         [Tooltip("Vertical field of view in degrees. Wider = more sky in each pane.")]

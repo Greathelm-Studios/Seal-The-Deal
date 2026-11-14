@@ -53,6 +53,7 @@ Shader "CloseTheDeal/UI/Glass"
             TEXTURE2D(_UiGlassBlurTex);
             SAMPLER(sampler_UiGlassBlurTex);
             float _UiGlassBlurOn;
+            float4 _UiGlassBlurRect;   // where the blurred source sits on screen (x, y, w, h in 0..1)
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _Tint, _SheenColor, _BorderColor, _EdgeColor;
@@ -98,6 +99,8 @@ Shader "CloseTheDeal/UI/Glass"
 
                 float on = _UiGlassBlurOn * _BlurMix;
                 float2 suv = i.screen.xy / max(i.screen.w, 1e-5);
+                float4 br = _UiGlassBlurRect.z > 0 ? _UiGlassBlurRect : float4(0, 0, 1, 1);   // unset = full screen
+                suv = (suv - br.xy) / max(br.zw, float2(1e-4, 1e-4));
                 half3 blur = SAMPLE_TEXTURE2D(_UiGlassBlurTex, sampler_UiGlassBlurTex, suv).rgb;
 
                 // glass body: blurred scene with the paper tint over it. Without blur: tint only, denser.

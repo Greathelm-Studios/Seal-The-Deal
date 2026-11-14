@@ -114,6 +114,11 @@ Open `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`, press Play, then **Host 
 - **On a client**, a released plain prop now waits where it left the hands until the host's new pose arrives (up to 0.4 s), then eases onto it. A clean snap needs a NetBody reset call (Switchboard, Harvey's).
 - **Greybox.unity (the build scene) has no item HUD** and is outside this lane: its owner runs **Add Item HUD To Open Scene** there (orchestrator told).
 
+## Look highlight (2026-11-14)
+
+- The liftable item the prompt is about is drawn 28% brighter on the looker's screen, so "Pick up Chair" plainly means that chair. Assumption while Adam is away: brighter, not an outline (the kit has no outline shader and none is needed for greybox colours); too-heavy things get no highlight.
+- Still open elsewhere: the pistol viewmodel is drawn while the hands carry something (lane 2, AgentHub #470, unanswered); no hands on carried items until Harvey's posing layer reaches `buffer` (seats are ready: `Pickup.TryGetHandSeats`).
+
 ### Assumptions made while Adam was away (overnight 2026-11-13)
 
 - **The extinguisher keeps hissing after it is dropped**, or its carrier dies or leaves: it is still venting and driving itself round the floor until empty (6 s), and the design says it "cannot be stopped". The loop stops when it runs empty, comes back, is despawned (new match) or this machine leaves. Say if you want it silenced on drop.

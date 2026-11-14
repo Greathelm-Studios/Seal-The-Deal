@@ -129,9 +129,7 @@ namespace CloseTheDeal.Lobby
             if (options == null || options.Length == 0)
                 return;
 
-            int pick = fixedPick >= 0 && fixedPick < options.Length ? fixedPick : UnityEngine.Random.Range(0, options.Length);
-            if (options.Length > 1 && moment == _lastMoment && pick == _lastPick)
-                pick = (pick + 1) % options.Length; // Never the same line twice running.
+            int pick = fixedPick >= 0 && fixedPick < options.Length ? fixedPick : RandomPick(moment, options.Length);
             _lastPick = pick;
             _lastMoment = moment;
 
@@ -140,6 +138,15 @@ namespace CloseTheDeal.Lobby
             LookAtLocalPlayer();
             LineSpoken?.Invoke(moment, text, ReadingSeconds(text));
             CloseTheDeal.Narration.Subtitles.Show(new CloseTheDeal.Narration.SubtitleLine("Reception", text, ReadingSeconds(text), 10, moment.ToString()));
+        }
+
+        /// <summary>A random line, never the same one twice running for the same moment.</summary>
+        int RandomPick(SecretaryMoment moment, int count)
+        {
+            int pick = UnityEngine.Random.Range(0, count);
+            if (count > 1 && moment == _lastMoment && pick == _lastPick)
+                pick = (pick + 1) % count;
+            return pick;
         }
 
         float ReadingSeconds(string text)

@@ -16,7 +16,12 @@ namespace CloseTheDeal.UI
         /// <summary>The set in use. Loaded from Resources/UI/UiSoundSet on first use.</summary>
         public static UiSoundSet Set
         {
-            get { Runner r = Runner.Ensure(); return r != null ? r.set : null; }
+            get
+            {
+                if (!Application.isPlaying) return Resources.Load<UiSoundSet>("UI/UiSoundSet");   // edit mode: no runner object
+                Runner r = Runner.Ensure();
+                return r != null ? r.set : null;
+            }
         }
 
         /// <summary>Test hook: play even when the player is not focused (batch-mode checks).</summary>
@@ -74,6 +79,7 @@ namespace CloseTheDeal.UI
             public static Runner Ensure()
             {
                 if (instance != null) return instance;
+                if (!Application.isPlaying) return null;   // sounds only exist in a running game
                 var set = Resources.Load<UiSoundSet>("UI/UiSoundSet");
                 if (set == null) return null;
                 var go = new GameObject("UiSoundRunner") { hideFlags = HideFlags.HideInHierarchy };

@@ -129,6 +129,7 @@ namespace CloseTheDeal.Items
         Collider _lookCollider;
         Pickup _lookPickup;
         PromptKind _promptKind;
+        Pickup _highlighted;
         ItemDefinition _promptItem;
 
         public Pickup Held => _held;
@@ -345,15 +346,32 @@ namespace CloseTheDeal.Items
             if (target == null)
             {
                 SetPrompt(PromptKind.None, null);
+                Highlight(null);
                 return;
             }
 
             bool tooHeavy = target.Definition.WeightKg > _profile.MaxCarryWeight;
+            Highlight(tooHeavy ? null : target);
             SetPrompt(tooHeavy ? PromptKind.TooHeavy : PromptKind.PickUp, target.Definition);
+        }
+
+        /// <summary>Owner only. Brightens the liftable thing the prompt is about, and nothing else.</summary>
+        void Highlight(Pickup target)
+        {
+            if (target == _highlighted)
+                return;
+
+            if (_highlighted != null)
+                _highlighted.ShowLookedAt(false);
+            _highlighted = target;
+            if (_highlighted != null)
+                _highlighted.ShowLookedAt(true);
         }
 
         void SetPrompt(PromptKind kind, ItemDefinition item)
         {
+            if (kind == PromptKind.None)
+                Highlight(null);
             if (kind == _promptKind && item == _promptItem)
                 return;
 
