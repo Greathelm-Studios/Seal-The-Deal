@@ -56,11 +56,10 @@ Defined in `Scripts/Lobby/LobbyInput.cs`:
 | Interact | F | North |
 | Confirm (keep outfit) | Enter, Space | South |
 | Cancel (put back) | Backspace | East |
-| Next / previous option | D / A, arrows | D-pad right / left |
-| Next / previous category | S / W, arrows | D-pad down / up |
+| Host player list (host, reception) | Tab | View |
 | Rotate character | Q / R, mouse X | Right stick X |
 
-Fitting-room keys only matter while the player's own input is disabled.
+Moving through the fitting-room form and the host list is the UI kit's navigation (the shared UI map: arrows, WASD, D-pad), not lane actions. Lane keys only matter while the player's own input is disabled.
 
 ## Hooks for other lanes
 
@@ -85,6 +84,12 @@ Fitting-room keys only matter while the player's own input is disabled.
 | Eyewear, accessory (tie clip, ID card, earpiece) | Separate meshes parented to a head or chest bone, pivots at the attachment point, toon material slot, naming `Eyewear_<name>`, `Accessory_<name>`. Needs a small `OutfitView` addition (show one child per choice) |
 | Tie | A tie material of its own (today part of the shirt) |
 
+## UI revamp (2026-11-14)
+
+- Ready board, prompt and subtitles are UI kit plates (top left, under the Esc chip, because the match HUD owns the top right); fitting room and host player list are kit screens on the lobby canvas's own stack with the kit focus frame and sounds; reception moments sound through `LobbySounds`.
+- Host can remove a player (Tab in reception, confirm dialog), host-validated. A removed player can rejoin; no ban, lock or firm move yet.
+- Mouse does not click the fitting form or the host list: the cursor stays captured in game (a free cursor means the Esc menu). Mouse turns the character in the fitting room.
+
 ## Assumptions for the owner to confirm
 
 - Start rule: everyone ready, nobody in the fitting room, at least one per firm, firms within one player.
@@ -93,6 +98,8 @@ Fitting-room keys only matter while the player's own input is disabled.
 - Firm names and colours are not held by the lobby: `LobbyRules` points at the game mode's two `FirmDefinition` assets (`Profiles/Match`), index 0 = Building A. Today they read "Ashcombe & Pryce" and "Halloran Voss" (the game mode's proposals; the owner decides).
 - Secretary lines are proposals (`SecretaryLines`).
 - Unlocks: runs started on this PC (Silver suit 1, cobalt 3, white 5; navy shirt 2; cobalt belt 1). Locks are client-honoured only.
+- Host removal: Tab opens the list, the dialog focuses "Keep them" first; a removed player can join again.
+- Short-handed start allowed after a second hold (Lobby Rules, on by default).
 - One shared lobby (owner's words) instead of one reception per firm (GDD).
 - GDD lists cosmetics after v1 and AGENTS.md §2 still says release 29 Oct: both look out of date next to the owner's request and the date.
 

@@ -1,5 +1,6 @@
 using System.Text;
 using CloseTheDeal.Player;
+using CloseTheDeal.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -24,12 +25,17 @@ namespace CloseTheDeal.Lobby
 
         [Header("Prompt")]
         [SerializeField] CanvasGroup _prompt;
+        [SerializeField] TMP_Text _promptKey;
         [SerializeField] TMP_Text _promptText;
         [SerializeField] Image _holdFill;
 
         [Header("Subtitle")]
         [SerializeField] CanvasGroup _subtitle;
         [SerializeField] TMP_Text _subtitleText;
+
+        [Header("Kit")]
+        [Tooltip("The UI kit's tokens: fade timings and colours come from here.")]
+        [SerializeField] UiTokens _tokens;
 
         [Header("Look")]
         [Tooltip("Colour of the 'Ready' mark on the board.")]
@@ -38,9 +44,6 @@ namespace CloseTheDeal.Lobby
         [Tooltip("Colour of secondary board text.")]
         [SerializeField] Color _mutedColour = new(0.290f, 0.329f, 0.408f, 1f);
 
-        [Header("Motion")]
-        [Tooltip("Seconds for the board, prompt and subtitle to fade in or out.")]
-        [Range(0.05f, 0.5f)] [SerializeField] float _fadeSeconds = 0.15f;
 
         LobbyRoster _roster;
         LobbyInteractor _interactor;
@@ -217,7 +220,11 @@ namespace CloseTheDeal.Lobby
             if (line != null && !ReferenceEquals(line, _shownPrompt))
             {
                 _shownPrompt = line;
-                _promptText.text = line;
+                // Prompts read "F   Ready up": the key goes on the key cap, the rest beside it. Split on change only.
+                int gap = line.IndexOf("   ", System.StringComparison.Ordinal);
+                _promptKey.text = gap > 0 ? line.Substring(0, gap) : string.Empty;
+                _promptText.text = gap > 0 ? line.Substring(gap + 3) : line;
+                _promptKey.transform.parent.gameObject.SetActive(gap > 0); // The cap and its text.
             }
 
             float fill = target != null ? target.HoldProgress : -1f;
@@ -242,7 +249,9 @@ namespace CloseTheDeal.Lobby
             float target = show ? 1f : 0f;
             if (Mathf.Approximately(group.alpha, target))
                 return;
-            group.alpha = Mathf.MoveTowards(group.alpha, target, Time.unscaledDeltaTime / _fadeSeconds);
+            // The kit's panel timings: in a little slower than out. Reduce motion makes both the short fade.
+            float seconds = UiMotion.Reduced ? _tokens.ReducedFade : show ? _tokens.PanelIn : _tokens.PanelOut;
+            group.alpha = Mathf.MoveTowards(group.alpha, target, Time.unscaledDeltaTime / Mathf.Max(0.01f, seconds));
         }
     }
 }

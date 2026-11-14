@@ -6,6 +6,8 @@ using CloseTheDeal.Editor.Greybox;
 using CloseTheDeal.Lobby;
 using CloseTheDeal.MatchMode;
 using CloseTheDeal.Tower;
+using CloseTheDeal.UI;
+using CloseTheDeal.Editor.UI;
 using FishNet.Object;
 using TMPro;
 using UnityEditor;
@@ -915,95 +917,77 @@ namespace CloseTheDeal.Editor.Lanes
             iso.FindProperty("_rules").objectReferenceValue = rules;
             iso.ApplyModifiedPropertiesWithoutUndo();
             local.AddComponent<FittingRoom>();
+            local.AddComponent<LobbyHostControls>();
+            local.AddComponent<LobbySounds>();
         }
 
-        // ---- UI ------------------------------------------------------------------------------
+        // ---- UI (built from the UI kit: docs/systems/UI_KIT.md) ---------------------------------
 
-        const int FontBody = 18, FontLabel = 16, FontItem = 22, FontHeading = 40;
-
+        /// <summary>
+        /// The reception's UI on its own canvas, under the game menu (10) and the kit's title
+        /// canvas (20): the ready board, the prompt and the subtitles as kit plates, and the
+        /// fitting room and the host's player list as kit screens on this canvas's own stack, with
+        /// a kit focus frame. Only kit prefabs, tokens and sprites; no colours or fonts of its own.
+        /// </summary>
         internal static void BuildUi(LobbyRules rules)
         {
-            var canvasGo = new GameObject("LobbyUI", typeof(RectTransform));
+            CloseTheDeal.Editor.UI.UiKitSetup.BuildAssets();
+            UiTokens t = UiKitAssets.Tokens;
+
+            var canvasGo = new GameObject("LobbyUI", typeof(RectTransform)) { layer = 5 };
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 5; // Under the game menu (10), so Esc still covers everything.
+            canvas.sortingOrder = 5; // Under the game menu (10) and the kit's title (20).
             var scaler = canvasGo.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
+            canvasGo.AddComponent<GraphicRaycaster>();
+            var stack = canvasGo.AddComponent<UiScreenStack>();
 
             var hud = canvasGo.AddComponent<LobbyHud>();
             var hudSo = new SerializedObject(hud);
-            BuildBoard(canvasGo.transform, hudSo, rules);
-            BuildPrompt(canvasGo.transform, hudSo);
-            BuildSubtitle(canvasGo.transform, hudSo);
+            hudSo.FindProperty("_tokens").objectReferenceValue = t;
+            BuildBoard(canvasGo.transform, hudSo, rules, t);
+            BuildPrompt(canvasGo.transform, hudSo, t);
+            BuildSubtitle(canvasGo.transform, hudSo, t);
             hudSo.ApplyModifiedPropertiesWithoutUndo();
 
-            FittingRoomScreen screen = BuildFittingScreen(canvasGo.transform);
-            var room = Object.FindAnyObjectByType<FittingRoom>();
-            var roomSo = new SerializedObject(room);
-            roomSo.FindProperty("_screen").objectReferenceValue = screen;
-            roomSo.ApplyModifiedPropertiesWithoutUndo();
+            FittingRoomScreen screen = BuildFittingScreen(canvasGo.transform, stack, t);
+            LobbyHostPanel panel = BuildHostPanel(canvasGo.transform, stack, t);
+            UiKitAssets.Instance<UiFocusFrame>(CloseTheDeal.Editor.UI.UiKitComponents.FocusFrame, canvasGo.transform, "FocusFrame");
+
+            UiKitAssets.Set(Object.FindAnyObjectByType<FittingRoom>(), "_screen", screen);
+            UiKitAssets.Set(Object.FindAnyObjectByType<LobbyHostControls>(), "_panel", panel);
         }
 
-        static RectTransform Rect(Transform parent, string name, Vector2 anchor, Vector2 pivot, Vector2 position, Vector2 size)
+        /// <summary>A rect anchored to a corner or edge of the screen (anchor and pivot the same point), offset in reference pixels.</summary>
+        static RectTransform Anchored(Transform parent, string name, Vector2 anchor, Vector2 offset, Vector2 size)
         {
-            var go = new GameObject(name, typeof(RectTransform));
-            var rt = go.GetComponent<RectTransform>();
-            rt.SetParent(parent, false);
-            rt.anchorMin = rt.anchorMax = anchor;
-            rt.pivot = pivot;
-            rt.anchoredPosition = position;
-            rt.sizeDelta = size;
-            return rt;
+            RectTransform rect = UiKitAssets.Node(parent, name);
+            rect.anchorMin = rect.anchorMax = rect.pivot = anchor;
+            rect.anchoredPosition = offset;
+            rect.sizeDelta = size;
+            return rect;
         }
 
-        /// <summary>A Paper &amp; Hairline pane (style research §6): paper fill at 86 %, a 1 px navy hairline at 24 %, square corners.</summary>
-        static Image Pane(RectTransform rt, Color fill, bool hairline)
+        /// <summary>A kit plate filling <paramref name="parent"/>: the white surface every HUD piece sits on.</summary>
+        static void PlateUnder(RectTransform parent)
         {
-            var image = rt.gameObject.AddComponent<Image>();
-            image.color = fill;
-            image.raycastTarget = false;
-            if (hairline)
-            {
-                var outline = rt.gameObject.AddComponent<Outline>();
-                outline.effectColor = new Color(Navy.r, Navy.g, Navy.b, 0.24f);
-                outline.effectDistance = new Vector2(1f, -1f);
-            }
-            return image;
+            var plate = UiKitAssets.Instance<RectTransform>(CloseTheDeal.Editor.UI.UiKitComponents.Plate, parent, "Plate");
+            UiKitAssets.Stretch(plate);
+            plate.SetAsFirstSibling();
         }
 
-        static TMP_Text Text(RectTransform parent, string name, string content, int size, Color colour, Vector2 position, Vector2 box, TextAlignmentOptions align = TextAlignmentOptions.TopLeft, bool bold = false)
+        static void BuildBoard(Transform canvas, SerializedObject hud, LobbyRules rules, UiTokens t)
         {
-            RectTransform rt = Rect(parent, name, new Vector2(0f, 1f), new Vector2(0f, 1f), position, box);
-            var text = rt.gameObject.AddComponent<TextMeshProUGUI>();
-            text.text = content;
-            text.fontSize = size;
-            text.color = colour;
-            text.alignment = align;
-            text.fontStyle = bold ? FontStyles.Bold : FontStyles.Normal;
-            text.textWrappingMode = TextWrappingModes.Normal;
-            text.raycastTarget = false;
-            return text;
-        }
-
-        static Image Fill(RectTransform parent, string name, Color colour, Vector2 position, Vector2 size)
-        {
-            RectTransform rt = Rect(parent, name, new Vector2(0f, 1f), new Vector2(0f, 1f), position, size);
-            var image = rt.gameObject.AddComponent<Image>();
-            image.color = colour;
-            image.raycastTarget = false;
-            return image;
-        }
-
-        static void BuildBoard(Transform canvas, SerializedObject hud, LobbyRules rules)
-        {
-            RectTransform board = Rect(canvas, "Ready board", Vector2.one, Vector2.one, new Vector2(-32f, -32f), new Vector2(440f, 452f));
-            Pane(board, new Color(Paper.r, Paper.g, Paper.b, 0.86f), true);
+            // Top left, under the Esc chip: the match HUD owns the top right (briefcase and firm plates).
+            RectTransform board = Anchored(canvas, "Ready board", new Vector2(0f, 1f), new Vector2(24f, -76f), new Vector2(460f, 452f));
+            PlateUnder(board);
             hud.FindProperty("_board").objectReferenceValue = board.gameObject.AddComponent<CanvasGroup>();
 
-            Text(board, "Title", "Reception", FontLabel, Ink2, new Vector2(24f, -18f), new Vector2(392f, 24f));
-            Fill(board, "Rule", new Color(Navy.r, Navy.g, Navy.b, 0.24f), new Vector2(24f, -48f), new Vector2(392f, 1f));
+            UiKitAssets.Label(board, "Section", 24f, 16f, 412f, 22f, "RECEPTION  ·  READY BOARD", t.Section, t.Ink3);
+            UiKitAssets.Box(board, "Rule", 24f, 46f, 412f, 1f, t.Hair);
 
             SerializedProperty names = hud.FindProperty("_firmNames");
             SerializedProperty lists = hud.FindProperty("_firmLists");
@@ -1011,97 +995,219 @@ namespace CloseTheDeal.Editor.Lanes
             names.arraySize = lists.arraySize = marks.arraySize = 2;
             for (int firm = 0; firm < 2; firm++)
             {
-                float top = -62f - firm * 160f;
-                marks.GetArrayElementAtIndex(firm).objectReferenceValue = Fill(board, "Mark", rules.FirmColour(firm), new Vector2(24f, top - 8f), new Vector2(12f, 12f));
-                names.GetArrayElementAtIndex(firm).objectReferenceValue = Text(board, "Firm", rules.FirmName(firm), FontItem, Navy, new Vector2(46f, top), new Vector2(370f, 30f), bold: true);
-                lists.GetArrayElementAtIndex(firm).objectReferenceValue = Text(board, "Members", string.Empty, FontBody, Navy, new Vector2(46f, top - 34f), new Vector2(370f, 116f));
+                float top = 60f + firm * 150f;
+                marks.GetArrayElementAtIndex(firm).objectReferenceValue = UiKitAssets.Box(board, "Mark", 24f, top + 9f, 12f, 12f, rules.FirmColour(firm));
+                names.GetArrayElementAtIndex(firm).objectReferenceValue = UiKitAssets.Label(board, "Firm", 46f, top, 390f, 30f, rules.FirmName(firm), t.Item, t.Navy);
+                lists.GetArrayElementAtIndex(firm).objectReferenceValue = UiKitAssets.Label(board, "Members", 46f, top + 34f, 390f, 108f, string.Empty, t.Body, t.Navy, TextAlignmentOptions.TopLeft, true);
             }
 
-            Fill(board, "Rule", new Color(Navy.r, Navy.g, Navy.b, 0.24f), new Vector2(24f, -384f), new Vector2(392f, 1f));
-            hud.FindProperty("_status").objectReferenceValue = Text(board, "Status", string.Empty, FontLabel, Ink2, new Vector2(24f, -396f), new Vector2(392f, 48f));
+            UiKitAssets.Box(board, "Rule", 24f, 364f, 412f, 1f, t.Hair);
+            hud.FindProperty("_status").objectReferenceValue = UiKitAssets.Label(board, "Next step", 24f, 374f, 412f, 64f, string.Empty, t.Label, t.Ink2, TextAlignmentOptions.TopLeft, true);
         }
 
-        static void BuildPrompt(Transform canvas, SerializedObject hud)
+        static void BuildPrompt(Transform canvas, SerializedObject hud, UiTokens t)
         {
-            RectTransform prompt = Rect(canvas, "Prompt", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 230f), new Vector2(520f, 60f));
-            Pane(prompt, new Color(Paper.r, Paper.g, Paper.b, 0.86f), true);
+            RectTransform prompt = Anchored(canvas, "Prompt", new Vector2(0.5f, 0f), new Vector2(0f, 236f), new Vector2(620f, 64f));
+            PlateUnder(prompt);
             hud.FindProperty("_prompt").objectReferenceValue = prompt.gameObject.AddComponent<CanvasGroup>();
-            hud.FindProperty("_promptText").objectReferenceValue = Text(prompt, "Line", string.Empty, FontItem, Navy, new Vector2(0f, -14f), new Vector2(520f, 32f), TextAlignmentOptions.Center);
-            Image fill = Fill(prompt, "Hold", Cobalt, new Vector2(0f, -56f), new Vector2(520f, 4f));
+
+            // A key cap drawn from the kit's outline sprite and Label role: the kit's KeyHint is sized
+            // for small footer hints, and the prompt's key has to read from across the room.
+            RectTransform cap = UiKitAssets.At(prompt, "Key", 20f, 12f, 96f, 40f);
+            UiKitAssets.Img(cap, CloseTheDeal.Editor.UI.UiKitArt.Outline1, t.Navy);
+            hud.FindProperty("_promptKey").objectReferenceValue = UiKitAssets.Label(cap, "Text", 0f, 0f, 96f, 40f, string.Empty, t.Label, t.Navy, TextAlignmentOptions.Center);
+            hud.FindProperty("_promptText").objectReferenceValue = UiKitAssets.Label(prompt, "Line", 132f, 0f, 470f, 64f, string.Empty, t.Item, t.Navy);
+
+            Image fill = UiKitAssets.Box(prompt, "Hold", 0f, 60f, 620f, 4f, t.Cobalt, CloseTheDeal.Editor.UI.UiKitArt.White);
             fill.type = Image.Type.Filled;
             fill.fillMethod = Image.FillMethod.Horizontal;
-            fill.sprite = WhiteSprite();
             fill.enabled = false;
             hud.FindProperty("_holdFill").objectReferenceValue = fill;
         }
 
-        /// <summary>A filled Image needs a sprite to fill; Unity's built-in one is a plain white square.</summary>
-        static Sprite WhiteSprite() => AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
-
-        static void BuildSubtitle(Transform canvas, SerializedObject hud)
+        static void BuildSubtitle(Transform canvas, SerializedObject hud, UiTokens t)
         {
-            RectTransform subtitle = Rect(canvas, "Subtitle", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 96f), new Vector2(1100f, 92f));
-            Pane(subtitle, new Color(Navy.r, Navy.g, Navy.b, 0.92f), false);
+            RectTransform subtitle = Anchored(canvas, "Subtitle", new Vector2(0.5f, 0f), new Vector2(0f, 104f), new Vector2(1100f, 96f));
+            PlateUnder(subtitle);
             hud.FindProperty("_subtitle").objectReferenceValue = subtitle.gameObject.AddComponent<CanvasGroup>();
-            Text(subtitle, "Speaker", "Reception", FontLabel, Cyan, new Vector2(28f, -12f), new Vector2(1044f, 22f));
-            hud.FindProperty("_subtitleText").objectReferenceValue = Text(subtitle, "Line", string.Empty, 24, Color.white, new Vector2(28f, -36f), new Vector2(1044f, 52f));
+            UiKitAssets.Box(subtitle, "Bullet", 28f, 20f, 8f, 8f, t.Cobalt);
+            UiKitAssets.Label(subtitle, "Speaker", 46f, 12f, 1020f, 22f, "RECEPTION", t.Caption, t.Ink3);
+            hud.FindProperty("_subtitleText").objectReferenceValue = UiKitAssets.Label(subtitle, "Line", 28f, 38f, 1044f, 52f, string.Empty, t.Body, t.Navy, TextAlignmentOptions.TopLeft, true);
         }
 
-        static FittingRoomScreen BuildFittingScreen(Transform canvas)
+        /// <summary>A kit screen covering the canvas, with its own Canvas Group (the stack fades it).</summary>
+        static RectTransform ScreenRoot(Transform canvas, string name)
         {
-            RectTransform holder = Rect(canvas, "Fitting room", Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
-            holder.anchorMin = Vector2.zero;
-            holder.anchorMax = Vector2.one;
-            holder.sizeDelta = Vector2.zero;
-            var group = holder.gameObject.AddComponent<CanvasGroup>();
+            RectTransform root = UiKitAssets.Fill(canvas, name);
+            root.gameObject.AddComponent<CanvasGroup>();
+            return root;
+        }
 
-            // Sized to the categories the catalog really has, so the form is not mostly empty.
-            int rows = Mathf.Clamp(AssetDatabase.LoadAssetAtPath<OutfitCatalog>(CatalogPath).SlotCount, 1, OutfitLoadout.MaxSlots);
-            float lower = -156f - rows * 60f - 24f;
-            float height = -lower + 230f + 96f;
-            RectTransform panel = Rect(holder, "Form", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(48f, 0f), new Vector2(600f, height));
-            Pane(panel, new Color(Paper.r, Paper.g, Paper.b, 0.9f), true);
+        static FittingRoomScreen BuildFittingScreen(Transform canvas, UiScreenStack stack, UiTokens t)
+        {
+            int count = Mathf.Clamp(AssetDatabase.LoadAssetAtPath<OutfitCatalog>(CatalogPath).SlotCount, 1, OutfitLoadout.MaxSlots);
+            RectTransform root = ScreenRoot(canvas, "Fitting room");
+            float rowsTop = 150f, rowsBottom = rowsTop + count * t.RowHeight;
+            float height = rowsBottom + 300f;
+            RectTransform form = Anchored(root, "Form", new Vector2(0f, 0.5f), new Vector2(48f, 0f), new Vector2(660f, height));
+            PlateUnder(form);
+            var reveal = new List<CanvasGroup>();
 
-            Text(panel, "Form code", "Form F-1   ·   Wardrobe amendment", FontLabel, Ink3, new Vector2(40f, -36f), new Vector2(520f, 22f));
-            Text(panel, "Title", "Fitting room", FontHeading, Navy, new Vector2(40f, -64f), new Vector2(520f, 52f));
-            Fill(panel, "Rule", new Color(Navy.r, Navy.g, Navy.b, 0.24f), new Vector2(40f, -132f), new Vector2(520f, 1f));
+            RectTransform head = UiKitAssets.RevealLine(form, "Heading");
+            reveal.Add(head.GetComponent<CanvasGroup>());
+            UiKitAssets.Box(head, "Bullet", 40f, 38f, 8f, 8f, t.Black);
+            UiKitAssets.Label(head, "Breadcrumb", 60f, 30f, 560f, 24f, "SEAL THE DEAL  ·  FORM F-1  ·  WARDROBE AMENDMENT", t.Micro, t.Ink3);
+            UiKitAssets.Label(head, "Heading", 40f, 62f, 580f, 56f, "FITTING ROOM", t.Heading, t.Navy);
+            UiKitAssets.Box(head, "Rule", 40f, 136f, 580f, 1f, t.Hair);
 
-            var screen = holder.gameObject.AddComponent<FittingRoomScreen>();
-            var so = new SerializedObject(screen);
-            so.FindProperty("_group").objectReferenceValue = group;
-            so.FindProperty("_panel").objectReferenceValue = panel;
-            BuildRows(panel, so, rows);
+            RectTransform rows = UiKitAssets.RevealLine(form, "Rows");
+            reveal.Add(rows.GetComponent<CanvasGroup>());
+            var steppers = new UiStepper[count];
+            var labels = new TMP_Text[count];
+            for (int i = 0; i < count; i++)
+                steppers[i] = StepperRow(rows, i, rowsTop + i * t.RowHeight, t, out labels[i]);
 
-            float top = lower;
-            Fill(panel, "Rule", new Color(Navy.r, Navy.g, Navy.b, 0.24f), new Vector2(40f, top), new Vector2(520f, 1f));
-            so.FindProperty("_optionCount").objectReferenceValue = Text(panel, "Count", string.Empty, FontBody, Ink2, new Vector2(40f, top - 20f), new Vector2(520f, 26f));
-            so.FindProperty("_optionName").objectReferenceValue = Text(panel, "Choice", string.Empty, FontHeading, Navy, new Vector2(40f, top - 50f), new Vector2(520f, 52f));
-            so.FindProperty("_lockLine").objectReferenceValue = Text(panel, "Lock", string.Empty, FontBody, Ink2, new Vector2(40f, top - 108f), new Vector2(520f, 52f));
-            so.FindProperty("_notice").objectReferenceValue = Text(panel, "Notice", string.Empty, FontBody, Cobalt, new Vector2(40f, top - 160f), new Vector2(520f, 52f), bold: true);
+            RectTransform foot = UiKitAssets.RevealLine(form, "Footer");
+            reveal.Add(foot.GetComponent<CanvasGroup>());
+            TMP_Text detail = UiKitAssets.Label(foot, "Detail", 40f, rowsBottom + 14f, 580f, 56f, string.Empty, t.Body, t.Ink2, TextAlignmentOptions.TopLeft, true);
+            var keep = UiKitAssets.Instance<UiButton>(CloseTheDeal.Editor.UI.UiKitComponents.Primary, foot, "Keep");
+            UiKitAssets.Place((RectTransform)keep.transform, 40f, rowsBottom + 84f, 270f, t.PrimaryHeight);
+            SetButtonLabel(keep, "Keep outfit");
+            keep.Description = "Wear this outfit and save it on this PC. Everyone sees it once you keep it.";
+            var putBack = UiKitAssets.Instance<UiButton>(CloseTheDeal.Editor.UI.UiKitComponents.Secondary, foot, "PutBack");
+            UiKitAssets.Place((RectTransform)putBack.transform, 326f, rowsBottom + 88f, 200f, t.SecondaryHeight);
+            SetButtonLabel(putBack, "Put back");
+            putBack.Description = "Go back to what you were wearing.";
+            var status = UiKitAssets.Instance<UiStatusLine>(CloseTheDeal.Editor.UI.UiKitComponents.StatusLine, foot, "StatusLine");
+            UiKitAssets.Place((RectTransform)status.transform, 40f, rowsBottom + 166f, 580f, ((RectTransform)status.transform).sizeDelta.y);
+            TMP_Text hint = UiKitAssets.Label(foot, "Controls", 40f, rowsBottom + 214f, 580f, 56f, string.Empty, t.Caption, t.Ink3, TextAlignmentOptions.TopLeft, true);
 
-            so.FindProperty("_hint").objectReferenceValue = Text(panel, "Controls", string.Empty, FontLabel, Ink2, new Vector2(40f, -(height - 76f)), new Vector2(520f, 56f));
-            so.ApplyModifiedPropertiesWithoutUndo();
+            LinkFormNavigation(steppers, keep, putBack);
+
+            var screen = root.gameObject.AddComponent<FittingRoomScreen>();
+            WireKitScreen(screen, form, reveal, steppers[0], t);
+            UiKitAssets.SetArray(screen, "_rows", steppers);
+            UiKitAssets.SetArray(screen, "_rowNames", labels);
+            UiKitAssets.Set(screen, "_keep", keep);
+            UiKitAssets.Set(screen, "_putBack", putBack);
+            UiKitAssets.Set(screen, "_detail", detail);
+            UiKitAssets.Set(screen, "_status", status);
+            UiKitAssets.Set(screen, "_hint", hint);
+            UiKitAssets.Set(screen, "_stack", stack);
             return screen;
         }
 
-        static void BuildRows(RectTransform panel, SerializedObject screen, int count)
+        /// <summary>One kit settings-style row: hover highlight, cobalt rule, the category name on the left, a stepper on the right.</summary>
+        static UiStepper StepperRow(RectTransform parent, int index, float y, UiTokens t, out TMP_Text label)
         {
-            SerializedProperty names = screen.FindProperty("_slotNames");
-            SerializedProperty values = screen.FindProperty("_slotValues");
-            SerializedProperty focus = screen.FindProperty("_slotFocus");
-            SerializedProperty rows = screen.FindProperty("_slotRows");
-            names.arraySize = values.arraySize = focus.arraySize = rows.arraySize = count;
+            RectTransform row = UiKitAssets.At(parent, "Row " + (index + 1), 40f, y, 580f, t.RowHeight);
+            Image highlight = UiKitAssets.Img(UiKitAssets.Fill(row, "Highlight"), CloseTheDeal.Editor.UI.UiKitArt.White, UiTokens.WithAlpha(t.HoverTint, 0f));
+            Image rule = UiKitAssets.Img(UiKitAssets.At(row, "Rule", 0f, 0f, 4f, t.RowHeight), CloseTheDeal.Editor.UI.UiKitArt.White, UiTokens.WithAlpha(t.Cobalt, 0f));
+            label = UiKitAssets.Label(row, "Name", 16f, 0f, 200f, t.RowHeight, string.Empty, t.Item, t.Navy);
+            UiKitAssets.Box(row, "Hairline", 0f, t.RowHeight - 1f, 580f, 1f, t.Hair);
 
-            for (int i = 0; i < count; i++)
+            var stepper = UiKitAssets.Instance<UiStepper>(CloseTheDeal.Editor.UI.UiKitComponents.Stepper, row, "Stepper");
+            var rect = (RectTransform)stepper.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 0.5f);
+            rect.anchoredPosition = new Vector2(-12f, 0f);
+            stepper.Fx.RowHighlight = highlight;
+            stepper.Fx.RowRule = rule;
+            stepper.Description = "Left and right change it; you see it at once.";
+            EditorUtility.SetDirty(stepper);
+            return stepper;
+        }
+
+        static void SetButtonLabel(UiButton button, string text)
+        {
+            if (button.Fx.Label != null)
+                button.Fx.Label.text = text;
+        }
+
+        static void WireKitScreen(UiScreen screen, RectTransform content, List<CanvasGroup> reveal, Selectable first, UiTokens t)
+        {
+            UiKitAssets.Set(screen, "_tokens", t);
+            UiKitAssets.Set(screen, "_content", content);
+            UiKitAssets.SetArray(screen, "_reveal", reveal.ToArray());
+            UiKitAssets.Set(screen, "_firstFocus", first);
+        }
+
+        /// <summary>Up / down through the rows, the last row down to Keep; Keep and Put back side by side.</summary>
+        static void LinkFormNavigation(UiStepper[] rows, UiButton keep, UiButton putBack)
+        {
+            for (int i = 0; i < rows.Length; i++)
             {
-                Image row = Fill(panel, "Row " + (i + 1), Color.clear, new Vector2(40f, -156f - i * 60f), new Vector2(520f, 56f));
-                var rowRect = row.rectTransform;
-                rows.GetArrayElementAtIndex(i).objectReferenceValue = row;
-                focus.GetArrayElementAtIndex(i).objectReferenceValue = Fill(rowRect, "Focus", Cobalt, Vector2.zero, new Vector2(4f, 56f));
-                names.GetArrayElementAtIndex(i).objectReferenceValue = Text(rowRect, "Category", string.Empty, FontItem, Navy, new Vector2(20f, -14f), new Vector2(220f, 30f));
-                values.GetArrayElementAtIndex(i).objectReferenceValue = Text(rowRect, "Choice", string.Empty, FontItem, Navy, new Vector2(240f, -14f), new Vector2(264f, 30f), TextAlignmentOptions.TopRight);
-                Fill(rowRect, "Hairline", new Color(Navy.r, Navy.g, Navy.b, 0.12f), new Vector2(0f, -55f), new Vector2(520f, 1f));
+                rows[i].navigation = new Navigation
+                {
+                    mode = Navigation.Mode.Explicit,
+                    selectOnUp = i == 0 ? (Selectable)keep : rows[i - 1],
+                    selectOnDown = i == rows.Length - 1 ? (Selectable)keep : rows[i + 1]
+                };
             }
+
+            keep.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = rows[^1], selectOnDown = rows[0], selectOnRight = putBack };
+            putBack.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = rows[^1], selectOnDown = rows[0], selectOnLeft = keep };
+        }
+
+        const int HostPanelRows = 7;
+
+        static LobbyHostPanel BuildHostPanel(Transform canvas, UiScreenStack stack, UiTokens t)
+        {
+            RectTransform root = ScreenRoot(canvas, "Host players");
+            RectTransform form = Anchored(root, "Form", new Vector2(0f, 0.5f), new Vector2(48f, 0f), new Vector2(660f, 760f));
+            PlateUnder(form);
+            var reveal = new List<CanvasGroup>();
+
+            RectTransform head = UiKitAssets.RevealLine(form, "Heading");
+            reveal.Add(head.GetComponent<CanvasGroup>());
+            UiKitAssets.Box(head, "Bullet", 40f, 38f, 8f, 8f, t.Black);
+            UiKitAssets.Label(head, "Breadcrumb", 60f, 30f, 560f, 24f, "SEAL THE DEAL  ·  RECEPTION  ·  HOST ONLY", t.Micro, t.Ink3);
+            UiKitAssets.Label(head, "Heading", 40f, 62f, 580f, 56f, "PLAYERS", t.Heading, t.Navy);
+            UiKitAssets.Box(head, "Rule", 40f, 136f, 580f, 1f, t.Hair);
+
+            RectTransform list = UiKitAssets.RevealLine(form, "List");
+            reveal.Add(list.GetComponent<CanvasGroup>());
+            var rows = new UiButton[HostPanelRows];
+            var labels = new TMP_Text[HostPanelRows];
+            for (int i = 0; i < HostPanelRows; i++)
+            {
+                rows[i] = UiKitAssets.Instance<UiButton>(CloseTheDeal.Editor.UI.UiKitComponents.Secondary, list, "Player " + (i + 1));
+                UiKitAssets.Place((RectTransform)rows[i].transform, 40f, 156f + i * (t.SecondaryHeight + 8f), 580f, t.SecondaryHeight);
+                labels[i] = rows[i].Fx.Label;
+                rows[i].Description = "Remove this player from the lobby. You are asked first.";
+            }
+            TMP_Text empty = UiKitAssets.Label(list, "Empty", 40f, 160f, 580f, 56f, "Nobody else is here yet. Invite a friend from the Esc menu.", t.Body, t.Ink2, TextAlignmentOptions.TopLeft, true);
+
+            RectTransform foot = UiKitAssets.RevealLine(form, "Footer");
+            reveal.Add(foot.GetComponent<CanvasGroup>());
+            var close = UiKitAssets.Instance<UiButton>(CloseTheDeal.Editor.UI.UiKitComponents.Quiet, foot, "Close");
+            UiKitAssets.Place((RectTransform)close.transform, 40f, 680f, 200f, t.SecondaryHeight);
+            SetButtonLabel(close, "Close");
+            close.Description = "Back to reception.";
+            UiKitAssets.Label(foot, "Hint", 260f, 690f, 360f, 40f, "Tab or Backspace closes", t.Caption, t.Ink3);
+
+            for (int i = 0; i < HostPanelRows; i++)
+            {
+                rows[i].navigation = new Navigation
+                {
+                    mode = Navigation.Mode.Explicit,
+                    selectOnUp = i == 0 ? (Selectable)close : rows[i - 1],
+                    selectOnDown = i == HostPanelRows - 1 ? (Selectable)close : rows[i + 1]
+                };
+            }
+            close.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = rows[^1], selectOnDown = rows[0] };
+
+            var confirm = UiKitAssets.Instance<UiConfirmDialog>(CloseTheDeal.Editor.UI.UiKitScreens.Confirm, canvas, "Remove dialog");
+            confirm.gameObject.SetActive(false);
+
+            var panel = root.gameObject.AddComponent<LobbyHostPanel>();
+            WireKitScreen(panel, form, reveal, rows[0], t);
+            UiKitAssets.SetArray(panel, "_rows", rows);
+            UiKitAssets.SetArray(panel, "_rowLabels", labels);
+            UiKitAssets.Set(panel, "_empty", empty);
+            UiKitAssets.Set(panel, "_close", close);
+            UiKitAssets.Set(panel, "_confirm", confirm);
+            UiKitAssets.Set(panel, "_stack", stack);
+            return panel;
         }
 
         static Color Hex(int rgb) => new(((rgb >> 16) & 0xFF) / 255f, ((rgb >> 8) & 0xFF) / 255f, (rgb & 0xFF) / 255f, 1f);

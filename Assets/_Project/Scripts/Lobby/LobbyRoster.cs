@@ -134,6 +134,9 @@ namespace CloseTheDeal.Lobby
         /// <summary>The host only: everyone is ready but a firm is empty or uneven, so the start needs a second, confirming hold (the reason).</summary>
         public event Action<StartBlock> OnStartNeedsConfirm;
 
+        /// <summary>Every machine: the host removed a player (their name), raised just before they leave.</summary>
+        public event Action<string> OnKicked;
+
         /// <summary>Every machine: the run is starting.</summary>
         public event Action OnRunStarting;
 
@@ -352,6 +355,32 @@ namespace CloseTheDeal.Lobby
         public void RequestReady(bool ready) => CmdSetReady(ready);
         public void RequestFitting(bool fitting) => CmdSetFitting(fitting);
         public void RequestStart(bool confirmed = false) => CmdStart(confirmed);
+
+        /// <summary>The host only: remove this player from the lobby. The host checks it again; anyone else asking changes nothing.</summary>
+        public void RequestKick(int clientId) => CmdKick(clientId);
+
+        [ServerRpc(RequireOwnership = false)]
+        void CmdKick(int clientId, NetworkConnection conn = null)
+        {
+            // Host only, never the host itself, and only someone actually in the lobby.
+            if (!conn.IsHost || clientId == conn.ClientId)
+                return;
+            int index = IndexOf(clientId);
+            if (index < 0 || !ServerManager.Clients.TryGetValue(clientId, out NetworkConnection target))
+                return;
+
+            string name = _members[index].Name;
+            Debug.Log($"[Lobby] The host removed {name} (client {clientId}).");
+            RpcKicked(name);
+            // Off the board at once: the transport's own "stopped" can lag behind a host-side disconnect.
+            _members.RemoveAt(index);
+            // Disconnecting drops them from the roster through OnRemoteConnectionState. Their game
+            // shows its usual lost-connection message: a "removed by the host" line needs SteamLobby.
+            target.Disconnect(false);
+        }
+
+        [ObserversRpc]
+        void RpcKicked(string name) => OnKicked?.Invoke(name);
 
         [ServerRpc(RequireOwnership = false)]
         void CmdSetName(string name, NetworkConnection conn = null)

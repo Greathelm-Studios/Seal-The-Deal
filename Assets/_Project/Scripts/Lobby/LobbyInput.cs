@@ -16,10 +16,8 @@ namespace CloseTheDeal.Lobby
         public static InputAction Interact { get; private set; }
         public static InputAction Confirm { get; private set; }
         public static InputAction Cancel { get; private set; }
-        public static InputAction NextOption { get; private set; }
-        public static InputAction PreviousOption { get; private set; }
-        public static InputAction NextSlot { get; private set; }
-        public static InputAction PreviousSlot { get; private set; }
+        /// <summary>The host opens the reception's player list (to remove someone).</summary>
+        public static InputAction HostPanel { get; private set; }
         /// <summary>Turn the character in the fitting room: keys and stick give -1..1, the mouse gives its movement.</summary>
         public static InputAction Rotate { get; private set; }
         public static InputAction RotatePointer { get; private set; }
@@ -75,10 +73,8 @@ namespace CloseTheDeal.Lobby
             Cancel.AddBinding("<Keyboard>/backspace");
             Cancel.AddBinding("<Gamepad>/buttonEast");
 
-            NextOption = Button("NextOption", "<Keyboard>/d", "<Keyboard>/rightArrow", "<Gamepad>/dpad/right");
-            PreviousOption = Button("PreviousOption", "<Keyboard>/a", "<Keyboard>/leftArrow", "<Gamepad>/dpad/left");
-            NextSlot = Button("NextSlot", "<Keyboard>/s", "<Keyboard>/downArrow", "<Gamepad>/dpad/down");
-            PreviousSlot = Button("PreviousSlot", "<Keyboard>/w", "<Keyboard>/upArrow", "<Gamepad>/dpad/up");
+            // Moving through a form is the UI kit's navigation (the UI map), not lane actions.
+            HostPanel = Button("HostPanel", "<Keyboard>/tab", "<Gamepad>/select");
 
             Rotate = _map.AddAction("Rotate", InputActionType.Value);
             Rotate.AddCompositeBinding("1DAxis").With("Negative", "<Keyboard>/q").With("Positive", "<Keyboard>/r");
