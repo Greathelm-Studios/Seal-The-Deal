@@ -1,4 +1,5 @@
 using System.IO;
+using CloseTheDeal.Editor.Greybox;
 using CloseTheDeal.UI;
 using UnityEditor;
 using UnityEngine;
@@ -39,6 +40,7 @@ namespace CloseTheDeal.Editor.UI
             foreach (var p in Presets)
             {
                 string path = $"{ResDir}/Glass{p.name}.mat";
+                if (!GeneratedAssetGuard.MayOverwrite(path)) continue;   // hand-tuned since the tool wrote it: left alone
                 var m = AssetDatabase.LoadAssetAtPath<Material>(path);
                 if (m == null) { m = new Material(shader); AssetDatabase.CreateAsset(m, path); }
                 m.shader = shader;
@@ -50,9 +52,23 @@ namespace CloseTheDeal.Editor.UI
                 m.SetFloat("_BorderAlpha", p.border);
                 m.SetFloat("_BlurMix", p.mix);
                 EditorUtility.SetDirty(m);
+                GeneratedAssetGuard.MarkGenerated(m);
             }
             AssetDatabase.SaveAssets();
             Debug.Log("UiGlassSetup: materials built in " + ResDir);
+        }
+
+        /// <summary>One-off: labels the presets already in the repo (written by this tool before it used the guard) as
+        /// tool-made, so Build Glass Materials may keep updating them. Run once; hand edits after that are respected.</summary>
+        public static void MarkExistingPresetsFromCommandLine()
+        {
+            foreach (var p in Presets)
+            {
+                var m = AssetDatabase.LoadAssetAtPath<Material>($"{ResDir}/Glass{p.name}.mat");
+                if (m != null) GeneratedAssetGuard.MarkGenerated(m);
+            }
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(0);
         }
 
         /// <summary>Adds UiGlassBlurFeature to the renderer asset at path (once).</summary>
