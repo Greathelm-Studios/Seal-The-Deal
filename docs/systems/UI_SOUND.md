@@ -62,45 +62,49 @@ Combat sounds sit at 2.6 to 4.2 kHz and peak 4 dB hotter than UI sounds so they 
 
 ## Verification
 
-Scripted Unity run (6000.4.8f1, batch mode, `-executeMethod CloseTheDeal.Editor.Lanes.UiSoundLaneSetup.RunSelfTest`, 2026-11-13). It enters Play Mode, fires every event once through the UI bus and measures the final output at the listener. Peaks read 3 dB under the file peak because a mono clip is centre-panned into stereo. **Measured, not heard.**
+Scripted Unity run (6000.4.8f1, batch mode, `-executeMethod CloseTheDeal.Editor.Lanes.UiSoundLaneSetup.RunSelfTest`, 2026-11-14, after merging buffer). It enters Play Mode, first checks that nothing plays while the game is unfocused and that a volume saved before the session is restored, then fires every event once through the UI kit's hub and the UI bus and measures the final output at the listener. Peaks read 3 dB under the file peak because a mono clip is centre-panned into stereo. **Measured, not heard.**
 
 ```
-audioConfig: sampleRate=44100 speakerMode=Stereo dspTime=10.612
-event HoverMove          peak=0.316 rms=0.0389 SIGNAL
-event Focus              peak=0.318 rms=0.0478 SIGNAL
+audioConfig: sampleRate=44100 speakerMode=Stereo dspTime=14.698
+hub: UiSound.Player is the sound lane's adapter OK
+unfocused: Application.isFocused=False, Play returned False
+unfocused: output peak=0.00000 OK silent
+saved volume: Interface saved at 0.5 before this session, first sound peak=0.159 (-6.0 dB against full, expect about -6) OK restored
+event HoverMove          peak=0.316 rms=0.0410 SIGNAL
+event Focus              peak=0.318 rms=0.0451 SIGNAL
 event Select             peak=0.318 rms=0.0496 SIGNAL
-event Confirm            peak=0.318 rms=0.0732 SIGNAL
+event Confirm            peak=0.318 rms=0.0755 SIGNAL
 event Back               peak=0.318 rms=0.0607 SIGNAL
-event Error              peak=0.317 rms=0.0702 SIGNAL
-event TabChange          peak=0.315 rms=0.0325 SIGNAL
-event ToggleOn           peak=0.318 rms=0.0488 SIGNAL
-event ToggleOff          peak=0.318 rms=0.0570 SIGNAL
-event SliderTick         peak=0.317 rms=0.0317 SIGNAL
+event Error              peak=0.317 rms=0.0697 SIGNAL
+event TabChange          peak=0.318 rms=0.0329 SIGNAL
+event ToggleOn           peak=0.318 rms=0.0490 SIGNAL
+event ToggleOff          peak=0.318 rms=0.0541 SIGNAL
+event SliderTick         peak=0.317 rms=0.0339 SIGNAL
 event DropdownOpen       peak=0.316 rms=0.0453 SIGNAL
-event DropdownClose      peak=0.312 rms=0.0470 SIGNAL
-event KeyBindListen      peak=0.318 rms=0.0608 SIGNAL
+event DropdownClose      peak=0.313 rms=0.0469 SIGNAL
+event KeyBindListen      peak=0.318 rms=0.0609 SIGNAL
 event KeyBindSet         peak=0.318 rms=0.0489 SIGNAL
-event PanelOpen          peak=0.318 rms=0.0589 SIGNAL
-event PanelClose         peak=0.318 rms=0.0596 SIGNAL
-event Transition         peak=0.315 rms=0.0543 SIGNAL
-event Notification       peak=0.316 rms=0.0613 SIGNAL
-event LobbyReady         peak=0.318 rms=0.0596 SIGNAL
-event LobbyUnready       peak=0.318 rms=0.0678 SIGNAL
+event PanelOpen          peak=0.317 rms=0.0589 SIGNAL
+event PanelClose         peak=0.318 rms=0.0580 SIGNAL
+event Transition         peak=0.314 rms=0.0555 SIGNAL
+event Notification       peak=0.317 rms=0.0611 SIGNAL
+event LobbyReady         peak=0.318 rms=0.0595 SIGNAL
+event LobbyUnready       peak=0.317 rms=0.0678 SIGNAL
 event CountdownTick      peak=0.314 rms=0.0339 SIGNAL
-event CountdownGo        peak=0.389 rms=0.0819 SIGNAL
-event MatchWon           peak=0.389 rms=0.0799 SIGNAL
-event MatchLost          peak=0.388 rms=0.0810 SIGNAL
+event CountdownGo        peak=0.389 rms=0.0804 SIGNAL
+event MatchWon           peak=0.389 rms=0.0807 SIGNAL
+event MatchLost          peak=0.388 rms=0.0802 SIGNAL
 event FloorOpened        peak=0.388 rms=0.0646 SIGNAL
-event BriefcaseTaken     peak=0.317 rms=0.0509 SIGNAL
-event BriefcaseDropped   peak=0.313 rms=0.0603 SIGNAL
-event HandsFull          peak=0.318 rms=0.0612 SIGNAL
-event HitMarker          peak=0.484 rms=0.0613 SIGNAL
-event HitMarkerHead      peak=0.472 rms=0.0461 SIGNAL
-event KillConfirm        peak=0.478 rms=0.0697 SIGNAL
+event BriefcaseTaken     peak=0.317 rms=0.0521 SIGNAL
+event BriefcaseDropped   peak=0.317 rms=0.0604 SIGNAL
+event HandsFull          peak=0.317 rms=0.0607 SIGNAL
+event HitMarker          peak=0.487 rms=0.0612 SIGNAL
+event HitMarkerHead      peak=0.488 rms=0.0461 SIGNAL
+event KillConfirm        peak=0.478 rms=0.0672 SIGNAL
 UI bus at 0 (-80 dB): peak=0.00000 OK silent
 UI slider 1.0 peak=0.318, 0.5 peak=0.159: -6.0 dB (expect about -6) OK
 SFX bus at 0 while UI plays: peak=0.318 OK UI unaffected
-rapid hover: 37484 requests in 1 s, started=17 dropped=37467, output peak=0.343 OK no clipping
+rapid hover: 33132 requests in 1 s, started=17 dropped=33115, output peak=0.343 OK no clipping
 ```
 
 ## Item sounds (world, SFX bus)

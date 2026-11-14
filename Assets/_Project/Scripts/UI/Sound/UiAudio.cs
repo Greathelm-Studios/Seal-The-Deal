@@ -13,6 +13,9 @@ namespace CloseTheDeal.UI
         static readonly string[] Param = { "MasterVolume", "MusicVolume", "SfxVolume", "VoiceVolume", "UiVolume" };
         static readonly float[] Default = { 1f, 0.8f, 1f, 1f, 1f };
 
+        /// <summary>The volume a bus starts at before the player has touched it, 0 to 1.</summary>
+        public static float DefaultOf(AudioBus bus) => Default[(int)bus];
+
         public static float Get(AudioBus bus) => PlayerPrefs.GetFloat(Key + bus, Default[(int)bus]);
 
         public static void SetVolume(AudioBus bus, float slider01, bool save = true)
