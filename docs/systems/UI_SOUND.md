@@ -22,131 +22,142 @@ UiSound (hub, Scripts/UI/Kit, lane 5) --> UiSoundPlayer --> AudioSource pool -->
 
 ## The sounds
 
-Key: C major pentatonic (C D E G A), so any run of sounds is consonant. Confirms resolve upward; back, error and unready resolve downward. Every clip is scaled to a peak target by class (UI 0.45 = -6.9 dBFS, sting 0.55 = -5.2 dBFS, combat 0.70 = -3.1 dBFS), so none is louder than another by number; RMS varies with length and is printed for review. 16-bit, 48 kHz, mono, under 1.2 s.
+Key: C major pentatonic (C D E G A), so any run of sounds is consonant. Confirms resolve upward; back, error and unready resolve downward. Every clip is levelled to a **perceived** target, not a peak: the A-weighted level of its loudest 46 ms (UI -14 dB, stings -11, hit ticks -11, kill confirm -9, slider tick -18, countdown tick -15), under a peak ceiling per class (UI 0.70, sting 0.80, combat 0.90). A very short tick can hit its ceiling before its target; the table shows where. 16-bit, 48 kHz, mono, under 1.2 s.
 
-| Event | Length | Peak | RMS | Class | Pitch and relation |
+| Event | Length | Peak | Perceived level | Class | Pitch and relation |
 |---|---|---|---|---|---|
-| `HoverMove` | 100 ms | -6.9 dBFS | -21.5 dBFS | ui | G5; run steps up C D E G A |
-| `Focus` | 100 ms | -6.9 dBFS | -20.2 dBFS | ui | E5, softer than hover |
-| `Select` | 180 ms | -6.9 dBFS | -20.8 dBFS | ui | C5 to G5, rises a fifth |
-| `Confirm` | 260 ms | -6.9 dBFS | -17.9 dBFS | ui | C5 G5 C6, rises (resolves up) |
-| `Back` | 200 ms | -6.9 dBFS | -19.2 dBFS | ui | G5 to C5, falls |
-| `Error` | 300 ms | -6.9 dBFS | -18.7 dBFS | ui | E4 to C4, falls (dull, soft) |
-| `TabChange` | 120 ms | -6.9 dBFS | -23.8 dBFS | ui | E5 glass tick + air |
-| `ToggleOn` | 140 ms | -6.9 dBFS | -20.6 dBFS | ui | C5 to G5, quick rise |
-| `ToggleOff` | 140 ms | -6.9 dBFS | -19.3 dBFS | ui | G5 to C5, quick fall |
-| `SliderTick` | 50 ms | -6.9 dBFS | -21.2 dBFS | ui | C6 tick; runtime pitch follows value |
-| `DropdownOpen` | 160 ms | -6.9 dBFS | -21.4 dBFS | ui | air swish up + A5 |
-| `DropdownClose` | 140 ms | -6.9 dBFS | -20.9 dBFS | ui | air swish down + E5 |
-| `KeyBindListen` | 200 ms | -6.9 dBFS | -19.1 dBFS | ui | E5 double pulse (waiting) |
-| `KeyBindSet` | 300 ms | -6.9 dBFS | -21.7 dBFS | ui | C6 ding over G5 |
-| `PanelOpen` | 300 ms | -6.9 dBFS | -20.2 dBFS | ui | C5 + G5 rising sweep |
-| `PanelClose` | 260 ms | -6.9 dBFS | -19.9 dBFS | ui | G5 + C5 falling sweep |
-| `Transition` | 480 ms | -6.9 dBFS | -20.6 dBFS | ui | noise whoosh up; C5 under |
-| `Notification` | 460 ms | -6.9 dBFS | -20.2 dBFS | ui | G5 then D6, rises a fifth |
-| `LobbyReady` | 220 ms | -6.9 dBFS | -19.4 dBFS | ui | E5 to B5, rises |
-| `LobbyUnready` | 200 ms | -6.9 dBFS | -18.2 dBFS | ui | B5 to E5, falls |
-| `CountdownTick` | 70 ms | -6.9 dBFS | -22.1 dBFS | ui | E5 tick, one pitch |
-| `CountdownGo` | 500 ms | -5.2 dBFS | -17.9 dBFS | sting | C5 E5 G5 C6 flourish, up |
-| `MatchWon` | 1100 ms | -5.2 dBFS | -18.4 dBFS | sting | C5 E5 G5 C6 E6 arpeggio, up |
-| `MatchLost` | 1000 ms | -5.2 dBFS | -18.3 dBFS | sting | G4 E4 C4, slow fall |
-| `FloorOpened` | 650 ms | -5.2 dBFS | -20.1 dBFS | sting | C6 then G6 lift chime over C4 |
-| `BriefcaseTaken` | 240 ms | -6.9 dBFS | -21.0 dBFS | ui | clack + G5 to C6 rise |
-| `BriefcaseDropped` | 200 ms | -6.9 dBFS | -19.3 dBFS | ui | thud + C4 fall |
-| `HandsFull` | 200 ms | -6.9 dBFS | -19.2 dBFS | ui | D4 double bonk, low |
-| `HitMarker` | 55 ms | -3.1 dBFS | -16.3 dBFS | combat | G7 tick (3.1 kHz), very short (full auto: 10 per second) |
-| `HitMarkerHead` | 55 ms | -3.1 dBFS | -18.2 dBFS | combat | C8 tick (4.2 kHz) over G7: brighter, precision hit |
-| `KillConfirm` | 200 ms | -3.1 dBFS | -18.1 dBFS | combat | E7 to B7 ticks + B6 ring (2.6 to 3.9 kHz) |
+| `HoverMove` | 100 ms | -4.6 dBFS | -14.0 dB | ui | G5; run steps up C D E G A |
+| `Focus` | 100 ms | -4.9 dBFS | -14.0 dB | ui | E5, softer than hover |
+| `Select` | 180 ms | -9.4 dBFS | -14.0 dB | ui | C5 to G5, rises a fifth |
+| `Confirm` | 260 ms | -10.0 dBFS | -14.0 dB | ui | C5 G5 C6, rises (resolves up) |
+| `Back` | 200 ms | -7.7 dBFS | -14.0 dB | ui | G5 to C5, falls |
+| `Error` | 300 ms | -3.1 dBFS | -14.0 dB | ui | E4 to C4, falls (dull, soft) |
+| `TabChange` | 120 ms | -3.6 dBFS | -14.0 dB | ui | A5 glass tick + air |
+| `ToggleOn` | 140 ms | -6.6 dBFS | -14.0 dB | ui | C5 to G5, quick rise |
+| `ToggleOff` | 140 ms | -5.3 dBFS | -14.0 dB | ui | A5 to E5, light fall |
+| `SliderTick` | 50 ms | -3.1 dBFS | -19.1 dB | ui | C6 tick; runtime pitch follows value |
+| `DropdownOpen` | 160 ms | -9.1 dBFS | -14.0 dB | ui | air swish up + A5 |
+| `DropdownClose` | 140 ms | -6.8 dBFS | -14.0 dB | ui | air swish down + A5 to D5 |
+| `KeyBindListen` | 200 ms | -8.2 dBFS | -14.0 dB | ui | E5 double pulse (waiting) |
+| `KeyBindSet` | 300 ms | -9.5 dBFS | -14.0 dB | ui | C6 ding over G5 |
+| `PanelOpen` | 300 ms | -7.4 dBFS | -14.0 dB | ui | C5 + G5 rising sweep |
+| `PanelClose` | 260 ms | -7.1 dBFS | -14.0 dB | ui | G5 + C5 falling sweep |
+| `Transition` | 480 ms | -7.1 dBFS | -14.0 dB | ui | noise whoosh up; C5 under |
+| `Notification` | 460 ms | -10.0 dBFS | -14.0 dB | ui | G5 then D6, rises a fifth |
+| `LobbyReady` | 240 ms | -10.4 dBFS | -14.0 dB | ui | D5 G5 D6, three steps up |
+| `LobbyUnready` | 220 ms | -9.0 dBFS | -14.0 dB | ui | D6 G5 D5, three steps down |
+| `CountdownTick` | 70 ms | -3.1 dBFS | -17.7 dB | ui | C6 tick over a C4 knock |
+| `CountdownGo` | 500 ms | -4.8 dBFS | -11.0 dB | sting | C5 E5 G5 C6 flourish, up |
+| `MatchWon` | 1100 ms | -6.8 dBFS | -11.0 dB | sting | C5 E5 G5 C6 E6 arpeggio, up |
+| `MatchLost` | 1000 ms | -1.9 dBFS | -11.4 dB | sting | G4 E4 C4, slow fall |
+| `FloorOpened` | 650 ms | -5.7 dBFS | -11.0 dB | sting | C6 then G6 lift chime over C4 |
+| `BriefcaseTaken` | 240 ms | -10.6 dBFS | -14.0 dB | ui | clack + G5 to C6 rise |
+| `BriefcaseDropped` | 200 ms | -4.6 dBFS | -14.0 dB | ui | thud + C4 fall |
+| `HandsFull` | 200 ms | -3.1 dBFS | -15.5 dB | ui | D4 double bonk, low |
+| `HitMarker` | 55 ms | -0.9 dBFS | -13.6 dB | combat | G7 tick (3.1 kHz), very short (full auto: 10 per second) |
+| `HitMarkerHead` | 55 ms | -0.9 dBFS | -15.7 dB | combat | C8 tick (4.2 kHz) over G7: brighter, precision hit |
+| `KillConfirm` | 200 ms | -4.6 dBFS | -9.0 dB | combat | E7 to B7 ticks + B6 ring (2.6 to 3.9 kHz) |
 
-Combat sounds sit at 2.6 to 4.2 kHz and peak 4 dB hotter than UI sounds so they cut through gunfire; the tick stays short because full auto fires up to 10 hits a second.
+Combat sounds sit at 2.6 to 4.2 kHz so they cut through gunfire; the tick stays short because full auto fires up to 10 hits a second.
+
+## Measured against each other
+
+`python3 ArtSource/Audio/ui/make_ui_sounds.py --analyse` prints, for every clip, its perceived level and spectral centroid, and lists UI pairs close enough to be confused (same length within 30 %, band spectrum and level envelope both above 0.93 cosine similarity). These numbers stand in for ears; they do not replace them.
+
+- **First measurement (peak-normalised clips):** the UI set spread over 12.9 dB by perceived level, and seven pairs were flagged as alike (Focus / TabChange / DropdownClose / CountdownTick all sat on E5; Back / ToggleOff; DropdownOpen / LobbyReady; PanelOpen / PanelClose).
+- **Now:** every UI clip sits on its target except the two deliberately quieter ticks; stings spread 0.4 dB. TabChange moved to A5, DropdownClose to A5 then D5, ToggleOff to A5 then E5, LobbyReady and LobbyUnready to three steps (D5 G5 D6 and back), CountdownTick to C6 over a C4 knock.
+- **Still flagged:** SliderTick / CountdownTick (both C6 ticks; they never play in the same place) and PanelOpen / PanelClose (same notes, opposite glide direction, which this measure cannot see).
+- **Shots and the explosion are peak-limited:** a gunshot is a few milliseconds long, so at full scale it still measures about -15 dB (pistol) and -20 dB (AR-15) on a 46 ms window, and the explosion -14 dB. Handling sounds, impacts and glass are set under the shots so the order holds (shot, then glass and impacts, then reloads and swap). How loud a shot is in the game is the playing lane's AudioSource volume and distance curve.
 
 ## Verification
 
 Scripted Unity run (6000.4.8f1, batch mode, `-executeMethod CloseTheDeal.Editor.Lanes.UiSoundLaneSetup.RunSelfTest`, 2026-11-14, after merging buffer). It enters Play Mode, first checks that nothing plays while the game is unfocused and that a volume saved before the session is restored, then fires every event once through the UI kit's hub and the UI bus and measures the final output at the listener. Peaks read 3 dB under the file peak because a mono clip is centre-panned into stereo. **Measured, not heard.**
 
 ```
-audioConfig: sampleRate=44100 speakerMode=Stereo dspTime=14.698
+audioConfig: sampleRate=44100 speakerMode=Stereo dspTime=21.432
 hub: UiSound.Player is the sound lane's adapter OK
 unfocused: Application.isFocused=False, Play returned False
 unfocused: output peak=0.00000 OK silent
-saved volume: Interface saved at 0.5 before this session, first sound peak=0.159 (-6.0 dB against full, expect about -6) OK restored
-event HoverMove          peak=0.316 rms=0.0410 SIGNAL
-event Focus              peak=0.318 rms=0.0451 SIGNAL
-event Select             peak=0.318 rms=0.0496 SIGNAL
-event Confirm            peak=0.318 rms=0.0755 SIGNAL
-event Back               peak=0.318 rms=0.0607 SIGNAL
-event Error              peak=0.317 rms=0.0697 SIGNAL
-event TabChange          peak=0.318 rms=0.0329 SIGNAL
-event ToggleOn           peak=0.318 rms=0.0490 SIGNAL
-event ToggleOff          peak=0.318 rms=0.0541 SIGNAL
-event SliderTick         peak=0.317 rms=0.0339 SIGNAL
-event DropdownOpen       peak=0.316 rms=0.0453 SIGNAL
-event DropdownClose      peak=0.313 rms=0.0469 SIGNAL
-event KeyBindListen      peak=0.318 rms=0.0609 SIGNAL
-event KeyBindSet         peak=0.318 rms=0.0489 SIGNAL
-event PanelOpen          peak=0.317 rms=0.0589 SIGNAL
-event PanelClose         peak=0.318 rms=0.0580 SIGNAL
-event Transition         peak=0.314 rms=0.0555 SIGNAL
-event Notification       peak=0.317 rms=0.0611 SIGNAL
-event LobbyReady         peak=0.318 rms=0.0595 SIGNAL
-event LobbyUnready       peak=0.317 rms=0.0678 SIGNAL
-event CountdownTick      peak=0.314 rms=0.0339 SIGNAL
-event CountdownGo        peak=0.389 rms=0.0804 SIGNAL
-event MatchWon           peak=0.389 rms=0.0807 SIGNAL
-event MatchLost          peak=0.388 rms=0.0802 SIGNAL
-event FloorOpened        peak=0.388 rms=0.0646 SIGNAL
-event BriefcaseTaken     peak=0.317 rms=0.0521 SIGNAL
-event BriefcaseDropped   peak=0.317 rms=0.0604 SIGNAL
-event HandsFull          peak=0.317 rms=0.0607 SIGNAL
-event HitMarker          peak=0.487 rms=0.0612 SIGNAL
-event HitMarkerHead      peak=0.488 rms=0.0461 SIGNAL
-event KillConfirm        peak=0.478 rms=0.0672 SIGNAL
+event HoverMove          peak=0.414 rms=0.0537 SIGNAL
+event Focus              peak=0.401 rms=0.0571 SIGNAL
+event Select             peak=0.240 rms=0.0375 SIGNAL
+event Confirm            peak=0.224 rms=0.0530 SIGNAL
+event Back               peak=0.293 rms=0.0559 SIGNAL
+event Error              peak=0.493 rms=0.1089 SIGNAL
+event TabChange          peak=0.463 rms=0.0516 SIGNAL
+event ToggleOn           peak=0.331 rms=0.0506 SIGNAL
+event ToggleOff          peak=0.384 rms=0.0561 SIGNAL
+event SliderTick         peak=0.494 rms=0.0528 SIGNAL
+event DropdownOpen       peak=0.247 rms=0.0354 SIGNAL
+event DropdownClose      peak=0.322 rms=0.0622 SIGNAL
+event KeyBindListen      peak=0.276 rms=0.0533 SIGNAL
+event KeyBindSet         peak=0.237 rms=0.0364 SIGNAL
+event PanelOpen          peak=0.303 rms=0.0557 SIGNAL
+event PanelClose         peak=0.314 rms=0.0572 SIGNAL
+event Transition         peak=0.293 rms=0.0546 SIGNAL
+event Notification       peak=0.225 rms=0.0433 SIGNAL
+event LobbyReady         peak=0.213 rms=0.0412 SIGNAL
+event LobbyUnready       peak=0.252 rms=0.0542 SIGNAL
+event CountdownTick      peak=0.493 rms=0.0466 SIGNAL
+event CountdownGo        peak=0.400 rms=0.0852 SIGNAL
+event MatchWon           peak=0.326 rms=0.0665 SIGNAL
+event MatchLost          peak=0.564 rms=0.1179 SIGNAL
+event FloorOpened        peak=0.368 rms=0.0609 SIGNAL
+event BriefcaseTaken     peak=0.208 rms=0.0335 SIGNAL
+event BriefcaseDropped   peak=0.411 rms=0.0784 SIGNAL
+event HandsFull          peak=0.492 rms=0.0981 SIGNAL
+event HitMarker          peak=0.614 rms=0.0741 SIGNAL
+event HitMarkerHead      peak=0.617 rms=0.0592 SIGNAL
+event KillConfirm        peak=0.404 rms=0.0589 SIGNAL
 UI bus at 0 (-80 dB): peak=0.00000 OK silent
-UI slider 1.0 peak=0.318, 0.5 peak=0.159: -6.0 dB (expect about -6) OK
-SFX bus at 0 while UI plays: peak=0.318 OK UI unaffected
-rapid hover: 33132 requests in 1 s, started=17 dropped=33115, output peak=0.343 OK no clipping
+saved volume: Interface saved at 0.5 before this session, first sound peak=0.112 against 0.224 at full: -6.0 dB (expect about -6) OK restored
+UI slider 1.0 peak=0.224, 0.5 peak=0.112: -6.0 dB (expect about -6) OK
+SFX bus at 0 while UI plays: peak=0.224 OK UI unaffected
+rapid hover: 27724 requests in 1 s, started=17 dropped=27707, output peak=0.450 OK no clipping
 ```
 
 ## Item sounds (world, SFX bus)
 
 The same generator writes the pickups lane's 12 world sounds to `Assets/_Project/Audio/Items/Item_<Slot>.wav` (3D, routed to `Master/SFX` by that lane's setup; slots and timing in ITEMS.md "Item sounds"). **Unheard, like the rest.**
 
-| Slot | Length | Peak | What it is |
-|---|---|---|---|
-| `PickUp` | 150 ms | -4.4 dBFS | grab: soft noise and a knock |
-| `Drop` | 200 ms | -4.4 dBFS | dull knock and a small bounce |
-| `Throw` | 200 ms | -4.4 dBFS | whoosh, band falling |
-| `ImpactLight` | 120 ms | -1.9 dBFS | thin clack, full strength (game scales by speed) |
-| `ImpactHeavy` | 350 ms | -1.9 dBFS | low thud, 140 to 55 Hz, full strength |
-| `Arm` | 100 ms | -4.4 dBFS | two-part click |
-| `Beep` | 50 ms | -4.4 dBFS | 2.1 kHz |
-| `Explosion` | 1100 ms | -0.9 dBFS | crack, boom falling 120 to 32 Hz, rumble tail |
-| `VentLoop` | 2000 ms | -6.0 dBFS | gas hiss, seamless (crossfaded seam; set loop on the AudioSource) |
-| `VentEnd` | 400 ms | -4.4 dBFS | hiss falling away |
-| `WetFloorDown` | 320 ms | -4.4 dBFS | plastic clack and splash |
-| `Slip` | 300 ms | -4.4 dBFS | squeak 700 to 1900 Hz and a scuff |
+| Slot | Length | Peak | Perceived level | What it is |
+|---|---|---|---|---|
+| `PickUp` | 150 ms | -0.9 dBFS | -14.3 dB | grab: soft noise + knock |
+| `Drop` | 200 ms | -0.9 dBFS | -16.3 dB | dull knock + small bounce |
+| `Throw` | 200 ms | -7.3 dBFS | -14.0 dB | whoosh, band falling |
+| `ImpactLight` | 120 ms | -0.9 dBFS | -15.7 dB | thin clack, full strength |
+| `ImpactHeavy` | 350 ms | -0.9 dBFS | -16.4 dB | low thud 140 to 55 Hz, full strength |
+| `Arm` | 100 ms | -5.1 dBFS | -16.0 dB | two-part click |
+| `Beep` | 50 ms | -10.4 dBFS | -13.0 dB | 2.1 kHz, 50 ms |
+| `Explosion` | 1100 ms | -0.3 dBFS | -14.2 dB | crack + boom 120 to 32 Hz + rumble tail |
+| `VentEnd` | 400 ms | -6.0 dBFS | -14.0 dB | hiss falling away |
+| `WetFloorDown` | 320 ms | -2.3 dBFS | -14.0 dB | plastic clack + splash |
+| `Slip` | 300 ms | -10.0 dBFS | -13.0 dB | squeak 700 to 1900 Hz + scuff |
+| `VentLoop` | 2000 ms | -9.5 dBFS | -17.0 dB | gas hiss, seamless (crossfaded seam; set loop on the AudioSource) |
 
 ## Weapon sounds (world, SFX bus)
 
 The same generator writes the shooting lane's 15 sounds to `Assets/_Project/Audio/Weapons/Weapon_<Name>.wav`. Events and timing are in WEAPONS.md "Sounds the guns still need"; the shooting lane plays them from its own events (3D at the muzzle or hit point; Hurt, Death and Respawn 2D). **Unheard, like the rest.** A synthesised gunshot is the hardest of these to get right without ears: expect the two shots to need the most retuning.
 
-| Name | Length | Peak | What it is |
-|---|---|---|---|
-| `PistolShot` | 260 ms | -0.9 dBFS | crack, punch 220 to 70 Hz, 0.2 s room tail |
-| `AR15Shot` | 100 ms | -0.9 dBFS | tighter crack; 100 ms so 10 a second stays clean |
-| `DryFire` | 60 ms | -6.0 dBFS | dull click |
-| `ReloadMagOut` | 110 ms | -4.4 dBFS | slide and release click (15 % into the reload) |
-| `ReloadMagIn` | 140 ms | -3.7 dBFS | slide and solid seat (60 %) |
-| `ReloadSlide` | 130 ms | -3.7 dBFS | pistol slide: back click, forward clack (85 %) |
-| `ReloadCharge` | 210 ms | -3.7 dBFS | rifle charging handle: pull, heavy return (85 %) |
-| `ReloadFinished` | 60 ms | -8.0 dBFS | small settled click |
-| `Swap` | 220 ms | -6.0 dBFS | swish and catch |
-| `ImpactWorld` | 130 ms | -3.1 dBFS | hard tick and debris |
-| `ImpactBody` | 120 ms | -3.1 dBFS | dull thud 170 to 85 Hz |
-| `GlassShatter` | 700 ms | -1.4 dBFS | crack, 26 falling glass partials, bright wash |
-| `Hurt` | 220 ms | -4.4 dBFS | low pulse 120 to 75 Hz, 2D |
-| `Death` | 750 ms | -4.4 dBFS | tone falling E4 to C3 over a low drop, 2D |
-| `Respawn` | 520 ms | -6.0 dBFS | C5 to G5 rise with air, 2D |
+| Name | Length | Peak | Perceived level | What it is |
+|---|---|---|---|---|
+| `PistolShot` | 260 ms | -0.3 dBFS | -15.1 dB | crack + punch 220 to 70 Hz + 0.2 s room tail |
+| `AR15Shot` | 100 ms | -0.3 dBFS | -19.6 dB | tighter crack, 100 ms so 10 a second stays clean |
+| `DryFire` | 60 ms | -6.5 dBFS | -25.0 dB | dull click |
+| `ReloadMagOut` | 110 ms | -8.5 dBFS | -24.0 dB | slide + release click |
+| `ReloadMagIn` | 140 ms | -9.3 dBFS | -23.0 dB | slide + solid seat |
+| `ReloadSlide` | 130 ms | -10.0 dBFS | -23.0 dB | pistol slide: back click, forward clack |
+| `ReloadCharge` | 210 ms | -10.2 dBFS | -23.0 dB | rifle charging handle: pull, heavy return |
+| `ReloadFinished` | 60 ms | -10.3 dBFS | -27.0 dB | small settled click |
+| `Swap` | 220 ms | -18.7 dBFS | -25.0 dB | swish + catch |
+| `ImpactWorld` | 130 ms | -2.8 dBFS | -20.0 dB | hard tick + debris |
+| `ImpactBody` | 120 ms | -2.3 dBFS | -21.0 dB | dull thud 170 to 85 Hz |
+| `GlassShatter` | 700 ms | -10.7 dBFS | -17.0 dB | crack + 26 falling glass partials + bright wash |
+| `Hurt` | 220 ms | -0.9 dBFS | -19.0 dB | low pulse 120 to 75 Hz, 2D |
+| `Death` | 750 ms | -3.5 dBFS | -17.0 dB | tone falling E4 to C3 over a low drop, 2D |
+| `Respawn` | 520 ms | -11.9 dBFS | -17.0 dB | C5 to G5 rise with air, 2D |
+
+The audition page (`ArtSource/UI/review/10_sound_audition.html`) was opened in a browser from a local web server on 2026-11-14: all 58 clips loaded and a play call succeeded. It was not opened straight from disk.
 
 ## Regenerating
 
