@@ -7,8 +7,33 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: Accent_Aqua
+    second: {fileID: 2100000, guid: 408c3fc1eac2ffc4a9915267a1cc13c3, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: Accent_Cobalt
     second: {fileID: 2100000, guid: a115edd3bbf533e47a91944208313fe0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Accent_Mist
+    second: {fileID: 2100000, guid: 405880305307c2b4d88ce516e99d0a11, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Accent_Seal
+    second: {fileID: 2100000, guid: c99a7b153e6263943a39af1e3b45fb2b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Carpet_Dark
+    second: {fileID: 2100000, guid: c0035b6627b85b04c9c051a25fb69ded, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Ceiling_Grid
+    second: {fileID: 2100000, guid: b527de7b9f2fcaf4ba69b1432cef285b, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
@@ -52,6 +77,11 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: Plant_Leaf
+    second: {fileID: 2100000, guid: b82464d7d7ec6304fa6f79ccb7dc6987, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: Stair_Aluminium
     second: {fileID: 2100000, guid: 2e45a99799898114e9f61ba81ddacbe4, type: 2}
   - first:
@@ -64,6 +94,11 @@ ModelImporter:
       assembly: UnityEngine.CoreModule
       name: Wall_PaperWhite
     second: {fileID: 2100000, guid: 69b03e28be2ae824a95c75765de67aa7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Water_Wall
+    second: {fileID: 2100000, guid: 429469d6996fcd841a5f73e4de6a07e6, type: 2}
   materials:
     materialImportMode: 1
     materialName: 0

@@ -5,7 +5,8 @@
 // Reviewed  : NOT YET REVIEWED BY A HUMAN
 // Summary   : Additive Prefab Mode tool that fits two cards to STDMC's baked bind-pose skin.
 // Modified  : Claude Opus 5.5 (Claude Code), 2026-11-13 — cards 1.4x larger, lower and finer-fitted
-//             to match Alex's concept sheet ("make them bigger").
+//             to match Alex's concept sheet ("make them bigger"), then 1.25x again; closer together and
+//             tilted 7 degrees, outer corners up, to match Alex's placement reference.
 using CloseTheDeal.Editor.Greybox;
 using CloseTheDeal.Player;
 using UnityEditor;
@@ -28,19 +29,24 @@ namespace CloseTheDeal.Editor.Art
 
         // WHY: the baked skin's front is +Z. Alex's concept sheet puts large eyes at the fringe's
         // lower edge (~1.58 m on this mesh) with strands across them. Alex then asked for them
-        // higher than 1.595 m; the pupil sits ~8 mm below the card centre in the eye atlas, so
-        // this centre lands it at ~1.597 m, tucked further under the fringe.
-        private const float CentreHeight = 1.605f;
-        // WHY: ~1.8 eye widths between pupils, as in the concept; wider pushed the outer
-        // corners past the cheek silhouette (face is ~±0.06 m at eye height).
-        private const float CentreSpacing = 0.064f;
-        // WHY: 1.4x the first 52 x 40 mm pass ("make them bigger"), so the open eye is ~37 mm
-        // across, about a quarter of the face. Keep Width/Height = 52/40: CharacterEyeCard.shader
-        // corrects iris glance with that ratio.
-        private const float Width = 0.0728f;
-        private const float Height = 0.056f;
+        // higher than 1.595 m; the pupil sits 0.144 card heights (~10 mm) below the card centre
+        // in the eye atlas, so this centre lands it at ~1.597 m, tucked further under the fringe.
+        private const float CentreHeight = 1.607f;
+        // WHY: ~1.7 eye widths between pupils, measured off Alex's placement reference, so the
+        // inner corners sit just either side of the centre strand. Scaled with Width. The cards
+        // overlap in the middle, which is fine: only their transparent margins do.
+        private const float CentreSpacing = 0.0625f;
+        // WHY: 1.75x the first 52 x 40 mm pass: 1.4x ("make them bigger"), then 1.25x more after
+        // Alex saw them in game, where the fringe and distance shrink them. Keep
+        // Width/Height = 52/40: CharacterEyeCard.shader corrects iris glance with that ratio.
+        private const float Width = 0.091f;
+        private const float Height = 0.070f;
+        // WHY: Alex's placement reference draws each eye as a slash: lid and brow rise about
+        // 7 degrees toward the outer corner, so the inner corners dip toward the nose.
+        // Positive raises the outer corners; each card is mirrored.
+        private const float TiltDegrees = 7f;
         // WHY: subdivisions follow the curved cheek without raising an entire plane into the hair.
-        // WHY: at the 1.4x card size, 8 segments let the cheek bulge through between samples
+        // At the 1.4x card size, 8 segments let the cheek bulge through between samples
         // (skin patches inside the whites, broken lid lines in the close-up render).
         private const int Segments = 16;
         // WHY: 1.5 mm still let the skin through at the inner and outer corners of the larger
@@ -232,13 +238,20 @@ namespace CloseTheDeal.Editor.Art
             var uv = new Vector2[vertices.Length];
             var halves = new Vector2[vertices.Length];
             var triangles = new int[Segments * Segments * 6];
+            // WHY: the outer corner of the card at +x is +x; mirror the turn so both outer corners rise.
+            float tilt = Mathf.Sign(centreX) * TiltDegrees * Mathf.Deg2Rad;
+            float cos = Mathf.Cos(tilt), sin = Mathf.Sin(tilt);
             for (int row = 0; row < stride; row++)
             for (int column = 0; column < stride; column++)
             {
                 float u = (float)column / Segments;
                 float v = (float)row / Segments;
-                float x = (0.5f - u) * Width;
-                float y = (v - 0.5f) * Height;
+                float flatX = (0.5f - u) * Width;
+                float flatY = (v - 0.5f) * Height;
+                // WHY: the grid is turned in the face plane before fitting, rather than rotating
+                // the card's transform, so every vertex is still sampled onto the curved skin.
+                float x = flatX * cos - flatY * sin;
+                float y = flatX * sin + flatY * cos;
                 // WHY: the transparent outer edge can reach past the cheek; use the closest
                 // inner sample there so that the last strip still follows the skin's depth.
                 float depth = FrontDepth(skin, indices, centreX + x, CentreHeight + y);

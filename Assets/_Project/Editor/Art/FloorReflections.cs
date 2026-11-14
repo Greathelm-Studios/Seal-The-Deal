@@ -44,10 +44,10 @@ namespace CloseTheDeal.Editor.Art
         const string GroupName = "Reflection Probes";
         const string KitRootName = "Kit Office";
 
-        /// <summary>Main floor plus service spine, metres across x (TOWER.md footprint, KitOfficeScene).</summary>
-        const float RoomWidth = 28f;
-        /// <summary>Façade strip, three 4 m rows and the 4 m spine, metres along z (KitOfficeScene.Depth).</summary>
-        const float RoomDepth = 18f;
+        /// <summary>Floor plate width, metres across x (KitOfficeScene's labyrinth since 2026-11-13; was 28).</summary>
+        const float RoomWidth = 32f;
+        /// <summary>Floor plate depth, metres along z (KitOfficeScene.Depth; was 18).</summary>
+        const float RoomDepth = 24f;
         /// <summary>Floor to ceiling, metres (KitOfficeScene.ClearHeight).</summary>
         const float ClearHeight = 4.3f;
 

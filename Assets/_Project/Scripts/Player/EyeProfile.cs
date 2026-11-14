@@ -4,6 +4,7 @@
 // Prompt    : Give the STDMC player character animated 2D eye cards.
 // Reviewed  : NOT YET REVIEWED BY A HUMAN
 // Summary   : Designer-owned timing and expression thresholds for the eye cards.
+// Modified  : Claude Opus 5.5 (Claude Code), 2026-11-13 — idle look-around tuning.
 using UnityEngine;
 
 namespace CloseTheDeal.Player
@@ -32,6 +33,17 @@ namespace CloseTheDeal.Player
         [Min(0f)]
         [SerializeField] private float _glanceSpeed = 1.6f;
 
+        [Header("Look around")]
+        [Tooltip("Shortest (X) and longest (Y) wait between idle glances, in seconds. Raise either for a calmer character; the eyes rest centred in between. Negative waits count as zero.")]
+        [SerializeField] private Vector2 _lookAroundInterval = new(3f, 7f);
+
+        [Tooltip("Shortest (X) and longest (Y) time an idle glance is held before the eyes return to centre, in seconds.")]
+        [SerializeField] private Vector2 _lookAroundHold = new(0.4f, 1.2f);
+
+        [Tooltip("How far an idle glance reaches, as a share of the glance range above. 0 turns idle glances off; 1 uses the full range. Running and turning still take priority.")]
+        [Range(0f, 1f)]
+        [SerializeField] private float _lookAroundReach = 0.6f;
+
         [Header("Expressions")]
         [Tooltip("How strong a stagger must be to make the eyes wince, from 0 (the slightest stagger) to 1 (the strongest). Knockback always makes the eyes wince.")]
         [Range(0f, 1f)]
@@ -58,6 +70,15 @@ namespace CloseTheDeal.Player
         /// <summary>Pupil speed in card widths per second.</summary>
         public float GlanceSpeed => _glanceSpeed;
 
+        /// <summary>Seconds between idle glances, shortest to longest.</summary>
+        public Vector2 LookAroundInterval => Ascending(_lookAroundInterval);
+
+        /// <summary>Seconds an idle glance is held, shortest to longest.</summary>
+        public Vector2 LookAroundHold => Ascending(_lookAroundHold);
+
+        /// <summary>Idle glance reach as a 0–1 share of <see cref="GlanceRange"/>.</summary>
+        public float LookAroundReach => _lookAroundReach;
+
         /// <summary>Minimum stagger weight for the wince.</summary>
         public float WinceThreshold => _winceThreshold;
 
@@ -66,5 +87,9 @@ namespace CloseTheDeal.Player
 
         /// <summary>Minimum weight between a walk and full sprint for the focused eyes.</summary>
         public float FocusThreshold => _focusThreshold;
+
+        /// <summary>A non-negative range with its smaller value first.</summary>
+        private static Vector2 Ascending(Vector2 range) =>
+            new(Mathf.Max(0f, Mathf.Min(range.x, range.y)), Mathf.Max(0f, Mathf.Max(range.x, range.y)));
     }
 }
