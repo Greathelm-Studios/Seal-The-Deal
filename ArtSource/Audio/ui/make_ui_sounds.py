@@ -932,9 +932,12 @@ WALK = [(0.0, "UI", "TitleAppear", 0, "The title appears; the ambient bed fades 
         (12.5, "UI", "Back", 0, "Esc: back to the title"),
         (13.4, "UI", "Focus", 0, "Arrow up to Host game"), (13.9, "UI", "Select", 0, "Press Host game"),
         (14.05, "UI", "Confirm", 0, "Release"),
-        (14.1, "UI", "TransitionFrameZoom", 0, "The game starts: the frame zooms in and the bed fades out"),
-        (16.0, "UI", "CountdownTick", 0, "3"), (17.0, "UI", "CountdownTick", 0, "2"), (18.0, "UI", "CountdownTick", 0, "1"),
-        (19.0, "UI", "CountdownGo", 0, "Go")]
+        (15.0, "UI", "TransitionFrameZoom", 0, "You arrive in reception: the frame zooms in; the bed carries on"),
+        (17.0, "UI", "Focus", 0, "Look at the sign-in stand"), (17.6, "UI", "Select", 0, "Press F"),
+        (17.6, "UI", "LobbyReady", 0, "You are ready"),
+        (19.5, "UI", "Confirm", 0, "The host starts the run: the bed fades out"),
+        (21.0, "UI", "CountdownTick", 0, "3"), (22.0, "UI", "CountdownTick", 0, "2"), (23.0, "UI", "CountdownTick", 0, "1"),
+        (24.0, "UI", "CountdownGo", 0, "Go")]
 
 
 def write_audition():
@@ -980,7 +983,7 @@ button:hover{{background:#244FB9;color:#F3F4F4}}p{{max-width:70ch}}#now{{min-hei
 <p><b>Nobody has listened to these yet</b>: they were synthesised and measured only. Start with the walk: it plays the menu
 the way a player meets it in their first minute, with the ambient bed under the title. Then play any group on its own.
 Note any that are harsh, too long, too alike, or wrong for what the player just did.</p>
-<p><button id="walk">Walk through the menu (20 s)</button> <button id="stop">Stop</button></p><p id="now"></p>
+<p><button id="walk">Walk through the menu (25 s)</button> <button id="stop">Stop</button></p><p id="now"></p>
 {body}
 <script>
 const WALK=[{walk}];
@@ -996,7 +999,7 @@ document.getElementById('stop').onclick=stopAll;
 document.getElementById('walk').onclick=()=>{{stopAll();bedAudio=new Audio(BED);bedAudio.loop=true;bedAudio.volume=0;bedAudio.play();fade(bedAudio,0.3,1500);
  WALK.forEach(([t,path,semi,note])=>timers.push(setTimeout(()=>{{clip(path,semi);if(note)document.getElementById('now').textContent=t.toFixed(1)+' s · '+note;
   if(note.indexOf('bed fades out')>=0&&bedAudio)fade(bedAudio,0,1500);}},t*1000)));
- timers.push(setTimeout(()=>{{document.getElementById('now').textContent='End of the walk.';if(bedAudio){{bedAudio.pause();bedAudio=null;}}}},21000));}};
+ timers.push(setTimeout(()=>{{document.getElementById('now').textContent='End of the walk.';if(bedAudio){{bedAudio.pause();bedAudio=null;}}}},25500));}};
 </script></body></html>
 """
     with open(page, "w", encoding="utf-8") as fh:
