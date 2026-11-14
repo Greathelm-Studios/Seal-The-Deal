@@ -352,6 +352,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Combat.WeaponView
   _thirdPersonAnchor: {fileID: 7830627154488973553}
+  _drawHeldGun: 1
   _dipDistance: 0.3
   _dipSeconds: 0.18
   _maxKick: 14
