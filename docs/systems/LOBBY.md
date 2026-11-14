@@ -79,13 +79,14 @@ What a screen reads, and when it changes. UI reads this state and sends requests
 | `OnStartNeedsConfirm` | `StartBlock` | The host | The host asked to start short-handed without confirming (the desk confirms with a second hold) |
 | `ReceptionDesk.OnConfirmArmed` | `StartBlock` | The host machine | The first hold armed a short-handed confirm (6 s window) |
 | `OnRunStarting` | none | Every machine | The host started the run |
+| `OnKicked` | string name | Every machine | The host removed a player, just before they leave |
 | `Secretary.LineSpoken` | `SecretaryMoment, string, float seconds` | Every machine | The secretary speaks a line (arrival, ready, not ready, firm chosen, firm refused, start blocked, short-handed, start) |
 | `LobbyInteractor.OnTargetChanged` | `LobbyInteractable` | Local | The player looks at, or away from, a desk, stand or mirror |
 | `LobbyInteractor.OnUsed` | `LobbyInteractable` | Local | The interact button went down on a target |
 
 ### Requests (send)
 
-`RequestReady(bool)`, `RequestFirm(int)`, `RequestFitting(bool)`, `RequestStart(bool confirmed)`: each is one small RPC the host judges; a refusal comes back as the events above.
+`RequestReady(bool)`, `RequestFirm(int)`, `RequestFitting(bool)`, `RequestStart(bool confirmed)`, `RequestKick(int clientId)` (host only): each is one small RPC the host judges; a refusal comes back as the events above.
 
 ### Guidance wording (on the ready board)
 
@@ -101,6 +102,18 @@ What a screen reads, and when it changes. UI reads this state and sends requests
 ### Suggested sound and motion hooks
 
 Ready / take back: `OnReadyChanged` (UI sound `LobbyReady` / `LobbyUnready`). Sign-in: `OnFirmChosen` (`Confirm`), `OnFirmRefused` (`Error`). Refused start: `OnStartBlocked` (`Error`). Confirm armed: `OnConfirmArmed` (`Notification`). Start: `OnRunStarting` (`CountdownGo`). Target change: `OnTargetChanged` (`Focus`). Use: `OnUsed` (`Select`).
+
+
+## Host controls
+
+The host presses **Tab** (pad: **View**) in reception to open **Players**, a kit screen listing everyone else with their firm. Choosing a player asks **Remove {name}?** (kit confirm dialog, **Keep them** focused first); **Remove** asks the roster, which checks again on the host that the asker is the host, that the player is not the host and is in the lobby, then disconnects them. Everyone hears the removal (`OnKicked`), the roster drops them as with any leave, and their game shows its usual lost-connection line.
+
+- **Proposal / known gaps:** a removed player can join again (a ban needs a lasting identity such as the Steam id, which is the netcode side's); the removed player's message is SteamLobby's generic "lost the connection" (a "removed by the host" line needs that script); no lock-the-lobby or move-between-firms yet.
+- The list closes on Tab, Backspace / B, Close, the game menu opening, or the host leaving.
+
+## Look and sound
+
+The board, prompt and subtitles are UI kit **Plates** with the kit's type roles and colours (`UiTokens`), fading on the kit's panel timings. The fitting room and the host's player list are kit **screens** on the lobby canvas's own `UiScreenStack`, with the kit's slide-and-reveal, focus frame (shown after a key or pad press), and the kit controls' own sounds. Reception moments that are not kit controls sound through `LobbySounds`: target change `Focus`, use `Select`, own ready / take back `LobbyReady` / `LobbyUnready`, sign-in `Confirm`, refusals `Error`, short-handed confirm `Notification`, start `Confirm`, fitting room in `Transition`, out `Confirm` (kept) or `Back` (put back).
 
 ## Hooks for other lanes
 
