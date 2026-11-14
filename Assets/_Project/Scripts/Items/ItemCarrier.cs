@@ -466,12 +466,16 @@ namespace CloseTheDeal.Items
             if ((nearest - eye).sqrMagnitude > reach * reach)
                 return false;
 
-            // Line of sight to the item's middle, not to the nearest corner of its box: the first
-            // solid thing on the way must be the item itself. Another loose prop in front, or a thin
-            // wall that a leaning prop's box pokes through, is hit first and the grab is refused.
+            // Seen if a line from the eye to its middle or to its nearest point reaches the item
+            // before anything else: another prop half over it still leaves it takeable, but a wall
+            // between always blocks (a leaning prop's box poking through a thin wall is not enough,
+            // since a line that ends short of the item without touching it does not count).
             Vector3 middle = pickup.Body.worldCenterOfMass;
-            return !Physics.Linecast(eye, middle, out RaycastHit first, ItemLayers.LookMask, QueryTriggerInteraction.Ignore)
-                || first.collider.GetComponentInParent<Pickup>() == pickup;
+            if (!Physics.Linecast(eye, middle, out RaycastHit first, ItemLayers.LookMask, QueryTriggerInteraction.Ignore))
+                return true;
+            return first.collider.GetComponentInParent<Pickup>() == pickup
+                || (Physics.Linecast(eye, nearest + (middle - nearest) * 0.1f, out RaycastHit edge, ItemLayers.LookMask, QueryTriggerInteraction.Ignore)
+                    && edge.collider.GetComponentInParent<Pickup>() == pickup);
         }
 
         /// <summary>An item already in the hands, or the hands shared with something else that holds them.</summary>

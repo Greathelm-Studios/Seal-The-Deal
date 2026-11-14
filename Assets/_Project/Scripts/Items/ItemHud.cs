@@ -68,8 +68,29 @@ namespace CloseTheDeal.Items
         /// <summary>What the hands slot names; empty while the hands are empty.</summary>
         public string HandsReading => _handsFade.To > 0.5f ? _handsName.text : "";
 
+        bool Wired()
+        {
+            Object[] parts = { _tokens, _prompt, _promptGroup, _promptPlate, _promptEdge, _promptKeyCap, _promptKey, _promptLabel, _hands, _handsGroup, _handsName, _handsLoadFill, _useHint, _useLabel };
+            foreach (Object part in parts)
+            {
+                if (part == null)
+                    return false;
+            }
+
+            return true;
+        }
+
         void Awake()
         {
+            // A scene built by an older setup can hold this component with parts unset: say so
+            // once and stay off, rather than throwing every frame.
+            if (!Wired())
+            {
+                Debug.LogError($"[Items] The item HUD on {name} is missing parts (an older scene). Run Close the Deal > Lanes > Add Item HUD To Open Scene.", this);
+                enabled = false;
+                return;
+            }
+
             _promptHome = _prompt.anchoredPosition;
             _handsHome = _hands.anchoredPosition;
             _loadWidth = ((RectTransform)_handsLoadFill.parent).rect.width;
