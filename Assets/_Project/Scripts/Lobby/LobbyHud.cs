@@ -56,8 +56,20 @@ namespace CloseTheDeal.Lobby
         string _readyHex;
         string _mutedHex;
 
+        const string RebuildHint = "Run Close the Deal > Lanes > Set Up Lobby (or Set Up Integration) to rebuild it.";
+
         void Awake()
         {
+            // A scene built before the UI kit revamp lacks these. One clear error and stand down:
+            // never throw per frame, never get in the way of a player spawning.
+            if (_tokens == null || _board == null || _prompt == null || _subtitle == null || _promptKey == null
+                || _promptText == null || _holdFill == null || _status == null || _subtitleText == null)
+            {
+                Debug.LogError($"[Lobby] {name}: the reception HUD is from an older build and is missing its UI kit wiring, so the ready board, prompt and subtitles are off. {RebuildHint}", this);
+                enabled = false;
+                return;
+            }
+
             _readyHex = ColorUtility.ToHtmlStringRGB(_readyColour);
             _mutedHex = ColorUtility.ToHtmlStringRGB(_mutedColour);
             _board.alpha = 0f;

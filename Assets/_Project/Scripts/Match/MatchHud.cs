@@ -64,6 +64,8 @@ namespace CloseTheDeal.MatchMode
         [SerializeField] RectTransform _marker;
         [SerializeField] Image _markerFill;
         [SerializeField] Image _markerEdgeImage;
+        [Tooltip("The UI kit's edge marker (lane 5): over the case on screen, pinned to the screen edge with a chevron and the distance when it is off screen or behind you; a diamond while your firm holds it, a triangle for the rival, a square when loose. Empty = this HUD's own square, on screen only.")]
+        [SerializeField] UiEdgeMarker _edgeMarker;
 
         [Header("Timing")]
         [Tooltip("Seconds a line such as 'The roof only counts with the briefcase' stays up.")]
@@ -107,7 +109,7 @@ namespace CloseTheDeal.MatchMode
         {
             // An empty slot means the scene's HUD predates this script: say so once and stand down.
             // Switching off from here runs OnDisable at once, before anything was subscribed.
-            _wired = MatchWiring.Complete(this, nameof(_clockWarning), nameof(_markerEdgeImage), nameof(_openSprite), nameof(_shutSprite));
+            _wired = MatchWiring.Complete(this, nameof(_clockWarning), nameof(_markerEdgeImage), nameof(_edgeMarker), nameof(_openSprite), nameof(_shutSprite));
             if (!_wired)
                 return;
 
@@ -411,6 +413,8 @@ namespace CloseTheDeal.MatchMode
             FirmMember local = FirmMember.Local;
             if (local != null)
                 Say(byFirm == local.Firm ? "Your firm took the briefcase from the rival." : "The rival firm took the briefcase from you.", UiStatusKind.Info);
+            if (_edgeMarker != null)
+                _edgeMarker.Flash();
         }
 
         void OnReturning()
@@ -492,6 +496,11 @@ namespace CloseTheDeal.MatchMode
             Briefcase briefcase = Briefcase.Current;
             Camera view = Camera.main;
             bool show = MarkerWanted(briefcase, view);
+            if (_edgeMarker != null)
+            {
+                TrackOnEdgeMarker(show, briefcase, view);
+                show = false; // the kit marker does both the on-screen mark and the edge pin
+            }
             if (_marker.gameObject.activeSelf != show)
                 _marker.gameObject.SetActive(show);
             if (show)
@@ -504,6 +513,31 @@ namespace CloseTheDeal.MatchMode
                 return false;
             FirmMember local = FirmMember.Local;
             return _match.CaseStatus.State != BriefcaseState.Returning && !(local != null && _match.IsCarrying(local));
+        }
+
+        void TrackOnEdgeMarker(bool show, Briefcase briefcase, Camera view)
+        {
+            // Under the HUD root, which is off until the match is live: the marker hasn't woken before then.
+            if (!_edgeMarker.isActiveAndEnabled)
+                return;
+            if (!show)
+            {
+                if (_edgeMarker.Visible)
+                    _edgeMarker.Hide();
+                return;
+            }
+
+            _edgeMarker.Kind = MarkKind(_match.CaseStatus);
+            _edgeMarker.Track(view, briefcase.Centre + Vector3.up * 0.6f);
+        }
+
+        /// <summary>Whose the case is to this player: shape and colour on the kit marker.</summary>
+        static UiMarkKind MarkKind(BriefcaseStatus status)
+        {
+            FirmMember local = FirmMember.Local;
+            if (status.State != BriefcaseState.Carried || local == null)
+                return UiMarkKind.Loose;
+            return status.CarrierFirm == local.Firm ? UiMarkKind.Ours : UiMarkKind.Rival;
         }
 
         /// <summary>

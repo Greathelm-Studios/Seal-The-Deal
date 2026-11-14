@@ -111,6 +111,9 @@ namespace CloseTheDeal.Editor.UI
             InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
             InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
             _keyboard = InputSystem.AddDevice<Keyboard>("UI capture keyboard");
+            // These runs step the kit's motion by hand, which lane 8's transitions (real frames) can't follow; the
+            // transitions run (wide-transitions) switches them back on for its own clip.
+            UiScreenStack.UseTransitions = false;
             UiSound.Played += e => { Sounds.Add($"{Time.frameCount} {e}"); Debug.Log("[UiSound] " + e); };
             Steps.Push(_mode.StartsWith("wide") ? WideScript(_mode) : _mode == "persist-write" ? PersistWrite() : _mode == "persist-read" ? PersistRead() : _mode == "menu-rule" ? MenuRuleOnly() : CaptureScript());
         }

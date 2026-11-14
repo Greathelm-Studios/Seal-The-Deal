@@ -13,7 +13,7 @@ namespace CloseTheDeal.UI
     /// into BackdropSlot (SetLiveBackdrop hides the fallback). Text changes only on lobby events.
     /// </summary>
     [AddComponentMenu("Close the Deal/UI/Title Screen")]
-    public sealed class TitleScreen : UiScreen
+    public sealed class TitleScreen : UiScreen, IBackdropScreen
     {
         [Header("Backdrop")]
         [Tooltip("Where the title lane's live sky goes. Anything placed here draws behind the window frame's mullions.")]
@@ -104,6 +104,10 @@ namespace CloseTheDeal.UI
             {
                 _lobby.OnStatus += OnStatus;
                 _lobby.OnChanged += Refresh;
+                // Status changes while the title was off (in a game, leaving it) were missed: take the lobby's current one.
+                if (!string.IsNullOrEmpty(_lobby.StatusText))
+                    _lastStatus = _lobby.StatusText;
+                _refusalShown = false;
             }
 
             _host.Clicked += OnHost;

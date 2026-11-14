@@ -90,14 +90,14 @@ Which camera feeds the glass: a Game camera that draws to the screen (not overla
 - [UiGlass.cs](../../Assets/_Project/UI/Glass/Scripts/UiGlass.cs): the component. Put it on a uGUI `Image` (white, no sprite needed); pick a preset; optional mullions (0–4) and a cyan bottom edge-light. It writes the pane's pixel size into uv1 (it turns on TexCoord1 on the canvas) and counts live panes for the feature.
 - [UiGlassBackdrop.cs](../../Assets/_Project/UI/Glass/Scripts/UiGlassBackdrop.cs): panes over a UI backdrop blur that image (quarter-size blur of its texture, only while shown). Added by itself at run time to every kit `TitleScreen.BackdropSlot`, where lane 8's live sky goes; no other lane's file is edited. Capture: [10_glass_window_glass_backdrop.png](../../ArtSource/UI/review/10_glass_window_glass_backdrop.png).
 - [UiGlassSettings.cs](../../Assets/_Project/UI/Glass/Scripts/UiGlassSettings.cs): the quality setting `Auto / Blur / NoBlur`, saved in PlayerPrefs (`ctd.ui.glassQuality`). The settings screen (lane 5) sets `UiGlassSettings.Current`.
-- [UiGlassSetup.cs](../../Assets/_Project/UI/Glass/Editor/UiGlassSetup.cs): **Close the Deal > UI > Build Glass Materials** (re-run safe), **Close the Deal > UI > Wire Kit Glass Pane** (puts `GlassFrosted.mat` in lane 5's `UiGlassPane` slot on `Assets/_Project/UI/Kit/GlassPane.prefab` and adds `UiGlass` with Owns Material off; agreed with lane 5, it takes that prefab over from lane 5's generator), and `AddFeature(renderer path)`.
+- [UiGlassSetup.cs](../../Assets/_Project/UI/Glass/Editor/UiGlassSetup.cs): **Close the Deal > UI > Build Glass Materials** (re-run safe), **Close the Deal > UI > Wire Kit Glass Pane** (puts `GlassFrosted.mat` in lane 5's `UiGlassPane` slot on `Assets/_Project/UI/Kit/GlassPane.prefab` and `GlassHudChip.mat` on `Assets/_Project/UI/Kit/Plate.prefab`, each with a `UiGlass`, Owns Material off; agreed with lane 5 (#469, #542), it takes those prefabs over from lane 5's generator), and `AddFeature(renderer path)`.
 - [UiGlassCapture.cs](../../Assets/_Project/UI/Glass/Editor/UiGlassCapture.cs): the captures, the measurement and the timing, from the command line.
 
 ## Rules for UI built on it
 
-- Lane 5's kit panes are wired: every pane built from `GlassPane.prefab` is glass, on its overlay canvas too. On the title and settings screens today the panes sit on white (the sill, the paper grid), so there is little to see through; suggested to lane 5 (#498) to let a pane overlap the sky.
+- Lane 5's kit panes are wired: every pane built from `GlassPane.prefab` (the confirm dialog) is Frosted glass, and every HUD plate built from `Plate.prefab` (lane 4's clock, briefcase tracker, ladder, banners and notice; lane 3's interact prompt and hands slot; lane 4's menu match section) is HUD chip glass. `Lane_Integration` holds them as linked prefab instances, so the scene needs no edit. On the title and settings screens today the panes sit on white (the sill, the paper grid), so there is little to see through; suggested to lane 5 (#498) to let a pane overlap the sky.
 
-- Screen Space - Camera and Screen Space - Overlay canvases both get the blur (the texture outlives the camera's render graph). **The overlay path is not captured**: headless captures render camera-space canvases only, so it is checked by construction, not by a picture.
+- Screen Space - Camera and Screen Space - Overlay canvases both get the blur (the texture outlives the camera's render graph). **The overlay path is not captured**: an overlay canvas never reaches a camera texture, and a batch-mode editor has no screen (`ScreenCapture` returns blank). Only a person playing, or a built player, can see it.
 - Text never sits on Clear. Text on Frosted or HUD chip is Deep Navy `#111B38`. Light text on glass is not a used pair.
 - Keep a glass canvas's plane distance in front of world geometry (the capture uses 0.08 m with a 0.05 m near clip), or a close wall cuts through the pane.
 
@@ -106,4 +106,5 @@ Which camera feeds the glass: a Game camera that draws to the screen (not overla
 - The blur sees the opaque scene and sky only, not transparent world objects (window glass sheen, particles) behind the pane.
 - PC renderer only. `Mobile_Renderer.asset` has no feature, so mobile quality always gets the fallback.
 - The cyan edge-light and mullions use a per-pane material copy (no batching for those panes).
-- Not seen in Play Mode, on a client, at 1280 × 720 or at 21:9: the captures are editor renders of the scene with a test canvas.
+- Not seen in Play Mode, on a client, at 1280 × 720 or at 21:9: the captures are editor renders of the scene with a test canvas. Adam is checking it by playing (no more headless runs, his call 2026-11-14).
+- The title and settings screens use neither kit pane today (white sill and paper): no glass there until lane 5 puts a pane over the sky.

@@ -49,6 +49,9 @@ namespace CloseTheDeal.Player
 
         void AwakeFeedback()
         {
+            if (_profile != null && _profile.Sounds != null)
+                gameObject.AddComponent<MovementSounds>().Init(this, _profile.Sounds);
+
             _ownRenderers = _cameraTarget.GetComponentsInChildren<Renderer>(true);
             _authoredShadows = new UnityEngine.Rendering.ShadowCastingMode[_ownRenderers.Length];
             for (int i = 0; i < _ownRenderers.Length; i++)

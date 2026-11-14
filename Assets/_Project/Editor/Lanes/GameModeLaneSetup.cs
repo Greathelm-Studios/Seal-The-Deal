@@ -521,6 +521,7 @@ namespace CloseTheDeal.Editor.Lanes
                 if (edge != null)
                     FillIfEmpty(existing, "_markerEdgeImage", edge.GetComponent<UnityEngine.UI.Image>());
                 AddClockWarningIfMissing(existing, hud);
+                AddEdgeMarkerIfMissing(existing, hud);
                 return;
             }
 
@@ -553,6 +554,7 @@ namespace CloseTheDeal.Editor.Lanes
             Wire("_clockCaption", UiKitAssets.Label(clock, "Caption", 0f, 8f, 240f, 18f, "QUARTER", t.Caption, t.Ink2, TextAlignmentOptions.Center));
             Wire("_clockText", UiKitAssets.Label(clock, "Time", 0f, 26f, 240f, 52f, "15:00", t.Heading, t.Navy, TextAlignmentOptions.Center));
             Wire("_clockWarning", ClockWarning(kit, clock));
+            Wire("_edgeMarker", EdgeMarker(root));
 
             // Briefcase tracker: top right, a bar in the holder's colour down its left edge.
             RectTransform tracker = PlateAt(kit, root, "Tracker", new Vector2(1f, 1f), new Vector2(-24f, -20f), new Vector2(460f, 88f));
@@ -735,6 +737,37 @@ namespace CloseTheDeal.Editor.Lanes
             UnityEngine.UI.Image image = UiKitAssets.Img(fill, kit.White, kit.Tokens.Amber);
             image.enabled = false;
             return image;
+        }
+
+        const string EdgeMarkerPrefabPath = "Assets/_Project/UI/Kit/EdgeMarker.prefab";
+
+        /// <summary>The kit's edge marker for the briefcase, stretched over the whole HUD (UI_KIT.md "Edge marker"). Null when the kit has none yet.</summary>
+        static UiEdgeMarker EdgeMarker(Transform parent)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(EdgeMarkerPrefabPath);
+            if (prefab == null)
+                return null;
+
+            UiEdgeMarker marker = UiKitAssets.Instance<UiEdgeMarker>(prefab, parent, "BriefcaseEdgeMarker");
+            UiKitAssets.Stretch((RectTransform)marker.transform);
+            return marker;
+        }
+
+        /// <summary>A kit HUD from before the kit had an edge marker: add only that.</summary>
+        static void AddEdgeMarkerIfMissing(MatchHud hud, Transform hudRoot)
+        {
+            var serialized = new SerializedObject(hud);
+            if (serialized.FindProperty("_edgeMarker").objectReferenceValue != null)
+                return;
+
+            Transform root = hudRoot.Find(HudName);
+            if (root == null)
+                return;
+
+            Transform stale = root.Find("BriefcaseEdgeMarker");
+            UiEdgeMarker marker = stale != null ? stale.GetComponent<UiEdgeMarker>() : EdgeMarker(root);
+            if (marker != null)
+                FillIfEmpty(hud, "_edgeMarker", marker);
         }
 
         /// <summary>A kit HUD from before the cap warning moved onto an amber plate: add only that fill.</summary>

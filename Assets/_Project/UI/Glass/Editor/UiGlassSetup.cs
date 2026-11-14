@@ -100,30 +100,43 @@ namespace CloseTheDeal.Editor.UI
 
         const string KitPane = "Assets/_Project/UI/Kit/GlassPane.prefab";
 
-        /// <summary>Wires Lane 5's kit pane to the glass: GlassFrosted.mat in UiGlassPane's glass slot, and a UiGlass
-        /// (Owns Material off) on the pane's surface Image so the shader gets its size and the blur runs.
-        /// Agreed with lane 5 (AgentHub #469): this takes the prefab over from its generator.</summary>
+        /// <summary>Wires lane 5's two kit surfaces to the glass: GlassPane.prefab (menus, confirm) to GlassFrosted.mat
+        /// and Plate.prefab (every HUD plate) to GlassHudChip.mat. Each gets the material in its UiGlassPane slot and on
+        /// its surface Image, and a UiGlass (Owns Material off) so the shader gets its size and the blur runs.
+        /// Agreed with lane 5 (AgentHub #469, #542): this takes both prefabs over from lane 5's generator.</summary>
+        const string KitPlate = "Assets/_Project/UI/Kit/Plate.prefab";
+
         [MenuItem("Close the Deal/UI/Wire Kit Glass Pane")]
         public static void WireKitPane()
         {
-            var root = PrefabUtility.LoadPrefabContents(KitPane);
+            Wire(KitPane, "GlassFrosted.mat", UiGlass.Preset.Frosted);   // menus, settings, confirm
+            Wire(KitPlate, "GlassHudChip.mat", UiGlass.Preset.HudChip);  // every HUD plate (lanes 3 and 4 build from it)
+        }
+
+        static void Wire(string prefabPath, string materialName, UiGlass.Preset preset)
+        {
+            var root = PrefabUtility.LoadPrefabContents(prefabPath);
             try
             {
                 var pane = root.GetComponentInChildren<UiGlassPane>(true);
-                if (pane == null) { Debug.LogError("UiGlassSetup: no UiGlassPane in " + KitPane); return; }
+                if (pane == null) { Debug.LogError("UiGlassSetup: no UiGlassPane in " + prefabPath); return; }
                 var so = new SerializedObject(pane);
                 var surface = so.FindProperty("_pane").objectReferenceValue as UnityEngine.UI.Image;
-                so.FindProperty("_glassMaterial").objectReferenceValue =
-                    AssetDatabase.LoadAssetAtPath<Material>(ResDir + "/GlassFrosted.mat");
+                var mat = AssetDatabase.LoadAssetAtPath<Material>(ResDir + "/" + materialName);
+                so.FindProperty("_glassMaterial").objectReferenceValue = mat;
                 so.ApplyModifiedPropertiesWithoutUndo();
                 if (surface == null) { Debug.LogError("UiGlassSetup: UiGlassPane has no surface Image"); return; }
                 var glass = surface.GetComponent<UiGlass>() ?? surface.gameObject.AddComponent<UiGlass>();
                 var gso = new SerializedObject(glass);
                 gso.FindProperty("ownsMaterial").boolValue = false;
-                gso.FindProperty("preset").enumValueIndex = (int)UiGlass.Preset.Frosted;
+                gso.FindProperty("preset").enumValueIndex = (int)preset;
                 gso.ApplyModifiedPropertiesWithoutUndo();
-                PrefabUtility.SaveAsPrefabAsset(root, KitPane);
-                Debug.Log("UiGlassSetup: wired " + KitPane + " (surface " + surface.name + ")");
+                // Serialize what UiGlassPane applies at run time, so edit mode and the Scene view show it too
+                // (adding UiGlass ran its own Apply with the default preset before Owns Material was turned off).
+                surface.material = mat;
+                surface.color = Color.white;
+                PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+                Debug.Log("UiGlassSetup: wired " + prefabPath + " to " + materialName + " (surface " + surface.name + ")");
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }
         }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace CloseTheDeal.UI.Title
@@ -188,13 +189,39 @@ namespace CloseTheDeal.UI.Title
             _fade.enabled = false;
         }
 
-        public void Run(UiTransitionKind kind, Action onCovered, Action onDone) => StartCoroutine(Play(kind, onCovered, onDone));
+        int _pending;
+        EventSystem _blocked;
+        bool _blockedWas;
+
+        public void Run(UiTransitionKind kind, Action onCovered, Action onDone)
+        {
+            // Keys and the pad: the overlay already eats clicks, but Submit and the arrows go to the selected button
+            // through the EventSystem, so a second A press on Host would fire again under the cover. Hold them off
+            // from the call until the last queued transition is gone.
+            if (_pending++ == 0 && EventSystem.current != null)
+            {
+                _blocked = EventSystem.current;
+                _blockedWas = _blocked.sendNavigationEvents;
+                _blocked.sendNavigationEvents = false;
+            }
+            StartCoroutine(Play(kind, onCovered, onDone));
+        }
+
+        void Unblock()
+        {
+            if (_blocked != null)
+                _blocked.sendNavigationEvents = _blockedWas;
+            _blocked = null;
+        }
+
+        void OnDestroy() => Unblock();
 
         IEnumerator Play(UiTransitionKind kind, Action onCovered, Action onDone)
         {
             while (Playing)
                 yield return null;
             Playing = true;
+            UiSound.Play(SoundFor(kind));   // each kind has its own sound; FrameZoom's is the game-start sting
             UiTransition.Timing(kind, out float cover, out float reveal);
             // WHY a capped step and t = 0 on the first frame: the frame a press lands on is often a slow one (a
             // screen being built), and its whole delta would skip the cover phase: the screen change would pop.
@@ -212,7 +239,20 @@ namespace CloseTheDeal.UI.Title
             }
             HideAll();
             Playing = false;
+            if (--_pending == 0)
+                Unblock();
             onDone?.Invoke();
+        }
+
+        static UiSoundEvent SoundFor(UiTransitionKind kind)
+        {
+            switch (kind)
+            {
+                case UiTransitionKind.CloudWipe: return UiSoundEvent.TransitionCloudWipe;
+                case UiTransitionKind.PaneSlide: return UiSoundEvent.TransitionPaneSlide;
+                case UiTransitionKind.FrameZoom: return UiSoundEvent.TransitionFrameZoom;
+                default: return UiSoundEvent.TransitionFade;
+            }
         }
 
         /// <summary>Seconds to advance this frame: real time, but never more than a 30 fps frame.</summary>

@@ -47,8 +47,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Customisation.OutfitView
   _catalog: {fileID: 11400000, guid: 854545d5dee284086b5495c7949da976, type: 2}
   _bodies:
-  - {fileID: 3353914303983368958}
-  - {fileID: 221282730380386448}
+  - {fileID: 1358447645221580323}
+  - {fileID: 4968286438348689302}
   - {fileID: 8076706961032971129}
   - {fileID: 1010548392025909868}
   - {fileID: 3701471824071324077}
@@ -100,11 +100,15 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 8681212111058009404}
     m_Modifications:
+    - target: {fileID: 2154656316083215443, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
+      propertyPath: m_CastShadows
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4951589600900328821, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
       propertyPath: m_Name
       value: STDMC_Toon
       objectReference: {fileID: 0}
-    - target: {fileID: 6486909461156557653, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
+    - target: {fileID: 5462349982243683814, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
       propertyPath: m_CastShadows
       value: 1
       objectReference: {fileID: 0}
@@ -160,20 +164,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 8619742333054527803, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
-      propertyPath: m_CastShadows
-      value: 1
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
---- !u!23 &221282730380386448 stripped
-MeshRenderer:
-  m_CorrespondingSourceObject: {fileID: 6486909461156557653, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
-  m_PrefabInstance: {fileID: 6418762728891683781}
-  m_PrefabAsset: {fileID: 0}
 --- !u!137 &981295619357052597 stripped
 SkinnedMeshRenderer:
   m_CorrespondingSourceObject: {fileID: 6091757978169875824, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
@@ -184,9 +179,9 @@ SkinnedMeshRenderer:
   m_CorrespondingSourceObject: {fileID: 6274137537289189801, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
   m_PrefabInstance: {fileID: 6418762728891683781}
   m_PrefabAsset: {fileID: 0}
---- !u!23 &3353914303983368958 stripped
+--- !u!23 &1358447645221580323 stripped
 MeshRenderer:
-  m_CorrespondingSourceObject: {fileID: 8619742333054527803, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
+  m_CorrespondingSourceObject: {fileID: 5462349982243683814, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
   m_PrefabInstance: {fileID: 6418762728891683781}
   m_PrefabAsset: {fileID: 0}
 --- !u!137 &3701471824071324077 stripped
@@ -202,6 +197,11 @@ Transform:
 --- !u!137 &4701949807657317033 stripped
 SkinnedMeshRenderer:
   m_CorrespondingSourceObject: {fileID: 1753211704054538604, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
+  m_PrefabInstance: {fileID: 6418762728891683781}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &4968286438348689302 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 2154656316083215443, guid: c369f6ea62551a94a9624256fa4eb3ba, type: 3}
   m_PrefabInstance: {fileID: 6418762728891683781}
   m_PrefabAsset: {fileID: 0}
 --- !u!137 &4976289985572825446 stripped

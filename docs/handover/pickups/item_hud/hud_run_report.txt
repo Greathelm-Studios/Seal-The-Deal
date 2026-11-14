@@ -1,11 +1,12 @@
 ROLE hud: Lane_Integration hosting with its own player; the item HUD is added for this run only.
 local port 17783
 PASS  this machine is the host (it did not join someone else's game on the same port)
-PASS  the integration scene has the kit item HUD
+PASS  the scene has the kit item HUD
 PASS  the scene has a loose chair, something too heavy and a second liftable thing  — chair Chair(Clone), heavy Desk(Clone), other Chair(Clone)
 wrote hud_00_empty_1080p.png
 wrote hud_00_empty_720p.png
 PASS  looking at a chair shows the kit prompt  — prompt reads "F · Pick up Chair"
+PASS  the chair the prompt is about is brightened on this screen
 wrote hud_01_prompt_chair_1080p.png
 wrote hud_01_prompt_chair_720p.png
 PASS  looking at something too heavy says so, with no key  — prompt reads "Desk · Too heavy"
@@ -18,6 +19,7 @@ wrote hud_03_hands_in_150ms.png
 wrote hud_03_hands_in_200ms.png
 wrote hud_03_hands_in_250ms.png
 PASS  the hands slot names what is carried  — slot reads "Chair"
+PASS  once carried, the chair is drawn at its own colour again
 wrote hud_04_hands_chair_1080p.png
 wrote hud_04_hands_chair_720p.png
 wrote hud_05_hands_full_shake.png
@@ -34,5 +36,6 @@ wrote hud_09_pad_look_720p.png
 PASS  letting go empties the hands slot  — slot reads ""
 wrote hud_07_dropped_1080p.png
 wrote hud_07_dropped_720p.png
+NOT CHECKED  a definition-free prop's highlight: this scene has none loose
 UI sounds asked for: Focus 4, HandsFull 2, Error 0
-RESULT: 0 failed check(s), 11 passed, 69 frames.
+RESULT: 0 failed check(s), 13 passed, 70 frames.

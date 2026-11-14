@@ -62,6 +62,7 @@ namespace CloseTheDeal.Editor.Lanes
             GreyboxSceneSetup.EnsurePlayRig(new Vector3(-2.8f, 0.1f, -2.5f), new Vector3(2.8f, 0.1f, -2.5f));
             EnsureMovementHud();
             EnsureCrosshairFeed();
+            SetUpMovementSounds();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -309,7 +310,8 @@ namespace CloseTheDeal.Editor.Lanes
             ("Jump; hold to keep hopping", "Jump", "", ""),
             ("Climb: jump at a ledge", "Jump", "", ""),
             ("Sprint", "Sprint", "", ""),
-            ("Crouch; at a run, slide", "Crouch", "", ""),
+            ("Crouch", "Crouch", "", ""),
+            ("Slide: sprint, then crouch", "Crouch", "", ""),
             ("Lean left and right", "Lean", "", ""),
             ("Fire", "Attack", "", ""),
             ("Aim or alternate fire", "AltFire", "", ""),
@@ -353,6 +355,156 @@ namespace CloseTheDeal.Editor.Lanes
             return true;
         }
 
+        /// <summary>Adds a slide line to a controls card built before it had one: a new line at the bottom, the card grown to fit. Only adds.</summary>
+        static bool EnsureSlideCardLine(MovementHud hud)
+        {
+            var so = new SerializedObject(hud);
+            SerializedProperty rows = so.FindProperty("_rows");
+            var card = so.FindProperty("_card").objectReferenceValue as RectTransform;
+            var hintPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/KeyHint.prefab");
+            if (card == null || hintPrefab == null)
+                return false;
+
+            for (int i = 0; i < rows.arraySize; i++)
+            {
+                var label = rows.GetArrayElementAtIndex(i).FindPropertyRelative("Label").objectReferenceValue as TMP_Text;
+                if (label != null && label.text.StartsWith("Slide"))
+                    return false;
+            }
+
+            int index = rows.arraySize;
+            var hint = (GameObject)PrefabUtility.InstantiatePrefab(hintPrefab, card);
+            hint.name = "Line " + (index + 1);
+            UiKitAssets.Place((RectTransform)hint.transform, 28f, CardTop + index * RowHeight, CardWidth - 56f, 40f);
+            TMP_Text text = hint.transform.Find("Label").GetComponent<TMP_Text>();
+            text.text = "Slide: sprint, then crouch";
+            card.sizeDelta = new Vector2(card.sizeDelta.x, card.sizeDelta.y + RowHeight);
+
+            rows.arraySize = index + 1;
+            SerializedProperty row = rows.GetArrayElementAtIndex(index);
+            row.FindPropertyRelative("Action").stringValue = "Crouch";
+            row.FindPropertyRelative("PadAction").stringValue = string.Empty;
+            row.FindPropertyRelative("KeyboardText").stringValue = string.Empty;
+            row.FindPropertyRelative("KeyCap").objectReferenceValue = hint.transform.Find("KeyCap");
+            row.FindPropertyRelative("Key").objectReferenceValue = hint.transform.Find("Key").GetComponent<TMP_Text>();
+            row.FindPropertyRelative("Label").objectReferenceValue = text;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            Debug.Log("[Movement lane] Added a slide line to the controls card.");
+            return true;
+        }
+
+        /// <summary>Adds the slide hint line to a movement HUD built before it existed. Only adds when missing.</summary>
+        static bool EnsureSlideHint(MovementHud hud)
+        {
+            var so = new SerializedObject(hud);
+            if (so.FindProperty("_slideHint").objectReferenceValue != null)
+                return false;
+
+            var statusPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/StatusLine.prefab");
+            if (statusPrefab == null)
+                return false;
+
+            var hint = (GameObject)PrefabUtility.InstantiatePrefab(statusPrefab, hud.transform);
+            hint.name = "SlideHint";
+            var rect = (RectTransform)hint.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = new Vector2(0f, 240f);
+            var group = hint.AddComponent<CanvasGroup>();
+            group.alpha = 0f;
+            group.blocksRaycasts = false;
+            group.interactable = false;
+            so.FindProperty("_slideHint").objectReferenceValue = hint.GetComponent<UiStatusLine>();
+            so.FindProperty("_slideHintGroup").objectReferenceValue = group;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            Debug.Log("[Movement lane] Added the slide hint to the movement HUD.");
+            return true;
+        }
+
+        // ---- Movement sounds ------------------------------------------------------------------
+
+        const string SoundSetPath = "Assets/_Project/Profiles/MovementSounds.asset";
+        const string MovementProfilePath = "Assets/_Project/Profiles/DefaultMovement.asset";
+        const string MovementAudioFolder = "Assets/_Project/Audio/Movement";
+        const string MixerPath = "Assets/_Project/Audio/UI/GameMixer.mixer";
+
+        /// <summary>
+        /// Makes the movement sound set when missing, gives it the game mixer's SFX bus and any
+        /// Move_*.wav clips in Audio/Movement for slots that are empty, and links it from the
+        /// movement profile when that link is empty. Never overwrites a filled slot (AGENTS.md §4).
+        /// </summary>
+        [MenuItem("Close the Deal/Lanes/Set Up Movement Sounds")]
+        public static void SetUpMovementSounds()
+        {
+            var set = AssetDatabase.LoadAssetAtPath<CloseTheDeal.Player.MovementSoundSet>(SoundSetPath);
+            if (set == null)
+            {
+                set = ScriptableObject.CreateInstance<CloseTheDeal.Player.MovementSoundSet>();
+                AssetDatabase.CreateAsset(set, SoundSetPath);
+                GeneratedAssetGuard.MarkGenerated(set);
+            }
+
+            var so = new SerializedObject(set);
+            SerializedProperty output = so.FindProperty("Output");
+            if (output.objectReferenceValue == null)
+            {
+                var mixer = AssetDatabase.LoadAssetAtPath<UnityEngine.Audio.AudioMixer>(MixerPath);
+                var groups = mixer != null ? mixer.FindMatchingGroups("SFX") : null;
+                if (groups != null && groups.Length > 0)
+                    output.objectReferenceValue = groups[0];
+            }
+
+            FillClip(so, "Jump", "Move_Jump");
+            FillClip(so, "LandLight", "Move_Land_Light");
+            FillClip(so, "LandHeavy", "Move_Land_Heavy");
+            FillClip(so, "SlideStart", "Move_Slide_Start");
+            FillClip(so, "SlideLoop", "Move_Slide_Loop");
+            FillClip(so, "SlideStop", "Move_Slide_Stop");
+            FillClip(so, "Mantle", "Move_Mantle");
+            FillClip(so, "Vault", "Move_Vault");
+            FillClip(so, "WindLoop", "Move_Wind_Loop");
+            FillClips(so, "FootstepWalk", "Move_Footstep_Walk");
+            FillClips(so, "FootstepRun", "Move_Footstep_Run");
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            var profile = AssetDatabase.LoadAssetAtPath<CloseTheDeal.Player.MovementProfile>(MovementProfilePath);
+            if (profile != null && profile.Sounds == null)
+            {
+                var ps = new SerializedObject(profile);
+                ps.FindProperty("Sounds").objectReferenceValue = set;
+                ps.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log("[Movement lane] Movement sound set ready at " + SoundSetPath);
+        }
+
+        static void FillClip(SerializedObject so, string field, string clipName)
+        {
+            SerializedProperty slot = so.FindProperty(field);
+            if (slot.objectReferenceValue == null)
+                slot.objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(MovementAudioFolder + "/" + clipName + ".wav");
+        }
+
+        /// <summary>Fills an empty variation list with every clip whose name starts with the given name (Move_Footstep_Walk_1.wav and so on).</summary>
+        static void FillClips(SerializedObject so, string field, string clipPrefix)
+        {
+            SerializedProperty list = so.FindProperty(field);
+            if (list.arraySize > 0 || !AssetDatabase.IsValidFolder(MovementAudioFolder))
+                return;
+
+            var found = new List<AudioClip>();
+            foreach (string guid in AssetDatabase.FindAssets(clipPrefix + " t:AudioClip", new[] { MovementAudioFolder }))
+            {
+                var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(AssetDatabase.GUIDToAssetPath(guid));
+                if (clip != null && clip.name.StartsWith(clipPrefix))
+                    found.Add(clip);
+            }
+            list.arraySize = found.Count;
+            for (int i = 0; i < found.Count; i++)
+                list.GetArrayElementAtIndex(i).objectReferenceValue = found[i];
+        }
+
         /// <summary>
         /// Adds movement's HUD (the refusal line and the controls help card, from the UI kit's
         /// prefabs) under the game menu's HUD in the open scene. Only adds when missing; returns
@@ -368,8 +520,9 @@ namespace CloseTheDeal.Editor.Lanes
                 return false;
             }
 
-            if (hud.GetComponentInChildren<MovementHud>(true) != null)
-                return false;
+            MovementHud existing = hud.GetComponentInChildren<MovementHud>(true);
+            if (existing != null)
+                return EnsureSlideHint(existing) | EnsureSlideCardLine(existing);
 
             var statusPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/StatusLine.prefab");
             var platePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Plate.prefab");
@@ -455,6 +608,7 @@ namespace CloseTheDeal.Editor.Lanes
                 e.FindPropertyRelative("Label").objectReferenceValue = rows[i].Label;
             }
             so.ApplyModifiedPropertiesWithoutUndo();
+            EnsureSlideHint(component);
             Debug.Log("[Movement lane] Added movement's HUD (refusal line, controls card) under " + hud.name);
             return true;
         }

@@ -26,11 +26,18 @@ The open floor (host-owned, only rises during a match)
 
 ## Where it stands
 
-**Ready for review**, not approved. Four commits on this branch:
+**Ready for review**, not approved. **Gameplay is frozen** (Adam, 2026-11-14: "Don't worry about any more gameplay or mechanics being worked on"): the rules, gates, tower and netcode stay as they are; only UI work continues in this lane.
 
-- "Add the briefcase game mode: two firms, a match clock and a roof win" and "Correct the game mode handover's verification notes and doc dates": the first per-firm version, now superseded.
-- "Rework the game mode around one shared briefcase, a plaza and skybridges": the current rules.
-- "Add the floor gate: the briefcase carrier opens each floor for everyone": the gate.
+Open, in priority order:
+1. **Gates or locked doors** (below): Adam's call; both are in the build today.
+2. **Results screen:** lane 5's to build. This lane hands over `MatchDirector.Snapshot`, `ReasonLine(result, firm)` and `OnMatchEnded` (MATCH.md, UI contract); the menu's result section (`MatchMenuPanel`) stays until that screen lands, then goes.
+3. **720p captions:** the kit's smallest captions render about 9 px at 720p; waiting on lane 5's type scale.
+4. **Menu section move:** lane 5's in-game menu moves `MatchSection` onto its glass pane (`KitUI/InGameMenu/Content/MatchSlot`); after that lands, point `EnsureMenuSection` at that slot for fresh scenes (agreed on AgentHub #529, #530).
+5. **Held-object seat:** the case sits small in the lower left (gun hand is the right, AgentHub #492, #535). Harvey's viewmodel can give the left arm a seat on the case later.
+6. **Player Settings name:** `productName` is still `CloseTheDeal`, `companyName` `DefaultCompany` (built executable name, shared PlayerPrefs file). Renaming moves saved settings: Adam's call.
+7. **The roof win is a text card:** no roof moment yet (out of scope while gameplay is frozen; a UI-only stamp before the menu opens is the smallest fix).
+
+Done on the UI side (2026-11-14): kit HUD and menu section; contrast measured from real pixels; cap warning on an amber plate; 21:9 and reduced-motion captures; the kit's edge marker for the off-screen briefcase; wiring guards so a stale scene can't stop a spawn; `Lane_Integration.unity` rebuilt twice and proven in a macOS build; Set Up Integration made add-only for `Player.prefab`.
 
 ## What was checked
 

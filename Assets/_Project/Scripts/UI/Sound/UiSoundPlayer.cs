@@ -100,10 +100,72 @@ namespace CloseTheDeal.UI
 
             void Start() => UiAudio.ApplySaved();
 
+            // ---- Ambient bed and the title sting -------------------------------------------------------------
+            // Looked at four times a second, not every frame: is the player at the menus (the title and its screens
+            // before a game) or in the lobby reception before the run starts? Reaching the title plays TitleAppear once.
+            AudioSource bed;
+            float nextLook, bedTarget;
+            bool atTitle;
+            GameMenu menu;
+            UiRoot root;
+
+            void Update()
+            {
+                float now = Time.unscaledTime;
+                if (now >= nextLook)
+                {
+                    nextLook = now + 0.25f;
+                    Look();
+                }
+                if (bed == null)
+                    return;
+                float step = set.ambienceFade > 0f ? Time.unscaledDeltaTime / set.ambienceFade : 1f;
+                bed.volume = Mathf.MoveTowards(bed.volume, bedTarget, step * Mathf.Max(set.ambienceLevel, 0.0001f));
+                if (bed.volume <= 0f && bedTarget <= 0f && bed.isPlaying)
+                    bed.Stop();
+            }
+
+            void Look()
+            {
+                if (menu == null) menu = FindAnyObjectByType<GameMenu>();
+                if (root == null) root = FindAnyObjectByType<UiRoot>();
+                bool title = menu != null && menu.OutOfGame && root != null && root.Stack.Count > 0;
+                var roster = CloseTheDeal.Lobby.LobbyRoster.Instance;
+                bool reception = roster != null && !roster.RunInProgress;
+                if (title && !atTitle)
+                    UiSound.Play(UiSoundEvent.TitleAppear);   // through the hub, so its Played log sees it
+                atTitle = title;
+                SetBed(title || reception);
+            }
+
+            void SetBed(bool on)
+            {
+                bedTarget = on ? set.ambienceLevel : 0f;
+                if (!on || set.ambience == null || set.ambienceLevel <= 0f)
+                    return;
+                if (bed == null)
+                {
+                    bed = gameObject.AddComponent<AudioSource>();
+                    bed.playOnAwake = false;
+                    bed.loop = true;
+                    bed.spatialBlend = 0f;
+                    bed.priority = 200;   // the first voice to lose if the mixer runs short
+                    bed.outputAudioMixerGroup = set.ambienceOutput != null ? set.ambienceOutput : set.output;
+                    bed.clip = set.ambience;
+                    bed.volume = 0f;
+                }
+                if (!bed.isPlaying)
+                    bed.Play();
+            }
+
             public bool Begin(UiSoundEvent e, UiSoundSet.Entry en, float gain, float semitones)
             {
                 float now = Time.realtimeSinceStartup;
-                if (now - lastAny < set.globalMinGap) { Dropped++; return false; }
+                // Screen sounds (a screen or panel opening, a transition, the title) sit on their own layer: a button that
+                // opens a screen plays its Confirm and the screen its whoosh in the same frame, and both must be heard.
+                // The global gap only thins bursts of control sounds.
+                bool screen = ScreenLayer(e);
+                if (!screen && now - lastAny < set.globalMinGap) { Dropped++; return false; }
                 if (lastPlayed.TryGetValue(e, out float t) && now - t < en.minGap) { Dropped++; return false; }
                 AudioSource v = Pick();
                 float variance = en.pitchVariance > 0f ? Random.Range(-en.pitchVariance, en.pitchVariance) : 0f;
@@ -111,10 +173,23 @@ namespace CloseTheDeal.UI
                 v.clip = en.clip;
                 v.volume = en.volume * gain;
                 v.Play();
-                lastAny = now;
+                if (!screen) lastAny = now;
                 lastPlayed[e] = now;
                 Started++;
                 return true;
+            }
+
+            static bool ScreenLayer(UiSoundEvent e)
+            {
+                switch (e)
+                {
+                    case UiSoundEvent.Transition: case UiSoundEvent.PanelOpen: case UiSoundEvent.PanelClose:
+                    case UiSoundEvent.TitleAppear: case UiSoundEvent.TransitionCloudWipe: case UiSoundEvent.TransitionPaneSlide:
+                    case UiSoundEvent.TransitionFrameZoom: case UiSoundEvent.TransitionFade:
+                        return true;
+                    default:
+                        return false;
+                }
             }
 
             // A free voice, else steal the one nearest its end.

@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0cf17443a4594a319748361fbed52d8, type: 3}
+  m_Name: CombatSounds
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Combat.CombatSoundSet
+  Output: {fileID: 4781412786198489561, guid: 6737b27e57e4d4e709fbdb02f079a21f, type: 2}
+  Volume: 1
+  PitchVariance: 0.03
+  ImpactWorld: {fileID: 8300000, guid: c567a6a0975504cd6bf843b4a727e384, type: 3}
+  ImpactBody: {fileID: 8300000, guid: d6d213a556b714616bb856651be96e63, type: 3}
+  GlassShatter: {fileID: 8300000, guid: f9d8760adf8554691866fe886db8ace1, type: 3}
+  Hurt: {fileID: 8300000, guid: d05632a19bbd740c1aecc50360b73b35, type: 3}
+  Death: {fileID: 8300000, guid: 39591355407d0434fb9c593cdb01c77c, type: 3}
+  Respawn: {fileID: 8300000, guid: ec8c59ca3fe084df99c6224bdbf73dce, type: 3}
+  NearDistance: 2
+  FarDistance: 60

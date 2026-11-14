@@ -130,6 +130,13 @@ Open `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`, press Play, then **Host 
 
 Carried items float in front of the camera with no hands or arms, and the beep, hiss and boom are generated tones, so picking something up has no physical weight on screen.
 
-## Next steps
+## Next steps (ready, not started: the owner stopped gameplay and mechanics work on 2026-11-14; UI only)
 
-Adam plays the hand-test list above; the next agent fixes what he reports, then the integrator does the merge steps.
+Ordered by how much each changes what a player sees.
+
+1. **Hands on carried items.** Harvey's posing layer (`Scripts/Player/Viewmodel/`, left and right hands, `PlayerViewmodel.TwoHanded`) is now in `buffer`. On `ItemCarrier.HeldChanged`, set `TwoHanded` from `Pickup.TryGetHandSeats(out main, out support, out twoHanded)` and seat the grips on those world poses each frame after order 100. Agreed with Harvey's agent (AgentHub #534): he converts the seat axes on his side (ours: +Z fingers, +Y palm; his HandGrip: +Y little finger to index, a 90° roll per hand) and moves his first-person solve to order 101. While anything is carried the gun is put away (full hands never shoot); no item is left-hand-only.
+2. **`Greybox.unity` (the build scene) has no item HUD.** Its owner opens it, runs **Close the Deal > Lanes > Add Item HUD To Open Scene**, saves.
+3. **Client-side release.** A dropped or thrown plain prop waits up to 0.4 s where it left the hands until the host's pose arrives, then eases onto it. A clean snap needs a NetBody call to reset a body's interpolation to a given pose (Switchboard, Harvey's); then `Pickup.ObserversReleased` sends the release pose and calls it.
+4. **Item sound loudness by distance.** The clips are at full scale (lane 9, AgentHub #520), so loudness in play is `ItemAudio`'s 3D settings (min 1.5 m, max 40 m, logarithmic) and `ItemSoundSet.Volume`. The explosion probably wants a bigger minimum distance (about 8 m). Nobody has listened yet.
+5. **PlayStation glyphs.** Pad prompts use Xbox names on every pad (`ItemCarrier.KeyName`); the stand-in font has no button symbols.
+6. Small: an extinguisher lost out of the building mid-vent plays its vent-end sound; a prop left on a skybridge more than 2.5 m below where it started is taken back (documented in ITEMS.md).

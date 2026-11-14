@@ -63,8 +63,9 @@ namespace CloseTheDeal.Editor.Lanes
             var parts = new List<string>();
             EnsureContent(parts);
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
-            if (prefab == null)
+            if (prefab == null || GeneratedAssetGuard.MayOverwrite(PrefabPath))
             {
+                // Rebuilt while only this tool has written it; once a person edits it, it is left alone.
                 prefab = BuildPrefab();
                 parts.Add("Records.prefab");
             }
@@ -113,8 +114,8 @@ namespace CloseTheDeal.Editor.Lanes
             var plates = go.AddComponent<Nameplates.Nameplates>();
             SetRef(plates, "_tokens", AssetDatabase.LoadAssetAtPath<CloseTheDeal.UI.UiTokens>("Assets/_Project/UI/Tokens/UiTokens.asset"));
             SetRef(plates, "_platePrefab", AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Plate.prefab"));
-            SetRef(plates, "_diamondSprite", AssetDatabase.LoadAssetAtPath<Sprite>(KitFolder + "/Sprites/Kit_White.png"));
-            SetRef(plates, "_markerSprite", AssetDatabase.LoadAssetAtPath<Sprite>(KitFolder + "/Sprites/Kit_Chevron.png"));
+            SetRef(plates, "_diamondSprite", AssetDatabase.LoadAssetAtPath<Sprite>(KitFolder + "/Sprites/Kit_Diamond.png"));
+            SetRef(plates, "_markerSprite", AssetDatabase.LoadAssetAtPath<Sprite>(KitFolder + "/Sprites/Kit_Triangle.png"));
         }
 
         static void SetRef(Object target, string field, Object value)
@@ -713,12 +714,24 @@ namespace CloseTheDeal.Editor.Lanes
             Aim(them.Position + Vector3.up * 1.2f);
             yield return 1f;
             Check("NAMES: a teammate in view has their name over their head", Plates != null && Plates.ShowsName(them) && !Plates.ShowsMarker(them));
-            Capture("nameplate_team");
+            Capture("host_nameplate_team");
+            yield return 4f; // the client checks and captures the host's name in this window
 
+            them.ServerTeleport(OpenSpot(1 - myFirm, 1));
+            yield return 1.5f;
+            Aim(them.Position + Vector3.up * 1.2f);
+            yield return 1f;
+            float across = Vector3.Distance(Camera.main.transform.position, them.Position);
+            Check("NAMES: a teammate across the street, within range, still has a name", across > 40f || Plates.ShowsName(them), $"{across:0.0} m away, shown {Plates.ShowsName(them)}");
+            Capture("host_nameplate_across_street");
+
+            them.ServerTeleport(SpotAway(myFirm, 1, mine, 5f, 9f));
+            yield return 1.5f;
+            Aim(them.Position + Vector3.up * 1.2f);
             them.ServerSetFirm(theirFirm, theirSlot);
             yield return 0.6f;
             Check("NAMES: a rival inside this tower is marked, with no name", Plates.ShowsMarker(them) && !Plates.ShowsName(them));
-            Capture("nameplate_raider");
+            Capture("host_nameplate_raider");
             yield return 2.5f;
             Check("NAMES: the rival's marker goes after its 2 s", !Plates.ShowsMarker(them) && !Plates.ShowsName(them));
         }
@@ -753,8 +766,14 @@ namespace CloseTheDeal.Editor.Lanes
             PitchField.SetValue(cam, -Mathf.Asin(direction.y) * Mathf.Rad2Deg);
         }
 
-        /// <summary>Renders the game camera with the nameplate canvas into a 1280 x 720 picture in the run's folder.</summary>
+        /// <summary>Renders the game camera with the nameplate canvas at 1920 x 1080 and 1280 x 720 into the run's folder.</summary>
         static void Capture(string name)
+        {
+            CaptureAt(name + "_1080p", 1920, 1080);
+            CaptureAt(name + "_720p", 1280, 720);
+        }
+
+        static void CaptureAt(string name, int width, int height)
         {
             Camera cam = Camera.main;
             Nameplates.Nameplates plates = Plates;
@@ -766,7 +785,7 @@ namespace CloseTheDeal.Editor.Lanes
 
             var canvas = plates.GetComponent<Canvas>();
             var scaler = plates.GetComponent<CanvasScaler>();
-            var rt = new RenderTexture(1280, 720, 24, RenderTextureFormat.ARGB32);
+            var rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
             canvas.renderMode = RenderMode.ScreenSpaceCamera;
             canvas.worldCamera = cam;
             canvas.planeDistance = cam.nearClipPlane + 0.05f;
@@ -779,13 +798,15 @@ namespace CloseTheDeal.Editor.Lanes
             cam.Render();
             RenderTexture previous = RenderTexture.active;
             RenderTexture.active = rt;
-            var tex = new Texture2D(1280, 720, TextureFormat.RGB24, false);
-            tex.ReadPixels(new Rect(0, 0, 1280, 720), 0, 0);
+            var tex = new Texture2D(width, height, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
             tex.Apply();
             RenderTexture.active = previous;
             File.WriteAllBytes(Path.Combine(_out, name + ".png"), tex.EncodeToPNG());
             cam.targetTexture = null;
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            scaler.enabled = false;
+            scaler.enabled = true;
             Object.DestroyImmediate(tex);
             rt.Release();
             Note("wrote " + name + ".png");
@@ -880,6 +901,7 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 1f;
             var plates = Object.FindAnyObjectByType<Nameplates.Nameplates>();
             Check("CLIENT: the host, now a teammate and in view, has a name chip on this screen", plates != null && InView(Other()) && plates.ShowsName(Other()), $"in view {InView(Other())}, shown {plates != null && plates.ShowsName(Other())}");
+            Capture("client_nameplate_team");
         }
 
         static bool InView(FirmMember who)

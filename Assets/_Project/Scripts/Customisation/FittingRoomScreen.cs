@@ -38,7 +38,7 @@ namespace CloseTheDeal.Customisation
         /// <summary>Put back was activated, or Back was pressed on the screen.</summary>
         public event Action PutBackPressed;
 
-        const string KeysHint = "Left / Right  change     Up / Down  category     Mouse, Q / R  turn     Enter  keep     Backspace  put back";
+        const string KeysHint = "Click the arrows or Left / Right  change     Up / Down  category     Right-drag, Q / R  turn     Enter  keep     Backspace  put back";
         const string PadHint = "D-pad left / right  change     D-pad up / down  category     Right stick  turn     A  keep     B  put back";
         const string LockedReason = "One of these choices is still locked. Put it back, or pick another.";
 
@@ -48,8 +48,19 @@ namespace CloseTheDeal.Customisation
 
         public bool IsShowing => _open;
 
+        /// <summary>False when the scene's form is from before the UI kit revamp: the fitting room then stays shut.</summary>
+        public bool IsWired => _keep != null && _putBack != null && _stack != null && _status != null && _detail != null && _hint != null && _rows.Length > 0 && _tokens != null;
+
         protected override void Awake()
         {
+            if (!IsWired)
+            {
+                // One clear error, then stand down: never throw, never block a spawn.
+                Debug.LogError($"[Lobby] {name}: the fitting-room form is from an older build and is missing its UI kit wiring, so the fitting room is closed. Run Close the Deal > Lanes > Set Up Lobby (or Set Up Integration) to rebuild it.", this);
+                gameObject.SetActive(false);
+                return;
+            }
+
             base.Awake();
             for (int i = 0; i < _rows.Length; i++)
             {

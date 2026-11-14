@@ -183,6 +183,7 @@ namespace CloseTheDeal.Editor.UI
                     UnityEngine.Object.DestroyImmediate(bgTex); UnityEngine.Object.DestroyImmediate(txtTex);
                 }
             }
+            // Overlay canvases never reach a camera texture and a batch editor has no screen: only a person playing sees them.
             // Backdrop source: a full-screen RawImage showing the first pose's plain scene, with UiGlassBackdrop on it.
             // The blurred pane must line up with the image behind it (orientation and rect mapping).
             if (poses.Count > 0)

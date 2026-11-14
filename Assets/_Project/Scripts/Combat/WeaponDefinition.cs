@@ -146,6 +146,25 @@ namespace CloseTheDeal.Combat
         [Tooltip("How much of a shove goes upward, as a fraction of the push along the shot. 0 = straight back; 0.5 lifts them off their feet.")]
         [Range(0f, 1.5f)] public float ShoveLift = 0.35f;
 
+        [Header("Sounds")]
+        [Tooltip("The shot, heard by everyone from the muzzle. Keep a fast gun's short, or a burst smears.")]
+        public AudioClip ShotSound;
+
+        [Tooltip("The click of pulling the trigger on an empty magazine.")]
+        public AudioClip DryFireSound;
+
+        [Tooltip("Bringing this gun out.")]
+        public AudioClip DrawSound;
+
+        [Tooltip("The reload's first stage, about 15 % of the way through.")]
+        public AudioClip MagazineOutSound;
+
+        [Tooltip("The reload's second stage, about 60 % of the way through.")]
+        public AudioClip MagazineInSound;
+
+        [Tooltip("The reload's last stage, about 85 % of the way through: a pistol's slide, a rifle's charging handle.")]
+        public AudioClip ReloadEndSound;
+
         [Header("Looks")]
 
         [Tooltip("The gun model shown in the hand. It needs a child called Muzzle where the shot leaves, and may have a child called Flash that is lit for an instant on each shot.")]

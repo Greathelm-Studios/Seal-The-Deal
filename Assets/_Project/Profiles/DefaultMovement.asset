@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7b79ea216fff1f45943dba3a0329d64, type: 3}
   m_Name: DefaultMovement
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Player.MovementProfile
-  WalkSpeed: 6
-  SprintSpeed: 9
-  GroundAcceleration: 70
+  WalkSpeed: 6.75
+  SprintSpeed: 10.1
+  GroundAcceleration: 80
   GroundFriction: 6
   GroundTurnRate: 720
   StopSpeed: 3
@@ -22,25 +22,28 @@ MonoBehaviour:
   KnockedBraking: 15
   TurnSpeed: 720
   StepDownSnap: 0.35
-  CrouchSpeed: 3
+  CrouchSpeed: 3.3
   CrouchHeight: 1.1
   CrouchRate: 8
   SlideMinSpeed: 7
   SlideBoost: 2.5
   SlideBoostCooldown: 1.5
   SlideFriction: 0.45
-  SlideSlopeGain: 2
+  SlideSlopeGain: 2.5
   SlideEndSpeed: 3.5
   AirAcceleration: 30
   AirStrafeSpeed: 1.5
   HoldToHop: 1
   JumpHeight: 1.6
-  AirGravityMultiplier: 2
+  AirGravityMultiplier: 1.6
   MaxFallSpeed: 30
-  FallGravityMultiplier: 3
+  KnockedGravityMultiplier: 2
+  ApexGravityMultiplier: 0.6
+  ApexHangSpeed: 1.5
+  FallGravityMultiplier: 2.4
   JumpReleaseKeep: 0.5
-  CoyoteTime: 0.1
-  JumpBufferTime: 0.12
+  CoyoteTime: 0.12
+  JumpBufferTime: 0.15
   LeanDistance: 0.45
   LeanAngle: 12
   LeanSpeed: 6
@@ -50,27 +53,43 @@ MonoBehaviour:
   MantleDuration: 0.35
   MantleSpeedKeep: 0.9
   GroundProbe: 0.1
+  EyeHeight: 1.6
   MouseSensitivity: 0.12
   StickYawSpeed: 240
   StickPitchSpeed: 150
   StickLookCurve: 1.6
   LookUpLimit: 89
   LookDownLimit: 89
-  LandingDipPerSpeed: 0.012
-  LandingDipMax: 0.25
-  LandingDipRecover: 0.25
+  CameraSpringFrequency: 6
+  CameraSpringDamping: 0.5
+  JumpKick: 0.35
+  LandKickPerSpeed: 0.06
+  LandKickMax: 0.9
+  SlideKick: 0.45
+  MantleKick: 0.3
+  SprintStartKick: 0.12
+  HardStopKick: 0.25
+  HardStopSpeed: 7
+  SlideFovKick: 4
   SpeedFovKick: 6
   SpeedFovRate: 30
-  EyeHeight: 1.6
   SlideRoll: 2
   SlideRollRate: 20
-  MoveStickDeadZone: 0.1
-  LookStickDeadZone: 0.15
-  StickTurnBoost: 160
-  StickTurnBoostDelay: 0.15
-  StickTurnBoostRamp: 0.25
   CrosshairOpenPerSpeed: 1.2
   CrosshairOpenInAir: 6
   CrosshairOpenMax: 16
   CrosshairOpenRate: 80
   CrosshairLandingPulseSpeed: 8
+  CrosshairJumpPulse: 0.2
+  CrosshairSlidePulse: 0.35
+  CrosshairOpenSliding: 4
+  Sounds: {fileID: 11400000, guid: 1f747dc498d3e4c9aad476332cf8dc2c, type: 2}
+  RumbleLandPerSpeed: 0.05
+  RumbleLandMax: 0.7
+  RumbleSlide: 0.35
+  RumbleSeconds: 0.14
+  MoveStickDeadZone: 0.1
+  LookStickDeadZone: 0.15
+  StickTurnBoost: 160
+  StickTurnBoostDelay: 0.15
+  StickTurnBoostRamp: 0.25

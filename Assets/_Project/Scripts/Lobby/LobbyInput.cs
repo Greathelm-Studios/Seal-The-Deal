@@ -74,7 +74,10 @@ namespace CloseTheDeal.Lobby
             Cancel.AddBinding("<Gamepad>/buttonEast");
 
             // Moving through a form is the UI kit's navigation (the UI map), not lane actions.
-            HostPanel = Button("HostPanel", "<Keyboard>/tab", "<Gamepad>/select");
+            HostPanel = _map.AddAction("HostPanel", InputActionType.Button);
+            HostPanel.AddBinding("<Keyboard>/tab");
+            // Every pad button is taken in play; reception has nothing on slot 1, so a held d-pad up opens it.
+            HostPanel.AddBinding("<Gamepad>/dpad/up", interactions: "hold(duration=0.5)");
 
             Rotate = _map.AddAction("Rotate", InputActionType.Value);
             Rotate.AddCompositeBinding("1DAxis").With("Negative", "<Keyboard>/q").With("Positive", "<Keyboard>/r");

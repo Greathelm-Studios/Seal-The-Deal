@@ -56,7 +56,7 @@ Defined in `Scripts/Lobby/LobbyInput.cs`:
 | Interact | F | North |
 | Confirm (keep outfit) | Enter, Space | South |
 | Cancel (put back) | Backspace | East |
-| Host player list (host, reception) | Tab | View |
+| Host player list (host, reception) | Tab | Hold D-pad up (0.5 s); every other pad button is taken in play |
 | Rotate character | Q / R, mouse X | Right stick X |
 
 Moving through the fitting-room form and the host list is the UI kit's navigation (the shared UI map: arrows, WASD, D-pad), not lane actions. Lane keys only matter while the player's own input is disabled.
@@ -88,7 +88,15 @@ Moving through the fitting-room form and the host list is the UI kit's navigatio
 
 - Ready board, prompt and subtitles are UI kit plates (top left, under the Esc chip, because the match HUD owns the top right); fitting room and host player list are kit screens on the lobby canvas's own stack with the kit focus frame and sounds; reception moments sound through `LobbySounds`.
 - Host can remove a player (Tab in reception, confirm dialog), host-validated. A removed player can rejoin; no ban, lock or firm move yet.
-- Mouse does not click the fitting form or the host list: the cursor stays captured in game (a free cursor means the Esc menu). Mouse turns the character in the fitting room.
+- The mouse works the fitting form and the host list: both hold the cursor free with lane 5's `GameMenu.HoldCursor` while open, and wait while the Esc menu is over them. In the fitting room the right button drags to turn the character.
+- A removed player sees a kit plate over their title saying the host removed them (plus SteamLobby's own lost-connection status underneath).
+- Set Up Lobby only adds to Player.prefab: if both a character model and the old greybox Outfit figure are present it warns and leaves the figure for a person to delete.
+
+## Open, for whoever picks this up
+
+- Fixed 2026-11-14 by the one-off migration **Close the Deal > Lanes > Migrations > Player: Outfit on the Real Model (once)** (hub #543, owner's go-ahead): Player.prefab drew every player twice. It deleted the greybox figure at Graphics/Lean/Outfit, put an OutfitView on Graphics/Lean/Body (Catalog = OutfitCatalog, Bodies = Body's renderers, change bob on Body) and pointed PlayerOutfit > View at it. Re-running it does nothing. Not yet seen in a played game.
+- Owner's direction 2026-11-14: no more gameplay, rules or netcode in this lane. Not built and left open: a ban or remove list (a removed player can rejoin), locking the lobby, moving a player between firms, unlocks from career stats (ProfileStore) instead of runs started, rematch with the same firms.
+- Fonts are the kit's stand-in (Liberation Sans) until the target faces are licensed.
 
 ## Assumptions for the owner to confirm
 
