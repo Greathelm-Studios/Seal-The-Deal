@@ -28,11 +28,21 @@ namespace CloseTheDeal.UI.Title
         [Tooltip("Seconds for one slow sway out and back. Higher = calmer.")]
         [SerializeField, Range(5f, 60f)] float _swaySeconds = 26f;
 
+        [Header("While hosting, joining or connecting")]
+        [Tooltip("Degrees the view turns while the session panel is open (hosting, joining, connecting), so the wait reads as something happening. 0 = no change.")]
+        [SerializeField, Range(-60f, 60f)] float _connectingTurn = 24f;
+        [Tooltip("Degrees the view lifts while the session panel is open. Higher = more open sky.")]
+        [SerializeField, Range(-20f, 20f)] float _connectingLift = 6f;
+        [Tooltip("Seconds the view takes to turn to the waiting view and back. Higher = slower, calmer.")]
+        [SerializeField, Range(0.3f, 5f)] float _connectingSeconds = 1.6f;
+
         [Header("Sky")]
         [Tooltip("Seconds between planes while the title shows (the game uses 40). 0 = leave the sky as it is.")]
         [SerializeField, Range(0f, 120f)] float _planeEverySeconds = 18f;
 
         TitleScreen _title;
+        UiRoot _root;
+        float _waiting;
         Camera _camera;
         RawImage _image;
         Canvas _canvas;
@@ -60,11 +70,13 @@ namespace CloseTheDeal.UI.Title
                 return;
             var go = new GameObject("Title sky");
             go.transform.SetParent(root.transform, false);
-            go.AddComponent<TitleSky>().Bind(root.Title);
+            go.AddComponent<TitleSky>().Bind(root);
         }
 
-        void Bind(TitleScreen title)
+        void Bind(UiRoot root)
         {
+            _root = root;
+            TitleScreen title = root.Title;
             _title = title;
             _camera = gameObject.AddComponent<Camera>();
             _camera.cullingMask = 0;                      // the sky only: no scene geometry
@@ -101,8 +113,14 @@ namespace CloseTheDeal.UI.Title
             if (!_showing)
                 return;
             EnsureTexture();
-            float t = UiTransition.ReducedMotion ? 0f : Time.unscaledTime * Mathf.PI * 2f / _swaySeconds;
-            transform.rotation = _base * Quaternion.Euler(Mathf.Sin(t * 0.5f) * _swayDegrees * 0.3f, Mathf.Sin(t) * _swayDegrees, 0f);
+            bool reduced = UiTransition.ReducedMotion;
+            // The session panel is a dialog over the title: while it is open, the view turns slowly to a second view.
+            bool waiting = _root != null && _root.Session != null && _root.Session.isActiveAndEnabled;
+            _waiting = reduced ? (waiting ? 1f : 0f) : Mathf.MoveTowards(_waiting, waiting ? 1f : 0f, Time.unscaledDeltaTime / _connectingSeconds);
+            float w = _waiting * _waiting * (3f - 2f * _waiting);
+            float t = reduced ? 0f : Time.unscaledTime * Mathf.PI * 2f / _swaySeconds;
+            transform.rotation = _base * Quaternion.Euler(-_connectingLift * w + Mathf.Sin(t * 0.5f) * _swayDegrees * 0.3f,
+                _connectingTurn * w + Mathf.Sin(t) * _swayDegrees, 0f);
         }
 
         void SetShowing(bool show)
