@@ -15,6 +15,9 @@ namespace CloseTheDeal.UI
     [AddComponentMenu("Close the Deal/UI/Problem Panel")]
     public sealed class ProblemPanel : UiScreen
     {
+        /// <summary>Opens and closes under lane 8's CloudWipe (docs/systems/UI_KIT.md "Screens").</summary>
+        public override CloseTheDeal.UI.Title.UiTransitionKind? Through => CloseTheDeal.UI.Title.UiTransitionKind.CloudWipe;
+
         [Header("Parts")]
         [Tooltip("The section caption, e.g. § 1  JOIN GAME.")]
         [SerializeField] TMP_Text _caption;

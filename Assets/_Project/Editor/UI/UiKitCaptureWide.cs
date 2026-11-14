@@ -7,6 +7,8 @@ using CloseTheDeal.UI;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using Object = UnityEngine.Object;
 
 namespace CloseTheDeal.Editor.UI
@@ -45,6 +47,9 @@ namespace CloseTheDeal.Editor.UI
                     break;
                 case "wide3":
                     yield return SessionScreens(lobby);
+                    break;
+                case "wide-transitions":
+                    yield return StackTransitions(lobby);
                     break;
                 case "wide-frame":
                     yield return TitleFrame(Arg("-uiShotPrefix") ?? "14_title_frame");
@@ -282,6 +287,110 @@ namespace CloseTheDeal.Editor.UI
             Shot("12_title_live_sky_2560x1080", 2560, 1080);
             CheckInside(title.transform, 1280, 720, "title at 1280x720");
             CheckInside(title.transform, 2560, 1080, "title at 2560x1080");
+        }
+
+        // ---- Lane 8's transitions from the screen stack ----------------------------------------------------
+
+        static int _filmFrame;
+        static readonly List<string> TransitionLog = new();
+
+        /// <summary>
+        /// One real frame filmed: the kit's motion steps 1/30 s by hand, and lane 8's transition steps by itself (its
+        /// step is capped at 1/30 s and batch frames are slower than that), so the clip plays at 30 fps.
+        /// </summary>
+        static void FilmFrame(string folder)
+        {
+            UiMotion.Tick(Step);
+            Texture2D tex = Grab(1280, 720);
+            File.WriteAllBytes(Path.Combine(folder, $"t{_filmFrame:0000}.png"), tex.EncodeToPNG());
+            Object.DestroyImmediate(tex);
+            if (CloseTheDeal.UI.Title.UiTransition.IsPlaying)
+                TransitionLog.Add(_filmFrame.ToString("0000"));
+            _filmFrame++;
+        }
+
+        static IEnumerator Film(string folder, float seconds)
+        {
+            for (float t = 0f; t < seconds; t += Step)
+            {
+                FilmFrame(folder);
+                yield return null;
+            }
+        }
+
+        /// <summary>
+        /// Settings opens and closes under PaneSlide, hosting opens under CloudWipe, and the game starts under FrameZoom,
+        /// all filmed from the transition's own overlay (bound to the capture camera, so it is in the frames). Checks
+        /// that each change waited for its cover, and that Esc during a transition does nothing.
+        /// </summary>
+        static IEnumerator StackTransitions(SteamLobby lobby)
+        {
+            string folder = Path.Combine(_out, "transitions");
+            Directory.CreateDirectory(folder);
+            _filmFrame = 0;
+            TransitionLog.Clear();
+            UiScreenStack.UseTransitions = true; // the other capture runs step motion by hand and switch them off
+            var host = CloseTheDeal.UI.Title.UiTransitionHost.Get(_cam); // the overlay draws into the capture's frames
+            foreach (Transform t in host.GetComponentsInChildren<Transform>(true))
+                t.gameObject.layer = 5;
+            UiMotion.Paused = true;
+            TitleScreen title = _root.Title;
+            SettingsScreen settings = Settings();
+            var ped = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
+            yield return Film(folder, 0.5f);
+
+            // Settings: PaneSlide forward.
+            UiButton open = Find<UiButton>(title, "Settings");
+            ExecuteEvents.Execute(open.gameObject, ped, ExecuteEvents.pointerDownHandler);
+            yield return Film(folder, 0.1f);
+            ExecuteEvents.Execute(open.gameObject, ped, ExecuteEvents.pointerUpHandler);
+            ExecuteEvents.Execute(open.gameObject, ped, ExecuteEvents.pointerClickHandler);
+            bool waited = _root.Stack.Top == title && _root.Stack.Busy;
+            int before = TransitionLog.Count;
+            yield return Film(folder, 0.9f);
+            Check("Settings opens under PaneSlide: the change waits for the cover, then Settings is on top",
+                waited && _root.Stack.Top == settings && TransitionLog.Count > before, $"{TransitionLog.Count - before} covered frames");
+
+            // Back: PaneSlide again; Esc pressed while it plays is ignored (no second pop).
+            settings.OnCancel();
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.Escape));
+            yield return null;
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState());
+            before = TransitionLog.Count;
+            yield return Film(folder, 1.0f);
+            Check("Back from Settings under PaneSlide lands on the title; an Esc during the cover changes nothing",
+                _root.Stack.Top == title && _root.Stack.Count == 1 && TransitionLog.Count > before, $"top {_root.Stack.Top?.name}, count {_root.Stack.Count}");
+
+            // Host: the session panel under CloudWipe, then the game under FrameZoom.
+            ushort port = ushort.TryParse(Arg("-lanePort"), out ushort p) ? p : (ushort)17785;
+            var tugboat = Object.FindAnyObjectByType<FishNet.Transporting.Tugboat.Tugboat>();
+            if (tugboat != null)
+                tugboat.SetPort(port);
+            UiButton hostButton = Find<UiButton>(title, "HostGame");
+            ExecuteEvents.Execute(hostButton.gameObject, ped, ExecuteEvents.pointerDownHandler);
+            yield return Film(folder, 0.1f);
+            ExecuteEvents.Execute(hostButton.gameObject, ped, ExecuteEvents.pointerUpHandler);
+            ExecuteEvents.Execute(hostButton.gameObject, ped, ExecuteEvents.pointerClickHandler);
+            bool sawSession = false;
+            for (float t = 0f; t < 8f && (PlayerMotor.Local == null || _root.Stack.Count > 0 || CloseTheDeal.UI.Title.UiTransition.IsPlaying); t += Step)
+            {
+                FilmFrame(folder);
+                sawSession |= _root.Stack.Top == _root.Session;
+                yield return null;
+            }
+
+            yield return Film(folder, 0.6f);
+            Check("this run is the host (not a client of someone else's game)", lobby.IsHosting);
+            Check("hosting showed the session panel (CloudWipe) and the game start cleared the screens (FrameZoom)",
+                PlayerMotor.Local != null && _root.Stack.Count == 0, $"session seen {sawSession}, stack {_root.Stack.Count}");
+            Note($"filmed {_filmFrame} frames, {TransitionLog.Count} of them under a transition");
+
+            lobby.Leave();
+            yield return Film(folder, 1.5f);
+            Check("leaving brings the title back (under CloudWipe)", _root.Stack.Top == title);
+            Note("covered frames: " + string.Join(",", TransitionLog));
+            UiMotion.Paused = false;
+            UiScreenStack.UseTransitions = false;
         }
 
         /// <summary>
