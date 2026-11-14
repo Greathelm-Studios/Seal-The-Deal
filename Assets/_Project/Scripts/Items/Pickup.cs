@@ -2,6 +2,7 @@ using System;
 using CloseTheDeal.Core;
 using CloseTheDeal.Player;
 using CloseTheDeal.Props;
+using CloseTheDeal.Tower;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using UnityEngine;
@@ -126,6 +127,13 @@ namespace CloseTheDeal.Items
         public event Action<Pickup, float> Impact;
         /// <summary>Every machine. The item is back where it started.</summary>
         public event Action<Pickup> Returned;
+
+        /// <summary>
+        /// Host only, static. A thrown item landed on a player or on something that takes damage:
+        /// the item, the thrower's client id (-1 if unknown), what it hit, and the damage done
+        /// (0 for a shove alone). For match records ("throws landed"). Fires once per throw.
+        /// </summary>
+        public static event Action<Pickup, int, GameObject, float> ServerThrowLanded;
 
         /// <summary>The hand-made definition if this prefab has one, otherwise one worked out from the prop itself (LooseItemDefinition).</summary>
         public ItemDefinition Definition => _definition != null ? _definition : _derivedDefinition != null ? _derivedDefinition : Derive();
@@ -388,8 +396,35 @@ namespace CloseTheDeal.Items
                     _live = false;
             }
 
-            if (_body.position.y < _homePosition.y - Rules.FallReturnDistance)
+            if (OutOfTheBuilding(_body.position))
                 ServerSendAway(Rules.FallReturnSeconds, false);
+        }
+
+        /// <summary>
+        /// Host only. Gone from the building: below the ground, or outside both towers' footprints
+        /// and fallen below where it started (out of a window, into the street). Carried down
+        /// a stairwell or left on a skybridge at its own level, it stays. With no tower built
+        /// (a test scene), anything far below where it started counts.
+        /// The footprint is the same two-tower layout Switchboard's TowerFrame packs into:
+        /// tower-local X within half the width, |Z| from half the gap to the back of the spine.
+        /// </summary>
+        bool OutOfTheBuilding(Vector3 position)
+        {
+            CarryProfile rules = Rules;
+            TowerBuilder tower = TowerBuilder.Instance;
+            if (tower == null || !tower.IsBuilt || tower.Profile == null)
+                return position.y < _homePosition.y - rules.FallReturnDistance;
+
+            Vector3 local = tower.transform.InverseTransformPoint(position);
+            if (local.y < -rules.BelowGroundMetres)
+                return true;
+
+            TowerProfile shape = tower.Profile;
+            float side = Mathf.Abs(local.z);
+            bool inside = Mathf.Abs(local.x) <= shape.Width * 0.5f
+                && side >= shape.Gap * 0.5f
+                && side <= shape.Gap * 0.5f + shape.MainDepth + shape.SpineDepth;
+            return !inside && position.y < _homePosition.y - rules.OutsideDropMetres;
         }
 
         /// <summary>Keeps the solid part at the carrier's hands. A carrier that has gone (left the game) drops it where it is.</summary>
@@ -421,16 +456,23 @@ namespace CloseTheDeal.Items
             if (motor != null && motor == _thrower && Time.time < _throwerSafeUntil)
                 return;
 
+            LandOn(collision, motor, speed);
+            ObserversImpact(speed);
+        }
+
+        /// <summary>Shoves a player it hit and hurts anything that takes damage. One throw lands once: after that it is furniture again.</summary>
+        void LandOn(Collision collision, PlayerMotor motor, float speed)
+        {
             ContactPoint contact = collision.GetContact(0);
             Vector3 direction = _lastVelocity.sqrMagnitude > 0.01f ? _lastVelocity.normalized : -contact.normal;
             bool shoved = Shove(motor, speed, direction);
-            bool hurt = Hurt(collision.collider.GetComponentInParent<IDamageable>(), speed, contact.point, direction);
+            float damage = Hurt(collision.collider.GetComponentInParent<IDamageable>(), speed, contact.point, direction);
+            if (!shoved && damage < 0f)
+                return;
 
-            // One throw hurts once: after it lands on someone it is furniture again.
-            if (shoved || hurt)
-                _live = false;
-
-            ObserversImpact(speed);
+            _live = false;
+            Rigidbody struck = collision.collider.attachedRigidbody;
+            ServerThrowLanded?.Invoke(this, _lastHolderClientId, struck != null ? struck.gameObject : collision.collider.gameObject, Mathf.Max(0f, damage));
         }
 
         bool Shove(PlayerMotor motor, float speed, Vector3 direction)
@@ -443,14 +485,15 @@ namespace CloseTheDeal.Items
             return true;
         }
 
-        bool Hurt(IDamageable target, float speed, Vector3 point, Vector3 direction)
+        /// <summary>The damage done, or -1 when what it hit takes no damage.</summary>
+        float Hurt(IDamageable target, float speed, Vector3 point, Vector3 direction)
         {
             if (target == null)
-                return false;
+                return -1f;
 
             float damage = (speed - Rules.MinImpactSpeed) * _body.mass * Rules.DamagePerKgMps;
             target.ApplyDamage(damage, point, direction, _lastHolderClientId);
-            return true;
+            return damage;
         }
 
         // ---- Every machine: showing the state -------------------------------------------------

@@ -44,6 +44,7 @@ namespace CloseTheDeal.Editor.Lanes
         const string LaneTowerPath = ProfileFolder + "/LaneTowerFrame.asset";
         const string EmptyFloorPath = PrefabFolder + "/LaneEmptyFloor.prefab";
         const int PropsPerFloorCap = 16; // docs/systems/PROPS.md
+        const float LaneTowerGap = 60f;
 
         // The test floor: a slice of office 12 m up, so things can be thrown out of it.
         const float FloorTop = 12f;
@@ -962,6 +963,10 @@ namespace CloseTheDeal.Editor.Lanes
             var profile = ScriptableObject.CreateInstance<TowerProfile>();
             profile.Lobby = profile.Checkpoint = profile.Boardroom = profile.Roof = empty;
             profile.Offices = new[] { empty };
+            // The two empty towers stand well apart, so the hand-built slice and the ground
+            // under its windows are street, not inside a tower: things thrown out of it are
+            // out of the building (Pickup's fall rule) yet still inside Switchboard's box.
+            profile.Gap = LaneTowerGap;
             AssetDatabase.CreateAsset(profile, LaneTowerPath);
             Debug.Log("[Pickups] Created " + LaneTowerPath);
             return profile;
@@ -1738,6 +1743,13 @@ namespace CloseTheDeal.Editor.Lanes
             Stand(me, new Vector3(-2.5f, FloorY, -2f), -90f);
             yield return 0.5f;
             float healthBefore = dummyC.Health;
+            int landedBy = -2;
+            float landedDamage = -1f;
+            Action<Pickup, int, GameObject, float> onLanded = (item, thrower, hit, damage) =>
+            {
+                if (item == chairA) { landedBy = thrower; landedDamage = damage; }
+            };
+            Pickup.ServerThrowLanded += onLanded;
             me.LocalThrow(AimAt(me, dummyC.transform.position + Vector3.up * 1.1f, 0.08f));
             yield return 0.15f;
             FirstPersonStill("03_chair_in_flight");
@@ -1748,6 +1760,9 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 1.6f;
             Check("a thrown chair leaves the hands", me.Held == null && chairA.State == PickupState.InWorld);
             Check("a thrown chair damages what it hits", dummyC.Health < healthBefore, $"dummy {healthBefore:0} -> {dummyC.Health:0}");
+            Pickup.ServerThrowLanded -= onLanded;
+            Check("the host reports the throw landing, with who threw it and the damage", landedBy == me.OwnerId && landedDamage > 0f,
+                $"thrower {landedBy} (me {me.OwnerId}), damage {landedDamage:0.0}");
             Check("walking speed is back after letting go", Mathf.Approximately(me.Motor.Profile.WalkSpeed, fullWalk));
 
             // 2. Cubicle panel as moving cover, and the slowdown measured by walking.
