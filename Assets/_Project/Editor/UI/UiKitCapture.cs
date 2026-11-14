@@ -841,7 +841,16 @@ namespace CloseTheDeal.Editor.UI
                 yield break;
             }
 
-            Check("a game starting closes the kit's screens", _root.Stack.Count == 0);
+            float zoomWait = 0f;
+            while (_root.Stack.Count > 0 && zoomWait < 3f)
+            {
+                zoomWait += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            float zoom = CloseTheDeal.UI.Title.UiTransition.Duration(CloseTheDeal.UI.Title.UiTransitionKind.FrameZoom);
+            Check("a game starting closes the kit's screens once the window zoom covers the view", _root.Stack.Count == 0 && zoomWait <= zoom + 0.25f,
+                $"after {zoomWait:0.00} s more (zoom {zoom:0.00} s)");
             Note($"batch mode: cursor reads {Cursor.lockState} after the menu asked for Locked, so the menu reopens (no window to lock)");
 
             var reader = me.GetComponent<PlayerInputReader>();
@@ -885,11 +894,80 @@ namespace CloseTheDeal.Editor.UI
             menu.StateChanged -= OnState;
             Check("letting go of A closes the menu, not before", closedFrame >= releaseFrame - 1 && closedFrame > 0,
                 $"released frame {releaseFrame}, closed frame {closedFrame}");
+            yield return CursorHolds(menu, pad);
             InputSystem.RemoveDevice(pad);
 
             lobby.Leave();
             yield return 1.5f;
             Check("leaving the game brings the title back", _root.Stack.Top == _root.Title && menu.IsOpen);
+            Check("leaving the game drops every cursor hold", !GameMenu.CursorHeld);
+        }
+
+        /// <summary>
+        /// GameMenu.HoldCursor / ReleaseCursor (lane 6's fitting room and host list): a hold keeps the mouse free with the
+        /// menu closed, Esc still opens the menu, a release with A still down waits for A, and a destroyed holder stops
+        /// counting. Batch mode can't lock the cursor, so this reads what the menu asked for (CursorFree).
+        /// </summary>
+        static IEnumerator CursorHolds(GameMenu menu, Gamepad pad)
+        {
+            var owner = new GameObject("CaptureHolder");
+            menu.Open();
+            yield return 0.1f;
+            GameMenu.HoldCursor(owner);
+            GameMenu.HoldCursor(owner); // twice from one owner counts once
+            menu.Resume();
+            yield return 0.4f;
+            Check("hold: the menu closes and stays closed with the mouse free and the player idle",
+                !menu.IsOpen && menu.CursorFree && GameMenu.CursorHeld && !PlayerInputReader.Captured,
+                $"open {menu.IsOpen}, free {menu.CursorFree}");
+
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.Escape));
+            yield return 0.1f;
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState());
+            yield return 0.2f;
+            Check("hold: Esc still opens the menu", menu.IsOpen);
+            menu.Resume();
+            yield return 0.3f;
+            Check("hold: closing the menu again leaves the mouse free (still held)", !menu.IsOpen && menu.CursorFree);
+
+            InputSystem.QueueStateEvent(pad, new GamepadState(GamepadButton.South));
+            yield return 0.1f;
+            GameMenu.ReleaseCursor(owner);
+            yield return 0.2f;
+            Check("release with A down: the mouse stays free until A is let go", menu.CursorFree && !GameMenu.CursorHeld);
+            InputSystem.QueueStateEvent(pad, new GamepadState());
+            int upFrame = Time.frameCount;
+            bool askedBack = false;
+            void OnMenu() => askedBack |= !menu.CursorFree || menu.IsOpen;
+            menu.StateChanged += OnMenu;
+            for (int i = 0; i < 20 && !askedBack; i++)
+            {
+                yield return null;
+                askedBack |= !menu.CursorFree || menu.IsOpen;
+            }
+
+            menu.StateChanged -= OnMenu;
+            Note($"A let go at frame {upFrame}; answered by frame {Time.frameCount}, SubmitHeld {UiInput.SubmitHeld}");
+            Note($"after A let go: free {menu.CursorFree}, open {menu.IsOpen} (batch mode can't lock, so the menu then reopens to match)");
+            Check("release: once A is up the menu asked for the mouse back (or reopened because batch mode can't lock it)", askedBack);
+
+            GameMenu.HoldCursor(owner);
+            menu.Resume();
+            yield return 0.2f;
+            Check("hold again: closed with the mouse free", !menu.IsOpen && menu.CursorFree);
+            Object.Destroy(owner);
+            bool relocked = false;
+            for (int i = 0; i < 20 && !relocked; i++)
+            {
+                yield return null;
+                relocked = !menu.CursorFree;
+            }
+
+            Check("a destroyed holder stops counting and the menu asks for the mouse back (not opening itself)", !GameMenu.CursorHeld && relocked);
+
+            GameMenu.HoldCursor(menu); // held again, then the game is left below: leaving must drop it
+            menu.Open();
+            yield return 0.1f;
         }
 
         // ---- Settings persist across a relaunch ----------------------------------------------------------------
