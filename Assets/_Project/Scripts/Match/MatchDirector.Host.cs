@@ -94,14 +94,18 @@ namespace CloseTheDeal.MatchMode
             if (!(CanHostStart || CanHostRematch) || firmByClientId == null)
                 return false;
 
+            // All seats move at once, so players swapping firms never share a spawn point.
             TeamSpawner spawner = TeamSpawner.Instance;
+            if (spawner != null)
+                spawner.AssignTeams(firmByClientId);
+
             foreach (FirmMember member in FirmMember.All)
             {
                 if (!member.Owner.IsValid || !firmByClientId.TryGetValue(member.Owner.ClientId, out int firm) || firm < 0 || firm >= FirmCount)
                     continue;
 
-                int slot = spawner != null ? spawner.AssignTeam(member.Owner.ClientId, firm) : member.Slot;
-                member.ServerSetFirm(firm, slot);
+                int slot = spawner != null ? spawner.SlotOf(member.Owner.ClientId) : member.Slot;
+                member.ServerSetFirm(firm, Mathf.Max(0, slot));
             }
 
             ServerNewMatch();
@@ -126,7 +130,9 @@ namespace CloseTheDeal.MatchMode
                 SetCheckpoint(firm, 0);
             }
 
-            _openFloor.Value = 0;
+            _openFloor.Value = new FloorOpening { Floor = 0, ByFirm = NoFirm };
+            foreach (FirmMember member in FirmMember.All)
+                member.GateExplained = false;
             ApplyGates();
 
             Vector3 spawn = SpawnPosition();
@@ -226,7 +232,8 @@ namespace CloseTheDeal.MatchMode
         /// <summary>The carrier lets go, whatever the reason. Does nothing if they carry nothing.</summary>
         internal void ServerDrop(FirmMember member, DropCause cause)
         {
-            if (!IsServerStarted || !IsCarrying(member))
+            // Briefcase.Current is gone already when the host is shutting down: nothing left to drop.
+            if (!IsServerStarted || !IsCarrying(member) || Briefcase.Current == null)
                 return;
 
             Vector3 forward = member.Forward;
@@ -273,12 +280,16 @@ namespace CloseTheDeal.MatchMode
 
         void ServerPutDown(Vector3 position, Quaternion rotation, Vector3 velocity)
         {
+            if (Briefcase.Current == null)
+                return;
+
             Briefcase.Current.ServerRelease(position, rotation, velocity);
             BriefcaseStatus status = _briefcase.Value;
             status.State = BriefcaseState.Dropped;
             status.CarrierId = -1;
             status.CarrierFirm = NoFirm;
             status.Position = position;
+            status.ReturnTick = 0;
             _briefcase.Value = status;
         }
 
@@ -296,6 +307,7 @@ namespace CloseTheDeal.MatchMode
             status.CarrierFirm = NoFirm;
             status.Floor = status.ReturnFloor;
             status.Place = _arena.PlaceOf(ReturnPosition(status.ReturnFloor), 0f);
+            status.ReturnTick = briefcase.ReturnAtTick;
             _briefcase.Value = status;
         }
 
@@ -306,12 +318,12 @@ namespace CloseTheDeal.MatchMode
         }
 
         /// <summary>Host only. The carrier stood on a floor above the open floor: it opens, in both towers, for the rest of the match.</summary>
-        internal void ServerOpenFloor(int floor)
+        internal void ServerOpenFloor(int floor, int byFirm)
         {
-            if (floor <= _openFloor.Value)
+            if (floor <= _openFloor.Value.Floor)
                 return;
 
-            _openFloor.Value = (byte)floor;
+            _openFloor.Value = new FloorOpening { Floor = (byte)floor, ByFirm = (byte)byFirm };
             ApplyGates();
         }
 
@@ -320,7 +332,7 @@ namespace CloseTheDeal.MatchMode
         {
             BriefcaseStatus status = _briefcase.Value;
             byte returnFloor = status.ReturnFloor;
-            if (_arena.IsCheckpoint(floor) && floor > returnFloor && floor <= _openFloor.Value)
+            if (_arena.IsCheckpoint(floor) && floor > returnFloor && floor <= _openFloor.Value.Floor)
                 returnFloor = (byte)floor;
 
             if (status.Place == place && status.Floor == floor && status.ReturnFloor == returnFloor)

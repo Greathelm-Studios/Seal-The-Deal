@@ -20,6 +20,7 @@ MonoBehaviour:
   LooseColour: {r: 0.42, g: 0.3, b: 0.22, a: 1}
   CountdownSeconds: 5
   MatchSeconds: 900
+  CapWarningSeconds: 60
   BriefcasePrefab: {fileID: 6831599298344535723, guid: cffa4987ab56d4f5694035ec80627290, type: 3}
   SpawnOnPlaza: {x: 0, y: 0.3, z: 0}
   PickupRange: 2.2
@@ -33,4 +34,8 @@ MonoBehaviour:
   RailHeight: 1.1
   CarryBlendSeconds: 0.15
   FirstPersonOffset: {x: 0.42, y: -0.5, z: 0.95}
+  BeaconMaterial: {fileID: 2100000, guid: 4c88f0c71628f4af982364919a8d0719, type: 2}
+  BeaconRange: 30
+  BeaconHeight: 3.5
+  BeaconLooseColour: {r: 0.95, g: 0.97, b: 1, a: 1}
   NoticeSeconds: 4

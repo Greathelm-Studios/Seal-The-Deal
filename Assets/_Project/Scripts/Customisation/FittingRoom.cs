@@ -1,5 +1,6 @@
 using System;
 using CloseTheDeal.Lobby;
+using CloseTheDeal.MatchMode;
 using CloseTheDeal.Player;
 using UnityEngine;
 
@@ -38,11 +39,8 @@ namespace CloseTheDeal.Customisation
         [Tooltip("The height the camera looks at, in metres above the feet. About the belt line.")]
         [Range(0.3f, 1.8f)] [SerializeField] float _lookHeight = 0.95f;
 
-        [Tooltip("The camera's own height, in metres above the feet. A little above the look height reads as a tailor's view.")]
-        [Range(0.3f, 2.2f)] [SerializeField] float _cameraHeight = 1.25f;
-
-        [Tooltip("How far right of the character the camera sits, in metres, so the screen on the left doesn't cover them.")]
-        [Range(-1.5f, 1.5f)] [SerializeField] float _sideShift = -0.45f;
+        [Tooltip("How far the view slides sideways so the character stands right of centre, clear of the form on the left, in metres at the full-body distance (it shrinks as the camera closes in, so the character keeps its place on screen). Negative puts the character left.")]
+        [Range(-1.5f, 1.5f)] [SerializeField] float _sideShift = 0.4f;
 
         [Tooltip("Seconds to swing out of first person. Under 0.5 keeps it quick; much faster reads as a cut.")]
         [Range(0.1f, 1.5f)] [SerializeField] float _enterSeconds = 0.45f;
@@ -52,6 +50,18 @@ namespace CloseTheDeal.Customisation
 
         [Tooltip("Closest the camera gets to a wall behind it, in metres.")]
         [Range(0.05f, 0.5f)] [SerializeField] float _wallClearance = 0.2f;
+
+        [Tooltip("How long the camera takes to ease to a category's own view (angle, distance, height) when the player moves to it, in seconds. Under 0.2 it snaps; over 0.6 it lags behind fast flicking.")]
+        [Range(0.1f, 1f)] [SerializeField] float _viewSmoothSeconds = 0.35f;
+
+        [Tooltip("How far the camera pushes in when a choice changes, in metres, before easing back. 0 = no push. 0.12 is a small shove; above 0.3 it jolts.")]
+        [Range(0f, 0.5f)] [SerializeField] float _punchMetres = 0.12f;
+
+        [Tooltip("How long the push after a change takes to settle, in seconds.")]
+        [Range(0.1f, 0.6f)] [SerializeField] float _punchSeconds = 0.25f;
+
+        [Tooltip("How far above the look-at height the camera sits, in metres. Slightly above reads as a tailor's view.")]
+        [Range(0f, 0.8f)] [SerializeField] float _cameraRise = 0.3f;
 
         [Tooltip("Where round the character the view starts, in degrees from straight in front. 30 gives a three-quarter view that shows the suit's shape; 0 is flat on.")]
         [Range(-90f, 90f)] [SerializeField] float _startAngle = 30f;
@@ -74,13 +84,20 @@ namespace CloseTheDeal.Customisation
         Vector3 _savedOffset;
         Quaternion _savedRotation;
         Vector3 _facing;
-        float _orbit;
+        float _userOrbit;
+        float _userOrbitVelocity;
+        bool _returnOrbit;
+        float _angle, _angleVelocity;
+        float _viewDist, _viewDistVelocity;
+        float _viewLook, _viewLookVelocity;
+        float _punch;
         bool _waitForInteractRelease;
         OutfitLoadout _working;
         int _slot;
         bool _kept;
         int _wallMask;
         LobbyRoster _hookedRoster;
+        MatchDirector _hookedMatch;
 
         public bool IsOpen => _phase != Phase.Closed;
 
@@ -95,6 +112,8 @@ namespace CloseTheDeal.Customisation
         {
             if (_hookedRoster != null)
                 _hookedRoster.OnRunStarting -= OnRunStarting;
+            if (_hookedMatch != null)
+                _hookedMatch.OnPhaseChanged -= OnMatchPhase;
             if (Instance == this)
                 Instance = null;
         }
@@ -118,6 +137,7 @@ namespace CloseTheDeal.Customisation
             if (!_outfit.Catalog.IsValid(_working))
                 _working = _outfit.Catalog.Default;
             _slot = 0;
+            SnapViewToSlot();
             _outfit.View.ForceVisible(true);
 
             if (LobbyRoster.Instance != null)
@@ -150,7 +170,6 @@ namespace CloseTheDeal.Customisation
             if (_facing.sqrMagnitude < 0.01f)
                 _facing = _player.forward;
             _facing.Normalize();
-            _orbit = _startAngle;
             _waitForInteractRelease = true;
         }
 
@@ -175,7 +194,7 @@ namespace CloseTheDeal.Customisation
             _kept = keep;
             _phase = Phase.Leaving;
             _blend = 0f;
-            _screen.Close();
+            _screen.Close(keep ? "Outfit kept." : "Outfit put back.");
         }
 
         /// <summary>Hands everything back to first person. Safe to call with the player gone.</summary>
@@ -202,6 +221,8 @@ namespace CloseTheDeal.Customisation
         {
             if (_outfit != null)
                 _outfit.Revert();
+            if (LobbyRoster.Instance != null)
+                LobbyRoster.Instance.RequestFitting(false); // Or the board keeps showing "In the fitting room" and the desk refuses a ready.
             _kept = false;
             _screen.Close();
             Finish();
@@ -209,6 +230,19 @@ namespace CloseTheDeal.Customisation
 
         void OnRunStarting()
         {
+            // With a match flow, a run counts when its countdown really begins (OnMatchPhase): a
+            // desk start the match refuses must not count, and the host's menu start must.
+            if (MatchDirector.Instance == null && PlayerOutfit.Local != null)
+                PlayerOutfit.Local.RecordRunStarted();
+            if (_phase != Phase.Closed)
+                Abort();
+        }
+
+        /// <summary>The match's countdown began, however it was started (desk or the host's menu): count the run and leave the fitting room.</summary>
+        void OnMatchPhase(MatchPhase from, MatchPhase to)
+        {
+            if (to != MatchPhase.Countdown || from == MatchPhase.Countdown)
+                return;
             if (PlayerOutfit.Local != null)
                 PlayerOutfit.Local.RecordRunStarted();
             if (_phase != Phase.Closed)
@@ -220,6 +254,7 @@ namespace CloseTheDeal.Customisation
         void Update()
         {
             HookRoster();
+            HookMatch();
             if (_phase == Phase.Closed)
                 return;
 
@@ -232,6 +267,18 @@ namespace CloseTheDeal.Customisation
             // The game menu frees the mouse; while it is up, the fitting room waits.
             if (_phase == Phase.Open && LobbyInput.Captured)
                 ReadInput();
+        }
+
+        void HookMatch()
+        {
+            MatchDirector match = MatchDirector.Instance;
+            if (match == _hookedMatch)
+                return;
+            if (_hookedMatch != null)
+                _hookedMatch.OnPhaseChanged -= OnMatchPhase;
+            _hookedMatch = match;
+            if (_hookedMatch != null)
+                _hookedMatch.OnPhaseChanged += OnMatchPhase;
         }
 
         void HookRoster()
@@ -272,10 +319,33 @@ namespace CloseTheDeal.Customisation
             else if (LobbyInput.PreviousOption.WasPressedThisFrame())
                 StepOption(-1);
 
+            ReadTurn();
+        }
+
+        /// <summary>Jumps the eased view to the focused category's own view (on entering).</summary>
+        void SnapViewToSlot()
+        {
+            OutfitSlot slot = _outfit.Catalog.Slot(_slot);
+            _angle = slot != null ? slot.ViewAngle : _startAngle;
+            _viewDist = slot != null ? slot.ViewDistance : _distance;
+            _viewLook = slot != null ? slot.ViewHeight : _lookHeight;
+            _angleVelocity = _viewDistVelocity = _viewLookVelocity = 0f;
+            _userOrbit = 0f;
+            _userOrbitVelocity = 0f;
+            _returnOrbit = false;
+            _punch = 0f;
+        }
+
+        /// <summary>Mouse, keys or stick spin the view round the character; the spin stays until another category is focused.</summary>
+        void ReadTurn()
+        {
             float turn = LobbyInput.Rotate.ReadValue<float>() * _turnSpeed * Time.deltaTime;
             turn += LobbyInput.RotatePointer.ReadValue<float>() * _mouseTurn;
-            if (!_waitForInteractRelease)
-                _orbit += turn;
+            if (!_waitForInteractRelease && !Mathf.Approximately(turn, 0f))
+            {
+                _userOrbit += turn;
+                _returnOrbit = false;
+            }
         }
 
         void FocusSlot(int step)
@@ -284,6 +354,7 @@ namespace CloseTheDeal.Customisation
             if (count == 0)
                 return;
             _slot = (_slot + step + count) % count;
+            _returnOrbit = true; // Turn back from wherever the player spun it, to show this category.
             Refresh();
             OnSlotFocused?.Invoke(_slot);
         }
@@ -298,6 +369,7 @@ namespace CloseTheDeal.Customisation
             int option = (_working.Get(_slot) + step + count) % count;
             _working = _working.With(_slot, option);
             _outfit.Preview(_working);
+            _punch = 1f;
             _screen.NudgeOption(step);
             Refresh();
             OnOptionShown?.Invoke(_slot, option);
@@ -330,6 +402,7 @@ namespace CloseTheDeal.Customisation
         /// <summary>Between the first-person eye and the framed view, by the current blend, eased at both ends so the swing never jolts.</summary>
         void PlaceCamera()
         {
+            EaseView(Time.deltaTime);
             Vector3 eye = _player.position + _savedOffset;
             Framed(out Vector3 framed, out Quaternion framedRotation);
 
@@ -341,12 +414,30 @@ namespace CloseTheDeal.Customisation
                 Quaternion.Slerp(_savedRotation, framedRotation, towardFramed));
         }
 
+        /// <summary>Eases the view to the focused category's angle, distance and height, lets a spin the player made return, and settles the push after a change.</summary>
+        void EaseView(float dt)
+        {
+            OutfitSlot slot = _outfit.Catalog.Slot(_slot);
+            if (slot != null)
+            {
+                _angle = Mathf.SmoothDampAngle(_angle, slot.ViewAngle, ref _angleVelocity, _viewSmoothSeconds, Mathf.Infinity, dt);
+                _viewDist = Mathf.SmoothDamp(_viewDist, slot.ViewDistance, ref _viewDistVelocity, _viewSmoothSeconds, Mathf.Infinity, dt);
+                _viewLook = Mathf.SmoothDamp(_viewLook, slot.ViewHeight, ref _viewLookVelocity, _viewSmoothSeconds, Mathf.Infinity, dt);
+            }
+
+            if (_returnOrbit)
+                _userOrbit = Mathf.SmoothDampAngle(_userOrbit, 0f, ref _userOrbitVelocity, _viewSmoothSeconds, Mathf.Infinity, dt);
+            _punch = Mathf.MoveTowards(_punch, 0f, dt / _punchSeconds);
+        }
+
         void Framed(out Vector3 position, out Quaternion rotation)
         {
-            Vector3 direction = Quaternion.Euler(0f, _orbit, 0f) * _facing;
+            Vector3 direction = Quaternion.Euler(0f, _angle + _userOrbit, 0f) * _facing;
             Vector3 side = Vector3.Cross(Vector3.up, direction);
-            Vector3 look = _player.position + Vector3.up * _lookHeight + side * _sideShift;
-            Vector3 wanted = _player.position + Vector3.up * _cameraHeight + side * _sideShift + direction * _distance;
+            float distance = _viewDist - _punchMetres * _punch * _punch;
+            float shift = _sideShift * (_viewDist / _distance);
+            Vector3 look = _player.position + Vector3.up * _viewLook + side * shift;
+            Vector3 wanted = _player.position + Vector3.up * (_viewLook + _cameraRise) + side * shift + direction * distance;
 
             Vector3 ray = wanted - look;
             float length = ray.magnitude;

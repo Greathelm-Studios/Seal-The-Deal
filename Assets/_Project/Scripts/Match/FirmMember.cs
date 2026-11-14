@@ -74,6 +74,9 @@ namespace CloseTheDeal.MatchMode
         /// <summary>Host only: was at a closed floor gate last tick, so the refusal is said once per approach.</summary>
         internal bool WasAtGate;
 
+        /// <summary>Host only: has been told this match why a gate is shut, so later refusals use the short line.</summary>
+        internal bool GateExplained;
+
         /// <summary>Host only: was on a roof last tick, so the "needs the briefcase" line is said once per visit.</summary>
         internal bool WasOnRoof;
 
@@ -269,6 +272,15 @@ namespace CloseTheDeal.MatchMode
         {
             if (MatchDirector.Instance != null)
                 MatchDirector.Instance.ServerDrop(this, DropCause.Manual);
+        }
+
+        /// <summary>The owner's own body hit something: a shut floor gate answers at once, before the host's refusal line arrives.</summary>
+        void OnCollisionEnter(Collision collision)
+        {
+            if (!IsOwner || MatchDirector.Instance == null || MatchDirector.Instance.Gates == null)
+                return;
+
+            MatchDirector.Instance.Gates.Touch(collision.collider);
         }
 
         // ---- Host: moving and telling the player ---------------------------------------------

@@ -29,7 +29,9 @@ namespace CloseTheDeal.Items
         /// <summary>The player is being thrown about and cannot grab anything.</summary>
         KnockedAbout = 4,
         /// <summary>The item cannot be used here, for example nowhere flat to put it down.</summary>
-        CannotUseHere = 5
+        CannotUseHere = 5,
+        /// <summary>This player let go of it a moment ago and cannot snatch it straight back. No text: it passes in under a second.</summary>
+        TooSoon = 6
     }
 
     /// <summary>
@@ -59,6 +61,9 @@ namespace CloseTheDeal.Items
 
         /// <summary>The hands this client controls. Null on a pure host with no player.</summary>
         public static ItemCarrier Local { get; private set; }
+
+        /// <summary>This machine. Local changed: this client's player spawned (the new hands) or left (null). Bind the HUD here instead of checking Local every frame.</summary>
+        public static event Action<ItemCarrier> LocalChanged;
 
         /// <summary>
         /// Host only. A player has just taken an item. Guns are granted here: the weapon holder
@@ -106,6 +111,9 @@ namespace CloseTheDeal.Items
         ItemDefinition _promptItem;
 
         public Pickup Held => _held;
+
+        /// <summary>Every machine. How much what is carried weighs on the carrier: 0 is weightless (up to the free weight), 1 is at the weight limit.</summary>
+        public float Load { get; private set; }
         public PlayerMotor Motor => _motor;
         public CapsuleCollider Capsule => _capsule;
         public CarryProfile Profile => _profile;
@@ -116,6 +124,9 @@ namespace CloseTheDeal.Items
             _rigidbody = GetComponent<Rigidbody>();
             _capsule = GetComponent<CapsuleCollider>();
             _speed = new MotorSpeedOverride(_motor);
+            // Loose props with no rules of their own follow the players' rules.
+            if (CarryProfile.Shared == null)
+                CarryProfile.Shared = _profile;
             enabled = false;
         }
 
@@ -155,6 +166,7 @@ namespace CloseTheDeal.Items
             Local = this;
             CreateInput();
             enabled = true;
+            LocalChanged?.Invoke(this);
         }
 
         public override void OnStopClient()
@@ -163,11 +175,14 @@ namespace CloseTheDeal.Items
             if (!IsOwner)
                 return;
 
-            if (Local == this)
-                Local = null;
             enabled = false;
             DisposeInput();
             SetPrompt(PromptKind.None, null);
+            if (Local == this)
+            {
+                Local = null;
+                LocalChanged?.Invoke(null);
+            }
         }
 
         // ---- Owner: input ---------------------------------------------------------------------
@@ -376,18 +391,27 @@ namespace CloseTheDeal.Items
                 return DenyReason.KnockedAbout;
             if (pickup.Definition.WeightKg > _profile.MaxCarryWeight)
                 return DenyReason.TooHeavy;
+            if (pickup.ServerTooSoonFor(this))
+                return DenyReason.TooSoon;
 
+            return InReach(pickup) ? null : DenyReason.TooFar;
+        }
+
+        /// <summary>
+        /// Close enough, and nothing solid between the eye and it that is not itself a pickup:
+        /// no grabbing through walls, floors or locked doors (doors share the Prop layer, so a
+        /// building-only mask would miss them).
+        /// </summary>
+        bool InReach(Pickup pickup)
+        {
             Vector3 eye = transform.position + Vector3.up * _motor.EyeHeight;
             Vector3 nearest = pickup.Body.ClosestPointOnBounds(eye);
             float reach = _profile.Reach + _profile.ReachTolerance;
             if ((nearest - eye).sqrMagnitude > reach * reach)
-                return DenyReason.TooFar;
+                return false;
 
-            // No grabbing through walls or floors: the building must not stand between the eye and the item.
-            if (Physics.Linecast(eye, nearest, ItemLayers.WorldMask, QueryTriggerInteraction.Ignore))
-                return DenyReason.TooFar;
-
-            return null;
+            return !Physics.Linecast(eye, nearest, out RaycastHit blocker, ItemLayers.LookMask, QueryTriggerInteraction.Ignore)
+                || blocker.collider.GetComponentInParent<Pickup>() != null;
         }
 
         /// <summary>An item already in the hands, or the hands shared with something else that holds them.</summary>
@@ -489,12 +513,34 @@ namespace CloseTheDeal.Items
             if (distance > 0.001f)
             {
                 Vector3 direction = reach / distance;
-                if (Physics.SphereCast(eye, item.HoldClearance, direction, out RaycastHit wall, distance, ItemLayers.WorldMask, QueryTriggerInteraction.Ignore))
-                    reach = direction * wall.distance;
+                float wall = NearestSolid(eye, item.HoldClearance, direction, distance);
+                if (wall < distance)
+                    reach = direction * wall;
             }
 
             position = eye + reach;
             rotation = frame * Quaternion.Euler(item.HeldEuler);
+        }
+
+        static readonly RaycastHit[] HoldHits = new RaycastHit[16];
+
+        /// <summary>
+        /// How far the hands can reach before something solid that is not a loose item: the
+        /// building, and locked doors (which share the Prop layer with loose things).
+        /// </summary>
+        static float NearestSolid(Vector3 eye, float radius, Vector3 direction, float distance)
+        {
+            int count = Physics.SphereCastNonAlloc(eye, radius, direction, HoldHits, distance, ItemLayers.LookMask, QueryTriggerInteraction.Ignore);
+            float nearest = distance;
+            for (int i = 0; i < count; i++)
+            {
+                RaycastHit hit = HoldHits[i];
+                // A distance of 0 is something the sphere already overlaps at the eye: ignored, as a single cast would.
+                if (hit.distance > 0f && hit.distance < nearest && hit.collider.GetComponentInParent<Pickup>() == null)
+                    nearest = hit.distance;
+            }
+
+            return nearest;
         }
 
         /// <summary>Called by the item on every machine when it lands in these hands.</summary>
@@ -515,6 +561,7 @@ namespace CloseTheDeal.Items
                 return;
 
             _held = null;
+            Load = 0f;
             _speed.Clear();
             if (IsOwner)
                 HoldFire(false);
@@ -525,8 +572,8 @@ namespace CloseTheDeal.Items
         /// <summary>Heavier things slow the carrier: full speed up to the free weight, the profile's slowest at the weight limit.</summary>
         void ApplyWeight(float weightKg)
         {
-            float load = Mathf.InverseLerp(_profile.FreeCarryWeight, _profile.MaxCarryWeight, weightKg);
-            _speed.Set(Mathf.Lerp(1f, _profile.SpeedAtMaxWeight, load), Mathf.Lerp(1f, _profile.JumpAtMaxWeight, load));
+            Load = Mathf.InverseLerp(_profile.FreeCarryWeight, _profile.MaxCarryWeight, weightKg);
+            _speed.Set(Mathf.Lerp(1f, _profile.SpeedAtMaxWeight, Load), Mathf.Lerp(1f, _profile.JumpAtMaxWeight, Load));
         }
     }
 }

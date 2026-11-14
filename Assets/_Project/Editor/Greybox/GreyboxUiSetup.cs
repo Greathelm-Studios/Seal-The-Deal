@@ -59,6 +59,7 @@ namespace CloseTheDeal.Editor.Greybox
             DestroyNamed(CanvasName);
             DestroyNamed(OldCanvasName);
             Build(lobby);
+            CloseTheDeal.Editor.UI.UiKitSetup.EnsureInOpenScene();
             SaveScene();
         }
 
@@ -69,7 +70,10 @@ namespace CloseTheDeal.Editor.Greybox
         {
             GameMenu existing = Object.FindAnyObjectByType<GameMenu>();
             if (existing != null && existing.transform.Find("Menu/Card/StartSection/JoinCodeGroup") == null)
+            {
+                CloseTheDeal.Editor.UI.UiKitSetup.EnsureInOpenScene();
                 return;
+            }
 
             if (existing != null)
             {
@@ -79,6 +83,7 @@ namespace CloseTheDeal.Editor.Greybox
 
             DestroyNamed(OldCanvasName);
             Build(lobby);
+            CloseTheDeal.Editor.UI.UiKitSetup.EnsureInOpenScene();
         }
 
         /// <summary>TextMeshPro's essential resources (default font, shaders, settings), imported silently.</summary>

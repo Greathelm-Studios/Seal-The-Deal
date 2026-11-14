@@ -92,10 +92,32 @@ GDD mismatches (the GDD is the authority on design; your 2026-11-12 words win fo
 - The brief says checkpoints on floors 3, 6 and 9. The tower inserts a checkpoint floor after every 3 offices, so they are stack floors 4, 8 and 12 (named Checkpoint 1–3).
 - The game's name is now "Seal the Deal"; the greybox menu still says "CLOSE THE DEAL" (`GreyboxUiSetup.cs`, not this lane's).
 
+## First 30 seconds for a stranger (UX slice, 2026-11-13)
+
+- **Briefcase beacon:** a soft column of light over the case, drawn through floors and walls within 30 m (`Beacon Range` on the match profile), white while loose, cyan or amber while a firm carries it; hidden from the carrier. Seen in a headless capture through the reception glass. Not judged by a person.
+- **First shut gate of the match** explains the rule ("Nobody climbs higher than the briefcase has been. Whoever carries it up there opens the floor for everyone, in both towers."); later ones get the short line. Host and client seen.
+- **Who has it:** `OnBriefcaseStolen(byFirm, fromFirm)` when it passes between firms; `OnFloorOpened(floor, byFirm)` names who opened a floor; `OnCapWarning` at 60 s left. Host and client seen, except the cap warning (only reachable by running the clock down; not seen).
+- **A late joiner is not shown news from before they arrived** (no "Floor 4 opened" on join); they read the current state. Seen on a late joiner.
+- **Shots pass through shut gates** (`Let Shots Through` on `MatchGates`, on): a weapon-mask ray passes the panel, bodies are still held. Not checked with a client pressing fire.
+- **Doorways:** the middle reception bay lets players out to the plaza and back over the sill on physics; a glazed bay holds. The kit glass's diagonal streaks are strong now that every window has glass: a look call for the glass owner.
+- **Every match input answers (2026-11-13):** a shut gate pulses brighter the moment you walk into it and plays the refusal sound; the case squashes and settles when it changes hands; the countdown, a floor opening, the case taken or dropped, a checkpoint, the cap warning and the result each play their sound from lane 9's set (`MatchSounds`). Sounds were seen starting in a headless run (the sound player's focus check bypassed for the test); nobody has heard them. After merge, run **Add GameMode To Open Scene** on `Lane_Integration.unity` to give its Match object `MatchSounds`.
+- The UI contract a HUD reads (state, events, types, when they fire, sound mapping) is in [MATCH.md](systems/MATCH.md). The current greybox `MatchHud` / `MatchMenuPanel` are replaced once the UI foundation lands.
+
+## Gates or locked doors (your call)
+
+Both now hold a team on a floor: the GDD's breakable locked door on each flight, and the floor gate that only the briefcase opens.
+
+| Option | What it plays like | What it costs |
+|---|---|---|
+| **Gates only** (doors removed from the templates) | The climb is paced by the briefcase alone: the carrier leads, everyone follows a floor at a time. Fights are about the case, not about a door. | One template-tool change. The GDD's pacing table assumed doors; a team carrying the case could sprint a floor in seconds, so floors would hold a team less long. |
+| **Doors only** (gates off: remove `MatchGates` from the Match object) | The GDD as written: break the door to climb, the briefcase only matters at the roof. | Your rule "only up to where the briefcase has been" goes. A team can leave the case behind and race to the roof, then has to fetch it. |
+| **Both** (now) | The carrier must also break each door; the floor above stays shut until they step on it. | The slowest climb: door time plus escort. With 4.5 m floors and 9 offices it may run past the 12-minute target. Untested in play. |
+
+Suggestion: gates only, if the briefcase is the game; doors only if the race is. Shots pass through gates now (an Inspector switch on `MatchGates`), so cross-gap fire works either way.
+
 ## Risks and known issues
 
-- **Gates and the GDD's breakable locked doors overlap:** both hold a team on a floor. Both are in; which to keep is a design question.
-- **A gate stops shots** (ordinary colliders); the GDD says glass never stops projectiles.
+- **Gates and the GDD's breakable locked doors overlap:** see the options table above.
 - **If the stair-cage glass becomes breakable** (shooting lane), players could leave the stairs above the open floor through a broken pane.
 
 - **Key clash with the pickups lane:** both use G (and d-pad down) to drop, so one press would drop an item and the briefcase together. Their Interact is E. Settle it in the shared actions asset at merge.

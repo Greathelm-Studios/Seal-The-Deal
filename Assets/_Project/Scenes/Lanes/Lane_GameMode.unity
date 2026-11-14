@@ -758,6 +758,7 @@ GameObject:
   - component: {fileID: 201529474}
   - component: {fileID: 201529473}
   - component: {fileID: 201529477}
+  - component: {fileID: 201529478}
   m_Layer: 0
   m_Name: Match
   m_TagString: Untagged
@@ -880,6 +881,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.MatchMode.MatchGates
   _gateMaterial: {fileID: 2100000, guid: 88c3037379f3e4edf8d8982594ac5ec7, type: 2}
+  _letShotsThrough: 1
+--- !u!114 &201529478
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 201529472}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb455090a7a81410f9efbe887eb70dff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.MatchMode.MatchSounds
+  _refusalGap: 0.6
 --- !u!1 &216693067
 GameObject:
   m_ObjectHideFlags: 0
@@ -4846,6 +4861,10 @@ MonoBehaviour:
   _actionButton: {fileID: 1952652715}
   _actionLabel: {fileID: 1680075905}
   _waitingText: {fileID: 36004687}
+  _startLabel: Start the match
+  _rematchLabel: Rematch
+  _waitingForStart: The host starts the match.
+  _waitingForRematch: The host can start a rematch.
 --- !u!114 &1356009366
 MonoBehaviour:
   m_ObjectHideFlags: 0

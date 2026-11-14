@@ -36,6 +36,7 @@ namespace CloseTheDeal.Editor.Lanes
         const string LeatherPath = PrefabFolder + "/BriefcaseLeather.mat";
         const string ShellPath = PrefabFolder + "/BriefcaseShell.mat";
         const string GatePath = PrefabFolder + "/FloorGate.mat";
+        const string BeaconPath = PrefabFolder + "/BriefcaseBeacon.mat";
         const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player.prefab";
 
         const string MatchObjectName = "Match";
@@ -60,6 +61,9 @@ namespace CloseTheDeal.Editor.Lanes
         [MenuItem("Close the Deal/Lanes/Set Up GameMode")]
         public static void SetUp()
         {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+
             MatchProfile profile = EnsureAssets();
             EnsurePlayerPrefab();
             TowerProfile laneTower = EnsureLaneTower();
@@ -138,6 +142,13 @@ namespace CloseTheDeal.Editor.Lanes
             else if (profile.BriefcasePrefab == null)
             {
                 profile.BriefcasePrefab = briefcase;
+                EditorUtility.SetDirty(profile);
+            }
+
+            // Filled only when empty: a designer's choice of beacon (or none) is kept.
+            if (profile.BeaconMaterial == null)
+            {
+                profile.BeaconMaterial = EnsureBeaconMaterial();
                 EditorUtility.SetDirty(profile);
             }
 
@@ -291,6 +302,25 @@ namespace CloseTheDeal.Editor.Lanes
             return material;
         }
 
+        /// <summary>The briefcase beacon's material, on the lane's own see-through-everything shader.</summary>
+        static Material EnsureBeaconMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(BeaconPath);
+            if (material != null)
+                return material;
+
+            Shader shader = Shader.Find("Close the Deal/Briefcase Beacon");
+            if (shader == null)
+            {
+                Debug.LogWarning("[GameMode] The briefcase beacon shader is missing; no beacon.");
+                return null;
+            }
+
+            material = new Material(shader) { name = "BriefcaseBeacon" };
+            AssetDatabase.CreateAsset(material, BeaconPath);
+            return material;
+        }
+
         static Material EnsureMaterial(string path, Color colour)
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -425,6 +455,10 @@ namespace CloseTheDeal.Editor.Lanes
                 gates = match.gameObject.AddComponent<MatchGates>();
             FillIfEmpty(gates, "_gateMaterial", EnsureGateMaterial());
             FillIfEmpty(match, "_gates", gates);
+
+            // The match's sounds, from the shared UI sound set.
+            if (match.GetComponent<MatchSounds>() == null)
+                match.gameObject.AddComponent<MatchSounds>();
 
             GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
             if (menu == null)

@@ -39,6 +39,9 @@ namespace CloseTheDeal.Items
         [Tooltip("How long a thing just let go cannot touch the player who let go of it, in seconds, so a throw never trips over its own thrower. Too short and big furniture snags on the way out.")]
         [Min(0f)] public float ThrowerIgnoreSeconds = 0.35f;
 
+        [Tooltip("How long a player must wait before taking back the thing they just let go of, in seconds. Stops a thrown chair being snatched back and thrown again every few ticks at someone pinned in a corner. Anyone else may catch it at once.")]
+        [Min(0f)] public float RetakeSeconds = 0.6f;
+
         [Tooltip("Tick to make a player drop what they carry when a blast or a heavy hit knocks them about.")]
         public bool DropWhenKnocked = true;
 
@@ -65,10 +68,64 @@ namespace CloseTheDeal.Items
         [Min(0.1f)] public float LiveThrowSeconds = 3f;
 
         [Header("Leaving the building")]
-        [Tooltip("How far below where it started a loose thing may fall before it is taken away and put back where it started, in metres. Must be more than one storey or things dropped down a stairwell vanish.")]
+        [Tooltip("Outside both towers (out of a window, into the street): how far below where it started a loose thing may fall before it is taken away and put back, in metres. Less than one storey, so a thing thrown out of a first-floor window still comes back; things on a skybridge at their own level stay.")]
+        [Min(0.5f)] public float OutsideDropMetres = 2.5f;
+
+        [Tooltip("Anywhere, inside or out: how far below the ground floor a loose thing may fall before it is taken away and put back, in metres.")]
+        [Min(0f)] public float BelowGroundMetres = 1f;
+
+        [Tooltip("Only where no tower has been built: how far below where it started a loose thing may fall before it is taken away and put back, in metres. Must be more than one storey or things dropped down a stairwell vanish.")]
         [Min(1f)] public float FallReturnDistance = 6f;
 
         [Tooltip("How long a thing that fell out of the building stays gone before it is back where it started, in seconds.")]
         [Min(0f)] public float FallReturnSeconds = 2f;
+
+        [Header("Feel in the hands (drawn only, never synced)")]
+        [Tooltip("How long a light thing takes to fly from where it lay into the hands, in seconds. Eases out. Under 0.3 s keeps the take feeling instant.")]
+        [Range(0f, 0.3f)] public float TakeSecondsLight = 0.12f;
+
+        [Tooltip("How long a thing at the weight limit takes to come into the hands, in seconds.")]
+        [Range(0f, 0.3f)] public float TakeSecondsHeavy = 0.24f;
+
+        [Tooltip("How quickly a light carried thing catches up when the view turns, per second. Higher is stiffer; 28 barely trails.")]
+        [Min(1f)] public float SwayFollowLight = 28f;
+
+        [Tooltip("How quickly a thing at the weight limit catches up when the view turns, per second. Lower swings further behind, so heavy things feel heavy.")]
+        [Min(1f)] public float SwayFollowHeavy = 9f;
+
+        [Tooltip("The furthest a carried thing may trail behind a fast turn, in degrees, so it never leaves the view.")]
+        [Range(0f, 30f)] public float MaxSwayDegrees = 10f;
+
+        [Header("Sound")]
+        [Tooltip("Every item's sounds and the mixer bus they play through, unless an item definition names its own set.")]
+        public ItemSoundSet Sounds;
+
+        [Header("Any loose prop (no item definition of its own)")]
+        [Tooltip("How fast the lightest loose props (1 kg or less) leave the hands when thrown, in metres per second. Heavier ones are slower, down to the speed below at the weight limit.")]
+        [Min(0f)] public float LooseThrowSpeedLight = 15f;
+
+        [Tooltip("How fast a loose prop at the weight limit leaves the hands when thrown, in metres per second.")]
+        [Min(0f)] public float LooseThrowSpeedHeavy = 5f;
+
+        [Tooltip("How fast the lightest loose props tumble when thrown, in full turns per second.")]
+        [Min(0f)] public float LooseTumbleLight = 2.2f;
+
+        [Tooltip("How fast a loose prop at the weight limit tumbles when thrown, in full turns per second.")]
+        [Min(0f)] public float LooseTumbleHeavy = 0.3f;
+
+        [Tooltip("How far in front of the eye a loose prop's near face is held, in metres. Its own depth is added, so a big thing is held further out.")]
+        [Min(0.1f)] public float LooseHoldAhead = 0.55f;
+
+        [Tooltip("How far below the eye a loose prop's base is held, in metres, before its height is counted. With the setting below, a 1 m chair's base sits 1 m below the eye.")]
+        [Min(0f)] public float LooseHoldBelowEye = 0.3f;
+
+        [Tooltip("How much further down the base is held for each metre of the prop's height, so tall things are carried low and do not block the view. 0.7 keeps the top of most things just under the crosshair.")]
+        [Range(0f, 1f)] public float LooseHoldDropPerMetre = 0.7f;
+
+        /// <summary>
+        /// The carry rules in play, for loose props that were not given a profile of their own.
+        /// Set by the first player's ItemCarrier; null until one exists.
+        /// </summary>
+        public static CarryProfile Shared { get; internal set; }
     }
 }

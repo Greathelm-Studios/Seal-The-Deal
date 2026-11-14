@@ -131,7 +131,7 @@ namespace CloseTheDeal.MatchMode
                 return true;
 
             if (onSurface && floor > _match.OpenFloor)
-                _match.ServerOpenFloor(floor);
+                _match.ServerOpenFloor(floor, member.Firm);
             _match.ServerTrackBriefcase(place, floor);
             return true;
         }
@@ -145,7 +145,11 @@ namespace CloseTheDeal.MatchMode
         {
             bool atGate = _match.HasGates && !carrying && place < MatchArena.Neutral && NearClosedGate(position, place);
             if (atGate && !member.WasAtGate)
-                member.Notify(MatchNotice.GateRefused);
+            {
+                // The first refusal of the match explains the rule; after that a short reminder.
+                member.Notify(member.GateExplained ? MatchNotice.GateRefused : MatchNotice.FirstGateRefusal);
+                member.GateExplained = true;
+            }
             member.WasAtGate = atGate;
         }
 
@@ -212,8 +216,19 @@ namespace CloseTheDeal.MatchMode
                 return;
             }
 
-            if (place != MatchArena.Outside)
-                _match.ServerTrackBriefcase(place, Arena.FloorOf(position));
+            if (place == MatchArena.Outside)
+                return;
+
+            // Knocked loose and lodged on a floor nobody may reach yet (a slab above the open
+            // floor): only a carrier could fetch it, and nobody can carry it there. Send it back.
+            int floor = Arena.FloorOf(position);
+            if (floor > _match.OpenFloor && Arena.OnFloorSurface(position, floor))
+            {
+                _match.ServerBeginReturn(tick);
+                return;
+            }
+
+            _match.ServerTrackBriefcase(place, floor);
         }
 
         // ---- The result ----------------------------------------------------------------------

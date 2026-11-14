@@ -22,6 +22,12 @@ namespace CloseTheDeal.MatchMode
         [Tooltip("What a closed gate looks like. A see-through panel reads best: players should see the floor they can't reach yet.")]
         [SerializeField] Material _gateMaterial;
 
+        [Tooltip("Tick and bullets fly through a shut gate as through open air, while bodies are still stopped; untick and a gate stops shots like a wall. Works because the weapons' shot test skips Unity's built-in Ignore Raycast layer, which the panels then sit on.")]
+        [SerializeField] bool _letShotsThrough = true;
+
+        /// <summary>Unity's built-in layer 2. Shots skip it; bodies still collide with it.</summary>
+        const int IgnoreRaycastLayer = 2;
+
         /// <summary>Outer edge of the stair treads, metres (TOWER.md: treads out to 2.6 m), plus the gap the cage stands off them.</summary>
         public const float Radius = 2.6f + 0.15f;
 
@@ -35,6 +41,28 @@ namespace CloseTheDeal.MatchMode
         /// <summary>How tall the ring on the roof is, metres: well above any jump or mantle.</summary>
         const float RoofGateHeight = 3f;
 
+        /// <summary>The local player walked into a shut gate: the floor it guards. Local only, for the refusal sound; the panel pulses by itself.</summary>
+        public static event System.Action<int> OnGateTouched;
+
+        /// <summary>How long a touched gate's pulse lasts, seconds, and how much brighter and more solid it starts. A short, firm answer.</summary>
+        const float PulseSeconds = 0.3f;
+        const float PulseGain = 0.45f;
+
+        /// <summary>A gate pulses at most this often, seconds, so pressing against it doesn't strobe.</summary>
+        const float PulseRepeat = 0.5f;
+
+        static readonly int BaseColour = Shader.PropertyToID("_BaseColor");
+
+        struct Pulse
+        {
+            public Renderer[] Panels;
+            public float Started;
+        }
+
+        readonly Dictionary<Collider, int> _floorOf = new();
+        readonly Dictionary<int, float> _lastPulse = new();
+        readonly List<Pulse> _pulses = new();
+        MaterialPropertyBlock _block;
         readonly Dictionary<int, List<GameObject>> _gates = new();
         readonly List<Collider> _colliders = new();
         GameObject _root;
@@ -111,6 +139,52 @@ namespace CloseTheDeal.MatchMode
             }
         }
 
+        // ---- Touch feedback (local) -------------------------------------------------------------
+
+        /// <summary>The local player's body hit this collider. If it is a shut gate, the gate pulses and the sound event fires. Returns whether it was a gate.</summary>
+        public bool Touch(Collider collider)
+        {
+            if (collider == null || !_floorOf.TryGetValue(collider, out int key) || !collider.gameObject.activeInHierarchy)
+                return false;
+
+            float now = Time.unscaledTime;
+            if (_lastPulse.TryGetValue(key, out float last) && now - last < PulseRepeat)
+                return true;
+
+            _lastPulse[key] = now;
+            _pulses.Add(new Pulse { Panels = collider.transform.parent.GetComponentsInChildren<Renderer>(), Started = now });
+            OnGateTouched?.Invoke(key / 2);
+            return true;
+        }
+
+        /// <summary>Runs only while a pulse is showing: brightens the touched gate, then eases it back.</summary>
+        void Update()
+        {
+            if (_pulses.Count == 0 || _gateMaterial == null)
+                return;
+
+            _block ??= new MaterialPropertyBlock();
+            Color rest = _gateMaterial.GetColor(BaseColour);
+            for (int i = _pulses.Count - 1; i >= 0; i--)
+            {
+                float t = Mathf.Clamp01((Time.unscaledTime - _pulses[i].Started) / PulseSeconds);
+                float gain = PulseGain * (1f - t) * (1f - t); // ease-out back to rest
+                var colour = new Color(Mathf.Min(1f, rest.r + gain), Mathf.Min(1f, rest.g + gain), Mathf.Min(1f, rest.b + gain), Mathf.Min(1f, rest.a + gain));
+                foreach (Renderer panel in _pulses[i].Panels)
+                {
+                    if (panel == null)
+                        continue;
+                    _block.Clear();
+                    panel.GetPropertyBlock(_block);
+                    _block.SetColor(BaseColour, colour);
+                    panel.SetPropertyBlock(_block);
+                }
+
+                if (t >= 1f)
+                    _pulses.RemoveAt(i);
+            }
+        }
+
         // ---- Building ------------------------------------------------------------------------
 
         GameObject BuildGate(MatchArena arena, int building, int floor, bool roof)
@@ -134,9 +208,13 @@ namespace CloseTheDeal.MatchMode
                 panel.transform.SetParent(gate.transform, false);
                 panel.transform.SetPositionAndRotation(arena.FloorPoint(building, floor, local), facing * Quaternion.Euler(0f, angle, 0f));
                 panel.transform.localScale = new Vector3(width, height, PanelThickness);
+                if (_letShotsThrough)
+                    panel.layer = IgnoreRaycastLayer;
                 if (_gateMaterial != null)
                     panel.GetComponent<Renderer>().sharedMaterial = _gateMaterial;
-                _colliders.Add(panel.GetComponent<Collider>());
+                Collider collider = panel.GetComponent<Collider>();
+                _colliders.Add(collider);
+                _floorOf[collider] = floor * 2 + building;
             }
 
             return gate;
@@ -169,6 +247,9 @@ namespace CloseTheDeal.MatchMode
         {
             _gates.Clear();
             _colliders.Clear();
+            _floorOf.Clear();
+            _lastPulse.Clear();
+            _pulses.Clear();
             _exempt = null;
             _openFloor = -1;
             if (_root != null)

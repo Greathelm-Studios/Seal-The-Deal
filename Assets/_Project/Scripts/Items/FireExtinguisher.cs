@@ -21,7 +21,7 @@ namespace CloseTheDeal.Items
         [Tooltip("The smoke. It must simulate in world space so the cloud stays where it was laid.")]
         [SerializeField] ParticleSystem _smoke;
 
-        [Tooltip("Plays the hiss while venting. Leave its clip empty to use the built-in stand-in sound.")]
+        [Tooltip("Plays the vent loop while venting, routed to the item sound set's bus. Its own clip wins; empty uses the set's Vent Loop.")]
         [SerializeField] AudioSource _audio;
 
         [Header("Hooks for sound, effects and UI (fire on every machine)")]
@@ -37,6 +37,7 @@ namespace CloseTheDeal.Items
         readonly SyncVar<bool> _empty = new();
 
         float _takeAwayAt;
+        AudioClip _ownLoop;
 
         /// <summary>Every machine. The pin was pulled and the smoke started.</summary>
         public event Action<FireExtinguisher> PinPulled;
@@ -50,6 +51,24 @@ namespace CloseTheDeal.Items
         {
             base.Awake();
             _ventUntilTick.OnChange += OnVentChanged;
+            if (_audio != null)
+                _ownLoop = _audio.clip;
+        }
+
+        public override void OnStartNetwork()
+        {
+            base.OnStartNetwork();
+            ItemAudio.Configure(_audio, Item.Sounds);
+        }
+
+        /// <summary>
+        /// Despawned (the match ended and the towers were rebuilt), or this machine left the game:
+        /// the smoke and the loop stop here, whatever the last synced state said.
+        /// </summary>
+        public override void OnStopNetwork()
+        {
+            base.OnStopNetwork();
+            ShowVenting(false);
         }
 
         public override void OnStartServer()
@@ -78,6 +97,12 @@ namespace CloseTheDeal.Items
                 return;
 
             _ventUntilTick.Value = TimeManager.Tick + TimeManager.TimeToTicks(_profile.SmokeSeconds, TickRounding.RoundUp);
+        }
+
+        /// <summary>Out of play mid-vent (it fell out of the building): it stops venting and comes back full.</summary>
+        public override void ServerOnSentAway()
+        {
+            _ventUntilTick.Value = 0;
         }
 
         public override void ServerOnReturned()
@@ -128,6 +153,10 @@ namespace CloseTheDeal.Items
 
         void OnVentChanged(uint previous, uint next, bool asServer)
         {
+            // On the host this runs twice, as server then as client: answer once.
+            if (!ShowsChange(asServer))
+                return;
+
             bool venting = next != 0;
             ShowVenting(venting);
 
@@ -138,6 +167,7 @@ namespace CloseTheDeal.Items
             }
             else if (!venting && previous != 0)
             {
+                ItemAudio.PlayAt(Item.Sounds, Item.Sounds?.VentEnd, transform.position);
                 RanEmpty?.Invoke(this);
                 _onRanEmpty.Invoke();
             }
@@ -171,8 +201,11 @@ namespace CloseTheDeal.Items
                 return;
             }
 
+            // Chosen each time it starts, so a clip added to the set later replaces the stand-in.
+            _audio.clip = _ownLoop != null ? _ownLoop : Item.Sounds != null ? Item.Sounds.VentLoop : null;
             if (_audio.clip == null)
-                _audio.clip = ItemTones.Hiss;
+                return;
+            _audio.volume = Item.Sounds != null ? Item.Sounds.Volume : 1f;
             _audio.loop = true;
             _audio.Play();
         }
