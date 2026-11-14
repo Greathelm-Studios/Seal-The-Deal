@@ -11,7 +11,7 @@ The target is **tight gunplay for fast movement** (owner, 2026-11-12): the first
 - **Pistol**: one shot per press (up to 400 a minute; a press made a moment early is remembered, never swallowed), 34 damage, 12 rounds. **Three hits kill.** Dead on; each shot kicks the view up about a degree.
 - **AR-15**: fires while held at 600 a minute, 20 damage, 30 rounds. **Five hits kill, 0.4 s at full rate.** The view climbs almost straight for eight shots, then sweeps left, then right, and a longer burst keeps sweeping. It is the same path every burst, so pulling down and against the sweep keeps it on target. The view only settles once the trigger rests, and the pattern starts over after 0.35 s of rest.
 
-The crosshair moves with the kick and the shot goes where it points. On top of the pattern there is a small random stray that builds through a burst (at most 0.7° on the AR-15, 0.6° on the pistol); it is zero on a rested first shot.
+The crosshair moves with the kick and the shot goes where it points. On top of the pattern there is a small random stray that builds through a burst (at most 0.7° on the AR-15, 0.6° on the pistol when tapped faster than about three a second) and only settles once the trigger has rested for the pattern's reset time; it is zero on a rested first shot.
 
 The shooter sees the shot at once: muzzle flash, tracer, view kick, the round gone from the magazine. The hit itself is the host's call; when the host agrees, the shooter gets a hit confirmation (the hook for a hit marker) and, on a kill, a separate kill confirmation.
 A hit flashes the target red; by default it does not shove a living target, so being shot never takes a player's movement away (`Hit Shove` on the gun turns that on). The killing shot throws the body hard, **13 m/s with lift by default, which carries a body standing roughly 1.3 to 6 m from a window out through it** (closer than that it hits the 0.6 m sill first).
@@ -215,11 +215,11 @@ Set-up is one editor file, [ShootingLaneSetup.cs](../../Assets/_Project/Editor/L
 - **No sound, no HUD, no hit marker on screen, greybox box guns.** The events are there; nothing listens yet.
 - **No ragdoll.** A dead body is the capsule tipped flat and thrown; `Health.Died` carries the impulse a ragdoll would use.
 - **Ammo is endless**: a reload always fills the magazine. No reserve ammo exists; that is a design question.
-- **Friendly fire is on.** Teams exist only as a spawn side so far; nothing here knows who is on which firm.
+- **Friendly fire is on.** Firms exist now (`FirmMember.Firm`), but whether a teammate's shot hurts is Adam's decision; until then every shot hurts everyone.
 - **The left-click test blast in `PlayerMotor` is switched off by the set-up menu**, by pointing the motor at a blast profile that does nothing (`Profiles/Weapons/NoTestBlast.asset`) and clearing its two blast masks, because it shares the fire button. It is a workaround: the real fix is for the movement lane to remove the test blast from `PlayerMotor`. Until explosives exist, locked doors are broken with bullets instead (`DoorDamage`, 300 damage by default).
 - **Respawn is "last place this player stood on the ground"**, sampled four times a second, not a spawn point on the floor. A player killed after falling to the street respawns in the street. Window exits don't yet go to a checkpoint (no checkpoints exist).
 - **A dead player can still look around**, and their body still blocks others until it respawns.
-- **Lag allowance trusts the shooter's reported lag**, capped at 0.25 s. A cheating client could always claim the cap; acceptable for a friends-only game.
+- **Lag allowance trusts the shooter's reported view tick**, capped at 0.25 s. A cheating client could always claim the cap; acceptable for a friends-only game. What a client can't do: start a shot behind a wall or a locked door (the host checks it can see the claimed eye position), choose its spread (each shot's number must follow the last), or hit a player at their corpse (rewound ticks before a respawn are ignored).
 - **The gun in other players' hands does not follow where they look up or down**; it points along the body.
 - **GDD mismatch:** [GDD.md](../GDD.md) still says combat "should feel chaotic rather than precise" and lists the rifle as the reliable gun. The guns are built to the owner's newer words (tight gunplay); the GDD needs his edit.
 - **The pattern's shot count lives on the shooter's game only.** Other players' guns show no kick.
