@@ -425,6 +425,65 @@ namespace CloseTheDeal.Editor.Lanes
                 GeneratedAssetGuard.MarkGenerated(AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath));
         }
 
+        const string MigrationTitle = "Seal the Deal: one figure per player";
+
+        /// <summary>
+        /// One-off migration, 14 Nov 2026 (AgentHub #543, owner's go-ahead): Player.prefab drew every
+        /// player twice, the lobby's greybox Outfit figure on top of the real character at
+        /// Graphics/Lean/Body. This deletes Graphics/Lean/Outfit, gives Body an OutfitView if it has
+        /// none, and points PlayerOutfit's View at it. Nothing else on the prefab is touched. It
+        /// asks before acting and does nothing when there is nothing to fix.
+        /// </summary>
+        [MenuItem("Close the Deal/Lanes/Migrations/Player: Outfit on the Real Model (once)")]
+        static void MigrateOutfitToModelMenu()
+        {
+            if (!EditorUtility.DisplayDialog(MigrationTitle,
+                    "Player.prefab: delete the greybox figure at Graphics/Lean/Outfit, give Graphics/Lean/Body an OutfitView if it has none, and point PlayerOutfit's View at it. Nothing else changes.",
+                    "Migrate", "Cancel"))
+                return;
+            MigrateOutfitToModel();
+        }
+
+        /// <summary>The migration's work, also reachable from -executeMethod for the one batch run that applies it.</summary>
+        internal static void MigrateOutfitToModel()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(PlayerPrefabPath);
+            try
+            {
+                Transform lean = root.transform.Find("Graphics/Lean");
+                Transform body = lean != null ? lean.Find("Body") : null;
+                var player = root.GetComponent<PlayerOutfit>();
+                if (body == null || player == null)
+                {
+                    Debug.LogError("[Lobby] Migration: Player.prefab has no Graphics/Lean/Body or no PlayerOutfit; nothing changed.");
+                    return;
+                }
+
+                Transform greybox = lean.Find("Outfit");
+                var so = new SerializedObject(player);
+                SerializedProperty viewProperty = so.FindProperty("_view");
+                var current = viewProperty.objectReferenceValue as OutfitView;
+                if (greybox == null && current != null && current.transform == body)
+                {
+                    Debug.Log("[Lobby] Migration: Player.prefab already wears the outfit on Body; nothing to do.");
+                    return;
+                }
+
+                if (greybox != null)
+                    Object.DestroyImmediate(greybox.gameObject);
+                OutfitView view = AttachToModel(lean, body);
+                viewProperty.objectReferenceValue = view;
+                so.ApplyModifiedPropertiesWithoutUndo();
+
+                PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
+                Debug.Log("[Lobby] Migration: Player.prefab now wears the outfit on Graphics/Lean/Body; the greybox figure is gone.");
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
         /// <summary>
         /// True when Lean/Body already holds a real character (the toon STDMC model Alex's player
         /// build puts there): then the outfit is attached to it instead of adding a second figure.
