@@ -208,7 +208,11 @@ namespace CloseTheDeal.Records
         {
             int id = member.Owner.ClientId;
             if (_tally.TryGetValue(id, out MatchLine line))
+            {
+                // A late joiner's line can be made before the host seats them in a firm; follow the firm they play for.
+                line.Firm = (byte)member.Firm;
                 return line;
+            }
 
             if (!_joinedAt.ContainsKey(id))
                 _joinedAt[id] = Time.time;

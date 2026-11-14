@@ -5,7 +5,10 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using CloseTheDeal.Combat;
+using CloseTheDeal.Editor.Greybox;
 using CloseTheDeal.MatchMode;
+using CloseTheDeal.Narration;
+using CloseTheDeal.Onboarding;
 using CloseTheDeal.Net;
 using CloseTheDeal.Profile;
 using CloseTheDeal.Records;
@@ -66,10 +69,138 @@ namespace CloseTheDeal.Editor.Lanes
                 parts.Add("ProfileKeeper");
             }
 
+            EnsureContent(parts);
+            AddWithAsset<MatchSecretary>(host, "_lines", AssetDatabase.LoadAssetAtPath<MatchSecretaryLines>(LinesPath), parts);
+            AddWithAsset<FirstRunHints>(host, "_hints", AssetDatabase.LoadAssetAtPath<OnboardingHints>(HintsPath), parts);
+
             if (parts.Count > 0)
                 EditorSceneManager.MarkSceneDirty(host.scene);
             return string.Join(", ", parts);
         }
+
+        /// <summary>Adds the component if the scene has none, and fills its asset slot only while it is empty.</summary>
+        static void AddWithAsset<T>(GameObject host, string field, Object asset, List<string> parts) where T : Component
+        {
+            T component = Object.FindAnyObjectByType<T>(FindObjectsInactive.Include);
+            if (component == null)
+            {
+                component = Undo.AddComponent<T>(host);
+                parts.Add(typeof(T).Name);
+            }
+
+            var serialized = new SerializedObject(component);
+            SerializedProperty slot = serialized.FindProperty(field);
+            if (slot == null || slot.objectReferenceValue != null || asset == null)
+                return;
+            slot.objectReferenceValue = asset;
+            serialized.ApplyModifiedProperties();
+            parts.Add(typeof(T).Name + " asset");
+        }
+
+        // ---- Content assets (created once; a person's edits are never overwritten) ----------------
+
+        internal const string NarrationFolder = "Assets/_Project/Profiles/Narration";
+        internal const string LinesPath = NarrationFolder + "/MatchSecretaryLines.asset";
+        internal const string HintsPath = "Assets/_Project/Profiles/Onboarding/OnboardingHints.asset";
+
+        /// <summary>Makes the lines and hints assets if missing. Never touches existing ones.</summary>
+        internal static void EnsureContent(List<string> parts)
+        {
+            if (AssetDatabase.LoadAssetAtPath<MatchSecretaryLines>(LinesPath) == null)
+            {
+                var lines = ScriptableObject.CreateInstance<MatchSecretaryLines>();
+                lines.EditorInit(SecretaryContent());
+                Create(lines, LinesPath);
+                parts.Add("MatchSecretaryLines.asset");
+            }
+
+            if (AssetDatabase.LoadAssetAtPath<OnboardingHints>(HintsPath) == null)
+            {
+                var hints = ScriptableObject.CreateInstance<OnboardingHints>();
+                hints.EditorInit(HintContent());
+                Create(hints, HintsPath);
+                parts.Add("OnboardingHints.asset");
+            }
+        }
+
+        static void Create(ScriptableObject asset, string path)
+        {
+            string folder = Path.GetDirectoryName(path).Replace('\\', '/');
+            if (!AssetDatabase.IsValidFolder(folder))
+                AssetDatabase.CreateFolder(Path.GetDirectoryName(folder).Replace('\\', '/'), Path.GetFileName(folder));
+            AssetDatabase.CreateAsset(asset, path);
+            GeneratedAssetGuard.MarkGenerated(asset);
+            AssetDatabase.SaveAssets();
+        }
+
+        static MatchSecretaryLines.Moment M(MatchMoment when, int priority, params string[] lines) =>
+            new() { When = when, Priority = priority, Lines = lines };
+
+        /// <summary>Proposals for the owner, every one.</summary>
+        static MatchSecretaryLines.Moment[] SecretaryContent() => new[]
+        {
+            M(MatchMoment.MatchStart, 30,
+                "The quarter is open. Please carry the briefcase upward.",
+                "Today's agenda: one briefcase, two roofs. Any other business can wait.",
+                "The briefcase is on the plaza. It won't file itself."),
+            M(MatchMoment.FirstPickup, 35,
+                "{name} has the briefcase. I've updated the org chart.",
+                "{firm} has taken possession of the briefcase. Possession is most of the law.",
+                "The briefcase is with {name}. Please don't shake it."),
+            M(MatchMoment.FirstKill, 30,
+                "{killer} has let {victim} go. HR has been informed.",
+                "First casualty of the quarter: {victim}. {killer} will be expensing the ammunition."),
+            M(MatchMoment.Steal, 50,
+                "{firm} has acquired the briefcase from {rival}. Hostile, but legal.",
+                "The briefcase has changed hands. {rival} will want that in writing.",
+                "{name} has taken the briefcase. {rival} has been notified."),
+            M(MatchMoment.FloorOpened, 40,
+                "{floor} is open. Please mind the wet paint.",
+                "{floor} is now accessible. Visitors must be accompanied by a briefcase.",
+                "{floor} has been unlocked. The staff there are thrilled."),
+            M(MatchMoment.CheckpointMoved, 25,
+                "Your firm has moved up to {floor}. Your desks will follow.",
+                "{floor} is your firm's new address. I've changed the letterhead."),
+            M(MatchMoment.WindowKill, 60,
+                "{victim} has left the building. {killer} held the window.",
+                "{victim} has taken the express route down, courtesy of {killer}.",
+                "{killer} has shown {victim} the quickest way out."),
+            M(MatchMoment.FellOut, 20,
+                "{name} has left the building without signing out.",
+                "{name} took the stairs the wrong way."),
+            M(MatchMoment.BriefcaseReturned, 30,
+                "The briefcase went out of a window. It's back on {place}.",
+                "Lost property has returned the briefcase to {place}."),
+            M(MatchMoment.CapWarning, 80,
+                "The quarter closes in {time}. Please wrap up any hostilities.",
+                "{time} left in the quarter. I'm already putting my coat on."),
+            M(MatchMoment.Won, 100,
+                "{firm} has sealed the deal. Drinks are in the boardroom. They're not free.",
+                "Congratulations, {firm}. Your bonus is in the post. Second class.",
+                "Deal sealed. {firm} may now use the executive lift."),
+            M(MatchMoment.Lost, 100,
+                "{firm} has sealed the deal. Please clear your desks by five.",
+                "The deal went to {firm}. I've cancelled your parking.",
+                "{firm} closed it. HR will be in touch about your future. Briefly."),
+            M(MatchMoment.NoWinner, 100,
+                "The quarter has closed with no deal. The shareholders are not surprised.",
+                "No deal this quarter. I'll schedule a meeting about it.")
+        };
+
+        static OnboardingHints.Hint H(string id, HintTrigger when, float seconds, string text) =>
+            new() { Id = id, When = when, Seconds = seconds, Text = text };
+
+        /// <summary>Proposals for the owner, every one.</summary>
+        static OnboardingHints.Hint[] HintContent() => new[]
+        {
+            H("reception", HintTrigger.ArrivedInReception, 8f, "Sign in with a firm at one of the stands, then ready up at the desk. Press {interact} at either."),
+            H("briefcase-rule", HintTrigger.MatchRunning, 8f, "One briefcase decides the match. Carry it onto either roof and your firm wins."),
+            H("carrying", HintTrigger.CarryingBriefcase, 7f, "You have the briefcase. Every floor you carry it onto opens for both towers. Press {drop} to hand it to a teammate."),
+            H("rival-carrying", HintTrigger.RivalCarrying, 7f, "The rival firm has the briefcase. Knock the carrier down and it drops. Skybridges on checkpoint floors cross to their tower."),
+            H("died", HintTrigger.Died, 6f, "You'll be back on this floor in a few seconds. You keep your guns. Anything you carried was dropped."),
+            H("fell-out", HintTrigger.FellOut, 6f, "Leaving through a window sends you back to your firm's last checkpoint, without the briefcase."),
+            H("kept", HintTrigger.MatchRecorded, 6f, "Every finished match is kept. Your wins, kills and time with the briefcase carry over.")
+        };
     }
 
     /// <summary>
@@ -101,6 +232,8 @@ namespace CloseTheDeal.Editor.Lanes
         static int _finals;
         static bool _deadAtFinal;
         static MatchPhase? _phaseAtJoin;
+        static readonly List<string> Said = new();
+        static readonly List<string> Hinted = new();
 
         [MenuItem("Close the Deal/Lanes/Gaps/Run Records Check (solo)")]
         static void RunFromMenu() => Begin("solo", "Temp/GapsRun");
@@ -181,6 +314,8 @@ namespace CloseTheDeal.Editor.Lanes
             Application.runInBackground = true;
             Application.targetFrameRate = 60;
             Application.logMessageReceived += CountProfileErrors;
+            Subtitles.Shown += line => { Said.Add(line.Moment); Note($"said ({line.Speaker}, {line.Moment}): {line.Text}"); };
+            FirstRunHints.HintShown += hint => { Hinted.Add(hint.Id); Note($"hint ({hint.Id}): {hint.Text}"); };
             Steps.Push(_role == "client" ? ClientScript() : _role == "host" ? HostScript() : SoloScript());
         }
 
@@ -394,15 +529,10 @@ namespace CloseTheDeal.Editor.Lanes
         static IEnumerator SoloScript()
         {
             Note("ROLE solo: one copy hosting alone. Profile at " + ProfileStore.FilePath);
-            bool spoiled = Flag("-gapsCorrupt");
             ProfileStore.LoadState state = ProfileStore.State == ProfileStore.LoadState.NotLoaded ? LoadNow() : ProfileStore.State;
             int before = P(ProfileStat.MatchesPlayed);
             Note($"profile on launch: {state}, {ShowProfile()}");
-            if (spoiled)
-            {
-                Check("corrupt file: a fresh profile started, no error logged", state == ProfileStore.LoadState.RecoveredFromCorrupt && before == 0 && _profileErrors == 0, $"{state}, errors {_profileErrors}");
-                Check("corrupt file: the unreadable file was kept as .corrupt", File.Exists(ProfileStore.FilePath + ".corrupt"));
-            }
+            CheckLaunch(state, before);
 
             yield return Host();
             yield return StartMatch(false);
@@ -411,12 +541,41 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 1.5f;
             yield return CarryToRoof();
             yield return new Until(() => _finals == 1, 5f, "this player's final record");
+            CheckSoloRecord(before);
+            yield return new Until(() => before > 0 || Hinted.Contains("carrying"), 20f, "the queued carrying hint");
+            CheckSoloVoice(before);
+        }
+
+        static void CheckLaunch(ProfileStore.LoadState state, int before)
+        {
+            if (Flag("-gapsCorrupt"))
+            {
+                Check("corrupt file: a fresh profile started, no error logged", state == ProfileStore.LoadState.RecoveredFromCorrupt && before == 0 && _profileErrors == 0, $"{state}, errors {_profileErrors}");
+                Check("corrupt file: the unreadable file was kept as .corrupt", File.Exists(ProfileStore.FilePath + ".corrupt"));
+            }
+            else if (state != ProfileStore.LoadState.Fresh)
+            {
+                Check("relaunch: last launch's profile loaded", state == ProfileStore.LoadState.Loaded && before >= 1, $"{state}, {ShowProfile()}");
+            }
+        }
+
+        static void CheckSoloRecord(int before)
+        {
             Records.TryGetLastFinal(out MatchFinal final);
             Note("final record: " + Show(final.Line));
             Check("solo: the finished match was added to the profile", P(ProfileStat.MatchesPlayed) == before + 1 && P(ProfileStat.Wins) >= 1, ShowProfile());
             Check("solo: carry time and a pick-up counted", final.Line.Pickups == 1 && final.Line.CarrySeconds >= 1, Show(final.Line));
             Check("solo: the file on disk holds the new count", File.ReadAllText(ProfileStore.FilePath).Contains("\"stats\"") && !File.Exists(ProfileStore.FilePath + ".tmp"));
             Check("solo: no profile or records errors in the log", _profileErrors == 0, _profileErrors.ToString());
+        }
+
+        static void CheckSoloVoice(int before)
+        {
+            Check("secretary: spoke at the start and on the win", Said.Contains("MatchStart") && Said.Contains("Won"), string.Join(", ", Said));
+            if (before == 0)
+                Check("first run: the briefcase rule and carrying hints showed and are remembered", Hinted.Contains("briefcase-rule") && Hinted.Contains("carrying") && ProfileStore.Current.HasSeen("briefcase-rule"), string.Join(", ", Hinted));
+            else
+                Check("second launch: hints already seen were not shown again", !Hinted.Contains("briefcase-rule") && !Hinted.Contains("carrying"), Hinted.Count == 0 ? "none shown" : string.Join(", ", Hinted));
         }
 
         static ProfileStore.LoadState LoadNow()
@@ -522,6 +681,8 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 2f;
             Check("CLIENT: the host left mid-match: nothing written, lines cleared", P(ProfileStat.MatchesPlayed) == matches && Records.Lines.Count == 0 && !File.Exists(ProfileStore.FilePath + ".tmp"), ShowProfile());
             Check("CLIENT: no profile or records errors in the log", _profileErrors == 0, _profileErrors.ToString());
+            Check("CLIENT: the secretary called the window kill and the loss", Said.Contains("WindowKill") && Said.Contains("Lost"), string.Join(", ", Said));
+            Check("CLIENT: the death and fall hints showed once each", Hinted.FindAll(h => h == "died").Count == 1 && Hinted.FindAll(h => h == "fell-out").Count == 1, string.Join(", ", Hinted));
         }
 
         static IEnumerator ClientMatchOne()
