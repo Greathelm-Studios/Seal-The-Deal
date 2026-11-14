@@ -98,6 +98,7 @@ namespace CloseTheDeal.Items
         PlayerMotor _thrower;
         int _lastHolderClientId = -1;
         bool _notThrowable;
+        Renderer[] _lookRenderers;
 
         // A client, after a plain carried thing is let go: its solid part is still where it was
         // taken until the host's new pose arrives, so the drawn item waits where it left the hands.
@@ -163,6 +164,16 @@ namespace CloseTheDeal.Items
         public Rigidbody Body => _body;
         public ItemCarrier Holder => _carrier;
         public PickupState State => _away.Value ? PickupState.Away : _holder.Value != null ? PickupState.Held : PickupState.InWorld;
+
+        /// <summary>This machine only: brightens the item while the local player's prompt is about it.</summary>
+        public void ShowLookedAt(bool on)
+        {
+            _lookRenderers ??= LookRenderers();
+            LookHighlight.Set(_lookRenderers, on);
+        }
+
+        /// <summary>What is drawn for it where it stands: its Visual child's renderers, or its own (never the copy in the hands).</summary>
+        Renderer[] LookRenderers() => _visual != null ? _visual.GetComponentsInChildren<Renderer>(true) : _ownRenderers;
 
         /// <summary>False for a prop marked NotThrowable: nobody is offered it, and the host refuses it.</summary>
         public bool Offered => !_notThrowable;
