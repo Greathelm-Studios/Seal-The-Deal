@@ -38,6 +38,18 @@ namespace CloseTheDeal.Player.Hud
         [Tooltip("Fades the status line in and out.")]
         [SerializeField] CanvasGroup _statusGroup;
 
+        [Tooltip("The kit status line that tells a sprinting player how to slide, until they have slid once this session.")]
+        [SerializeField] UiStatusLine _slideHint;
+
+        [Tooltip("Fades the slide hint in and out.")]
+        [SerializeField] CanvasGroup _slideHintGroup;
+
+        [Tooltip("How long a player must sprint without sliding before the hint shows, in seconds.")]
+        [SerializeField] float _slideHintAfter = 1.2f;
+
+        [Tooltip("How long the slide hint stays once shown, in seconds, unless the player slides first.")]
+        [SerializeField] float _slideHintSeconds = 3f;
+
         [Tooltip("How long a refusal stays on screen before it fades, in seconds. Long enough to read twelve words; a second refusal restarts it.")]
         [SerializeField] float _refusalSeconds = 2.2f;
 
@@ -95,7 +107,11 @@ namespace CloseTheDeal.Player.Hud
         void Bind(PlayerMotor motor)
         {
             if (_motor != null)
+            {
                 _motor.MantleRefused -= ShowRefusal;
+                _motor.SprintChanged -= OnSprintChanged;
+                _motor.SlideChanged -= OnSlideChanged;
+            }
             if (_reader != null)
             {
                 _reader.Pressed -= OnPressed;
@@ -105,7 +121,11 @@ namespace CloseTheDeal.Player.Hud
             _motor = motor;
             _reader = motor != null ? motor.GetComponent<PlayerInputReader>() : null;
             if (_motor != null)
+            {
                 _motor.MantleRefused += ShowRefusal;
+                _motor.SprintChanged += OnSprintChanged;
+                _motor.SlideChanged += OnSlideChanged;
+            }
             if (_reader != null)
             {
                 _reader.Pressed += OnPressed;
@@ -119,6 +139,41 @@ namespace CloseTheDeal.Player.Hud
                 _cardOpen = false;
                 UiMotion.Wake(this);
             }
+        }
+
+        /// <summary>Set once the player has slid this session; the slide hint never shows again until the game restarts.</summary>
+        static bool _hasSlid;
+        float _sprintFor = -1f;
+        float _hintHold;
+        float _hintAlpha;
+
+        void OnSprintChanged(bool sprinting)
+        {
+            _sprintFor = sprinting && !_hasSlid ? 0f : -1f;
+            if (sprinting && !_hasSlid)
+                UiMotion.Wake(this);
+        }
+
+        void OnSlideChanged(bool sliding)
+        {
+            if (!sliding)
+                return;
+            _hasSlid = true;
+            _sprintFor = -1f;
+            _hintHold = 0f;
+            UiMotion.Wake(this);
+        }
+
+        /// <summary>Shows how to slide, with the key for the device in use.</summary>
+        void ShowSlideHint()
+        {
+            if (_slideHint == null || _reader == null)
+                return;
+
+            string key = _reader.BindingText("Crouch", _reader.LastUsedGamepad);
+            _slideHint.Set($"Sprinting: press {key} to slide.", UiStatusKind.Info);
+            _hintHold = _slideHintSeconds;
+            UiSound.Play(UiSoundEvent.Notification);
         }
 
         /// <summary>The words for a refused climb: say why, in the house voice.</summary>
@@ -222,16 +277,37 @@ namespace CloseTheDeal.Player.Hud
             }
 
             _cardShown = Mathf.MoveTowards(_cardShown, _cardOpen ? 1f : 0f, dt / (_cardOpen ? panelIn : panelOut));
+
+            if (_sprintFor >= 0f)
+            {
+                _sprintFor += dt;
+                if (_sprintFor >= _slideHintAfter)
+                {
+                    _sprintFor = -1f;
+                    ShowSlideHint();
+                }
+            }
+            if (_hintHold > 0f)
+            {
+                _hintHold -= dt;
+                _hintAlpha = Mathf.MoveTowards(_hintAlpha, 1f, dt / statusIn);
+            }
+            else
+            {
+                _hintAlpha = Mathf.MoveTowards(_hintAlpha, 0f, dt / panelOut);
+            }
             Show();
 
             bool cardSettled = _cardShown == (_cardOpen ? 1f : 0f);
-            return _statusHold > 0f || _statusAlpha > 0f || !cardSettled;
+            return _statusHold > 0f || _statusAlpha > 0f || !cardSettled || _sprintFor >= 0f || _hintHold > 0f || _hintAlpha > 0f;
         }
 
         void Show()
         {
             if (_statusGroup != null)
                 _statusGroup.alpha = _statusAlpha;
+            if (_slideHintGroup != null)
+                _slideHintGroup.alpha = _hintAlpha;
 
             if (_cardGroup != null)
                 _cardGroup.alpha = _cardShown;

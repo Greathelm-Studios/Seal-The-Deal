@@ -14,7 +14,7 @@ namespace CloseTheDeal.Player
     /// the player's MovementProfile, not on this component, so every scene's camera agrees.
     /// </summary>
     [RequireComponent(typeof(Camera))]
-    public sealed class PlayerCamera : MonoBehaviour
+    public sealed partial class PlayerCamera : MonoBehaviour
     {
         public static PlayerCamera Instance { get; private set; }
 
@@ -33,7 +33,6 @@ namespace CloseTheDeal.Player
         float _pitch;
         float _shownLean;
         float _shownCrouch;
-        float _dip;
         float _restFov;
         float _edgeHeld;
         float _slideRoll;
@@ -67,17 +66,16 @@ namespace CloseTheDeal.Player
         public void Follow(Transform target, PlayerInputReader input, PlayerMotor motor)
         {
             if (_motor != null)
-                _motor.Landed -= OnLanded;
+                UnbindFeedback(_motor);
 
             _target = target;
             _input = input;
             _motor = motor;
-            _motor.Landed += OnLanded;
+            BindFeedback(_motor);
             _yaw = target.eulerAngles.y;
             _pitch = 0f;
             _shownLean = 0f;
             _shownCrouch = motor.Crouch;
-            _dip = 0f;
         }
 
         public void Release(Transform target)
@@ -85,7 +83,7 @@ namespace CloseTheDeal.Player
             if (_target != target)
                 return;
 
-            _motor.Landed -= OnLanded;
+            UnbindFeedback(_motor);
             _target = null;
             _input = null;
             _motor = null;
@@ -107,12 +105,6 @@ namespace CloseTheDeal.Player
             return direction.sqrMagnitude > 0.0001f ? direction.normalized : cam.forward;
         }
 
-        void OnLanded(float fallSpeed)
-        {
-            MovementProfile profile = _motor.Profile;
-            _dip = Mathf.Min(_dip + fallSpeed * profile.LandingDipPerSpeed, profile.LandingDipMax);
-        }
-
         void LateUpdate()
         {
             if (_target == null)
@@ -125,10 +117,7 @@ namespace CloseTheDeal.Player
             // The motor's lean and crouch move once per tick; ease toward them at the same pace so the view never steps.
             _shownLean = Mathf.MoveTowards(_shownLean, _motor.Lean, profile.LeanSpeed * dt);
             _shownCrouch = Mathf.MoveTowards(_shownCrouch, _motor.Crouch, profile.CrouchRate * dt);
-            if (_dip > 0f)
-                _dip = Mathf.MoveTowards(_dip, 0f, profile.LandingDipMax / Mathf.Max(profile.LandingDipRecover, 0.01f) * dt);
-
-            float eye = _motor.StandingEyeHeight - _motor.CrouchEyeDrop * _shownCrouch - _dip;
+            float eye = _motor.StandingEyeHeight - _motor.CrouchEyeDrop * _shownCrouch;
             Vector3 head = _target.position + Vector3.up * eye;
             Vector3 side = Quaternion.Euler(0f, _yaw, 0f) * Vector3.right;
             float reach = profile.LeanDistance * Mathf.Abs(_shownLean);
@@ -137,11 +126,15 @@ namespace CloseTheDeal.Player
             if (reach > 0.001f && Physics.SphereCast(head, _wallClearance, direction, out RaycastHit wall, reach, _wallMask, QueryTriggerInteraction.Ignore))
                 reach = wall.distance;
 
-            Quaternion rotation = Quaternion.Euler(_pitch, _yaw, -_shownLean * profile.LeanAngle + SlideRoll(profile, dt));
-            transform.SetPositionAndRotation(head + direction * reach, rotation);
+            float roll = Reduced ? 0f : SlideRoll(profile, dt);
+            Quaternion rotation = Quaternion.Euler(_pitch, _yaw, -_shownLean * profile.LeanAngle + roll);
+            // The movement kick moves the eye along the view's own axes; it never turns the view.
+            Vector3 kick = rotation * StepFeedback(profile, dt);
+            transform.SetPositionAndRotation(head + direction * reach + kick, rotation);
 
             float atSpeed = Mathf.InverseLerp(profile.WalkSpeed, profile.SprintSpeed, _motor.AnimState.PlanarSpeed);
-            _camera.fieldOfView = Mathf.MoveTowards(_camera.fieldOfView, _restFov + profile.SpeedFovKick * atSpeed, profile.SpeedFovRate * dt);
+            float widen = Reduced ? 0f : profile.SpeedFovKick * atSpeed + (_motor.AnimState.Sliding ? profile.SlideFovKick : 0f);
+            _camera.fieldOfView = Mathf.MoveTowards(_camera.fieldOfView, _restFov + widen, profile.SpeedFovRate * dt);
         }
 
         /// <summary>
