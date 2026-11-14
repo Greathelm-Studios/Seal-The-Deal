@@ -94,8 +94,11 @@ namespace CloseTheDeal.Items
         /// </summary>
         public static Func<ItemCarrier, bool> InteractClaimedElsewhere;
 
-        /// <summary>This machine. True when the last game input came from a gamepad, so prompts name pad buttons.</summary>
-        public static bool UsingPad { get; private set; }
+        /// <summary>
+        /// This machine. True when the local player last used a gamepad, so prompts name pad
+        /// buttons. One source for the whole HUD: the movement lane's PlayerInputReader.
+        /// </summary>
+        public static bool UsingPad => Local != null && Local._reader != null && Local._reader.LastUsedGamepad;
 
         /// <summary>This machine. The player switched between keyboard and mouse (false) and a gamepad (true).</summary>
         public static event Action<bool> UsingPadChanged;
@@ -128,6 +131,7 @@ namespace CloseTheDeal.Items
         InputAction _sharedAttack;
         Collider _lookCollider;
         Pickup _lookPickup;
+        PlayerInputReader _reader;
         PromptKind _promptKind;
         Pickup _highlighted;
         ItemDefinition _promptItem;
@@ -186,8 +190,9 @@ namespace CloseTheDeal.Items
                 return;
 
             Local = this;
-            InputSystem.onActionChange -= NoteDevice;
-            InputSystem.onActionChange += NoteDevice;
+            _reader = GetComponent<PlayerInputReader>();
+            if (_reader != null)
+                _reader.DeviceChanged += OnDeviceChanged;
             CreateInput();
             enabled = true;
             LocalChanged?.Invoke(this);
@@ -200,7 +205,8 @@ namespace CloseTheDeal.Items
                 return;
 
             enabled = false;
-            InputSystem.onActionChange -= NoteDevice;
+            if (_reader != null)
+                _reader.DeviceChanged -= OnDeviceChanged;
             DisposeInput();
             SetPrompt(PromptKind.None, null);
             if (Local == this)
@@ -228,17 +234,9 @@ namespace CloseTheDeal.Items
                 _sharedAttack = _sharedActions.FindActionMap(SharedMapName)?.FindAction(SharedAttackName);
         }
 
-        /// <summary>Any game action performed: note whether a pad or the keyboard and mouse did it. No allocation.</summary>
-        static void NoteDevice(object source, InputActionChange change)
+        /// <summary>The movement lane's reader says the player switched between keyboard and mouse and a pad.</summary>
+        void OnDeviceChanged(bool pad)
         {
-            if (change != InputActionChange.ActionPerformed || source is not InputAction action || action.activeControl == null)
-                return;
-
-            bool pad = action.activeControl.device is Gamepad;
-            if (pad == UsingPad)
-                return;
-
-            UsingPad = pad;
             UsingPadChanged?.Invoke(pad);
         }
 
@@ -449,7 +447,7 @@ namespace CloseTheDeal.Items
                 return DenyReason.TooHeavy;
             if (Time.time < _canTakeAt)
                 return DenyReason.TooSoon;
-            if (pickup.GetComponent<CloseTheDeal.Props.NotThrowable>() != null)
+            if (!pickup.Offered)
                 return DenyReason.Gone;
 
             return InReach(pickup) ? null : DenyReason.TooFar;
@@ -468,10 +466,16 @@ namespace CloseTheDeal.Items
             if ((nearest - eye).sqrMagnitude > reach * reach)
                 return false;
 
-            // The first thing in the way must be the item itself: another loose prop in front of a
-            // wall does not let a grab reach through the wall behind it.
-            return !Physics.Linecast(eye, nearest, out RaycastHit blocker, ItemLayers.LookMask, QueryTriggerInteraction.Ignore)
-                || blocker.collider.GetComponentInParent<Pickup>() == pickup;
+            // Seen if a line from the eye to its middle or to its nearest point reaches the item
+            // before anything else: another prop half over it still leaves it takeable, but a wall
+            // between always blocks (a leaning prop's box poking through a thin wall is not enough,
+            // since a line that ends short of the item without touching it does not count).
+            Vector3 middle = pickup.Body.worldCenterOfMass;
+            if (!Physics.Linecast(eye, middle, out RaycastHit first, ItemLayers.LookMask, QueryTriggerInteraction.Ignore))
+                return true;
+            return first.collider.GetComponentInParent<Pickup>() == pickup
+                || (Physics.Linecast(eye, nearest + (middle - nearest) * 0.1f, out RaycastHit edge, ItemLayers.LookMask, QueryTriggerInteraction.Ignore)
+                    && edge.collider.GetComponentInParent<Pickup>() == pickup);
         }
 
         /// <summary>An item already in the hands, or the hands shared with something else that holds them.</summary>
