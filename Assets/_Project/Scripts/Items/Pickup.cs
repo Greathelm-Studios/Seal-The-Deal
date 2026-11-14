@@ -98,6 +98,8 @@ namespace CloseTheDeal.Items
         PlayerMotor _thrower;
         int _lastHolderClientId = -1;
         ItemCarrier _letGoBy;
+        Vector3 _lastHoldPosition;
+        Quaternion _lastHoldRotation = Quaternion.identity;
         float _retakeAt;
         Vector3 _lastVelocity;
         float _returnAt;
@@ -118,6 +120,10 @@ namespace CloseTheDeal.Items
         Quaternion _takeFromRotation;
         Quaternion _swayFrame;
         bool _swaying;
+
+        // Where the item's pivot was drawn in the hands this frame, for the hand seats.
+        Vector3 _drawnPosition;
+        Quaternion _drawnRotation = Quaternion.identity;
 
         /// <summary>Every machine. A player took the item.</summary>
         public event Action<Pickup, ItemCarrier> Taken;
@@ -432,14 +438,28 @@ namespace CloseTheDeal.Items
         {
             if (_carrier == null || !_carrier.IsSpawned)
             {
+                // Left where the hands last were, not where it was picked up.
+                if (!SolidFollowsHands)
+                    ServerTeleport(_lastHoldPosition, _lastHoldRotation);
                 ServerDropFromHands(true);
                 return;
             }
 
-            _carrier.GetHoldPose(Definition, false, out Vector3 position, out Quaternion rotation);
-            _body.MovePosition(position);
-            _body.MoveRotation(rotation);
+            _carrier.GetHoldPose(Definition, false, out _lastHoldPosition, out _lastHoldRotation);
+            if (!SolidFollowsHands)
+                return;
+
+            _body.MovePosition(_lastHoldPosition);
+            _body.MoveRotation(_lastHoldRotation);
         }
+
+        /// <summary>
+        /// Whether the solid part must travel with the carrier. A shield must, to stop shots; a
+        /// gadget must, so its sound, smoke and blast are where it is. A plain carried thing has
+        /// no colliders on, every machine draws it from its carrier and a release starts from the
+        /// hands, so its solid part stays still: Switchboard sees it at rest and sends nothing.
+        /// </summary>
+        bool SolidFollowsHands => Definition.CoverWhileCarried || _behaviour != null;
 
         // ---- Host: a thrown item landing ------------------------------------------------------
 
@@ -501,7 +521,9 @@ namespace CloseTheDeal.Items
         [ObserversRpc(RunLocally = true)]
         void ObserversReleased(ReleaseKind kind)
         {
-            ItemAudio.PlayAt(Sounds, kind == ReleaseKind.Thrown ? Sounds?.Throw : Sounds?.Drop, transform.position);
+            // From where it is drawn (the hands): on a client the solid part may not have caught up yet.
+            Transform shown = Shown;
+            ItemAudio.PlayAt(Sounds, kind == ReleaseKind.Thrown ? Sounds?.Throw : Sounds?.Drop, shown != null ? shown.position : transform.position);
             Released?.Invoke(this, kind);
             if (kind == ReleaseKind.Thrown)
                 _onThrown.Invoke();
@@ -739,7 +761,26 @@ namespace CloseTheDeal.Items
             }
 
             shown.SetPositionAndRotation(targetPosition, targetRotation);
+            _drawnRotation = targetRotation * Quaternion.Inverse(_visualRestRotation);
+            _drawnPosition = targetPosition - _drawnRotation * _visualRestPosition;
         }
+
+        /// <summary>
+        /// Every machine, while carried: where the carrier's hands go on the item as drawn this
+        /// frame, in world space (Definition's seats; a loose prop's are worked out from its size).
+        /// A seat's +Y is where the palm faces and +Z where the fingers point. Valid after this
+        /// item's LateUpdate (execution order 100); false when nobody holds it.
+        /// </summary>
+        public bool TryGetHandSeats(out Pose main, out Pose support, out bool twoHanded)
+        {
+            ItemDefinition item = Definition;
+            twoHanded = item.TwoHanded;
+            main = Seat(item.MainHandSeat, item.MainHandEuler);
+            support = twoHanded ? Seat(item.SupportHandSeat, item.SupportHandEuler) : main;
+            return _carrier != null;
+        }
+
+        Pose Seat(Vector3 local, Vector3 euler) => new(_drawnPosition + _drawnRotation * local, _drawnRotation * Quaternion.Euler(euler));
 
         /// <summary>Swings the held pose round the eye so it lags the view's turn, heavier things more.</summary>
         void Sway(Transform view, ref Vector3 position, ref Quaternion rotation)
