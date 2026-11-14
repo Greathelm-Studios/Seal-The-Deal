@@ -1,6 +1,6 @@
 # Handover: movement lane
 
-**Status:** Ready for review (not approved) · **Last updated:** 2026-11-14 · **From:** movement lane session, branch `claude/lane-movement-864d86`
+**Status:** Ready for review (not approved) · **Last updated:** 2026-11-14 (UI only from here, per the owner) · **From:** movement lane session, branch `claude/lane-movement-864d86`
 
 ## Goal
 
@@ -26,16 +26,16 @@ All by the scripted session (`Scripts/Player/Dev/PlayerMovementSession.cs`), whi
 - HUD captures at 1920×1080, 1280×720 and 2560×1080 in `Lane_Movement.unity` and `Lane_Integration.unity`: default, refusal, refusal faded, help on keyboard, help on pad, menu over the card. Every sound event fired (Error, PanelOpen, PanelClose).
 - Not seen: a second real machine, Steam, more than two players, packet loss, ping above 120 ms, the real greybox tower's stairs (the automated run placed the body wrongly and measured nothing), and anyone playing it by hand.
 
-## Known issues
+## Known issues (open; gameplay work is stopped by the owner, so these are left for later)
 
+- **Sprint dips going up the spiral stairs.** The speed trace (`solo_trace_stairs_up.csv` from the scripted session) shows it is not the turn (`Ground Turn Rate` holds speed there) but contacts: a drop from 9.0 to 6.9 m/s about 2.9 m up the flight and the worst, to 5.1 m/s, at 4.39 m, where the flight's top meets the upper floor's slab edge. Likely cause: the capsule catching on the 48 flat facets of the flight mesh and on the lip at the top. Likely fix: a smoother collider for the flight (more segments, or a separate collision mesh) and a flush top edge, in the tower tool rather than the motor. The scripted check for it fails for this reason.
+- **A Space press is sometimes swallowed in the scripted session.** In about half the solo runs, the first press after the menu-opened-mid-jump check does not start the next climb; the menu check itself passes. Not seen outside the scripted session; cause not found. The likely area is the game menu's close-on-Submit-release guard (Space is also UI Submit) interacting with the session holding the menu closed.
+- **Other players' gun arm has no pitch.** `PlayerMotor.AimDirection` (Harvey's viewmodel) is built from yaw only, because movement's rework removed `Aim` from `MoveInput`. Giving remote arms pitch means sending pitch in the input again (2 bytes would do); noted in VIEWMODEL.md.
 - A slide down the spiral stairs leaves the treads (drifts to 4 m from the column) and is where the remaining 16-25 cm client corrections happen.
-- Sprint dips to about 6 m/s for a moment at the foot of the spiral flight; the turn itself now holds speed (flight 1.63 s, was 1.84 s).
 - `GreyboxSceneSetup.cs` still sets the removed motor fields `_blast`, `_playerMask`, `_propMask`; it only logs "no field" warnings. Not this lane's file.
 - Ledge checks include the Prop layer, so climbing a moving prop could make host and client disagree (review PM-7, suspected, not seen).
 - Bandwidth at 8 players is about 3.1 Mbit/s up from the host before packing.
-- The committed floor templates were stale against TOWER.md; the orchestrator rebuilt them on `buffer`, but movement has not measured those stairs.
-- In about half the solo runs, the first Space press after the menu-opened-mid-jump check doesn't start a climb (the check right before it passes; cause not found). Not seen outside the scripted session.
-- PlayerPrefs are one file shared by every checkout on this Mac; the scripted session now ignores saved rebinds without writing the file.
+- PlayerPrefs are one file shared by every checkout on this Mac (productName is still "CloseTheDeal"; renaming is Adam's call). The scripted session ignores saved rebinds, and puts back any look setting or rebind its settings check changed, even when play is stopped mid-check.
 - The scripted session holds the game menu closed while it runs, because a headless editor cannot lock the cursor; a real player never sees that.
 
 ## Assumptions made while Adam was away (confirm or change)
@@ -59,5 +59,8 @@ All by the scripted session (`Scripts/Player/Dev/PlayerMovementSession.cs`), whi
 Other players are still capsules with a procedural pose: their crouch, lean and slide now arrive, but nothing on their body animates a slide or a vault, so the speed you feel isn't shown on anyone else.
 
 ## Next steps
+
+The owner has stopped gameplay and mechanics work; the open items above wait for him. UI captures of movement's pieces in `Lane_Integration.unity` (crosshair, refusal line, help card on keyboard and pad, menu over the card) are listed in the last turn report.
+
 
 Keep a slide on the spiral treads (or accept and document it as a level rule).
