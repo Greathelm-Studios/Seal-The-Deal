@@ -34,6 +34,9 @@ namespace CloseTheDeal.Player
         float _shownCrouch;
         float _dip;
         float _restFov;
+        float _edgeHeld;
+        float _slideRoll;
+        const float StickEdge = 0.95f;
         int _aimMask;
         int _wallMask;
 
@@ -133,7 +136,7 @@ namespace CloseTheDeal.Player
             if (reach > 0.001f && Physics.SphereCast(head, _wallClearance, direction, out RaycastHit wall, reach, _wallMask, QueryTriggerInteraction.Ignore))
                 reach = wall.distance;
 
-            Quaternion rotation = Quaternion.Euler(_pitch, _yaw, -_shownLean * profile.LeanAngle);
+            Quaternion rotation = Quaternion.Euler(_pitch, _yaw, -_shownLean * profile.LeanAngle + SlideRoll(profile, dt));
             transform.SetPositionAndRotation(head + direction * reach, rotation);
 
             float atSpeed = Mathf.InverseLerp(profile.WalkSpeed, profile.SprintSpeed, _motor.AnimState.PlanarSpeed);
@@ -152,9 +155,33 @@ namespace CloseTheDeal.Player
             if (tilt > 0f)
                 stick *= Mathf.Pow(tilt, profile.StickLookCurve - 1f);
 
-            _yaw += mouse.x + stick.x * profile.StickYawSpeed * dt;
+            _yaw += mouse.x + stick.x * (profile.StickYawSpeed + TurnBoost(profile, stick.x, dt)) * dt;
             float pitch = _pitch - mouse.y - stick.y * profile.StickPitchSpeed * dt;
             _pitch = Mathf.Clamp(pitch, -profile.LookUpLimit, profile.LookDownLimit);
+        }
+
+        /// <summary>Extra turn speed once the stick has sat at the left or right edge a moment, building up over the ramp time.</summary>
+        float TurnBoost(MovementProfile profile, float stickX, float dt)
+        {
+            _edgeHeld = Mathf.Abs(stickX) >= StickEdge ? _edgeHeld + dt : 0f;
+            float built = (_edgeHeld - profile.StickTurnBoostDelay) / Mathf.Max(profile.StickTurnBoostRamp, 0.01f);
+            return profile.StickTurnBoost * Mathf.Clamp01(built);
+        }
+
+        /// <summary>Roll while sliding, away from the slide's sideways drift, so a slide reads as weight without moving the crosshair.</summary>
+        float SlideRoll(MovementProfile profile, float dt)
+        {
+            PlayerAnimState state = _motor.AnimState;
+            float target = 0f;
+            if (state.Sliding)
+            {
+                float across = state.PlanarSpeed > 0.1f ? state.LocalMove.x / state.PlanarSpeed : 0f;
+                // Half the roll into a straight slide; drifting sideways swings it away from the drift.
+                target = profile.SlideRoll * Mathf.Clamp(0.5f - across * 3f, -1f, 1f);
+            }
+
+            _slideRoll = Mathf.MoveTowards(_slideRoll, target, profile.SlideRollRate * dt);
+            return _slideRoll;
         }
     }
 }
