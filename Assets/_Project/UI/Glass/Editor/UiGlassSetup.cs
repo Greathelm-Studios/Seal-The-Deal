@@ -82,6 +82,38 @@ namespace CloseTheDeal.Editor.UI
             Debug.Log("UiGlassSetup: added UiGlassBlurFeature to " + rendererPath);
         }
 
+        const string KitPane = "Assets/_Project/UI/Kit/GlassPane.prefab";
+
+        /// <summary>Wires Lane 5's kit pane to the glass: GlassFrosted.mat in UiGlassPane's glass slot, and a UiGlass
+        /// (Owns Material off) on the pane's surface Image so the shader gets its size and the blur runs.
+        /// Agreed with lane 5 (AgentHub #469): this takes the prefab over from its generator.</summary>
+        [MenuItem("Close the Deal/UI/Wire Kit Glass Pane")]
+        public static void WireKitPane()
+        {
+            var root = PrefabUtility.LoadPrefabContents(KitPane);
+            try
+            {
+                var pane = root.GetComponentInChildren<UiGlassPane>(true);
+                if (pane == null) { Debug.LogError("UiGlassSetup: no UiGlassPane in " + KitPane); return; }
+                var so = new SerializedObject(pane);
+                var surface = so.FindProperty("_pane").objectReferenceValue as UnityEngine.UI.Image;
+                so.FindProperty("_glassMaterial").objectReferenceValue =
+                    AssetDatabase.LoadAssetAtPath<Material>(ResDir + "/GlassFrosted.mat");
+                so.ApplyModifiedPropertiesWithoutUndo();
+                if (surface == null) { Debug.LogError("UiGlassSetup: UiGlassPane has no surface Image"); return; }
+                var glass = surface.GetComponent<UiGlass>() ?? surface.gameObject.AddComponent<UiGlass>();
+                var gso = new SerializedObject(glass);
+                gso.FindProperty("ownsMaterial").boolValue = false;
+                gso.FindProperty("preset").enumValueIndex = (int)UiGlass.Preset.Frosted;
+                gso.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, KitPane);
+                Debug.Log("UiGlassSetup: wired " + KitPane + " (surface " + surface.name + ")");
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
+        }
+
+        public static void WireKitPaneFromCommandLine() { BuildMaterials(); WireKitPane(); EditorApplication.Exit(0); }
+
         public static void AddFeatureToPcFromCommandLine()
         {
             AddFeature("Assets/Settings/PC_Renderer.asset");

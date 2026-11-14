@@ -18,7 +18,7 @@ Each pane has a hard diagonal sheen streak, a brighter strip across its top, a 1
 All text on glass is Deep Navy and sits on top of the pane in its own text object.
 With the blur off (quality setting "No blur", a renderer without the feature, or a scene with no glass) every pane switches by itself to a denser plain tint over the sharp world; text stays legible.
 
-Captures (Lane_Integration, 1920 × 1080, same four panes top to bottom: Frosted, HUD chip, Clear, NoBlur):
+Captures (Lane_Integration, 1920 × 1080, panes top to bottom: Frosted, HUD chip, Clear, NoBlur, then lane 5's real `GlassPane.prefab` reading "Back to game"):
 - [10_glass_window_glass_Blur.png](../../ArtSource/UI/review/10_glass_window_glass_Blur.png), [..._NoBlur](../../ArtSource/UI/review/10_glass_window_glass_NoBlur.png), scene only [10_glass_window_scene.png](../../ArtSource/UI/review/10_glass_window_scene.png): reception window wall, sky and cloud sea.
 - [10_glass_suit_glass_Blur.png](../../ArtSource/UI/review/10_glass_suit_glass_Blur.png), [..._NoBlur](../../ArtSource/UI/review/10_glass_suit_glass_NoBlur.png), [10_glass_suit_scene.png](../../ArtSource/UI/review/10_glass_suit_scene.png): a navy suit filling the frame.
 These PNGs live in the shared, untracked `ArtSource/UI/review/` of the main checkout.
@@ -44,13 +44,15 @@ Method: `UiGlassCapture` renders each pane over the scene twice, without and wit
 | | HUD chip | **8.32:1** | **11.79:1** |
 | | NoBlur | 13.49:1 | 13.49:1 |
 | | Clear | 4.72:1 | 7.76:1 |
+| | Kit GlassPane.prefab | **10.29:1** | **10.84:1** |
 | Navy suit close-up | Frosted | **11.06:1** | **12.45:1** |
 | | HUD chip | **7.45:1** | **11.29:1** |
 | | NoBlur | 11.29:1 | 11.29:1 |
 | | Clear | **2.98:1 (fails)** | 6.46:1 |
+| | Kit GlassPane.prefab | **9.59:1** | **10.84:1** |
 
 Frosted, HUD chip and NoBlur pass 4.5:1 in both captures, blur on and off. Clear fails over the dark suit, which is why it never carries text.
-Full table: `glass_contrast.md`, written by the capture next to the PNGs.
+Full table: [10_glass_contrast.md](../../ArtSource/UI/review/10_glass_contrast.md).
 Not measured: sun-bloom pointed straight at the sun (the scene's sky never clips to pure white at this exposure), 1280 × 720, ultrawide.
 
 ## Frame cost
@@ -80,10 +82,12 @@ no pane alive / "No blur" / feature missing ──▶ passes skipped, _UiGlassBl
 - [UiGlass.shader](../../Assets/_Project/UI/Glass/UiGlass.shader) (`CloseTheDeal/UI/Glass`): the pane.
 - [UiGlass.cs](../../Assets/_Project/UI/Glass/Scripts/UiGlass.cs): the component. Put it on a uGUI `Image` (white, no sprite needed); pick a preset; optional mullions (0–4) and a cyan bottom edge-light. It writes the pane's pixel size into uv1 (it turns on TexCoord1 on the canvas) and counts live panes for the feature.
 - [UiGlassSettings.cs](../../Assets/_Project/UI/Glass/Scripts/UiGlassSettings.cs): the quality setting `Auto / Blur / NoBlur`, saved in PlayerPrefs (`ctd.ui.glassQuality`). The settings screen (lane 5) sets `UiGlassSettings.Current`.
-- [UiGlassSetup.cs](../../Assets/_Project/UI/Glass/Editor/UiGlassSetup.cs): **Close the Deal > UI > Build Glass Materials** (re-run safe), and `AddFeature(renderer path)`.
+- [UiGlassSetup.cs](../../Assets/_Project/UI/Glass/Editor/UiGlassSetup.cs): **Close the Deal > UI > Build Glass Materials** (re-run safe), **Close the Deal > UI > Wire Kit Glass Pane** (puts `GlassFrosted.mat` in lane 5's `UiGlassPane` slot on `Assets/_Project/UI/Kit/GlassPane.prefab` and adds `UiGlass` with Owns Material off; agreed with lane 5, it takes that prefab over from lane 5's generator), and `AddFeature(renderer path)`.
 - [UiGlassCapture.cs](../../Assets/_Project/UI/Glass/Editor/UiGlassCapture.cs): the captures, the measurement and the timing, from the command line.
 
 ## Rules for UI built on it
+
+- Lane 5's kit panes are already wired: every pane built from `GlassPane.prefab` is glass. The kit canvas must still switch to Screen Space - Camera (lane 5's next slice) for the blur; until then kit panes show the fallback tint.
 
 - **Glass canvases must be Screen Space - Camera.** A Screen Space - Overlay canvas draws after the camera; it gets the no-blur fallback (legible, not blurred). Not tested whether URP 17's overlay pass can see the texture.
 - Text never sits on Clear. Text on Frosted or HUD chip is Deep Navy `#111B38`. Light text on glass is not a used pair.

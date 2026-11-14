@@ -192,7 +192,7 @@ namespace CloseTheDeal.Editor.UI
             rt.Release();
         }
 
-        class PaneInfo { public UiGlass.Preset preset; public RectInt textBox; }
+        class PaneInfo { public string preset; public RectInt textBox; }
 
         static GameObject BuildCanvas(Camera cam, bool withText, out List<PaneInfo> panes)
         {
@@ -224,7 +224,26 @@ namespace CloseTheDeal.Editor.UI
                 tgo.SetActive(withText);
                 // text box in screen px (canvas is 1:1 at 1920x1080, origin bottom-left in Texture2D)
                 int cx = W / 2, cy = H / 2 + (int)rtf.anchoredPosition.y;
-                panes.Add(new PaneInfo { preset = presets[i], textBox = new RectInt(cx - 200, cy - 30, 400, 60) });
+                panes.Add(new PaneInfo { preset = presets[i].ToString(), textBox = new RectInt(cx - 200, cy - 30, 400, 60) });
+            }
+            // Lane 5's real kit pane, as the menus use it (wired by UiGlassSetup.WireKitPane)
+            var kit = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/UI/Kit/GlassPane.prefab");
+            if (kit != null)
+            {
+                var k = (GameObject)PrefabUtility.InstantiatePrefab(kit, go.transform);
+                var krt = (RectTransform)k.transform;
+                krt.anchorMin = krt.anchorMax = new Vector2(0.5f, 0.5f);
+                krt.pivot = new Vector2(0.5f, 0.5f);
+                krt.sizeDelta = new Vector2(560, 120);
+                krt.anchoredPosition = new Vector2(0, -430);
+                var tgo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
+                tgo.transform.SetParent(k.transform, false);
+                var t = tgo.GetComponent<TextMeshProUGUI>();
+                t.text = "Back to game"; t.color = new Color32(0x11, 0x1B, 0x38, 255);
+                t.fontSize = 44; t.alignment = TextAlignmentOptions.Center;
+                ((RectTransform)tgo.transform).sizeDelta = new Vector2(540, 100);
+                tgo.SetActive(withText);
+                panes.Add(new PaneInfo { preset = "KitGlassPane", textBox = new RectInt(W / 2 - 160, H / 2 - 430 - 30, 320, 60) });
             }
             return go;
         }
