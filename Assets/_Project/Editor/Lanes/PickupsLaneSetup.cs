@@ -2282,11 +2282,27 @@ namespace CloseTheDeal.Editor.Lanes
             // 6. Wet floor sign.
             Pickup sign = Find("Wet Floor Sign");
             var wetFloor = sign.GetComponent<WetFloorSign>();
+            // The blast can leave furniture lying over the sign; a covered item is rightly refused,
+            // so, as a player would, lift whatever lies on it out of the way first.
+            foreach (Pickup lying in UnityEngine.Object.FindObjectsByType<Pickup>())
+            {
+                if (lying == sign || lying.State != PickupState.InWorld || lying.Definition.WeightKg > me.Profile.MaxCarryWeight)
+                    continue;
+                if (Vector3.Distance(lying.transform.position, sign.transform.position) > 1.2f)
+                    continue;
+
+                Note($"{lying.name} lies on the wet floor sign after the blast: moved out of the way first");
+                yield return TakeWhereItIs(me, lying);
+                Stand(me, new Vector3(0f, FloorY, -3f), 0f);
+                yield return 0.3f;
+                me.LocalDrop();
+                yield return 0.8f;
+            }
+
+            yield return TakeWhereItIs(me, sign);
+            Check("the wet floor sign is taken", me.Held == sign);
             Stand(me, new Vector3(-6.8f, FloorY, 0f), -90f, 40f);
             yield return 0.4f;
-            me.LocalTake(sign);
-            yield return 0.5f;
-            Check("the wet floor sign is taken", me.Held == sign);
             Stand(me, new Vector3(-1f, FloorY, -4.6f), 0f);
             yield return 0.5f;
             me.LocalUse();
@@ -2369,29 +2385,43 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 0.5f;
         }
 
-        /// <summary>Host only: stands the player next to an item wherever it has ended up, and takes it.</summary>
+        static readonly Vector3[] StandOffsets = { new(0f, 0f, -1.2f), new(0f, 0f, 1.2f), new(1.4f, 0f, 0f), new(-1.4f, 0f, 0f) };
+
+        /// <summary>
+        /// Host only: stands the player next to an item wherever it has ended up, and takes it,
+        /// trying another side when something else covers it from the first (a blast leaves
+        /// furniture lying across things, and a covered item is rightly refused).
+        /// </summary>
         static IEnumerator TakeWhereItIs(ItemCarrier who, Pickup item)
         {
             Vector3 at = item.transform.position;
-            Vector3 stand = new(Mathf.Clamp(at.x, -8f, 8f), FloorY, Mathf.Clamp(at.z - 1.2f, -5f, 5f));
-            Vector3 toItem = at - stand;
-            Stand(who, stand, Mathf.Atan2(toItem.x, toItem.z) * Mathf.Rad2Deg, 30f);
-            yield return 0.4f;
             DenyReason? refused = null;
             Action<DenyReason> listen = reason => refused = reason;
+            Vector3 stand = at;
             who.Denied += listen;
             try
             {
-                who.LocalTake(item);
-                yield return 0.6f;
+                foreach (Vector3 offset in StandOffsets)
+                {
+                    stand = new Vector3(Mathf.Clamp(at.x + offset.x, -8f, 8f), FloorY, Mathf.Clamp(at.z + offset.z, -5f, 5f));
+                    Vector3 toItem = at - stand;
+                    Stand(who, stand, Mathf.Atan2(toItem.x, toItem.z) * Mathf.Rad2Deg, 30f);
+                    yield return 0.4f;
+                    refused = null;
+                    who.LocalTake(item);
+                    yield return 0.6f;
+                    if (who.Held == item)
+                        break;
+                }
             }
             finally
             {
                 who.Denied -= listen;
             }
+
             if (who.Held != item)
                 Check($"took {item.name} for the next step", false,
-                    $"held: {(who.Held != null ? who.Held.name : "nothing")}, item at {V(at)}, stood at {V(stand)}, state {who.Motor.State}, refused: {(refused.HasValue ? refused.ToString() : "no answer")}");
+                    $"held: {(who.Held != null ? who.Held.name : "nothing")}, item at {V(at)}, last stood at {V(stand)}, state {who.Motor.State}, refused: {(refused.HasValue ? refused.ToString() : "no answer")}");
         }
 
         /// <summary>

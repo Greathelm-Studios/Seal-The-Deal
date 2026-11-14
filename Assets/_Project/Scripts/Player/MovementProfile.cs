@@ -176,6 +176,22 @@ namespace CloseTheDeal.Player
         [Tooltip("How fast the slide roll comes in and goes out, in degrees per second.")]
         public float SlideRollRate = 20f;
 
+        [Header("Crosshair")]
+        [Tooltip("How far the crosshair's arms open for each metre per second above walking speed, in pixels at 100% crosshair size on a 1080p screen. 1.2 opens it about 4 px at a sprint and 11 px at 15 m/s of air strafing. 0 = speed never opens it. With a gun in hand, the gun's own spread is used instead whenever that is wider.")]
+        public float CrosshairOpenPerSpeed = 1.2f;
+
+        [Tooltip("Extra opening while in the air (jumping, hopping, falling, thrown), in pixels at 100% size. 6 reads clearly without hiding the centre.")]
+        public float CrosshairOpenInAir = 6f;
+
+        [Tooltip("The most movement alone can open the crosshair, in pixels at 100% size.")]
+        public float CrosshairOpenMax = 16f;
+
+        [Tooltip("How fast the crosshair opens and closes toward its target, in pixels per second. 80 settles in about a fifth of a second; lower is lazier.")]
+        public float CrosshairOpenRate = 80f;
+
+        [Tooltip("Landing faster than this, in metres per second downward, gives the crosshair a small outward pulse. A full jump lands at 9.4; 0 = every landing pulses.")]
+        public float CrosshairLandingPulseSpeed = 8f;
+
         [Header("Gamepad")]
         [Tooltip("Smallest push of the move stick that counts, as a fraction of full tilt. 0.1 ignores stick drift; raise it if a pad creeps.")]
         [Range(0f, 0.5f)] public float MoveStickDeadZone = 0.1f;

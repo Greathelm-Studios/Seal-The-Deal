@@ -105,6 +105,7 @@ namespace CloseTheDeal.Items
         bool _awaitingPose;
         float _awaitUntil;
         Vector3 _rootAtRelease;
+        Vector3 _rootWhileHeld;
         Vector3 _releasedAtPosition;
         Quaternion _releasedAtRotation;
         const float AwaitPoseSeconds = 0.4f;
@@ -622,6 +623,7 @@ namespace CloseTheDeal.Items
                 _blend = 0f;
                 _awaitingPose = false;
                 next.NotifyHeld(this);
+                _rootWhileHeld = transform.position;
                 StartTake(next);
                 if (!_quiet)
                     ItemAudio.PlayAt(Sounds, Sounds?.PickUp, transform.position);
@@ -709,7 +711,9 @@ namespace CloseTheDeal.Items
         void AwaitHostPose()
         {
             Shown.GetPositionAndRotation(out _releasedAtPosition, out _releasedAtRotation);
-            _rootAtRelease = transform.position;
+            // Where the solid part sat while carried (a plain carried thing does not move): if the
+            // host's new pose already arrived before the hands emptied, it is not waited for.
+            _rootAtRelease = _rootWhileHeld;
             _awaitUntil = Time.time + AwaitPoseSeconds;
             _awaitingPose = true;
         }
@@ -734,7 +738,7 @@ namespace CloseTheDeal.Items
             _shownAway = away;
             bool inHands = !away && (_carrier != null || _blend > 0f || _awaitingPose);
             if (inHands && _handsCopy == null)
-                _handsCopy = HandsCopy.Build(transform, _ownRenderers);
+                _handsCopy = HandsCopy.Build(transform, _ownRenderers, _ownRendererEnabled);
             if (_handsCopy != null)
                 _handsCopy.gameObject.SetActive(inHands);
             ShowOwnRenderers(!away && !inHands);

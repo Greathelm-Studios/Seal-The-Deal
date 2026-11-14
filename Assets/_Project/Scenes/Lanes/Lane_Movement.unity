@@ -9793,13 +9793,45 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1704006748750672637, guid: 05b4c185bc0e342039ad06a8b8848131, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1706290386}
   m_SourcePrefab: {fileID: 100100000, guid: 05b4c185bc0e342039ad06a8b8848131, type: 3}
 --- !u!224 &1706290383 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 626064288773616975, guid: 05b4c185bc0e342039ad06a8b8848131, type: 3}
   m_PrefabInstance: {fileID: 1706290382}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1706290384 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1704006748750672637, guid: 05b4c185bc0e342039ad06a8b8848131, type: 3}
+  m_PrefabInstance: {fileID: 1706290382}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1706290385 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7727309685449055671, guid: 05b4c185bc0e342039ad06a8b8848131, type: 3}
+  m_PrefabInstance: {fileID: 1706290382}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1706290384}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf64547df7c9949648f58b083a2de144, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.UI.UiCrosshair
+--- !u!114 &1706290386
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1706290384}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd3411c32757c4fedb1531c1f7ee8e64, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Player.Hud.CrosshairFeed
+  _crosshair: {fileID: 1706290385}
 --- !u!1 &1711291379
 GameObject:
   m_ObjectHideFlags: 0
