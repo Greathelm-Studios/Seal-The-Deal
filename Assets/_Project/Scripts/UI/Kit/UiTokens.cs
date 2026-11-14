@@ -20,6 +20,9 @@ namespace CloseTheDeal.UI
         [Tooltip("Bold, italic or capitals for this role. Leave plain unless the role needs it.")]
         public FontStyles Style;
 
+        [Tooltip("Optional look for this role's letters (thinner or heavier strokes) from a TextMeshPro material made from the same font. Empty = the font's own.")]
+        public Material Material;
+
         [Tooltip("The shipping face this role is meant to use, for whoever imports the fonts. Shown here only; the game reads the Font field.")]
         public string TargetFace;
     }

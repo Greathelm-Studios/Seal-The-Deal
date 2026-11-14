@@ -226,6 +226,8 @@ namespace CloseTheDeal.Editor.UI
             yield return QuitConfirm(title);
             yield return Clip(title);
             UiMotion.Paused = false;
+            yield return SoundProof();
+            yield return RebindClash();
             yield return MenuRule(lobby, menu);
         }
 
@@ -391,6 +393,8 @@ namespace CloseTheDeal.Editor.UI
             _root.Stack.Push(Settings());
             Settle(1f);
             SettingsScreen settings = Settings();
+            Tabs().Select(3, false);
+            Settle(0.5f);
             var settingRows = new List<(string, Selectable)>
             {
                 ("Tab", Find<UiButton>(settings, "AccessibilityTab")),
@@ -406,6 +410,8 @@ namespace CloseTheDeal.Editor.UI
         }
 
         static SettingsScreen Settings() => _root.GetComponentInChildren<SettingsScreen>(true);
+
+        static UiTabPages Tabs() => Settings().GetComponentInChildren<UiTabPages>(true);
 
         static IEnumerator Sheet(string name, List<(string label, Selectable control)> rows, int w, int h)
         {
@@ -493,7 +499,7 @@ namespace CloseTheDeal.Editor.UI
             var ped = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
             TMP_Text stamp = TimeStamp();
             int frame = 0;
-            for (float t = 0f; t <= 0.5f + 0.001f; t += Step, frame++)
+            for (float t = 0f; t <= 0.8f + 0.001f; t += Step, frame++)
             {
                 int ms = Mathf.RoundToInt(t * 1000f);
                 stamp.text = $"{ms} ms" + (frame == 1 ? "  hover" : frame == 4 ? "  press" : frame == 6 ? "  release: push" : string.Empty);
@@ -550,22 +556,153 @@ namespace CloseTheDeal.Editor.UI
 
         // ---- Settings ---------------------------------------------------------------------------------------
 
+        static readonly string[] TabNames = { "controls", "video", "audio", "accessibility" };
+
+        /// <summary>Every settings tab at the three sizes, the second row focused so the marks show.</summary>
         static IEnumerator SettingsShots()
         {
             _root.Stack.Push(Settings());
             Settle(1f);
             UiInput.ForceKeysOrPad(true);
-            EventSystem.current.SetSelectedGameObject(Find<UiSlider>(Settings(), "CrosshairSize").gameObject);
-            Settle(0.6f);
-            Shot("settings_accessibility_1080", 1920, 1080);
-            Shot("settings_accessibility_720", 1280, 720);
-            Shot("settings_accessibility_2560x1080", 2560, 1080);
-            CheckInside(Settings().transform, 1280, 720, "settings at 1280x720");
-            CheckInside(Settings().transform, 2560, 1080, "settings at 2560x1080");
+            for (int i = 0; i < TabNames.Length; i++)
+            {
+                Tabs().Select(i, false);
+                Settle(0.5f);
+                UiSettingsPage page = Tabs().CurrentPage;
+                Selectable row = page.FirstRow;
+                if (row != null)
+                {
+                    Navigation nav = row.navigation;
+                    Selectable second = nav.selectOnDown != null && nav.selectOnDown.transform.IsChildOf(page.transform) ? nav.selectOnDown : row;
+                    EventSystem.current.SetSelectedGameObject(second.gameObject);
+                }
+
+                Settle(0.6f);
+                Shot($"settings_{TabNames[i]}_1080", 1920, 1080);
+                Shot($"settings_{TabNames[i]}_720", 1280, 720);
+                Shot($"settings_{TabNames[i]}_2560x1080", 2560, 1080);
+                CheckInside(Settings().transform, 1280, 720, $"settings {TabNames[i]} at 1280x720");
+                CheckInside(Settings().transform, 2560, 1080, $"settings {TabNames[i]} at 2560x1080");
+            }
+
             UiInput.ForceKeysOrPad(false);
+            Tabs().Select(0, false);
             _root.Stack.Pop();
             Settle(1f);
             yield return null;
+        }
+
+        /// <summary>
+        /// Proves the hub reaches the sound lane's player: requests a few events and lists every AudioSource that
+        /// starts with its clip and the mixer group it routes to.
+        /// </summary>
+        static IEnumerator SoundProof()
+        {
+            Note("sound player registered: " + (UiSound.Player != null ? UiSound.Player.GetType().Name : "none"));
+            UiSoundPlayer.IgnoreFocus = true; // A batch run has no focused window; the player stays silent unfocused by design.
+            int started0 = UiSoundPlayer.Started;
+            UiSoundEvent[] events = { UiSoundEvent.Confirm, UiSoundEvent.Back, UiSoundEvent.TabChange, UiSoundEvent.Notification, UiSoundEvent.Error };
+            var heard = new List<string>();
+            foreach (UiSoundEvent e in events)
+            {
+                UiSound.Play(e);
+                yield return null;
+                foreach (AudioSource source in Resources.FindObjectsOfTypeAll<AudioSource>())
+                {
+                    if (!source.isPlaying || source.clip == null)
+                        continue;
+                    string line = $"{e}: clip {source.clip.name} -> mixer group {(source.outputAudioMixerGroup != null ? source.outputAudioMixerGroup.name : "none")}";
+                    if (!heard.Contains(line))
+                        heard.Add(line);
+                }
+
+                yield return 0.35f;
+            }
+
+            foreach (string line in heard)
+                Note("heard " + line);
+            Note($"sounds started by the player: {UiSoundPlayer.Started - started0}, dropped by its gap and voice rules: {UiSoundPlayer.Dropped}");
+            UiSoundPlayer.IgnoreFocus = false;
+            Check("the hub plays the sound lane's clips through a mixer group", heard.Count > 0 && heard.TrueForAll(l => !l.EndsWith("none")), $"{heard.Count} sources seen");
+        }
+
+        /// <summary>
+        /// Settings > Controls with custom keys live (the flag the input reader will set is forced here, since that hook is
+        /// on the movement lane's branch): Jump asks for a key, G is pressed, and G already belongs to Drop / Throw, so
+        /// the clash dialog asks; Esc keeps things as they were. The player's own keys are put back afterwards.
+        /// </summary>
+        static IEnumerator RebindClash()
+        {
+            string originals = InputPrefs.BindingOverridesJson;
+            bool hooked = InputPrefs.BindingsHooked;
+            InputPrefs.BindingsHooked = true;
+            InputPrefs.BindingOverridesJson = string.Empty;
+            _root.Stack.Push(Settings());
+            Tabs().Select(0, false);
+            yield return 0.6f;
+            var controls = (ControlsPage)Tabs().CurrentPage;
+            controls.ShowSaved();
+            UiButton jump = Find<UiButton>(controls, "KeyButton");
+            EventSystem.current.SetSelectedGameObject(jump.gameObject);
+            jump.Activate();
+            yield return 0.3f;
+            Check("pressing a key cell listens (Esc and arrows go to the rebind)", controls.Listening && UiInput.Capturing);
+            UiMotion.Paused = true;
+            Settle(0.3f);
+            UiInput.ForceKeysOrPad(true);
+            Shot("settings_controls_listening_1080", 1920, 1080);
+            UiMotion.Paused = false;
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.G));
+            yield return 0.25f;
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState());
+            yield return 0.4f;
+            Check("G for Jump: G is Drop / Throw's, so a dialog asks", _root.Stack.Top is UiConfirmDialog, _root.Stack.Top != null ? _root.Stack.Top.name : "none");
+            UiMotion.Paused = true;
+            Settle(0.6f);
+            Shot("settings_controls_conflict_1080", 1920, 1080);
+            UiMotion.Paused = false;
+            yield return Press(Key.Escape);
+            Check("Esc on the clash keeps both keys as they were", _root.Stack.Top is SettingsScreen && string.IsNullOrEmpty(InputPrefs.BindingOverridesJson));
+
+            // Again, choosing Assign: Jump takes G and Drop / Throw is left with no key.
+            jump.Activate();
+            yield return 0.3f;
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.G));
+            yield return 0.25f;
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState());
+            yield return 0.4f;
+            Find<UiButton>((UiConfirmDialog)_root.Stack.Top, "Confirm").Activate();
+            yield return 0.4f;
+            string json = InputPrefs.BindingOverridesJson;
+            Note("after Assign: " + json);
+            Check("Assign on the clash moves G to Jump and clears it from Drop / Throw (saved)",
+                json.Contains("Player/Jump") && json.Contains("<Keyboard>/g") && json.Contains("Player/Throw"));
+            UiMotion.Paused = true;
+            Settle(0.6f);
+            Shot("settings_controls_assigned_1080", 1920, 1080);
+            UiMotion.Paused = false;
+
+            // Close and reopen: the page must still answer (saves reach the status line, the tab ticks).
+            _root.Stack.Pop();
+            yield return 0.6f;
+            _root.Stack.Push(Settings());
+            yield return 0.6f;
+            Tabs().Select(2, true);
+            yield return 0.4f;
+            UiSlider music = Find<UiSlider>(Settings(), "Volume1");
+            float before = UiAudio.Get(AudioBus.Music);
+            EventSystem.current.SetSelectedGameObject(music.gameObject);
+            Move(MoveDirection.Left);
+            yield return null;
+            UiStatusLine settingsStatus = Find<UiStatusLine>(Settings(), "StatusLine");
+            Check("after closing and reopening Settings, a change still reports 'Saved' and Reset turns on",
+                settingsStatus.Text == "Saved on this PC." && Find<UiButton>(Settings(), "ResetToDefaults").interactable, settingsStatus.Text);
+            UiAudio.SetVolume(AudioBus.Music, before);
+
+            _root.Stack.Pop();
+            yield return 0.6f;
+            InputPrefs.BindingOverridesJson = originals;
+            InputPrefs.BindingsHooked = hooked;
         }
 
         // ---- Quit confirm: Esc = Stay ---------------------------------------------------------------------------
@@ -644,6 +781,13 @@ namespace CloseTheDeal.Editor.UI
             ExecuteEvents.Execute(settings.gameObject, ped, ExecuteEvents.pointerExitHandler);
             Film(1f);
             UiInput.ForceKeysOrPad(true);
+            Tabs().Select(1, true);
+            Film(0.6f);
+            Tabs().Select(2, true);
+            Film(0.6f);
+            Tabs().Select(3, true);
+            Film(0.6f);
+            EventSystem.current.SetSelectedGameObject(Tabs().CurrentTab.gameObject);
             Move(MoveDirection.Down);
             Film(0.4f);
             Move(MoveDirection.Down);
@@ -750,13 +894,15 @@ namespace CloseTheDeal.Editor.UI
         // ---- Settings persist across a relaunch ----------------------------------------------------------------
 
         const string OriginalsFile = "ui_settings_originals.txt";
+        const string BindingsFile = "ui_bindings_originals.txt";
 
         static IEnumerator PersistWrite()
         {
             yield return Until(() => Object.FindAnyObjectByType<UiRoot>() != null);
             _root = Object.FindAnyObjectByType<UiRoot>();
             File.WriteAllText(Path.Combine(_out, OriginalsFile),
-                $"{(UiSettings.ReducedMotion ? 1 : 0)} {(int)UiSettings.CrosshairStyle} {(int)UiSettings.CrosshairColour} {UiSettings.CrosshairSize} {(UiSettings.NetworkStats ? 1 : 0)}");
+                $"{(UiSettings.ReducedMotion ? 1 : 0)} {(int)UiSettings.CrosshairStyle} {(int)UiSettings.CrosshairColour} {UiSettings.CrosshairSize} {(UiSettings.NetworkStats ? 1 : 0)} {(UiVideo.VSync ? 1 : 0)} {UiAudio.Get(AudioBus.Music).ToString(System.Globalization.CultureInfo.InvariantCulture)}");
+            File.WriteAllText(Path.Combine(_out, BindingsFile), InputPrefs.BindingOverridesJson);
             UiSettings.ResetToDefaults();
             Note("player's own settings saved aside; starting from defaults");
 
@@ -764,6 +910,8 @@ namespace CloseTheDeal.Editor.UI
             yield return 0.5f;
             UiInput.ForceKeysOrPad(true);
             SettingsScreen s = Settings();
+            Tabs().Select(3, false);
+            yield return 0.3f;
             EventSystem.current.SetSelectedGameObject(Find<UiSlider>(s, "CrosshairSize").gameObject);
             for (int i = 0; i < 5; i++)
             {
@@ -777,7 +925,47 @@ namespace CloseTheDeal.Editor.UI
             Find<UiToggle>(s, "ReduceMotion").OnSubmit(new BaseEventData(EventSystem.current));
             yield return null;
             Note($"after editing through the controls: size {UiSettings.CrosshairSize}, style {UiSettings.CrosshairStyle}, reduce motion {UiSettings.ReducedMotion}");
-            Check("the controls wrote the settings", UiSettings.CrosshairSize == 150 && UiSettings.CrosshairStyle == CrosshairStyle.Cross && UiSettings.ReducedMotion);
+            Check("Accessibility: the controls wrote the settings", UiSettings.CrosshairSize == 150 && UiSettings.CrosshairStyle == CrosshairStyle.Cross && UiSettings.ReducedMotion);
+
+            Tabs().Select(1, false);
+            yield return 0.3f;
+            Note($"Video: quality levels on this platform: {string.Join(", ", QualitySettings.names)}");
+            UiToggle vsync = Find<UiToggle>(s, "VSync");
+            bool vsyncBefore = UiVideo.VSync;
+            EventSystem.current.SetSelectedGameObject(vsync.gameObject);
+            vsync.OnSubmit(new BaseEventData(EventSystem.current));
+            yield return null;
+            Note($"Video: vertical sync {vsyncBefore} -> {UiVideo.VSync}, vSyncCount {QualitySettings.vSyncCount}");
+            Check("Video: the vertical sync toggle changed and applied it", UiVideo.VSync != vsyncBefore && QualitySettings.vSyncCount == (UiVideo.VSync ? 1 : 0));
+
+            Tabs().Select(2, false);
+            yield return 0.3f;
+            EventSystem.current.SetSelectedGameObject(Find<UiSlider>(s, "Volume1").gameObject);
+            for (int i = 0; i < 6; i++)
+            {
+                Move(MoveDirection.Left);
+                yield return null;
+            }
+
+            Note($"Audio: music {UiAudio.Get(AudioBus.Music):0.00}");
+            Check("Audio: the music slider wrote 50%", Mathf.RoundToInt(UiAudio.Get(AudioBus.Music) * 100f) == 50);
+
+            Tabs().Select(0, false);
+            InputPrefs.BindingsHooked = true; // the reader's flag, forced: the hook is on the movement lane's branch
+            InputPrefs.BindingOverridesJson = string.Empty;
+            yield return 0.3f;
+            var controls = (ControlsPage)Tabs().CurrentPage;
+            controls.ShowSaved();
+            UiButton jump = Find<UiButton>(controls, "KeyButton");
+            EventSystem.current.SetSelectedGameObject(jump.gameObject);
+            jump.Activate();
+            yield return 0.3f;
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.H));
+            yield return 0.25f;
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState());
+            yield return 0.4f;
+            Note("Controls: overrides " + InputPrefs.BindingOverridesJson);
+            Check("Controls: Jump moved to H and was kept as an override", InputPrefs.BindingOverridesJson.Contains("<Keyboard>/h"));
             Find<UiButton>(s, "Back").Activate(); // Leaving Settings writes them to disk.
             yield return 0.5f;
         }
@@ -789,20 +977,30 @@ namespace CloseTheDeal.Editor.UI
             _root.Stack.Push(Settings());
             yield return 0.5f;
             SettingsScreen s = Settings();
+            Tabs().Select(3, false);
+            yield return 0.3f;
             int shownSize = Find<UiSlider>(s, "CrosshairSize").DisplayValue;
             Note($"after relaunch: size {UiSettings.CrosshairSize} (slider shows {shownSize}), style {UiSettings.CrosshairStyle}, reduce motion {UiSettings.ReducedMotion}");
-            Check("relaunch: the settings from the last run are back, and the settings screen shows them",
+            Check("relaunch, Accessibility: the settings from the last run are back, and the settings screen shows them",
                 UiSettings.CrosshairSize == 150 && shownSize == 150 && UiSettings.CrosshairStyle == CrosshairStyle.Cross && UiSettings.ReducedMotion);
+            Check("relaunch, Video: vertical sync is still off and applied at launch", !UiVideo.VSync && QualitySettings.vSyncCount == 0,
+                $"saved {UiVideo.VSync}, vSyncCount {QualitySettings.vSyncCount}");
+            Check("relaunch, Audio: music is still 50%", Mathf.RoundToInt(UiAudio.Get(AudioBus.Music) * 100f) == 50);
+            Check("relaunch, Controls: Jump is still on H", InputPrefs.BindingOverridesJson.Contains("<Keyboard>/h"));
 
             string path = Path.Combine(_out, OriginalsFile);
-            if (File.Exists(path))
+            string[] v = File.Exists(path) ? File.ReadAllText(path).Split(' ') : new string[0];
+            if (v.Length >= 7)
             {
-                string[] v = File.ReadAllText(path).Split(' ');
                 UiSettings.ReducedMotion = v[0] == "1";
                 UiSettings.CrosshairStyle = (CrosshairStyle)int.Parse(v[1]);
                 UiSettings.CrosshairColour = (CrosshairColour)int.Parse(v[2]);
                 UiSettings.CrosshairSize = int.Parse(v[3]);
                 UiSettings.NetworkStats = v[4] == "1";
+                UiVideo.VSync = v[5] == "1";
+                UiAudio.SetVolume(AudioBus.Music, float.Parse(v[6], System.Globalization.CultureInfo.InvariantCulture));
+                string bindings = Path.Combine(_out, BindingsFile);
+                InputPrefs.BindingOverridesJson = File.Exists(bindings) ? File.ReadAllText(bindings) : string.Empty;
                 PlayerPrefs.Save();
                 Note("restored the player's own settings: " + File.ReadAllText(path));
             }

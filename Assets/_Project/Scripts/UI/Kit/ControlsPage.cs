@@ -1,0 +1,411 @@
+using System;
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+
+namespace CloseTheDeal.UI
+{
+    /// <summary>
+    /// Settings › Controls: look sensitivity, invert and stick speed (shown once the camera reads InputPrefs), and the
+    /// key list: every action with its key and pad button. Once the input reader applies custom keys, each key is a
+    /// button: press it, press the new key (Esc cancels); a key another action uses asks before moving it there.
+    /// Rebinds are kept as binding-override JSON in InputPrefs. The actions asset itself is never changed.
+    /// </summary>
+    [AddComponentMenu("Close the Deal/UI/Settings Page - Controls")]
+    public sealed class ControlsPage : UiSettingsPage
+    {
+        [Serializable]
+        public sealed class BindingRow
+        {
+            [Tooltip("The action in the Player map, e.g. Jump.")]
+            public string Action;
+            [Tooltip("For a two-way action (Lean): which side, 'negative' or 'positive'. Empty otherwise.")]
+            public string Part;
+            [Tooltip("The row's whole object, shown or hidden with it.")]
+            public GameObject Root;
+            [Tooltip("The key as a button (shown once custom keys are live).")]
+            public UiButton Button;
+            [Tooltip("The key as a plain cap (shown until custom keys are live).")]
+            public TMP_Text Cap;
+            [Tooltip("The pad button.")]
+            public TMP_Text Pad;
+
+            [NonSerialized] public Action Listen;
+        }
+
+        [Tooltip("The project's input actions. Read only: rebinds are overrides kept in the player's settings.")]
+        [SerializeField] InputActionAsset _actions;
+        [SerializeField] UiSlider _sensitivity;
+        [SerializeField] UiToggle _invert;
+        [SerializeField] UiSlider _stickSpeed;
+        [SerializeField] BindingRow[] _bindings = Array.Empty<BindingRow>();
+        [Tooltip("The yes / no dialog the key clash question uses.")]
+        [SerializeField] UiConfirmDialog _dialog;
+        [Tooltip("The status line, for the 'press a key' prompt.")]
+        [SerializeField] UiStatusLine _status;
+        [Tooltip("The key list's block; it moves up into the look rows' place while those are hidden.")]
+        [SerializeField] RectTransform _keys;
+        [Tooltip("Height of the look rows together, in pixels.")]
+        [SerializeField] float _lookHeight = 192f;
+
+        InputActionAsset _working;
+        CanvasGroup _screenGroup;
+        InputActionRebindingExtensions.RebindingOperation _operation;
+        BindingRow _listening;
+        string _pendingPath;
+        int _pendingIndex;
+        InputAction _pendingAction;
+        InputAction _clashAction;
+        int _clashIndex;
+
+        public bool Listening => _operation != null;
+
+        /// <summary>The pad's B cancels a key capture too (the capture itself only listens to keys and the mouse).</summary>
+        void Update()
+        {
+            if (_operation != null && Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame)
+                _operation.Cancel();
+        }
+
+        void OnEnable()
+        {
+            _sensitivity.minValue = 5f;
+            _sensitivity.maxValue = 60f;
+            _sensitivity.Configure(5f, "%");
+            _stickSpeed.minValue = 5f;
+            _stickSpeed.maxValue = 20f;
+            _stickSpeed.Configure(10f, "%");
+            _sensitivity.Changed += OnSensitivity;
+            _invert.Changed += OnInvert;
+            _stickSpeed.Changed += OnStickSpeed;
+            foreach (BindingRow row in _bindings)
+            {
+                if (row.Button != null)
+                    row.Button.Clicked += row.Listen ??= () => StartListening(row);
+            }
+        }
+
+        void OnDisable()
+        {
+            _sensitivity.Changed -= OnSensitivity;
+            _invert.Changed -= OnInvert;
+            _stickSpeed.Changed -= OnStickSpeed;
+            foreach (BindingRow row in _bindings)
+            {
+                if (row.Button != null && row.Listen != null)
+                    row.Button.Clicked -= row.Listen;
+            }
+
+            CancelListening();
+        }
+
+        void OnDestroy()
+        {
+            if (_working != null)
+                Destroy(_working);
+        }
+
+        public override void ShowSaved()
+        {
+            bool look = InputPrefs.LookHooked;
+            _sensitivity.gameObject.transform.parent.gameObject.SetActive(look);
+            _invert.gameObject.transform.parent.gameObject.SetActive(look);
+            _stickSpeed.gameObject.transform.parent.gameObject.SetActive(look);
+            if (_keys != null)
+                _keys.anchoredPosition = new Vector2(_keys.anchoredPosition.x, look ? 0f : _lookHeight);
+            _sensitivity.SetDisplayWithoutNotify(Mathf.RoundToInt(InputPrefs.LookSensitivity * 100f));
+            _invert.SetWithoutNotify(InputPrefs.InvertY);
+            _stickSpeed.SetDisplayWithoutNotify(Mathf.RoundToInt(InputPrefs.StickLookSpeed * 100f));
+            LoadWorking();
+            DrawBindings();
+        }
+
+        public override bool AtDefaults =>
+            Mathf.Approximately(InputPrefs.LookSensitivity, 1f) && !InputPrefs.InvertY && Mathf.Approximately(InputPrefs.StickLookSpeed, 1f)
+            && InputPrefs.StickDeadZone == null
+            && string.IsNullOrEmpty(InputPrefs.BindingOverridesJson);
+
+        public override void ResetToDefaults()
+        {
+            InputPrefs.ResetLook();
+            InputPrefs.BindingOverridesJson = string.Empty;
+            ShowSaved();
+        }
+
+        public override void Hidden() => CancelListening();
+
+        void OnSensitivity(int percent) { InputPrefs.LookSensitivity = percent / 100f; RaiseSaved(); }
+
+        void OnInvert(bool on) { InputPrefs.InvertY = on; RaiseSaved(); }
+
+        void OnStickSpeed(int percent) { InputPrefs.StickLookSpeed = percent / 100f; RaiseSaved(); }
+
+        // ---- The key list ---------------------------------------------------------------------
+
+        void LoadWorking()
+        {
+            if (_actions == null)
+                return;
+            if (_working == null)
+                _working = Instantiate(_actions);
+            _working.RemoveAllBindingOverrides();
+            if (!string.IsNullOrEmpty(InputPrefs.BindingOverridesJson))
+                _working.LoadBindingOverridesFromJson(InputPrefs.BindingOverridesJson);
+        }
+
+        void DrawBindings()
+        {
+            bool live = InputPrefs.BindingsHooked;
+            foreach (BindingRow row in _bindings)
+            {
+                InputAction action = _working != null ? _working.FindAction("Player/" + row.Action) : null;
+                string key = action != null ? KeyName(action, KeyIndex(action, row.Part)) : "—";
+                string pad = action != null ? PadName(action, BindingIndex(action, row.Part, "<Gamepad>")) : "—";
+                if (row.Cap != null)
+                {
+                    row.Cap.text = key;
+                    row.Cap.transform.parent.gameObject.SetActive(!live);
+                }
+
+                if (row.Button != null)
+                {
+                    row.Button.gameObject.SetActive(live);
+                    if (row.Button.Fx.Label != null)
+                        row.Button.Fx.Label.text = key;
+                }
+
+                if (row.Pad != null)
+                    row.Pad.text = pad;
+            }
+        }
+
+        /// <summary>The keyboard binding, or the mouse one for actions on a mouse button (Fire, Aim).</summary>
+        static int KeyIndex(InputAction action, string part)
+        {
+            int index = BindingIndex(action, part, "<Keyboard>");
+            return index >= 0 ? index : BindingIndex(action, part, "<Mouse>");
+        }
+
+        /// <summary>The binding of this action (or this side of a two-way action) on the given device, or -1.</summary>
+        static int BindingIndex(InputAction action, string part, string device)
+        {
+            for (int i = 0; i < action.bindings.Count; i++)
+            {
+                InputBinding b = action.bindings[i];
+                if (b.isComposite)
+                    continue;
+                if (!string.IsNullOrEmpty(part) && !string.Equals(b.name, part, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                string path = b.effectivePath ?? string.Empty;
+                string original = b.path ?? string.Empty;
+                if (path.StartsWith(device, StringComparison.Ordinal) || original.StartsWith(device, StringComparison.Ordinal))
+                    return i;
+            }
+
+            return -1;
+        }
+
+        static string KeyName(InputAction action, int index)
+        {
+            if (index < 0)
+                return "—";
+            string path = action.bindings[index].effectivePath;
+            if (string.IsNullOrEmpty(path))
+                return "—";
+            return InputControlPath.ToHumanReadableString(path, InputControlPath.HumanReadableStringOptions.OmitDevice);
+        }
+
+        static string PadName(InputAction action, int index)
+        {
+            if (index < 0)
+                return "—";
+            string path = action.bindings[index].effectivePath ?? string.Empty;
+            int slash = path.IndexOf('/');
+            string control = slash >= 0 ? path.Substring(slash + 1) : path;
+            switch (control)
+            {
+                case "buttonSouth": return "A";
+                case "buttonEast": return "B";
+                case "buttonWest": return "X";
+                case "buttonNorth": return "Y";
+                case "leftShoulder": return "LB";
+                case "rightShoulder": return "RB";
+                case "leftTrigger": return "LT";
+                case "rightTrigger": return "RT";
+                case "leftStickPress": return "L3";
+                case "rightStickPress": return "R3";
+                case "start": return "Menu";
+                default: return InputControlPath.ToHumanReadableString(path, InputControlPath.HumanReadableStringOptions.OmitDevice);
+            }
+        }
+
+        // ---- Rebinding ------------------------------------------------------------------------
+
+        void StartListening(BindingRow row)
+        {
+            if (_operation != null || _working == null || !InputPrefs.BindingsHooked)
+                return;
+            InputAction action = _working.FindAction("Player/" + row.Action);
+            int index = action != null ? KeyIndex(action, row.Part) : -1;
+            if (index < 0)
+                return;
+
+            _listening = row;
+            if (row.Button.Fx.Label != null)
+                row.Button.Fx.Label.text = "Press a key";
+            _status.Set("Press a key for " + LabelOf(row) + ". Esc cancels.", UiStatusKind.Busy);
+            UiSound.Play(UiSoundEvent.KeyBindListen);
+            UiInput.Capturing = true;
+            if (EventSystem.current != null)
+                EventSystem.current.sendNavigationEvents = false;
+            // Clicks go to the capture, not to the buttons under the pointer.
+            UiScreen screen = GetComponentInParent<UiScreen>();
+            _screenGroup = screen != null ? screen.GetComponent<CanvasGroup>() : null;
+            if (_screenGroup != null)
+                _screenGroup.blocksRaycasts = false;
+
+            action.Disable();
+            _operation = action.PerformInteractiveRebinding(index)
+                .WithControlsHavingToMatchPath("<Keyboard>")
+                .WithControlsHavingToMatchPath("<Mouse>")
+                .WithControlsExcluding("<Mouse>/position")
+                .WithControlsExcluding("<Mouse>/delta")
+                .WithControlsExcluding("<Mouse>/scroll")
+                .WithCancelingThrough("<Keyboard>/escape")
+                .OnMatchWaitForAnother(0.05f)
+                .OnComplete(op => Finish(action, index, true))
+                .OnCancel(op => Finish(action, index, false))
+                .Start();
+        }
+
+        void Finish(InputAction action, int index, bool chosen)
+        {
+            _operation?.Dispose();
+            _operation = null;
+            EndCapture();
+
+            if (!chosen)
+            {
+                LoadWorking();
+                DrawBindings();
+                _status.Set("Kept " + KeyName(action, index) + ".", UiStatusKind.Info);
+                UiSound.Play(UiSoundEvent.Back);
+                return;
+            }
+
+            string path = action.bindings[index].effectivePath;
+            if (FindClash(action, index, path, out InputAction other, out int otherIndex))
+            {
+                AskAboutClash(action, index, path, other, otherIndex);
+                return;
+            }
+
+            Commit("Saved on this PC.");
+        }
+
+        bool FindClash(InputAction action, int index, string path, out InputAction other, out int otherIndex)
+        {
+            foreach (InputAction candidate in _working.FindActionMap("Player").actions)
+            {
+                for (int i = 0; i < candidate.bindings.Count; i++)
+                {
+                    if (candidate == action && i == index)
+                        continue;
+                    if (string.Equals(candidate.bindings[i].effectivePath, path, StringComparison.OrdinalIgnoreCase))
+                    {
+                        other = candidate;
+                        otherIndex = i;
+                        return true;
+                    }
+                }
+            }
+
+            other = null;
+            otherIndex = -1;
+            return false;
+        }
+
+        void AskAboutClash(InputAction action, int index, string path, InputAction other, int otherIndex)
+        {
+            _pendingAction = action;
+            _pendingIndex = index;
+            _pendingPath = path;
+            _clashAction = other;
+            _clashIndex = otherIndex;
+            string key = InputControlPath.ToHumanReadableString(path, InputControlPath.HumanReadableStringOptions.OmitDevice);
+            string otherName = NameOfAction(other.name, other.bindings[otherIndex].name);
+            _status.Set(key + " is already used for " + otherName + ".", UiStatusKind.Refusal);
+            UiSound.Play(UiSoundEvent.Error);
+            _dialog.Configure(key + " is already used for " + otherName + ".", "Assigning it here clears it there.", "Assign", "Cancel", AssignAnyway, CancelClash);
+            GetComponentInParent<UiScreen>().Stack.Push(_dialog);
+        }
+
+        void AssignAnyway()
+        {
+            _clashAction.ApplyBindingOverride(_clashIndex, string.Empty);
+            string line = "Moved. " + NameOfAction(_clashAction.name, _clashAction.bindings[_clashIndex].name) + " has no key now.";
+            // Save before closing (closing shows the page again, which reloads the saved keys); report after (the
+            // screen resets its status line as it uncovers).
+            SaveKeys();
+            _dialog.Stack?.Pop(false);
+            DrawBindings();
+            RaiseSaved(line);
+        }
+
+        void CancelClash()
+        {
+            _pendingAction.RemoveBindingOverride(_pendingIndex);
+            // Put back whatever override was there before this attempt.
+            LoadWorking();
+            DrawBindings();
+            _status.Set("Nothing changed.", UiStatusKind.Info);
+        }
+
+        void Commit(string line)
+        {
+            SaveKeys();
+            DrawBindings();
+            RaiseSaved(line);
+        }
+
+        void SaveKeys()
+        {
+            InputPrefs.BindingOverridesJson = _working.SaveBindingOverridesAsJson();
+            UiSound.Play(UiSoundEvent.KeyBindSet);
+        }
+
+        void CancelListening()
+        {
+            if (_operation == null)
+                return;
+            _operation.Cancel();
+        }
+
+        void EndCapture()
+        {
+            if (EventSystem.current != null)
+                EventSystem.current.sendNavigationEvents = true;
+            if (_screenGroup != null)
+                _screenGroup.blocksRaycasts = true;
+            _screenGroup = null;
+            UiInput.ReleaseCapture();
+            _listening = null;
+        }
+
+        string LabelOf(BindingRow row) => NameOfAction(row.Action, row.Part);
+
+        /// <summary>The name a player reads for an action (the Player map's names are code names).</summary>
+        public static string NameOfAction(string action, string part)
+        {
+            switch (action)
+            {
+                case "Attack": return "Fire";
+                case "AltFire": return "Aim";
+                case "Throw": return "Drop / Throw";
+                case "Lean": return string.Equals(part, "negative", StringComparison.OrdinalIgnoreCase) ? "Lean left" : "Lean right";
+                default: return action;
+            }
+        }
+    }
+}

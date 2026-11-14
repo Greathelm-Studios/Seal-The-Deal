@@ -227,7 +227,7 @@ namespace CloseTheDeal.Editor.UI
             Img(fill, UiKitArt.White, t.Cobalt);
             RectTransform handleArea = At(fx.Plate, "HandleArea", 16f, 0f, 260f, 48f);
             RectTransform handle = Node(handleArea, "Handle");
-            handle.sizeDelta = new Vector2(10f, 28f);
+            handle.sizeDelta = new Vector2(8f, 22f);
             Image handleImage = Img(handle, UiKitArt.White, t.Navy, raycast: true);
 
             Box(fx.Plate, "FieldBox", 300f, 2f, 104f, 44f, t.Navy, UiKitArt.Outline1);
