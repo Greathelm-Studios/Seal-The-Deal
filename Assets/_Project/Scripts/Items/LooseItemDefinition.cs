@@ -61,9 +61,38 @@ namespace CloseTheDeal.Items
             d.HeldEuler = Vector3.zero;
             d.HoldClearance = Mathf.Clamp(halfFootprint, 0.08f, 0.45f);
             d.CoverWhileCarried = false;
+            SeatHands(d, bounds, massKg);
             d.WhatItDoes = "";
             return d;
         }
+
+        /// <summary>
+        /// Something wider than a hand span or heavier than one hand lifts takes both hands, one
+        /// on each side at a little above half its height, palms facing in. Anything smaller is
+        /// held in the right hand from underneath, palm up.
+        /// </summary>
+        static void SeatHands(ItemDefinition d, Bounds bounds, float massKg)
+        {
+            Vector3 c = bounds.center;
+            Vector3 e = bounds.extents;
+            d.TwoHanded = e.x * 2f > OneHandWidth || massKg > OneHandKg;
+            if (d.TwoHanded)
+            {
+                float y = c.y + e.y * 0.2f;
+                d.MainHandSeat = new Vector3(c.x + e.x, y, c.z);
+                d.MainHandEuler = new Vector3(0f, 0f, 90f);
+                d.SupportHandSeat = new Vector3(c.x - e.x, y, c.z);
+                d.SupportHandEuler = new Vector3(0f, 0f, -90f);
+            }
+            else
+            {
+                d.MainHandSeat = new Vector3(c.x, c.y - e.y, c.z);
+                d.MainHandEuler = Vector3.zero;
+            }
+        }
+
+        const float OneHandWidth = 0.35f;
+        const float OneHandKg = 3f;
 
         /// <summary>"SM_PlantPot_02(Clone)" reads "Plant Pot"; "office_chair" reads "Office Chair".</summary>
         public static string ReadableName(string objectName)

@@ -24,7 +24,7 @@ Anything knocked out of your hands (a blast, a heavy hit, leaving the game) stay
 | Who holds an item | **Host.** A client asks; the host checks reach, weight, empty hands and that the item is still loose, and the first valid request wins | One value per item: the holder (`Pickup`) | On change |
 | Out of play / back in play | Host | One flag per item (`Pickup`) | On change |
 | A loose item's motion | Host; it is an ordinary prop ([PROPS.md](PROPS.md)) | Switchboard `NetBody` ([SWITCHBOARD.md](SWITCHBOARD.md)) | While moving, inside Switchboard's budget |
-| A carried item's solid part | Host moves it to the carrier's hands each tick | Switchboard `NetBody`, like any moving prop | While the carrier moves |
+| A carried item's solid part | Host. A shield (cubicle panel) or a gadget (case, extinguisher, sign) is moved to the hands each tick; a plain carried thing stays still where it was taken, since its colliders are off and every machine draws it from the carrier | Switchboard `NetBody`: shields and gadgets while the carrier moves; a plain carried thing is at rest, so nothing | Shields and gadgets while moving |
 | A carried item's look | Each machine, locally: the visual child follows the carrier's view (own camera) or body (other players) every frame | Nothing | — |
 | Throw, drop, use | Owner asks (one message each, the throw carries the aim direction); host does it | Arrives as holder change plus motion | On press |
 | Impact damage and shove | Host only, from the host's own collision | Damage is whatever the target syncs; shove rides the player's body state | On hit |
@@ -71,7 +71,7 @@ Any loose object can be picked up and thrown, not only the items above (Alex's d
 - Its own prefab, not merged into a desk or a floor piece, with its pivot at its base or centre.
 - One simple collider (a box or a capsule; a mesh collider must be convex) on the **Prop** layer.
 - A `Rigidbody` whose **mass is its real weight in kg**: it decides whether it can be lifted, how much it slows the carrier, how fast it is thrown and how much it hurts. The tool guesses one from its size (40 kg per cubic metre) and says so; set the real one.
-- `NetworkObject`, Switchboard's `NetBody` (the default profile), `Prop` and `Pickup`. **Set Up Pickups** also gives a `Pickup` to every prefab under `Assets/_Project` that has a `Prop` and none.
+- `NetworkObject`, Switchboard's `NetBody` (the default profile), `Prop` and `Pickup`. **Set Up Pickups** also gives a `Pickup` to every prefab under `Assets/_Project` that has a `Prop` and none, except a prefab marked `NotThrowable` (add it to keep a prop out of players' hands).
 
 **What is worked out at runtime** (`LooseItemDefinition`), when its `Pickup` has no definition:
 
@@ -119,7 +119,18 @@ What a HUD reads for items. All of it is events: nothing here needs checking eve
 
 **Sounds:** the world sounds (pick-up, throw, impact, beep, hiss) belong to the item and play on every machine from the events above. The HUD's own sounds use the UI lane's `UiSoundEvent`: `HandsFull` for a hands-full refusal, `Error` for the other refusals; a prompt appearing is a quiet `Focus`.
 
-`ItemPromptLabel` is this lane's stand-in two lines of text for the test scene; the revamped HUD replaces it and reads exactly the rows above.
+### The item HUD (built)
+
+`ItemHud` ([ItemHud.cs](../../Assets/_Project/Scripts/Items/ItemHud.cs)) draws the rows above from the UI kit only: the `Plate` and `KeyHint` prefabs, `UiTokens` colours, type, timings and springs, `UiMotion` and `UiSound`. **Close the Deal > Lanes > Add Item HUD To Open Scene** puts it under the game menu's `Hud` (Set Up Integration and Set Up Pickups call it); it replaces the old two-line `ItemPromptLabel`, which is deleted.
+
+| Piece | Where | Looks | Moves | Sound |
+|---|---|---|---|---|
+| Prompt | 90 px under the crosshair (the briefcase prompt's spot; the two never show together) | Plate, F key cap, "Pick up Chair" in navy; the plate fits its words | Fades up and rises 8 px in 100 ms (ease out); fades and sinks in 70 ms | `Focus` when it appears from nothing |
+| Too heavy | Same | Plate with an amber edge, no key, "Desk · Too heavy" in ink 2 | As the prompt | `Focus` |
+| Refusal | Same, for 1.6 s, then back to whatever is looked at | Amber edge, the reason ("Hands full · G to drop") | The kit's refusal shake (6 px, the one spring allowed to overshoot) | `HandsFull` for hands full, `Error` for the rest |
+| Hands slot | Bottom left, 32 px in (bottom centre is the briefcase notice, bottom right the usual weapon corner) | Plate: "IN HANDS", the item's name, a cobalt weight line (`ItemCarrier.Load`), key hints LMB Throw, G Drop, RMB and the use verb when it has one | Slides up 24 px and fades in 200 ms; out in 140 ms | None of its own: the item's pick-up and drop sounds play in the world |
+
+Reduce motion: fades only, no rise and no shake. No throw cue: every item has one throw strength, so there is nothing to charge, and an arc was left out as clutter for a throw that flies nearly straight at these speeds (decision taken while Adam was away; revisit if playtests miss throws).
 
 ## Item sounds
 
@@ -159,7 +170,7 @@ Every moment has a C# event and a UnityEvent on the prefab, firing on every mach
 - Shared hands (static, set by the integration glue): `ItemCarrier.HandsTakenElsewhere` (true refuses an item as hands full, on the owner's prompt and key and on the host) and `InteractClaimedElsewhere` (owner: something else answers F this frame).
 - `GrenadeCase`: Armed, Beeped, Exploded (point). `FireExtinguisher`: PinPulled, RanEmpty. `WetFloorSign`: PutDown, Cleared, Slipped (point).
 
-Sounds: see "Item sounds" above. `ItemPromptLabel` is the lane's own two lines of on-screen text, in the lane's test scene and the integration scene until the revamped HUD replaces it.
+Sounds: see "Item sounds" above. The HUD: see "The item HUD (built)" above.
 
 ## Scripts
 
@@ -171,7 +182,7 @@ Under [Assets/_Project/Scripts/Items/](../../Assets/_Project/Scripts/Items/):
 - `ItemBehaviour.cs`: base for what a particular item does. `GrenadeCase.cs`, `FireExtinguisher.cs`, `WetFloorSign.cs`.
 - `LooseItemDefinition.cs`: the definition worked out for a loose prop that has none. `HandsCopy.cs`: the draw-only copy shown in the hands for a prop with no Visual child.
 - `ItemBlast.cs`: damage in a radius. `MotorSpeedOverride.cs`: the carry slowdown. `ItemLayers.cs`: layer masks. `ItemSoundSet.cs`, `ItemAudio.cs`: the item sounds and how they play.
-- `DamageDummy.cs`: the practice target. `ItemPromptLabel.cs`: the on-screen prompt.
+- `DamageDummy.cs`: the practice target. `ItemHud.cs`: the item HUD (prompt, refusals, hands slot).
 
 Shared with other lanes: [Core/IDamageable.cs](../../Assets/_Project/Scripts/Core/IDamageable.cs).
 

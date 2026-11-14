@@ -49,6 +49,18 @@ namespace CloseTheDeal.Items
         [Tooltip("Tick for things that should work as a shield while carried, like a cubicle panel: it stays solid in the hands, so it blocks shots and other players. Unticked, it passes through everything until let go.")]
         public bool CoverWhileCarried;
 
+        [Header("Hands (for the arm-posing layer)")]
+        [Tooltip("Where the main (right) hand holds it, in metres in the item's own space from its pivot. The hand's palm faces along the seat's up (+Y); its fingers point along the seat's forward (+Z).")]
+        public Vector3 MainHandSeat = new(0.2f, 0.3f, 0f);
+        [Tooltip("How the main hand's seat is turned in the item's space, in degrees.")]
+        public Vector3 MainHandEuler = new(0f, 0f, 90f);
+        [Tooltip("Tick when it takes both hands (a chair, a panel); the support (left) hand then goes to the seat below.")]
+        public bool TwoHanded = true;
+        [Tooltip("Where the support (left) hand holds it, in metres in the item's space. Only used when Two Handed is ticked.")]
+        public Vector3 SupportHandSeat = new(-0.2f, 0.3f, 0f);
+        [Tooltip("How the support hand's seat is turned in the item's space, in degrees.")]
+        public Vector3 SupportHandEuler = new(0f, 0f, -90f);
+
         [Header("Throwing")]
         [Tooltip("How fast it leaves the hands when thrown, in metres per second. 6 is a heave that lands a few metres away; 16 crosses the room flat.")]
         [Min(0f)] public float ThrowSpeed = 10f;
