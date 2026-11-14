@@ -77,6 +77,29 @@ namespace CloseTheDeal.Combat
             return result;
         }
 
+        /// <summary>Whether nothing solid but glass stands between two points.</summary>
+        public static bool ClearPath(Vector3 from, Vector3 to, int solidMask)
+        {
+            Vector3 line = to - from;
+            float length = line.magnitude;
+            if (length < 0.001f)
+                return true;
+
+            Vector3 direction = line / length;
+            float travelled = 0f;
+            for (int i = 0; i <= MaxPanesPerShot && travelled < length; i++)
+            {
+                if (!Physics.Raycast(from + direction * travelled, direction, out RaycastHit hit, length - travelled, solidMask, QueryTriggerInteraction.Ignore))
+                    return true;
+                if (!GlassPane.TryFind(hit.collider, out _))
+                    return false;
+
+                travelled += hit.distance + PaneSkin;
+            }
+
+            return true;
+        }
+
         /// <summary>Host only. Breaks the panes the last traced shot crossed. Call straight after Trace.</summary>
         public static void BreakCrossedPanes(in ShotResult result, Vector3 direction, int attackerClientId)
         {
@@ -153,7 +176,11 @@ namespace CloseTheDeal.Combat
                 // Favour the shooter by one tick either side of the tick they saw: the picture on
                 // their screen sits between ticks, and is never known closer than that.
                 for (int offset = -RewindSlackTicks; offset <= RewindSlackTicks; offset++)
-                    TestBody(candidate, candidate.PositionAt(rewindTick + (uint)offset), origin, direction, ref nearest, ref body, ref bodyFeetY);
+                {
+                    uint tick = rewindTick + (uint)offset;
+                    if (candidate.WasAliveAt(tick))
+                        TestBody(candidate, candidate.PositionAt(tick), origin, direction, ref nearest, ref body, ref bodyFeetY);
+                }
             }
 
             return nearest;

@@ -16,7 +16,7 @@ The streaks slide over the pane as the viewer walks past, the way a reflection w
 Nothing is actually reflected: the art bible rules out mirror glass because players have to read each other through two panes.
 
 **Glass breaks.** A bullet passes straight through a pane and shatters it on the way; a blast shatters every pane in its radius; a chair, a desk or a thrown player that hits a pane fast enough goes through it and keeps most of its speed.
-A broken pane stays broken for the rest of the match and blocks nothing: people, bullets and furniture all pass.
+A broken pane stays broken for the rest of the match and blocks nothing: people, bullets and furniture all pass. A rematch (new towers) starts with every pane whole, on every machine.
 The building shell (slabs, sills, pillars, walls) never breaks.
 
 ## Breaking: who owns what (AGENTS.md §3)
