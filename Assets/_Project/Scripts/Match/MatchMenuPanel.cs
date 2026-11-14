@@ -35,6 +35,9 @@ namespace CloseTheDeal.MatchMode
         [Tooltip("What everyone else reads after a result.")]
         [SerializeField] string _waitingForRematch = "The host can start a rematch.";
 
+        // An empty slot means the scene's menu section predates this script: say so once and stand down.
+        void Awake() => MatchWiring.Complete(this);
+
         void OnEnable()
         {
             _match.OnStarted += OnStarted;

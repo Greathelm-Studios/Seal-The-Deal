@@ -33,7 +33,8 @@ MonoBehaviour:
   BridgeWidth: 3
   RailHeight: 1.1
   CarryBlendSeconds: 0.15
-  FirstPersonOffset: {x: 0.42, y: -0.5, z: 0.95}
+  FirstPersonOffset: {x: -0.34, y: -0.5, z: 0.8}
+  FirstPersonScale: 0.55
   BeaconMaterial: {fileID: 2100000, guid: 4c88f0c71628f4af982364919a8d0719, type: 2}
   BeaconRange: 30
   BeaconHeight: 3.5
