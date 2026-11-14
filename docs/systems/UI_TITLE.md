@@ -26,6 +26,7 @@ The UI kit's title screen (lane 5, `TitleScreen`) draws the white window frame, 
 Its camera draws only the scene's own sky (culling mask "nothing", so no scene geometry and no lights of its own), with the game's post-processing, into a render texture the size of the slot in screen pixels.
 It renders only while the title screen is shown; in a game it is disabled, so it costs nothing and nothing leaks into gameplay.
 The view faces 155 degrees away from the sun (facing it washed the panes out with sun glare), 20 degrees up, 46 degree field of view, and sways 1.4 degrees over 26 s (still with reduced motion).
+While the session panel (hosting, joining, connecting: a dialog over the title, `UiRoot.Session`) is open, the view eases 24 degrees round and 6 degrees up over 1.6 s, so the wait reads as something happening; it eases back when the panel closes (snaps with reduced motion).
 While shown, the sky material is swapped for a copy that sends a plane every 18 s; the original is put back when the title hides.
 
 ## The standalone set
