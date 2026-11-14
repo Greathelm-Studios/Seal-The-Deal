@@ -40,7 +40,7 @@ namespace CloseTheDeal.Customisation
         [Range(0.05f, 0.6f)] [SerializeField] float _openSeconds = 0.22f;
 
         [Tooltip("Seconds for the panel to slide away.")]
-        [Range(0.05f, 0.6f)] [SerializeField] float _closeSeconds = 0.16f;
+        [Range(0.05f, 0.6f)] [SerializeField] float _closeSeconds = 0.3f;
 
         [Tooltip("How far the panel travels as it slides, in pixels at 1920 × 1080.")]
         [Range(0f, 200f)] [SerializeField] float _slideDistance = 40f;
@@ -51,8 +51,8 @@ namespace CloseTheDeal.Customisation
         [Tooltip("Seconds the kick takes to settle.")]
         [Range(0.05f, 0.4f)] [SerializeField] float _nudgeSeconds = 0.14f;
 
-        const string KeysHint = "A / D   Change      W / S   Category      Mouse, Q / R   Turn      Enter   Keep      Backspace   Put back";
-        const string PadHint = "D-pad left / right   Change      D-pad up / down   Category     Right stick   Turn      A   Keep      B   Put back";
+        const string KeysHint = "Enter   Keep outfit      Backspace   Put back      A / D   Change      W / S   Category      Mouse, Q / R   Turn";
+        const string PadHint = "A   Keep outfit      B   Put back      D-pad left / right   Change      D-pad up / down   Category      Right stick   Turn";
         const string LockedNotice = "One of these choices is still locked. Put it back, or pick another.";
         const float NoticeSeconds = 3f;
 
@@ -82,8 +82,11 @@ namespace CloseTheDeal.Customisation
             _notice.text = string.Empty;
         }
 
-        public void Close()
+        /// <summary>Slides the form away. <paramref name="notice"/> (such as "Outfit kept.") shows while it goes, so keep and put back are unmistakable.</summary>
+        public void Close(string notice = null)
         {
+            if (!string.IsNullOrEmpty(notice))
+                _notice.text = notice;
             _opening = false;
             _t = 0f;
         }

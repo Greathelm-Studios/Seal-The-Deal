@@ -27,6 +27,7 @@ Steam host, join and invite are unchanged: the game menu (`GameMenu`, `SteamLobb
 | **Switching firm** | Allowed unless the new firm would then lead by more than Max Imbalance; a refusal gets a secretary line | `LobbyRules` Max Imbalance |
 | **Switching takes the ready back** | Others readied up for the old teams | Code |
 | **Fitting room takes the ready back** | So the host can never start with someone still choosing an outfit | Code |
+| **Short-handed start** | When everyone is ready but a firm is empty or the firms are uneven, the host can still start: the first hold arms a confirm (the prompt says why), a second hold within 6 s starts the run. A lone player can therefore start a test run from the desk. **Proposal for the owner**: untick Allow Short Handed Start in Lobby Rules and the run waits for both firms | `LobbyRules`: Allow Short Handed Start, Confirm Seconds |
 | **Hold to start** | 1 s hold at the desk, host only | `LobbyRules` Start Hold Seconds |
 | **Leaving** | A player who leaves is removed from the board; nobody is moved to rebalance; the board then says the firms are uneven if they are | Code |
 | **Firm names and colours** | Read from the two `FirmDefinition` assets in `Profiles/Match` (today "Ashcombe & Pryce" and "Halloran Voss", the game mode's proposals; the names are the owner's decision). Lobby Rules > Firms points at them, matching each to its building by its own Tower setting (0 = Building A = firm 0). Nothing in the lobby holds a name or colour of its own | `Profiles/Match/Firm_*.asset` |
@@ -44,6 +45,62 @@ Steam host, join and invite are unchanged: the game menu (`GameMenu`, `SteamLobb
 
 Late joiners get the whole roster with the object's spawn.
 A client never decides anything: a request the rules refuse changes nothing.
+
+## UI contract
+
+What a screen reads, and when it changes. UI reads this state and sends requests; it never decides an outcome (AGENTS.md §3). Nothing here is polled per frame: rebuild text on the event.
+
+### State (read)
+
+| Read | Type | Owner | Meaning |
+|---|---|---|---|
+| `LobbyRoster.Instance` | `LobbyRoster` | Host object, readable everywhere; null until the lobby is networked | The roster |
+| `Count`, `this[i]` | `LobbyMember { int ClientId; string Name; byte Firm; MemberState State }` | Host, synced list | One entry per player. `Firm` is 0 = Building A, 1 = Building B. `State`: `Browsing`, `Ready`, `Fitting` |
+| `TryGetLocal(out LobbyMember)` | bool | Local | This player's own entry |
+| `FirmSize(0 / 1)`, `ReadyCount` | int | Derived | Firm counts and how many are ready |
+| `Rules.FirmName(f)`, `Rules.FirmColour(f)` | string, Color | `FirmDefinition` assets | Name and colour of a firm; the only source |
+| `RunInProgress` | bool | Host, synced | The run has started |
+| `Evaluate(out StartBlock reason)` | `StartState { Unavailable, Ready, NeedsConfirm }` | Derived | Whether the host can start. `Ready`: one hold. `NeedsConfirm`: everyone is ready but `reason` is `NeedBothFirms` or `Unbalanced`; a second hold confirms |
+| `reason` | `StartBlock { None, RunInProgress, NotAllReady, NeedBothFirms, Unbalanced }` | Derived | Why the start is unavailable (or needs a confirm) |
+| `FirmProblem()`, `SmallerFirm()` | `StartBlock`, int | Derived | The firm-balance problem regardless of ready states, and the firm a sign-in would help |
+| `StepFor(me, isHost)` | `LobbyStep { Arriving, ReadyUp, WaitForOthers, StartRun, StartShortHanded, WaitForHost, Fitting, RunStarting }` | Derived | The local player's next step: the guidance line |
+| `IsLocalHost` | bool | Local | This machine hosts |
+| `LobbyInteractor.Target`, `LobbyInteractable.Prompt(gamepad)`, `.HoldProgress` | object, string (cached, null = none), float 0..1 or -1 | Local | What the player is looking at, its prompt line, and the fill while the host holds to start |
+
+### Events
+
+| Event | Payload | Fires on | When |
+|---|---|---|---|
+| `LobbyRoster.OnChanged` | none | Every machine | Any change to the list or the run flag: rebuild the board and guidance |
+| `OnArrived` | `LobbyMember` | Every machine | Someone new joined after this machine did |
+| `OnReadyChanged` | `LobbyMember, bool ready` | Every machine | A player readied or took it back |
+| `OnFirmChosen` / `OnFirmRefused` | int firm | That player | A sign-in went through / was refused to keep the firms fair |
+| `OnStartBlocked` | `StartBlock` | The host | The host tried to start and could not |
+| `OnStartNeedsConfirm` | `StartBlock` | The host | The host asked to start short-handed without confirming (the desk confirms with a second hold) |
+| `ReceptionDesk.OnConfirmArmed` | `StartBlock` | The host machine | The first hold armed a short-handed confirm (6 s window) |
+| `OnRunStarting` | none | Every machine | The host started the run |
+| `Secretary.LineSpoken` | `SecretaryMoment, string, float seconds` | Every machine | The secretary speaks a line (arrival, ready, not ready, firm chosen, firm refused, start blocked, short-handed, start) |
+| `LobbyInteractor.OnTargetChanged` | `LobbyInteractable` | Local | The player looks at, or away from, a desk, stand or mirror |
+| `LobbyInteractor.OnUsed` | `LobbyInteractable` | Local | The interact button went down on a target |
+
+### Requests (send)
+
+`RequestReady(bool)`, `RequestFirm(int)`, `RequestFitting(bool)`, `RequestStart(bool confirmed)`: each is one small RPC the host judges; a refusal comes back as the events above.
+
+### Guidance wording (on the ready board)
+
+| `LobbyStep` | Line |
+|---|---|
+| `ReadyUp` | "You are with {firm}. Ready up at the reception desk. To change firm, use a sign-in stand." |
+| `WaitForOthers` | "Ready. Waiting for {names}." |
+| `StartRun` (host) | "Everyone is ready. Hold F at the desk to start the run." |
+| `StartShortHanded` (host) | "Everyone is ready. {firm} has nobody, but you can still start: hold F at the desk, then hold it again to confirm." |
+| `WaitForHost` | "Everyone is ready. Waiting for the host to start the run." |
+| `Fitting` | "You are in the fitting room. Keep the outfit or put it back to continue." |
+
+### Suggested sound and motion hooks
+
+Ready / take back: `OnReadyChanged` (UI sound `LobbyReady` / `LobbyUnready`). Sign-in: `OnFirmChosen` (`Confirm`), `OnFirmRefused` (`Error`). Refused start: `OnStartBlocked` (`Error`). Confirm armed: `OnConfirmArmed` (`Notification`). Start: `OnRunStarting` (`CountdownGo`). Target change: `OnTargetChanged` (`Focus`). Use: `OnUsed` (`Select`).
 
 ## Hooks for other lanes
 

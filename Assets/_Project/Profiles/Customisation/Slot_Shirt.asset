@@ -21,3 +21,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: e01096525a8bf48339732f898ceec97f, type: 2}
   - {fileID: 11400000, guid: 4109f1d79a78f4bdfb530866e831fa85, type: 2}
   _defaultOption: 0
+  _viewAngle: -25
+  _viewDistance: 1.7
+  _viewHeight: 1.3
