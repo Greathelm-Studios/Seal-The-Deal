@@ -332,6 +332,7 @@ namespace CloseTheDeal.Player
         bool? _appliedBodyView;
         Transform _head;
         static readonly int BodyViewNearClipId = Shader.PropertyToID("_BodyViewNearClip");
+        static readonly int BodyViewClipBackId = Shader.PropertyToID("_BodyViewClipBack");
 
         /// <summary>Applies the body view, or undoes it, for the player this machine controls.</summary>
         /// <remarks>
@@ -570,6 +571,9 @@ namespace CloseTheDeal.Player
         {
             bool ownEye = _appliedBodyView == true && rendering == _baseCamera;
             Shader.SetGlobalFloat(BodyViewNearClipId, ownEye ? _profile.BodyViewHeadClip : 0f);
+            // The eye sits BodyViewForward in front of the middle of the head, so the middle
+            // of the head is that far behind the eye.
+            Shader.SetGlobalFloat(BodyViewClipBackId, ownEye ? _profile.BodyViewForward : 0f);
             if (_arms != null)
                 _arms.SetVisible(rendering == _armsCamera && !BodyView);
         }

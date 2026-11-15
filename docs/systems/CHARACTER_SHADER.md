@@ -37,7 +37,7 @@ Bit 8 is one of the four bits URP leaves to projects; any other effect that want
 
 ## Near clip for the body view
 
-Every pass except the shadow pass skips fragments closer to the camera than the global `_BodyViewNearClip` (added 2026-11-15; the eye-card shader does the same).
+Every pass except the shadow pass skips fragments inside a ball of radius `_BodyViewNearClip`, centred `_BodyViewClipBack` metres behind the camera (two globals, added 2026-11-15; the eye-card shader does the same).
 It is 0 for every camera except the one a player looks out of their own body with, in the body view ([VIEWMODEL.md](VIEWMODEL.md)), so it changes nothing anywhere else.
 
 ## Tuning a material

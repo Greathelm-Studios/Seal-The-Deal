@@ -79,11 +79,24 @@ Shader "Close the Deal/Character Toon"
         // 0 for every other camera, so mirrors, other players and shadows keep the whole body.
         // A global, not a material property, so it stays outside UnityPerMaterial.
         float _BodyViewNearClip;
+        // How far behind that camera the middle of the head is, metres. Set with the above.
+        float _BodyViewClipBack;
 
-        // SV_POSITION.w is the distance from the eye along its view, in metres.
+        // Skips what is inside a ball of radius _BodyViewNearClip around the middle of the
+        // owner's head. WHY a ball and not "everything nearer than a distance", which the first
+        // version did: a flat cut also sliced through the owner's own shoulder and sleeve,
+        // which sit beside the eye, and left the arm with an open end (Harvey: "It got worse").
+        // The ball covers the head and hair and stops short of the shoulders.
         void ClipNearOwnEye(float4 positionCS)
         {
-            clip(positionCS.w - _BodyViewNearClip);
+            // Where this pixel is, measured from the camera: sideways from its place on the
+            // screen and its depth (SV_POSITION.w is the distance along the view, in metres).
+            // abs() because only the distance matters, which also makes the screen's up-or-down
+            // convention irrelevant.
+            float2 fromCentre = abs(positionCS.xy / _ScaledScreenParams.xy * 2.0 - 1.0);
+            float2 sideways = fromCentre * positionCS.w / float2(UNITY_MATRIX_P[0][0], abs(UNITY_MATRIX_P[1][1]));
+            float ahead = positionCS.w + _BodyViewClipBack;
+            clip(dot(sideways, sideways) + ahead * ahead - _BodyViewNearClip * _BodyViewNearClip);
         }
 
         // WHY one block shared by every pass: the SRP Batcher only batches a shader whose passes

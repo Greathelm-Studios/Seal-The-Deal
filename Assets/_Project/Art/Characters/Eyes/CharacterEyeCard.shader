@@ -35,6 +35,7 @@ Shader "Close the Deal/Character Eye Card"
         // The same per-camera near clip as CharacterToon.shader: in the body view a player's
         // own eye cards are not drawn for their own eye. 0 for every other camera.
         float _BodyViewNearClip;
+        float _BodyViewClipBack;
 
         // WHY: these atlas dimensions and card proportions are the artist contract in CHARACTER_EYES.md.
         static const float2 AtlasGrid = float2(3.0, 4.0);
@@ -72,7 +73,11 @@ Shader "Close the Deal/Character Eye Card"
 
         half4 Cutout(Varyings input)
         {
-            clip(input.positionCS.w - _BodyViewNearClip);
+            // The same ball around the owner's head as CharacterToon.shader's ClipNearOwnEye.
+            float2 fromCentre = abs(input.positionCS.xy / _ScaledScreenParams.xy * 2.0 - 1.0);
+            float2 sideways = fromCentre * input.positionCS.w / float2(UNITY_MATRIX_P[0][0], abs(UNITY_MATRIX_P[1][1]));
+            float ahead = input.positionCS.w + _BodyViewClipBack;
+            clip(dot(sideways, sideways) + ahead * ahead - _BodyViewNearClip * _BodyViewNearClip);
             half4 lids = SAMPLE_TEXTURE2D(_Lids, sampler_Lids, input.atlasUV);
             clip(lids.a - Cutoff);
             return lids;
