@@ -188,7 +188,14 @@ namespace CloseTheDeal.Items
             base.OnStartClient();
             if (!IsOwner)
                 return;
-
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // Adam's call (2026-11-15): while Alex's stand-in DevCarry exists (Editor and
+            // development builds, the same condition it boots under) it alone owns F and G, as
+            // it did before this lane merged. Without this both grab the same prop on F and G
+            // drops and throws it in one frame. Release builds keep this lane's carrying.
+            return;
+#endif
+#pragma warning disable CS0162 // unreachable in Editor and development builds, see above
             Local = this;
             _reader = GetComponent<PlayerInputReader>();
             if (_reader != null)
@@ -196,6 +203,7 @@ namespace CloseTheDeal.Items
             CreateInput();
             enabled = true;
             LocalChanged?.Invoke(this);
+#pragma warning restore CS0162
         }
 
         public override void OnStopClient()
