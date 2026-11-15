@@ -7,6 +7,8 @@ using CloseTheDeal.UI;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using TMPro;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using Object = UnityEngine.Object;
@@ -50,6 +52,9 @@ namespace CloseTheDeal.Editor.UI
                     break;
                 case "wide-transitions":
                     yield return StackTransitions(lobby);
+                    break;
+                case "wide-ingame":
+                    yield return InGameMenu(lobby);
                     break;
                 case "wide-frame":
                     yield return TitleFrame(Arg("-uiShotPrefix") ?? "14_title_frame");
@@ -289,6 +294,245 @@ namespace CloseTheDeal.Editor.UI
             CheckInside(title.transform, 2560, 1080, "title at 2560x1080");
         }
 
+        // ---- The in-game menu (slice 4) ---------------------------------------------------------------------
+
+        static Camera _world;
+
+        /// <summary>The game's own camera (drawing to the screen), drawn first so the glass pane has the world behind it.</summary>
+        static Camera WorldCamera()
+        {
+            foreach (Camera c in Camera.allCameras)
+            {
+                if (c != _cam && c.targetTexture == null && c.enabled && c.cameraType == CameraType.Game && c.name != "TitleSkyCamera")
+                    return c;
+            }
+
+            return Camera.main;
+        }
+
+        /// <summary>A frame with the world under the UI: the game camera into the capture texture, then the UI over it.</summary>
+        static Texture2D GrabGame(int w, int h)
+        {
+            Resize(w, h);
+            if (_world == null)
+            {
+                _world = WorldCamera();
+                var names = new List<string>();
+                foreach (Camera c in Camera.allCameras)
+                    names.Add($"{c.name} ({c.cameraType}, target {(c.targetTexture != null ? c.targetTexture.name : "screen")})");
+                Note("cameras: " + string.Join("; ", names) + " -> world from " + (_world != null ? _world.name : "none"));
+            }
+            if (_world != null)
+            {
+                UiGlassBlurFeature.SourceCamera = _world; // the blur feeds from this camera though it draws into a texture
+                RenderTexture keep = _world.targetTexture;
+                _world.targetTexture = _rt;
+                _world.Render();
+                _world.targetTexture = keep;
+                _cam.clearFlags = CameraClearFlags.Nothing;
+            }
+
+            Canvas.ForceUpdateCanvases();
+            _cam.Render();
+            _cam.clearFlags = CameraClearFlags.SolidColor;
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = _rt;
+            var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+            tex.Apply();
+            RenderTexture.active = previous;
+            return tex;
+        }
+
+        static void GameShot(string name, int w, int h)
+        {
+            Texture2D tex = GrabGame(w, h);
+            File.WriteAllBytes(Path.Combine(_out, name + ".png"), tex.EncodeToPNG());
+            Object.DestroyImmediate(tex);
+            Note("wrote " + name + ".png");
+        }
+
+        static IEnumerator FilmGame(string folder, float seconds)
+        {
+            for (float t = 0f; t < seconds; t += Step)
+            {
+                UiMotion.Tick(Step);
+                Texture2D tex = GrabGame(1280, 720);
+                File.WriteAllBytes(Path.Combine(folder, $"g{_filmFrame++:0000}.png"), tex.EncodeToPNG());
+                Object.DestroyImmediate(tex);
+                yield return null;
+            }
+        }
+
+        static void Key1(Key key, bool down, params Key[] held)
+        {
+            var keys = new List<Key>(held);
+            if (down)
+                keys.Add(key);
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState(keys.ToArray()));
+        }
+
+        /// <summary>
+        /// Slice 4 on a real local host (port 17785, asserted to be the server): the HUD's kit key hint and readout,
+        /// the menu opened mid-sprint (the player stops), the glass pane over the game at three sizes with reception's
+        /// seats and the match section in its slot, a state sheet of its buttons, Settings and back from in game, the
+        /// host's leave question, Esc / Start closing it, a clip of all of it, the sounds through the mixer, and leaving.
+        /// Batch mode can't lock the cursor, so the game menu is switched off while the menu should read closed.
+        /// </summary>
+        static IEnumerator InGameMenu(SteamLobby lobby)
+        {
+            string folder = Path.Combine(_out, "ingame");
+            Directory.CreateDirectory(folder);
+            _filmFrame = 0;
+            ushort port = ushort.TryParse(Arg("-lanePort"), out ushort p) ? p : (ushort)17785;
+            var tugboat = Object.FindAnyObjectByType<FishNet.Transporting.Tugboat.Tugboat>();
+            if (tugboat != null)
+                tugboat.SetPort(port);
+            GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
+            InGameMenuScreen pane = _root.GameMenuScreen;
+            Check("the kit has the in-game menu", pane != null);
+            if (pane == null)
+                yield break;
+
+            // The HUD canvas into the capture camera too (behind the kit's canvas), so its kit pieces are in the shots.
+            var hudCanvas = menu.GetComponent<Canvas>();
+            hudCanvas.renderMode = RenderMode.ScreenSpaceCamera;
+            hudCanvas.worldCamera = _cam;
+            hudCanvas.planeDistance = 2f;
+            foreach (Transform t in hudCanvas.GetComponentsInChildren<Transform>(true))
+                t.gameObject.layer = 5;
+
+            UiMotion.Paused = false;
+            Find<UiButton>(_root.Title, "HostGame").Activate();
+            yield return Until(() => PlayerMotor.Local != null);
+            for (float t = 0f; t < 3f && (_root.Stack.Count > 0 || CloseTheDeal.UI.Title.UiTransition.IsPlaying); t += Time.unscaledDeltaTime)
+                yield return null;
+            Check("this run is the host (not a client of someone else's game)", lobby.IsHosting);
+            PlayerMotor me = PlayerMotor.Local;
+
+            // Menu closed: the HUD on the kit. (Batch mode reopens the menu every frame the cursor isn't locked.)
+            menu.Resume();
+            yield return null;
+            menu.enabled = false;
+            PlayerInputReader.ScriptedCapture = true;
+            yield return 0.5f;
+            Transform hud = menu.transform.Find("Hud");
+            var hint = hud.Find("KitMenuHint")?.GetComponent<UiKeyHint>();
+            Transform oldHint = hud.Find("MenuHint");
+            Transform readout = hud.Find("KitNetworkReadout");
+            Transform oldReadout = hud.Find("NetworkReadout");
+            Check("HUD: the Esc · Menu hint is the kit's key hint and the greybox chip is off",
+                hint != null && hint.KeyText == "Esc" && (oldHint == null || !oldHint.gameObject.activeSelf), hint != null ? hint.KeyText : "missing");
+            Check("HUD: the network readout is on a kit plate, shown as Show network stats says, the greybox chip off",
+                readout != null && readout.Find("Plate") != null && readout.Find("Plate").gameObject.activeSelf == UiSettings.NetworkStats
+                && (oldReadout == null || !oldReadout.gameObject.activeSelf));
+            UiGlyphs.Force(UiDeviceKind.Xbox);
+            yield return null;
+            Note("menu hint on an Xbox pad: " + (hint != null ? hint.KeyText : "-"));
+            UiGlyphs.Force(UiDeviceKind.KeyboardMouse);
+            yield return 0.2f;
+            GameShot("16_hud_kit_1080", 1920, 1080);
+
+            // Mid-sprint: W + Shift held, then Esc. The player must stop: input reads idle with the menu open.
+            Key1(Key.W, true, Key.LeftShift);
+            yield return 0.8f;
+            float running = me.PlanarSpeed;
+            PlayerInputReader.ScriptedCapture = false;
+            menu.enabled = true;
+            Key1(Key.Escape, true, Key.W, Key.LeftShift);
+            yield return null;
+            Key1(Key.W, true, Key.LeftShift);
+            yield return 0.8f;
+            float after = me.PlanarSpeed;
+            Check("menu opened mid-sprint: the glass pane opens and the player comes to a stop with W and Shift still held",
+                menu.IsOpen && _root.Stack.Top == pane && running > 2f && after < 0.5f, $"speed {running:0.0} -> {after:0.0} m/s");
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState());
+            yield return 0.3f;
+
+            UiMotion.Paused = true;
+            Settle(1f);
+            Check("in local mode Invite friends is hidden (Steam only)", !Find<UiButton>(pane, "InviteFriends").gameObject.activeSelf);
+            Transform slot = pane.transform.Find("Content/MatchSlot");
+            Note($"match slot children: {(slot != null ? slot.childCount : -1)}; first: {(slot != null && slot.childCount > 0 ? slot.GetChild(0).name : "none")}");
+            Transform seats = pane.transform.Find("Content/Reception");
+            Note($"reception shown: {(seats != null && seats.gameObject.activeSelf)}; roster: {(CloseTheDeal.Lobby.LobbyRoster.Instance != null ? CloseTheDeal.Lobby.LobbyRoster.Instance.Count + " in" : "none in this scene")}");
+            GameShot("16_ingame_menu_1080", 1920, 1080);
+            GameShot("16_ingame_menu_720", 1280, 720);
+            GameShot("16_ingame_menu_2560x1080", 2560, 1080);
+            CheckInside(pane.transform, 1280, 720, "in-game menu at 1280x720");
+            CheckInside(pane.transform, 2560, 1080, "in-game menu at 2560x1080");
+
+            var rows = new List<(string, Selectable)>
+            {
+                ("Back to game (primary)", Find<UiButton>(pane, "BackToGame")),
+                ("Settings (secondary)", Find<UiButton>(pane, "Settings")),
+                ("Leave game (secondary)", Find<UiButton>(pane, "LeaveGame")),
+            };
+            yield return Sheet("16_states_ingame_menu", rows, 1920, 1080);
+            Settle(0.5f);
+
+            // The clip: keys down the menu, Settings and back (PaneSlide), the host's leave question and Stay, Esc closes.
+            UiInput.ForceKeysOrPad(true);
+            EventSystem.current.SetSelectedGameObject(Find<UiButton>(pane, "BackToGame").gameObject);
+            yield return FilmGame(folder, 0.6f);
+            Move(MoveDirection.Down);
+            yield return FilmGame(folder, 0.4f);
+            Move(MoveDirection.Down);
+            yield return FilmGame(folder, 0.4f);
+            Move(MoveDirection.Down); // the end of the list: the marks bump
+            yield return FilmGame(folder, 0.5f);
+            Move(MoveDirection.Up);
+            yield return FilmGame(folder, 0.4f);
+            UiInput.ForceKeysOrPad(false);
+            UiScreenStack.UseTransitions = true;
+            Find<UiButton>(pane, "Settings").Activate();
+            yield return FilmGame(folder, 1.2f);
+            Check("Settings opens from the in-game menu (the game keeps running behind it)", _root.Stack.Top is SettingsScreen && menu.IsOpen);
+            Tabs().Select(1, false);
+            Settle(0.6f);
+            GameShot("16_settings_video_glass_1080", 1920, 1080);
+            Check("Video has the menu glass row (Blur / No blur)", Find<UiStepper>(Settings(), "UiGlass") != null);
+            _root.Stack.Cancel();
+            yield return FilmGame(folder, 1.0f);
+            Check("Back from Settings returns to the in-game menu", _root.Stack.Top == pane);
+            UiScreenStack.UseTransitions = false;
+
+            Find<UiButton>(pane, "LeaveGame").Activate();
+            yield return FilmGame(folder, 0.8f);
+            var dialog = _root.Stack.Top as UiConfirmDialog;
+            string question = dialog != null ? Find<TMP_Text>(dialog, "Question")?.text : null;
+            Check("leave as host asks first, in the host's words (alone here: closing your game)",
+                dialog != null && (question == "Close your game?" || question == "End the game for everyone?"), question ?? "no dialog");
+            GameShot("16_ingame_leave_host_1080", 1920, 1080);
+            _root.Stack.Cancel(); // Stay
+            yield return FilmGame(folder, 0.6f);
+            Check("Stay keeps the game and the menu", lobby.IsHosting && _root.Stack.Top == pane);
+
+            bool closed = false;
+            void OnMenu() => closed |= !menu.IsOpen;
+            menu.StateChanged += OnMenu;
+            _root.Stack.Cancel(); // Esc on the pane: back to game
+            yield return FilmGame(folder, 0.8f);
+            menu.StateChanged -= OnMenu;
+            Check("Esc on the in-game menu closes it (batch mode then reopens it: no window to lock the cursor in)", closed);
+            menu.Open();
+            yield return FilmGame(folder, 0.6f);
+            UiMotion.Paused = false;
+
+            yield return SoundProof(UiSoundEvent.PanelOpen, UiSoundEvent.PanelClose, UiSoundEvent.Focus, UiSoundEvent.Confirm, UiSoundEvent.Back);
+
+            UiScreenStack.UseTransitions = true;
+            Find<UiButton>(pane, "LeaveGame").Activate();
+            yield return 0.4f;
+            (_root.Stack.Top as UiConfirmDialog)?.GetComponentsInChildren<UiButton>(true)[0].Activate();
+            UiMotion.Paused = true;
+            yield return FilmGame(folder, 2.0f);
+            Check("leaving as host brings the title back", _root.Stack.Top == _root.Title && !lobby.IsActive);
+            UiScreenStack.UseTransitions = false;
+            UiMotion.Paused = false;
+            hudCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        }
+
         // ---- Lane 8's transitions from the screen stack ----------------------------------------------------
 
         static int _filmFrame;
@@ -443,14 +687,14 @@ namespace CloseTheDeal.Editor.UI
             CheckInside(Settings().transform, 1280, 720, "settings at 1280x720");
 
             // A change shows up in the summary at once (Music down to 40%, then back).
-            int before = Mathf.RoundToInt(UiAudio.Get(AudioBus.Music) * 100f);
+            HoldMusic();
             UiSlider music = Find<UiSlider>(Settings(), "Volume1");
             music.value = 8f; // 40%
             Settle(0.4f);
             Check("audio: the summary lists the changed music level against its shipped value",
                 body != null && body.text.Contains("Music") && body.text.Contains("40%") && heading.text.EndsWith("1"), body != null ? body.text : "no body");
             Shot("12_settings_audio_changed_1080", 1920, 1080);
-            UiAudio.SetVolume(AudioBus.Music, before / 100f);
+            ReleaseMusic();
 
             tabs.Select(3, false);
             Settle(0.6f);
@@ -492,7 +736,7 @@ namespace CloseTheDeal.Editor.UI
             UiSlider music = Find<UiSlider>(Settings(), "Volume1");
             EventSystem.current.SetSelectedGameObject(music.gameObject);
             Film(folder, 0.3f);
-            int before = Mathf.RoundToInt(UiAudio.Get(AudioBus.Music) * 100f);
+            HoldMusic();
             for (int i = 0; i < 4; i++)
             {
                 Move(MoveDirection.Left);
@@ -500,7 +744,7 @@ namespace CloseTheDeal.Editor.UI
             }
 
             Film(folder, 0.5f);
-            UiAudio.SetVolume(AudioBus.Music, before / 100f);
+            ReleaseMusic();
             Settings().GetComponentInChildren<AudioPage>(true).ShowSaved();
             _root.Stack.Cancel();
             Film(folder, 1.2f);

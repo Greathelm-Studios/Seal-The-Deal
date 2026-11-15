@@ -16,9 +16,10 @@ namespace CloseTheDeal.UI
     /// The menu opens by itself whenever there is no local player (before joining, after
     /// leaving, on disconnect); in game, Esc or the pad's Start button toggles it. Greybox, not the final lobby.
     /// Text is rebuilt only on lobby events, never per frame. Design: docs/systems/MENU_AND_HUD.md.
-    /// The UI kit's title screen takes over the "not in a game" state when present (HandTitleToKit); this
-    /// card then shows only while hosting, joining or in a game. Closing waits for the confirm button to
-    /// be let go, because the pad's A is both UI Submit and Jump (docs/systems/UI_KIT.md).
+    /// The UI kit draws every state when it is in the scene (HandTitleToKit): the title, hosting, joining and
+    /// failures, and the in-game menu pane; this dark card is then never shown, and the kit also closes the open
+    /// menu on Esc / B / Start. Closing waits for the confirm button to be let go, because the pad's A is both UI
+    /// Submit and Jump (docs/systems/UI_KIT.md).
     /// </summary>
     public sealed class GameMenu : MonoBehaviour
     {
@@ -48,6 +49,7 @@ namespace CloseTheDeal.UI
         bool _open = true;
         bool _inGame;
         bool _titleHandedOff;
+        bool _gameMenuHandedOff;
         bool _closeOnRelease;
         bool _lockOnRelease;
         int _closedFrame = -1;
@@ -129,19 +131,20 @@ namespace CloseTheDeal.UI
         public bool AtTitle => _open && !_inGame && !_lobby.IsActive;
 
         /// <summary>
-        /// No player of ours in the world: the title, hosting, joining, loading and any failure. The kit draws all of
-        /// it while it is in the scene; this card shows only in a game.
+        /// No player of ours in the world: the title, hosting, joining, loading and any failure.
         /// </summary>
         public bool OutOfGame => !_inGame;
 
         /// <summary>
-        /// The kit calls this while it is in the scene: the card then stays hidden whenever we are out of a game
-        /// (title, hosting, joining, loading, failures) and the kit draws those instead. The in-game card, the cursor
-        /// rule and the HUD stay here.
+        /// The kit calls this while it is in the scene: the card then stays hidden out of a game and the kit draws the
+        /// title, hosting, joining and failures. With inGameToo (a kit that has the in-game menu) the card is never
+        /// shown and the kit also closes the open menu itself (Esc / B / Start). The rule (menu open = mouse free =
+        /// player idle), the cursor holds and the HUD stay here.
         /// </summary>
-        public void HandTitleToKit(bool handed)
+        public void HandTitleToKit(bool handed, bool inGameToo = false)
         {
             _titleHandedOff = handed;
+            _gameMenuHandedOff = handed && inGameToo;
             ShowCard();
             if (_open)
                 SelectFirst();
@@ -188,7 +191,9 @@ namespace CloseTheDeal.UI
             if (!_inGame)
                 return;
 
-            if (MenuButtonPressed() && Time.frameCount != _closedFrame) // not the press that just closed it from outside
+            // With the kit drawing the menu, Esc / B / Start close it there (one owner per press); here they only open it.
+            bool kitCloses = _gameMenuHandedOff && _open && KitMenuUp;
+            if (MenuButtonPressed() && !kitCloses && Time.frameCount != _closedFrame) // not the press that just closed it from outside
             {
                 if (_open)
                     Close();
@@ -241,10 +246,21 @@ namespace CloseTheDeal.UI
         static bool MenuButtonPressed()
         {
             Keyboard keyboard = Keyboard.current;
-            Gamepad pad = Gamepad.current;
-            return (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
-                || (pad != null && pad.startButton.wasPressedThisFrame);
+            return (keyboard != null && keyboard.escapeKey.wasPressedThisFrame) || PadMenuPressed();
         }
+
+        /// <summary>The pad's menu button (Start / Menu / Options) went down this frame: it toggles the whole menu.</summary>
+        internal static bool PadMenuPressed()
+        {
+            Gamepad pad = Gamepad.current;
+            return pad != null && pad.startButton.wasPressedThisFrame;
+        }
+
+        /// <summary>
+        /// Set by the kit while its in-game menu pane is actually up. Only then does the kit own closing (Esc, B, Start);
+        /// while it can't show the pane (the window still zooming in) the keys stay this menu's, so it is never stuck.
+        /// </summary>
+        internal bool KitMenuUp { get; set; }
 
         // ---- Open / close --------------------------------------------------------------------
 
@@ -314,10 +330,11 @@ namespace CloseTheDeal.UI
             Cursor.visible = free;
         }
 
+        /// <summary>The playtest card shows only where the kit doesn't draw: without the kit, or in a game with a kit that has no in-game menu.</summary>
         void ShowCard()
         {
-            bool kitHasTitle = _titleHandedOff && !_inGame;
-            bool show = _open && !kitHasTitle;
+            bool kitDraws = _inGame ? _gameMenuHandedOff : _titleHandedOff;
+            bool show = _open && !kitDraws;
             if (_menuRoot.activeSelf != show)
                 _menuRoot.SetActive(show);
         }

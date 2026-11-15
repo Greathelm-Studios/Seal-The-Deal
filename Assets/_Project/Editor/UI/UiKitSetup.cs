@@ -1,4 +1,5 @@
 using CloseTheDeal.UI;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -40,8 +41,10 @@ namespace CloseTheDeal.Editor.UI
         [MenuItem("Close the Deal/Lanes/Replace UI In Open Scene")]
         public static void ReplaceFromMenu()
         {
-            if (!EditorUtility.DisplayDialog("Replace UI", "This deletes KitUI in the open scene and adds a fresh one from the kit prefabs. Changes made to KitUI in this scene are lost; the prefabs and other objects are untouched.", "Replace", "Cancel"))
+            if (!EditorUtility.DisplayDialog("Replace UI", "This rebuilds the kit's prefabs (any a person edited are skipped), deletes KitUI in the open scene and adds a fresh one. Changes made to KitUI in this scene are lost; the match lane's section in the in-game menu is carried across; other objects are untouched.", "Replace", "Cancel"))
                 return;
+            ParkMatchSection(); // out of KitUI before its prefabs are rebuilt under it
+            BuildAssets(true); // the screens are rebuilt only when asked: this is the ask
             if (Replace())
                 EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         }
@@ -49,8 +52,9 @@ namespace CloseTheDeal.Editor.UI
         /// <summary>Shell variant: rebuilds the kit's untouched assets, then Replace UI in Lane_Integration.unity, no question asked.</summary>
         public static void ReplaceFromCommandLine()
         {
-            BuildAssets(true);
             EditorSceneManager.OpenScene(IntegrationScene, OpenSceneMode.Single);
+            ParkMatchSection(); // out of KitUI before its prefabs are rebuilt under it
+            BuildAssets(true);
             if (!Replace())
             {
                 EditorApplication.Exit(1);
@@ -70,7 +74,11 @@ namespace CloseTheDeal.Editor.UI
 
             UiRoot old = Object.FindAnyObjectByType<UiRoot>(FindObjectsInactive.Include);
             if (old != null)
+            {
+                ParkMatchSection();
                 Object.DestroyImmediate(old.gameObject);
+            }
+
             return AddToOpenScene();
         }
 
@@ -130,15 +138,135 @@ namespace CloseTheDeal.Editor.UI
             ReportTitleSky();
             bool added = EnsureEventSystem();
             added |= EnsureCrosshair(menu);
+            // The movement lane's feed (speed, spread, hits) on the kit crosshair; Lane_Integration lacked it (review #563).
+            added |= CloseTheDeal.Editor.Lanes.MovementLaneSetup.EnsureCrosshairFeed();
             added |= EnsureMenuFade(menu);
+            added |= EnsureMenuHint(menu);
+            added |= EnsureNetworkReadout(menu);
 
             UiRoot existing = Object.FindAnyObjectByType<UiRoot>(FindObjectsInactive.Include);
             if (existing != null)
-                return RelinkMenu(existing, menu) | added;
+                return RelinkMenu(existing, menu) | MoveMatchSection(existing, menu) | added;
 
-            BuildCanvas(menu);
-            Debug.Log("[UI] Added the UI kit (title, settings, quit confirm, focus marks) to the scene.");
+            UiRoot root = BuildCanvas(menu);
+            MoveMatchSection(root, menu);
+            Debug.Log("[UI] Added the UI kit (title, settings, quit confirm, in-game menu, focus marks) to the scene.");
             return true;
+        }
+
+        // ---- The match lane's section in the in-game menu ---------------------------------------------------
+
+        /// <summary>Agreed with lane 4 (AgentHub #529/#530): their tool builds into this path once it exists.</summary>
+        internal const string MatchSlotPath = "InGameMenu/Content/MatchSlot";
+        const string MatchSectionName = "MatchSection";
+
+        /// <summary>
+        /// The match lane's section (where the match stands, Start / Rematch) was built into the playtest card, which
+        /// the kit's in-game menu replaces: the same object moves, untouched, into the menu's MatchSlot. Nothing is
+        /// rebuilt; its MatchMenuPanel keeps every reference. Only when the slot is empty.
+        /// </summary>
+        static bool MoveMatchSection(UiRoot root, GameMenu menu)
+        {
+            Transform slot = root.transform.Find(MatchSlotPath);
+            if (slot == null || slot.childCount > 0)
+                return false;
+            Transform section = menu.transform.Find("Menu/Card/" + MatchSectionName) ?? menu.transform.Find(MatchSectionName);
+            if (section == null)
+                return false;
+            section.SetParent(slot, false);
+            Debug.Log("[UI] Moved the match lane's section from the playtest card into the in-game menu (" + MatchSlotPath + ").");
+            return true;
+        }
+
+        /// <summary>
+        /// Before KitUI's prefabs are rebuilt or KitUI is replaced, the match lane's section leaves it (back to the old
+        /// card), so a rebuilt slot can't orphan it and the fresh KitUI takes it back.
+        /// </summary>
+        static void ParkMatchSection()
+        {
+            UiRoot old = Object.FindAnyObjectByType<UiRoot>(FindObjectsInactive.Include);
+            GameMenu menu = Object.FindAnyObjectByType<GameMenu>(FindObjectsInactive.Include);
+            Transform slot = old != null ? old.transform.Find(MatchSlotPath) : null;
+            if (slot == null || menu == null)
+                return;
+            Transform card = menu.transform.Find("Menu/Card");
+            for (int i = slot.childCount - 1; i >= 0; i--)
+                slot.GetChild(i).SetParent(card != null ? card : menu.transform, false);
+        }
+
+        // ---- HUD pieces on the kit ---------------------------------------------------------------------
+
+        /// <summary>The "Esc · Menu" hint as the kit's key hint (Esc on keys, Menu / Options on a pad); the greybox chip is switched off.</summary>
+        static bool EnsureMenuHint(GameMenu menu)
+        {
+            Transform hud = menu.transform.Find("Hud");
+            if (hud == null || hud.Find(MenuHintName) != null || UiKitComponents.KeyHint == null)
+                return false;
+
+            var hint = Instance<UiKeyHint>(UiKitComponents.KeyHint, hud, MenuHintName);
+            Pin((RectTransform)hint.transform, new Vector2(0f, 1f), new Vector2(24f, -24f), new Vector2(160f, 40f));
+            SetLabelText(hint.transform, "Label", "Menu");
+            SetLabelText(hint.transform, "Key", "Esc");
+            SetString(hint, "_keyboardText", "Esc");
+            SetString(hint, "_padControl", "start");
+            SwitchOff(hud, "MenuHint");
+            return true;
+        }
+
+        /// <summary>
+        /// The network readout on a kit plate (navy on white), with its own readout component; the greybox chip and its
+        /// component are switched off, not deleted or rewired. Show network stats still hides it (the plate is the
+        /// text's parent).
+        /// </summary>
+        static bool EnsureNetworkReadout(GameMenu menu)
+        {
+            Transform hud = menu.transform.Find("Hud");
+            if (hud == null || hud.Find(ReadoutName) != null || UiKitComponents.Plate == null)
+                return false;
+
+            // The readout hides its text's parent (the plate), so it lives on a holder above the plate: hidden, it can
+            // still hear Show network stats come back on.
+            RectTransform holder = Node(hud, ReadoutName);
+            Pin(holder, Vector2.zero, new Vector2(24f, 24f), new Vector2(500f, 84f));
+            var plate = Instance<RectTransform>(UiKitComponents.Plate, holder, "Plate");
+            Stretch(plate);
+            TextMeshProUGUI text = Label(plate, "Text", 16f, 10f, 468f, 64f, string.Empty, Tokens.Caption, Tokens.Navy, TextAlignmentOptions.TopLeft, true);
+            text.fontSize = 15f;
+            var readout = holder.gameObject.AddComponent<PredictionDebugHud>();
+            Set(readout, "_text", text);
+
+            foreach (PredictionDebugHud old in menu.GetComponents<PredictionDebugHud>())
+            {
+                old.enabled = false;
+                EditorUtility.SetDirty(old);
+            }
+
+            SwitchOff(hud, "NetworkReadout");
+            return true;
+        }
+
+        const string MenuHintName = "KitMenuHint";
+        const string ReadoutName = "KitNetworkReadout";
+
+        static void Pin(RectTransform rect, Vector2 corner, Vector2 offset, Vector2 size)
+        {
+            rect.anchorMin = rect.anchorMax = rect.pivot = corner;
+            rect.anchoredPosition = offset;
+            rect.sizeDelta = size;
+        }
+
+        static void SetLabelText(Transform under, string child, string text)
+        {
+            var label = under.Find(child)?.GetComponent<TMP_Text>();
+            if (label != null)
+                label.text = text;
+        }
+
+        static void SwitchOff(Transform hud, string name)
+        {
+            Transform old = hud.Find(name);
+            if (old != null)
+                old.gameObject.SetActive(false);
         }
 
         /// <summary>
@@ -162,12 +290,17 @@ namespace CloseTheDeal.Editor.UI
                 UiKitScreens.Canvas = AssetDatabase.LoadAssetAtPath<GameObject>(ScreenFolder + "/KitCanvas.prefab");
             if (UiKitComponents.Crosshair == null)
                 UiKitComponents.Crosshair = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Crosshair.prefab");
+            if (UiKitComponents.KeyHint == null)
+                UiKitComponents.KeyHint = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/KeyHint.prefab");
+            if (UiKitComponents.Plate == null)
+                UiKitComponents.Plate = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Plate.prefab");
         }
 
-        static void BuildCanvas(GameMenu menu)
+        static UiRoot BuildCanvas(GameMenu menu)
         {
             var root = Instance<UiRoot>(UiKitScreens.Canvas, null, CanvasName);
             Set(root, "_menu", menu);
+            return root;
         }
 
         /// <summary>

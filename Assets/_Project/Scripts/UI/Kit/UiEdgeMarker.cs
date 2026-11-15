@@ -102,8 +102,16 @@ namespace CloseTheDeal.UI
             }
         }
 
-        void Awake()
+        void Awake() => EnsureReady();
+
+        /// <summary>
+        /// Sets the mark up once: from Awake, or from the first Track / Place / Hide / Flash when a HUD calls one before
+        /// this object has woken (it sits under a HUD root that is still switched off).
+        /// </summary>
+        void EnsureReady()
         {
+            if (_group != null)
+                return;
             _group = GetComponent<CanvasGroup>();
             _group.blocksRaycasts = false;
             _group.interactable = false;
@@ -135,6 +143,7 @@ namespace CloseTheDeal.UI
         /// </summary>
         public void Place(Vector2 canvasPoint, bool inFront, float metres)
         {
+            EnsureReady();
             if (_body == null)
                 return;
             Vector2 size = _area.rect.size;
@@ -200,7 +209,11 @@ namespace CloseTheDeal.UI
         }
 
         /// <summary>Hides the mark (nothing to point at), fading it out.</summary>
-        public void Hide() => SetVisible(false);
+        public void Hide()
+        {
+            EnsureReady();
+            SetVisible(false);
+        }
 
         /// <summary>
         /// One flash of the mark: it pops 25% larger and settles back (a fade instead with Reduce motion). For a moment
@@ -208,6 +221,7 @@ namespace CloseTheDeal.UI
         /// </summary>
         public void Flash()
         {
+            EnsureReady();
             if (_tokens == null)
                 return;
             _flash.Start(1f, 0f, _tokens.PanelIn + _tokens.ConfirmTick, _tokens.EaseOut);
