@@ -437,6 +437,7 @@ namespace CloseTheDeal.UI
                 case "Attack": return "Fire";
                 case "AltFire": return "Aim";
                 case "Throw": return "Drop / Throw";
+                case "Voice": return "Mute / Push to talk";
                 case "Lean": return string.Equals(part, "negative", StringComparison.OrdinalIgnoreCase) ? "Lean left" : "Lean right";
                 default: return action;
             }
