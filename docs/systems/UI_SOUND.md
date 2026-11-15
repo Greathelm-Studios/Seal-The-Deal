@@ -172,6 +172,17 @@ The same generator writes the shooting lane's 15 sounds to `Assets/_Project/Audi
 
 The audition page (`ArtSource/UI/review/10_sound_audition.html`) groups every clip by where it plays and has a 25 s "walk through the menu" (title, settings, hosting into reception with the bed still under it, the run starting, the countdown). Opened in a browser from a local web server on 2026-11-14: all 64 clips (and the bed) loaded, the walk started, the bed faded in to 0.3. Not opened straight from disk.
 
+## Recorded sounds replace synthesised ones
+
+Adam judged the synthesised set "very artificial", so recordings from open-licence libraries will replace most of it, once he approves the sources. No new sounds are synthesised meanwhile (the movement set and any new bed included).
+
+- Every slot keeps its file name and event. A cleared recording put at `ArtSource/Audio/recorded/<UI|Items|Weapons|Movement|Ambience>/<the game's file name>` (16- or 24-bit PCM WAV, any rate, mono or stereo) replaces the synthesised one when the generator runs: trimmed and faded from `ArtSource/Audio/recorded/edits.json`, made mono 48 kHz, levelled to the slot's loudness target, written over the file in `Assets/_Project/Audio/`, so the .meta and every event keep working.
+- **A recording with no complete row in [ArtSource/Audio/LICENCES.md](../../ArtSource/Audio/LICENCES.md) is refused** and the run fails.
+- What each slot should sound like, its length, loops and variations, a library search phrase and whether the synthesised one may stay: [ArtSource/Audio/SOUND_SHOPPING_LIST.md](../../ArtSource/Audio/SOUND_SHOPPING_LIST.md).
+- The movement slots (lane 1's eleven names, 22 files with variations) live in `Assets/_Project/Audio/Movement/` and are written only once a recording arrives.
+- The audition page marks every slot synthesised, recorded or missing.
+- **The GDD says no asset packs ship** (docs/GDD.md line 144); shipping library sounds needs that changed. Flagged to Adam in LICENCES.md.
+
 ## Regenerating
 
 ```bash
