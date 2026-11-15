@@ -72,6 +72,7 @@ namespace CloseTheDeal.Player
             _input = input;
             _motor = motor;
             BindFeedback(_motor);
+            Hud.CrosshairFeed.EnsureInScene();
             _yaw = target.eulerAngles.y;
             _pitch = 0f;
             _shownLean = 0f;

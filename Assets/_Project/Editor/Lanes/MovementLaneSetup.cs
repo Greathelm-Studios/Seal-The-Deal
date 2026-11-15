@@ -454,14 +454,14 @@ namespace CloseTheDeal.Editor.Lanes
                     output.objectReferenceValue = groups[0];
             }
 
-            FillClip(so, "Jump", "Move_Jump");
-            FillClip(so, "LandLight", "Move_Land_Light");
-            FillClip(so, "LandHeavy", "Move_Land_Heavy");
+            FillClips(so, "Jump", "Move_Jump");
+            FillClips(so, "LandLight", "Move_Land_Light");
+            FillClips(so, "LandHeavy", "Move_Land_Heavy");
             FillClip(so, "SlideStart", "Move_Slide_Start");
             FillClip(so, "SlideLoop", "Move_Slide_Loop");
             FillClip(so, "SlideStop", "Move_Slide_Stop");
-            FillClip(so, "Mantle", "Move_Mantle");
-            FillClip(so, "Vault", "Move_Vault");
+            FillClips(so, "Mantle", "Move_Mantle");
+            FillClips(so, "Vault", "Move_Vault");
             FillClip(so, "WindLoop", "Move_Wind_Loop");
             FillClips(so, "FootstepWalk", "Move_Footstep_Walk");
             FillClips(so, "FootstepRun", "Move_Footstep_Run");

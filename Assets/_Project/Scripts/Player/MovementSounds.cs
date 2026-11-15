@@ -65,6 +65,20 @@ namespace CloseTheDeal.Player
         /// <summary>Your own body is heard flat (it is where you are); others are placed in the world.</summary>
         bool IsLocal => _motor == PlayerMotor.Local;
 
+        /// <summary>One of the variations at random, never the same as last time when there are several. Null when none.</summary>
+        AudioClip Pick(AudioClip[] clips, ref int last)
+        {
+            if (clips == null || clips.Length == 0)
+                return null;
+            int pick = Random.Range(0, clips.Length);
+            if (clips.Length > 1 && pick == last)
+                pick = (pick + 1) % clips.Length;
+            last = pick;
+            return clips[pick];
+        }
+
+        int _lastJump = -1, _lastLand = -1, _lastClimb = -1;
+
         void Play(AudioClip clip, float volume = 1f)
         {
             if (clip == null || volume <= 0f)
@@ -73,11 +87,12 @@ namespace CloseTheDeal.Player
             _oneShots.PlayOneShot(clip, _set.Volume * volume);
         }
 
-        void OnJumped() => Play(_set.Jump);
+        void OnJumped() => Play(Pick(_set.Jump, ref _lastJump));
 
         void OnLanded(float fallSpeed)
         {
-            AudioClip clip = fallSpeed >= _set.HeavyLandSpeed && _set.LandHeavy != null ? _set.LandHeavy : _set.LandLight;
+            AudioClip[] set = fallSpeed >= _set.HeavyLandSpeed && _set.LandHeavy.Length > 0 ? _set.LandHeavy : _set.LandLight;
+            AudioClip clip = Pick(set, ref _lastLand);
             Play(clip, Mathf.Clamp01(fallSpeed / _set.FullVolumeLandSpeed));
             _stepDistance = 0f;
         }
@@ -99,7 +114,7 @@ namespace CloseTheDeal.Player
             }
         }
 
-        void OnMantleStarted(MantleKind kind) => Play(kind == MantleKind.Vault ? _set.Vault : _set.Mantle);
+        void OnMantleStarted(MantleKind kind) => Play(Pick(kind == MantleKind.Vault ? _set.Vault : _set.Mantle, ref _lastClimb));
 
         /// <summary>Steps follow the distance travelled on foot, so they speed up and slow down with the body. No allocation.</summary>
         void Update()
@@ -129,11 +144,7 @@ namespace CloseTheDeal.Player
             if (steps.Length == 0)
                 return;
 
-            int pick = Random.Range(0, steps.Length);
-            if (steps.Length > 1 && pick == _lastStep)
-                pick = (pick + 1) % steps.Length;
-            _lastStep = pick;
-            Play(steps[pick], _set.FootstepVolume * Mathf.Lerp(0.7f, 1f, pace));
+            Play(Pick(steps, ref _lastStep), _set.FootstepVolume * Mathf.Lerp(0.7f, 1f, pace));
         }
 
         void Wind(in PlayerAnimState state)

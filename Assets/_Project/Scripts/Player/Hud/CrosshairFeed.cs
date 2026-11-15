@@ -32,6 +32,30 @@ namespace CloseTheDeal.Player.Hud
         /// <summary>The gap being fed, in pixels at 100% size. For checks.</summary>
         public float Open => _open;
 
+        /// <summary>
+        /// Makes sure the HUD's crosshair has a feed: the scene's own if a set-up menu added one,
+        /// otherwise one put on the HUD crosshair now (not the settings screen's preview tiles).
+        /// Called when the camera starts following the local player, so every scene with the kit
+        /// crosshair gets it without a scene edit. Nothing is added when there is no HUD crosshair.
+        /// </summary>
+        public static void EnsureInScene()
+        {
+            if (FindAnyObjectByType<CrosshairFeed>(FindObjectsInactive.Include) != null)
+                return;
+
+            foreach (UiCrosshair crosshair in FindObjectsByType<UiCrosshair>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (crosshair.GetComponentInParent<SettingsScreen>(true) != null)
+                    continue;
+
+                var feed = crosshair.gameObject.AddComponent<CrosshairFeed>();
+                feed._crosshair = crosshair;
+                if (feed.isActiveAndEnabled)
+                    feed.Bind(PlayerMotor.Local);
+                return;
+            }
+        }
+
         void OnEnable()
         {
             PlayerMotor.LocalChanged += Bind;
