@@ -31,6 +31,20 @@ MonoBehaviour:
   HeadTurnLimit: 50
   BodyTurnSpeed: 300
   LandFullSpeed: 20
+  CrouchIdleClip: {fileID: -1846782879953920020, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  CrouchClips:
+  - {fileID: 8200612064407043467, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: -655399457848999900, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: 316490985386366595, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: 1629482188006940296, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: 1585782272886157591, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: -6240584257669765322, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: -2474410428279273754, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  - {fileID: 4957406534267017289, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  SlideClip: {fileID: -1789719126843871629, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
+  CrouchClipSpeed: 2
+  SlideBlendIn: 0.12
+  SlideBlendOut: 0.25
   FidgetClips:
   - {fileID: -559334114680670186, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
   - {fileID: 3720260867492600729, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}

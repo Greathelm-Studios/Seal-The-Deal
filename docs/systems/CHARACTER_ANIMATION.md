@@ -26,6 +26,8 @@ It is not limp. Animation clips say what the body should be doing every frame (s
 - **Running:** a full run with a forward lean, pumping bent arms and a heel kick. The legs turn over faster or slower to match the real speed across the floor.
 - **Strafing and back-pedalling:** the body keeps facing forward while the feet step sideways, diagonally or backwards (eight directions). Sideways and backwards are calm, upright steps. The legs are always on exactly one of the eight clips (the nearest to the way he is travelling), and a change of direction cross-fades to the new one over about an eighth of a second. A quick left-right flip keeps its stride instead of dropping toward the standing stance.
 - **Sprinting:** a longer, faster stride, forward only; sprinting sideways uses the run.
+- **Crouching:** a low, hunched crouch with the head held level when still, and a crouched walk in eight directions when moving, eased in and out over about an eighth of a second from the motor's crouch. Everyone sees it: it reads the motor's animation state, which every client has. The motor's old stand-in, which squashed the whole body toward the feet, is switched off on `Player.prefab` and in the greybox tool.
+- **Sliding:** within about an eighth of a second of the slide starting he drops into a seated, feet-first slide, torso leaning back and head up, and holds it for as long as the motor slides. When the slide ends he comes up in about a quarter of a second into whatever the motor ends in: the crouch if crouch is still held, or standing.
 - **Stopping:** the legs keep their stride for a fifth of a second after the speed drops (so a flip of direction is not mistaken for a stop), then ease into the stance in about a quarter of a second; the arms come out for a moment.
 - **Jumping:** a held air pose with the arms out and the legs staggered, braced harder than on the floor.
 - **Landing:** a crouch whose depth grows with how fast the body came down, then it stands up into whatever it is doing next.
@@ -69,6 +71,9 @@ The price is that the level's colliders are in the other scene, so the ragdoll s
 | Air | `Jump_Loop` | Library 1 |
 | Landing | `Jump_Land` | Library 1 |
 | Fidgets | `Fidget_ScratchHead`, `Fidget_ScratchHip`, `Fidget_Yawn`, `Fidget_LookAround` | Made in Blender on top of the idle pose with the skill's hand IK and bone turns; each is 2.5 s and starts and ends on the idle. Not captured motion |
+| Crouch idle | `CrouchUp_Idle_Loop` | Library 1's `Crouch_Idle_Loop` with the neck and head lifted 14 and 26 degrees: the original looks at the floor (head 45 degrees forward), Alex: "his head looks down" |
+| Crouch walk, eight directions | `CSneak_Fwd_Loop` (made for 0.75 m/s) and `CSneak_FwdR/R/BwdR/Bwd/BwdL/L/FwdL_Loop` | Library 1's `Crouch_Fwd_Loop` with the same head lift; the other seven generated from it with the skill's `directions`. Tried and dropped: a crouched run made from our run (the back knee drags on the floor) and a crouched walk made from the walk (barely crouched, legs splay) |
+| Slide | `Slide_Sit_Loop` | Library 2's `Slide_Loop` with the spine tipped up 22, 16 and 10 degrees and the head lowered 12, because the original lies flat on its back |
 
 - **Licence:** the Quaternius library is CC0 (public domain); nothing to credit. **The Kevin Iglesias pack states no licence** on its page or in its download; the author told a commenter that a link to keviniglesias.com is enough credit. Until that is settled, treat its five clips as usable in the game but not cleared for redistribution in a public repository (Adam's call), and credit keviniglesias.com.
 - **How they were made:** retargeted onto `STDMC_Rigged.fbx`'s own skeleton in Blender with the `character-animation` skill, so each clip is plain bone animation that already fits this rig exactly.
@@ -90,6 +95,9 @@ All in `DefaultAnimation.asset`.
 | Body turn speed | How fast the body turns to face the look once it follows, in degrees per second. |
 | Fidget clips | The list of fidgets; one is picked at random. Add or remove clips here. |
 | Fidget min wait / max wait | The shortest and longest he stands still between fidgets, in seconds. |
+| Crouch clips, crouch idle clip, slide clip | The crouch and slide clips. With any of them empty the body stays standing when the player crouches or slides. |
+| Crouch clip speed | How fast the legs step when crouched. The clip is a slow sneak made for 0.75 m/s and the game's crouch is 3.3 m/s; at the default 2 the steps run at about one and a half times the clip's pace and the feet skate a little. Lower = quicker, busier steps that slide less. |
+| Slide blend in / out | How long the body takes to drop into the slide, and to come up out of it, in seconds. |
 | Land full speed | How hard a landing has to be to play the whole crouch. An ordinary jump lands at about 9.7 m/s, so the default of 20 gives about half. Lower = deeper landings. |
 
 **Standing** header (two values are used with the clips):
@@ -131,6 +139,10 @@ The headers marked "procedural pose only" do nothing while the clips are assigne
 - **Joint limits are generic.** They are ordinary human ranges measured from the T-pose, not fitted to this character; the shoulders have none.
 - **Its own parts pass through each other.** With self-collision the arms caught on the ribs every stride.
 - **No carrying or throwing yet.** Alex's direction (2026-11-13, not yet in the GDD) is that any loose object can be picked up and thrown. When that arrives the body needs a carry pose for small and large objects, a throw, and a reaction to being hit by one; none exist. The pickup system itself is Adam's lane 3, not this one.
+- **The crouch walk is a sneak played fast.** The library has no crouched run, and the game's crouch is jogging pace, so the steps are quicker than the clip was made for and still skate. A real crouch-run clip (Mixamo has one, behind an Adobe login) would fit better.
+- **No slide entry or exit clips.** The slide is one held pose blended in and out; the library's `Slide_Start` and `Slide_Exit` are not used.
+- **Crouch side and back steps are generated, not captured.** The crouch walk only exists going forward in the library; the other seven directions are made from it.
+- **Sliding body and the floor copy unchecked.** In the slide the hips and legs are at floor height; how the ragdoll's parts meet the level's floor copy while sliding has not been seen in Play Mode.
 - **Level copies stand still.** Doors that move and props that are thrown are not followed, so the ragdoll does not react to a chair hitting it. Only box, sphere, capsule and mesh colliders are copied.
 - **Feet do not grip the floor.** Nothing holds a planted foot in place.
 - **The model's Animator has no avatar while playing.** Anything added later that asks it for a bone at runtime (not at spawn) will get nothing.

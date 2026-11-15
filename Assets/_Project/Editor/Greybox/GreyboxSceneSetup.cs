@@ -269,6 +269,16 @@ namespace CloseTheDeal.Editor.Greybox
             SetReference(serializedRagdoll, "_avatar", avatar);
             SetInt(serializedRagdoll, "_solid", ~(1 << PlayerLayer));
             serializedRagdoll.ApplyModifiedPropertiesWithoutUndo();
+
+            // Once the animation has a real crouch, the motor's stand-in (squashing the whole
+            // body toward the feet) would squash a body that is already crouching.
+            // PLAYER_MOVEMENT.md says to switch it off at that point.
+            if (profile.HasCrouchClips)
+            {
+                var serializedMotor = new SerializedObject(motor);
+                SetBool(serializedMotor, "_squashBodyWhenCrouched", false);
+                serializedMotor.ApplyModifiedPropertiesWithoutUndo();
+            }
         }
 
         static PhysicsMaterial EnsureFrictionlessMaterial()

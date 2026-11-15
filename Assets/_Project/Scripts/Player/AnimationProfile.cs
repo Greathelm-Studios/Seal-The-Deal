@@ -34,6 +34,22 @@ namespace CloseTheDeal.Player
         public const int RunDirections = 8;
 
         /// <summary>True when every clip slot is filled, so the animator can play clips instead of its procedural pose.</summary>
+        /// <summary>True when every crouch and slide slot is filled. Without them the body stays standing when the player crouches or slides (and the motor's own squash, if left on, is all that shows).</summary>
+        public bool HasCrouchClips
+        {
+            get
+            {
+                if (CrouchIdleClip == null || SlideClip == null || CrouchClips == null || CrouchClips.Length != RunDirections)
+                    return false;
+                for (int i = 0; i < RunDirections; i++)
+                {
+                    if (CrouchClips[i] == null)
+                        return false;
+                }
+                return true;
+            }
+        }
+
         public bool HasClips
         {
             get
@@ -83,6 +99,25 @@ namespace CloseTheDeal.Player
 
         [Tooltip("Falling speed at touchdown, in metres per second, that plays the whole landing crouch. Slower landings sink in proportion. A 1.6 m jump lands at about 9.7, so at 20 an ordinary jump sinks about halfway. Lower = deeper landings.")]
         [Range(3f, 40f)] public float LandFullSpeed = 20f;
+
+        [Header("Crouching and sliding")]
+        [Tooltip("Crouched and still. Loops.")]
+        public AnimationClip CrouchIdleClip;
+
+        [Tooltip("The crouched walk in eight directions with the body facing forward, in the same order as the run: forward, forward-right, right, back-right, back, back-left, left, forward-left. All must loop and start on the same foot.")]
+        public AnimationClip[] CrouchClips = new AnimationClip[RunDirections];
+
+        [Tooltip("Sliding along the floor, feet first. Loops; held for as long as the slide lasts.")]
+        public AnimationClip SlideClip;
+
+        [Tooltip("How fast the legs step when crouched: the speed across the floor, in metres per second, at which the crouch walk plays at the rate it was made. The clip was made for 0.75. Lower = quicker, busier steps that slide less; higher = calmer steps that skate. The game's crouch speed is about 3.3; at the default 2 the steps are about one and a half times the clip's own pace.")]
+        [Range(0.3f, 6f)] public float CrouchClipSpeed = 2f;
+
+        [Tooltip("How long the body takes to drop into the slide pose, in seconds. Lower = a snap down; higher = he is still upright for the first part of the slide.")]
+        [Range(0.02f, 0.5f)] public float SlideBlendIn = 0.12f;
+
+        [Tooltip("How long the body takes to come up out of the slide into a crouch or standing, in seconds.")]
+        [Range(0.02f, 0.8f)] public float SlideBlendOut = 0.25f;
 
         [Header("Idle fidgets (little things he does while standing still)")]
         [Tooltip("The fidgets: scratching, yawning, looking about. One is picked at random each time. Each must start and end on the idle pose and plays once. Empty = he only stands and breathes.")]

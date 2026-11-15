@@ -21,6 +21,9 @@
 //              hit-reaction test dummy) can stand, breathe and fidget with the same component
 //              2026-11-14 — stops quietly, instead of throwing every frame, after Unity
 //              reloads scripts in the middle of Play Mode
+//              2026-11-15 — crouching and sliding: crouch idle, eight-way crouch walk and a
+//              seated slide, from the motor's animation state (Alex: "we got some more movement
+//              controls, crouching and sliding, so we need animations of them")
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Poses the player's humanoid skeleton every frame from how the body is moving,
 //              with no animation clips. Its own component, not part of PlayerMotor, because it
@@ -215,7 +218,9 @@ namespace CloseTheDeal.Player
 
         /// <summary>Where each clip plugs into the mixer: idle, then the eight run directions, then sprint, air and landing.</summary>
         const int IdleInput = 0, RunInput = 1, SprintInput = RunInput + AnimationProfile.RunDirections,
-            AirInput = SprintInput + 1, LandInput = AirInput + 1, FidgetInput = LandInput + 1, InputCount = FidgetInput + 1;
+            AirInput = SprintInput + 1, LandInput = AirInput + 1, FidgetInput = LandInput + 1,
+            CrouchIdleInput = FidgetInput + 1, CrouchRunInput = CrouchIdleInput + 1,
+            SlideInput = CrouchRunInput + AnimationProfile.RunDirections, InputCount = SlideInput + 1;
 
         /// <summary>
         /// How long a fidget takes to blend in, and to blend out when the player moves off in
@@ -428,6 +433,14 @@ namespace CloseTheDeal.Player
         float _fidgetTime, _fidgetWeight, _fidgetWait;
         /// <summary>How much of the run each direction's clip is showing, 0–1, summing to 1. Eased toward the direction of travel; starts as all forward.</summary>
         readonly float[] _runShares = { 1f, 0f, 0f, 0f, 0f, 0f, 0f, 0f };
+        /// <summary>True when the profile had every crouch and slide clip at spawn and there is a motor to say when to crouch.</summary>
+        bool _usesCrouch;
+        /// <summary>
+        /// 0–1: how far into the crouch, and into the slide, the pose is. Eased from the motor's
+        /// animation state, which every client has (other players' come from the host), so
+        /// everyone sees others crouch and slide.
+        /// </summary>
+        float _crouchWeight, _crouchWeightRate, _slideWeight, _slideWeightRate;
         /// <summary>How far the body is turned from where the player is looking, degrees, positive to the right of the look. 0 once it has caught up.</summary>
         float _bodyBehind;
         /// <summary>Where the player was looking last frame, degrees round the compass.</summary>
@@ -492,6 +505,7 @@ namespace CloseTheDeal.Player
 
             // The graph itself is made on the first frame; see BuildClipGraph for why.
             _usesClips = _profile.HasClips;
+            _usesCrouch = _usesClips && _hasMotor && _profile.HasCrouchClips;
             _ready = true;
         }
 
@@ -549,6 +563,13 @@ namespace CloseTheDeal.Player
             AddClip(SprintInput, _profile.SprintClip);
             AddClip(AirInput, _profile.AirClip);
             AddClip(LandInput, _profile.LandClip);
+            if (_usesCrouch)
+            {
+                AddClip(CrouchIdleInput, _profile.CrouchIdleClip);
+                for (int i = 0; i < AnimationProfile.RunDirections; i++)
+                    AddClip(CrouchRunInput + i, _profile.CrouchClips[i]);
+                AddClip(SlideInput, _profile.SlideClip);
+            }
 
             AnimationClip[] fidgets = _profile.FidgetClips;
             _fidgets = new AnimationClipPlayable[fidgets != null ? fidgets.Length : 0];
@@ -697,8 +718,17 @@ namespace CloseTheDeal.Player
             // WHY SmoothDamp and not a fixed rate: a blend that moves at a constant rate starts
             // and stops dead, and every limb pops at both ends. This eases in and out.
             float ease = _profile.PoseBlendTime;
+            if (_usesCrouch)
+            {
+                PlayerAnimState anim = _motor.AnimState;
+                _crouchWeight = Mathf.SmoothDamp(_crouchWeight, anim.Crouch, ref _crouchWeightRate, ease, Mathf.Infinity, dt);
+                _slideWeight = Mathf.SmoothDamp(_slideWeight, anim.Sliding ? 1f : 0f, ref _slideWeightRate,
+                    anim.Sliding ? _profile.SlideBlendIn : _profile.SlideBlendOut, Mathf.Infinity, dt);
+            }
+
             // With no motor there is no walking speed to measure a stride against: it stands.
-            float walkSpeed = _hasMotor ? _motor.Profile.WalkSpeed : 0f;
+            // Crouched, a full stride is the crouch speed, not the walk.
+            float walkSpeed = _hasMotor ? Mathf.Lerp(_motor.Profile.WalkSpeed, _motor.Profile.CrouchSpeed, _crouchWeight) : 0f;
             float stride = walkSpeed > 0f ? Mathf.Clamp01(speed / walkSpeed) : 0f;
             // With clips, a dip in speed shorter than the hold time does not shrink the stride.
             if (stride >= _heldStride || !_usesClips)
@@ -733,6 +763,8 @@ namespace CloseTheDeal.Player
                 // and lifted 26 cm two and a half times a second, which read as chaotic.
                 float forward = _runShares[ForwardDirection] + _runShares[ForwardRightDirection] + _runShares[ForwardLeftDirection];
                 ground = Mathf.Lerp(_profile.SideClipSpeed * _clipLengths[RunInput + SideDirection], ground, forward);
+                if (_usesCrouch)
+                    ground = Mathf.Lerp(ground, _profile.CrouchClipSpeed * _clipLengths[CrouchRunInput], _crouchWeight);
                 float matched = Mathf.Max(speed, SlowestCadence * walkSpeed);
                 _phase = _moveWeight < StandingStride && stride < StandingStride
                     ? 0f
@@ -801,8 +833,16 @@ namespace CloseTheDeal.Player
             float land = floor * _landStrength
                 * (1f - Mathf.SmoothStep(LandFadeStart, 1f, landAt / _clipLengths[LandInput]))
                 * Mathf.Lerp(1f, RunningLandShare, _moveWeight);
-            float ground = floor - land;
+            // A slide takes its share off the top; what is left is shared between standing and
+            // crouched by how far into the crouch the body is.
+            float slide = (floor - land) * _slideWeight;
+            float ground = floor - land - slide;
             float moving = ground * _moveWeight;
+            float crouched = _crouchWeight;
+            float idle = ground - moving;
+            float standingIdle = idle * (1f - crouched);
+            float crouchMoving = moving * crouched;
+            moving -= crouchMoving;
             // Only a forward run becomes the sprint clip; sprinting sideways or backwards is the
             // run clip for that direction turning over faster.
             float sprinting = moving * sprint * Mathf.Clamp01(_travel.z);
@@ -814,9 +854,9 @@ namespace CloseTheDeal.Player
             if (Mathf.Abs(Mathf.DeltaAngle(_runDirection * RunDirectionStep, heading)) > RunDirectionStep * 0.5f + RunDirectionSlack)
                 _runDirection = Mathf.RoundToInt(Mathf.Repeat(heading, 360f) / RunDirectionStep) % AnimationProfile.RunDirections;
 
-            float fidget = Fidget(dt, ground - moving);
-            _mixer.SetInputWeight(IdleInput, (ground - moving) * (1f - fidget));
-            _mixer.SetInputWeight(FidgetInput, (ground - moving) * fidget);
+            float fidget = Fidget(dt, standingIdle);
+            _mixer.SetInputWeight(IdleInput, standingIdle * (1f - fidget));
+            _mixer.SetInputWeight(FidgetInput, standingIdle * fidget);
             // Each direction's share eases toward all or nothing, so a change of direction
             // cross-fades straight from one clip to the other. Every stride clip sits at the same
             // point of its cycle, whatever its length.
@@ -827,6 +867,18 @@ namespace CloseTheDeal.Player
                 _runShares[i] += (wanted - _runShares[i]) * ease;
                 _mixer.SetInputWeight(RunInput + i, running * _runShares[i]);
                 _clips[RunInput + i].SetTime(_phase * _clipLengths[RunInput + i]);
+                if (_usesCrouch)
+                {
+                    _mixer.SetInputWeight(CrouchRunInput + i, crouchMoving * _runShares[i]);
+                    _clips[CrouchRunInput + i].SetTime(_phase * _clipLengths[CrouchRunInput + i]);
+                }
+            }
+            if (_usesCrouch)
+            {
+                _mixer.SetInputWeight(CrouchIdleInput, idle - standingIdle);
+                _clips[CrouchIdleInput].SetTime(Mathf.Repeat(_time, _clipLengths[CrouchIdleInput]));
+                _mixer.SetInputWeight(SlideInput, slide);
+                _clips[SlideInput].SetTime(Mathf.Repeat(_time, _clipLengths[SlideInput]));
             }
             _mixer.SetInputWeight(SprintInput, sprinting);
             _mixer.SetInputWeight(AirInput, _airWeight);
@@ -845,7 +897,7 @@ namespace CloseTheDeal.Player
                 _skeleton[i].SetLocalPositionAndRotation(_skeletonRestPositions[i], _skeletonRestRotations[i]);
             _graph.Evaluate();
             TurnHeadFirst(dt);
-            Breathe(ground - moving);
+            Breathe(idle);
         }
 
         /// <summary>

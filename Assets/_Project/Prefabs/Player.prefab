@@ -284,7 +284,7 @@ MonoBehaviour:
     m_Bits: 4294967231
   _cameraTarget: {fileID: 4165610245162811838}
   _leanPivot: {fileID: 1549759532965773935}
-  _squashBodyWhenCrouched: 1
+  _squashBodyWhenCrouched: 0
 --- !u!114 &8435823636130598287
 MonoBehaviour:
   m_ObjectHideFlags: 0
