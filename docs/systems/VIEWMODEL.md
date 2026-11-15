@@ -129,6 +129,19 @@ Transform muzzle = viewmodel.Muzzle; // where tracers should leave from
 
 The wiring on his side: `Fire()` on `WeaponHolder.Fired` when the shot is the owner's own predicted one, `Reload()` on `ReloadStarted`. Setting `Driven` is what stops a shot kicking the gun twice.
 
+## Body view (experiment)
+
+Press **F5** while playing (Editor and development builds) to switch between the usual view and the body view. The choice is remembered on that machine.
+In the body view the separate first-person arms are not drawn. The player looks out of their real body instead: the same arms, gun and legs everyone else sees, including the flinch when hit.
+It was asked for by Harvey on 2026-11-15 as something to try ("true POV"), and nothing has been decided.
+
+What keeps it comfortable: the view's direction still comes from the mouse alone, never from the head. Only the eye's position follows the real head, and only by a damped, capped share, so step bob, the head leading a turn and a hit's jolt reach the eye softened.
+The head itself is shrunk to nothing on the owner's screen, because the character's meshes are split by material and there is no head mesh to hide.
+
+Tuning, on the viewmodel profile under "Body view": **Head follow** (0 = a perfectly steady eye, 1 = the eye is the head), **Smoothing** (seconds to catch the head up), **Forward** (how far in front of the neck the eye sits) and **Max offset** (the furthest the head may pull the eye).
+
+Not judged yet: seen only in stills as host, standing (level, 35 and 70 degrees down, 30 up). Moving, sprinting, leaning, reloading, being hit and the two-handed hold are unseen. Known rough edges: looking straight down shows the collar from above; the owner's own shadow has no head; the body's gun sits further out than the view's and has no kick, reload move or sway (see the limitations below); nothing here is networked.
+
 ## Known limitations
 
 - **The body's gun arm has been seen in stills and measured, not watched moving, so how the flipping reads is unjudged.** Seen in play as host on 2026-11-14 from the side and the front, aiming level, 35 degrees up and 40 down, and the owner's own view was checked for a second gun (there is none); strafing and a jump were measured, not watched. Leaning, a knock-back and **another client's view of it** are unchecked; the aim other clients see comes from forwarded input and has not been watched.

@@ -23,6 +23,9 @@
 //              through the host, and V swings a stand-in melee hit (Harvey: "add hit
 //              reactions when hit by guns/melee weapons for the players so that when a shooter
 //              hits another player, they see a visible reaction in the person").
+//  Modified  : Claude Fable 5.2, 2026-11-15 — an experimental body view on F5: look out of the
+//              real body, with the separate arms hidden (Harvey: "what about true POV for
+//              the player? Could we try that out?").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Sits on the player prefab. For the player this client controls, and nobody
 //              else, it hangs the first-person arms on the camera, draws them with a camera
@@ -306,6 +309,61 @@ namespace CloseTheDeal.Player
             }
         }
 
+        /// <summary>
+        /// The body view: the owner looks out of the real body (its own arms, gun and legs)
+        /// and the separate first-person arms are not drawn. Off is the usual view. One switch
+        /// for this machine, remembered between sessions; nothing is networked, since it only
+        /// changes what this player's own screen draws.
+        /// </summary>
+        /// <remarks>An experiment (Harvey: "Instead of the set arm in your camera, what about true POV for the player?"): F5 switches it while playing, in the Editor and development builds.</remarks>
+        public static bool BodyView
+        {
+            get => _bodyView ??= PlayerPrefs.GetInt(BodyViewPref, 0) != 0;
+            set
+            {
+                _bodyView = value;
+                PlayerPrefs.SetInt(BodyViewPref, value ? 1 : 0);
+            }
+        }
+
+        const string BodyViewPref = "ctd.dev.bodyView";
+        static bool? _bodyView;
+        /// <summary>What the body view was the last time this player applied it; null before the first time.</summary>
+        bool? _appliedBodyView;
+        Transform _head;
+        Vector3 _headScale;
+
+        /// <summary>Applies the body view, or undoes it, for the player this machine controls.</summary>
+        /// <remarks>
+        /// WHY the head is shrunk to nothing rather than hidden: the character is seven meshes
+        /// split by material, not by body part, so there is no head mesh to switch off, and the
+        /// eye is inside it. A head bone at zero size folds the face, hair and eye cards into a
+        /// point behind the eye. Known cost: the owner's own shadow has no head.
+        /// </remarks>
+        void ApplyBodyView(bool on)
+        {
+            _appliedBodyView = on;
+            _motor.SetOwnBodyShown(on);
+
+            if (_head == null)
+            {
+                var avatar = GetComponentInChildren<Animator>(true);
+                _head = avatar != null && avatar.isHuman ? avatar.GetBoneTransform(HumanBodyBones.Head) : null;
+                if (_head != null)
+                    _headScale = _head.localScale;
+            }
+            if (_head != null)
+                _head.localScale = on ? Vector3.zero : _headScale;
+
+            PlayerCamera eye = PlayerCamera.Instance;
+            if (eye == null)
+                return;
+            if (on && _head != null)
+                eye.SetBodyView(_head, _profile.BodyViewHeadFollow, _profile.BodyViewSmoothing, _profile.BodyViewForward, _profile.BodyViewMaxOffset);
+            else
+                eye.ClearBodyView();
+        }
+
         void OnDisable()
         {
             Hide();
@@ -323,7 +381,24 @@ namespace CloseTheDeal.Player
             if (local && _arms == null)
                 Show();
             else if (!local && _arms != null)
+            {
+                // Give the body back as it was before this player stopped being ours.
+                if (_appliedBodyView == true)
+                    ApplyBodyView(false);
+                _appliedBodyView = null;
                 Hide();
+            }
+
+            if (local && _profile != null)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Keyboard keys = Keyboard.current;
+                if (keys != null && keys.f5Key.wasPressedThisFrame)
+                    BodyView = !BodyView;
+#endif
+                if (_appliedBodyView != BodyView)
+                    ApplyBodyView(BodyView);
+            }
 
             if (_arms != null && !Driven)
                 ReadTestInput();
@@ -487,7 +562,7 @@ namespace CloseTheDeal.Player
         void OnBeginCameraRendering(ScriptableRenderContext context, Camera rendering)
         {
             if (_arms != null)
-                _arms.SetVisible(rendering == _armsCamera);
+                _arms.SetVisible(rendering == _armsCamera && !BodyView);
         }
 
         /// <summary>Places the gun for this frame: authored framing, then look lag, walk bob, fire kick and the reload dip on top. The arms prefab then reaches the hand to it.</summary>

@@ -183,5 +183,18 @@ namespace CloseTheDeal.Player
 
         [Tooltip("How far the gun rolls onto its side at the deepest point of the reload, in degrees.")]
         [Range(0f, 90f)] public float ReloadRoll = 25f;
+
+        [Header("Body view (looking out of the real body)")]
+        [Tooltip("How much of the real head's movement the eye follows in the body view. 0 = a perfectly steady eye (most comfortable); 1 = the eye is the head, bobbing with every step and thrown by every hit (most likely to make people feel sick).")]
+        [Range(0f, 1f)] public float BodyViewHeadFollow = 0.35f;
+
+        [Tooltip("How long the eye takes to catch the head up in the body view, in seconds. Higher = smoother and floatier; lower = snappier and shakier.")]
+        [Range(0.01f, 0.5f)] public float BodyViewSmoothing = 0.08f;
+
+        [Tooltip("How far in front of the neck the eye sits in the body view, in metres. Raise it if you can see inside your own collar or shoulders; lower it if your arms look too short.")]
+        [Range(0f, 0.3f)] public float BodyViewForward = 0.10f;
+
+        [Tooltip("The furthest the head may pull the eye from its steady point in the body view, in metres. A cap so a hard hit cannot throw the view across the room.")]
+        [Range(0f, 0.5f)] public float BodyViewMaxOffset = 0.2f;
     }
 }

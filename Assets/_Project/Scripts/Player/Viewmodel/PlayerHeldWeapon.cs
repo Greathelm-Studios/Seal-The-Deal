@@ -249,7 +249,8 @@ namespace CloseTheDeal.Player
                 return;
 
             // The owner sees their own body as a shadow only; the weapon in its hand goes with it.
-            bool own = PlayerMotor.Local == _motor;
+            // In the body view the owner looks out of this body, so the weapon is drawn too.
+            bool own = PlayerMotor.Local == _motor && !PlayerViewmodel.BodyView;
             if (own != _shadowOnly)
                 SetShadowOnly(own);
 

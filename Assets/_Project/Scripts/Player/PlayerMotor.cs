@@ -259,6 +259,18 @@ namespace CloseTheDeal.Player
         }
 
         /// <summary>
+        /// Shows or hides this player's own body on its owner's screen. Used by the body view
+        /// (PlayerViewmodel.BodyView), where the owner looks out of the real body instead of at
+        /// separate arms. Drawing only: nothing here is simulated or networked.
+        /// </summary>
+        /// <param name="shown">True draws the whole body; false goes back to its shadow only.</param>
+        public void SetOwnBodyShown(bool shown)
+        {
+            if (Local == this)
+                ShowOwnBody(shown);
+        }
+
+        /// <summary>
         /// The first-person camera sits inside the body, so the owner sees only its shadow.
         /// A part the prefab sets to cast no shadow is hidden outright instead. Showing the
         /// body again puts back each part's own shadow setting from the prefab.
