@@ -136,6 +136,8 @@ namespace CloseTheDeal.Editor.Art
             "Wall_Door_2m", "Partition_Glass_Door_2m", "Stair_Straight_Half_2m",
             // Aero props on the trim sheet (ArtSource/Kit/props_aero.py, 2026-11-15): the new loose PC tower
             "PC_Tower",
+            // The lift's Aero remodel (ArtSource/Kit/concepts/Lift_Aero, 2026-11-15): opaque shaft wall and head-house cap
+            "Lift_Shaft_Wall_4m_Solid", "Lift_Cap_4x4",
         };
 
         /// <summary>Pieces that are seen but never touched, so they have no collider (kit README).</summary>

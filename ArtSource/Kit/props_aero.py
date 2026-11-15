@@ -80,6 +80,17 @@ PA = params(
                            # hinge: the pull goes at the free edge, and the README's 320 mm offset puts them apart
     LEAF_PULL_IN=0.19,     # bar pull's distance in from the free edge, metres (README: 400 from centre)
     LEAF_POCKET_D=0.016,   # pull pocket depth on each face, metres. WHY 16 a side: both faces get a pull inside 40 mm
+    # ---- Lift (concepts/Lift_Aero/README.md; Alex approved the sheets 2026-11-15)
+    LIFT_PORTAL_W=0.1,     # rolled silver portal band width round the opening, metres (sheet 1)
+    LIFT_PORTAL_PROUD=0.05,  # how far it stands off the wall, metres
+    LIFT_PORTAL_R=0.16,    # its outer corner radius, metres. WHY 160: the sheet's R60 inner roll plus the band
+    LIFT_KICK_H=0.08,      # silver kick band at the foot of the landing and solid shaft walls, metres
+    LIFT_IND_W=1.18, LIFT_IND_H=0.32, LIFT_IND_Y=2.66,   # smoked indicator capsule and its centre height, metres. WHY
+                           # not the sheet's 720 x 180: KitSigns' LED label there is 1.12 x 0.28 at 2.66; the capsule holds it all
+    LIFT_IND_W_RF=1.4,     # the roof frame's indicator width, metres: holds the full-width "RF 屋上" label
+    LIFT_RIBBON_H=0.1,     # frosted-aqua ribbon at the foot of the glass shaft walls, metres (sheet 3)
+    LIFT_CAP_H=0.3,        # head-house cap height above the roof storey's walls, metres (sheet 3: 140 mm roll on top)
+    LIFT_RAIL_Y=0.95,      # car handrail centre height, metres (sheet 2)
     # ---- Keyboard (sheet 5): 0.44 x 0.14, wedge 15 -> 30 mm
     KB_W=0.44, KB_D=0.14,
     KB_H_FRONT=0.012, KB_H_REAR=0.026,   # shell top at front and rear. WHY under 15/30: the key field sits 3 mm on
@@ -1144,6 +1155,229 @@ def door_leaf_aero():
     collider(ob, 'box')
 
 
+# ---------------------------------------------------------------- lift (concepts/Lift_Aero, approved by Alex 2026-11-15)
+
+def portal_sweep(path, section):
+    """A frame swept along a path in a wall's (x, y) plane: path = [(x, y)], section = [(across, out)] where `across`
+    runs along the path's left normal (away from an opening traced clockwise) and `out` stands proud toward +Z."""
+    rings = []
+    n = len(path)
+    for i, (x, y) in enumerate(path):
+        ax, ay = path[max(i - 1, 0)]
+        bx, by = path[min(i + 1, n - 1)]
+        tx, ty = bx - ax, by - ay
+        tl = math.hypot(tx, ty) or 1.0
+        nx, ny = -ty / tl, tx / tl
+        rings.append([(-(x + a * nx), -o, y + a * ny) for a, o in section])
+    return sweep(rings)
+
+
+def u_path(x0, x1, y_top, r, y_bottom=0.0, steps=8):
+    """The U of a doorway, traced up the left jamb, across the head and down the right, with corner radius r."""
+    pts = [(x0, y_bottom), (x0, y_top - r)]
+    pts += [(x0 + r - r * math.cos(math.pi / 2 * k / steps), y_top - r + r * math.sin(math.pi / 2 * k / steps))
+            for k in range(1, steps + 1)]
+    pts += [(x1 - r + r * math.sin(math.pi / 2 * k / steps), y_top - r + r * math.cos(math.pi / 2 * k / steps))
+            for k in range(0, steps + 1)]
+    pts += [(x1, y_bottom)]
+    return pts
+
+
+def round_section(width, proud, r, steps=4):
+    """A rolled frame section: `width` across, standing `proud`, its outer corners rounded by r (the sheet's R60
+    rolled-silver portal reads as a tube-like band, not a flat strip)."""
+    pts = [(0.0, -0.002)]
+    for k in range(steps + 1):
+        t = math.pi / 2 * k / steps
+        pts.append((r - r * math.cos(t), proud - r + r * math.sin(t)))
+    for k in range(steps + 1):
+        t = math.pi / 2 * k / steps
+        pts.append((width - r + r * math.sin(t), proud - r + r * math.cos(t)))
+    pts.append((width, -0.002))
+    return pts
+
+
+def lift_door_frame_aero(label):
+    """The lift's landing wall (Lift_Aero sheet 1): the same 4 m wall and Left / Right / Head parts with box colliders
+    as kit_pieces.py, with a pearl face in seamed panels and a silver kick band, a rolled silver R60 portal round the
+    1.4 x 2.2 m opening and silver reveals through it, a smoked capsule indicator in a silver rim centred at 2.66 m
+    (its 1F / RF dot-matrix text is a KitSigns label at piece-local (2.0, 2.66, 0.04)), a silver call panel with
+    round up / down buttons in cyan rings beside the doors, and the stacked AONAGI logo. Runs +X from the pivot on
+    the landing face (+Z = the lobby)."""
+    W, T, ow, oh = P.BAY, P.WALL, P.LIFT_OPEN_W, P.LIFT_OPEN_H
+    x0, x1 = (W - ow) / 2, (W + ow) / 2
+    y0 = -P.SLAB
+    tag = label[:2]
+    parts = []
+    for name, b in (('Left', u(0, x0, y0, CLEAR_H, -T, 0)), ('Right', u(x1, W, y0, CLEAR_H, -T, 0)),
+                    ('Head', u(x0, x1, oh, CLEAR_H, -T, 0))):
+        ob = part(f'Kit_Lift_Door_Frame_4m_{tag}_{name}', b, M_WALL, smooth=None)
+        collider(ob, 'box')
+        parts.append(ob)
+    pw, pp = PA.LIFT_PORTAL_W, PA.LIFT_PORTAL_PROUD
+    # The portal's outer edge traced round the opening; its section runs inward to the opening's edge.
+    portal = portal_sweep(u_path(x0 - pw, x1 + pw, oh + pw, PA.LIFT_PORTAL_R),
+                          [(-a, o) for a, o in round_section(pw, pp, min(0.02, pp * 0.8))])
+    reveals = join(u(x0, x0 + 0.02, 0, oh, -T, 0), u(x1 - 0.02, x1, 0, oh, -T, 0), u(x0, x1, oh - 0.02, oh, -T, 0))
+    # WHY two strips: one across the doorway would read as a step into the car.
+    kick = join(u(0, x0 - pw, 0, PA.LIFT_KICK_H, 0, 0.004), u(x1 + pw, W, 0, PA.LIFT_KICK_H, 0, 0.004))
+    seams = join(*[u(x - 0.004, x + 0.004, PA.LIFT_KICK_H, CLEAR_H, 0, 0.002) for x in (0.6, W - 0.6)])
+    # Indicator: a smoked capsule in a silver rim; the LED text is the KitSigns label in front of it.
+    # WHY wider and squarer on the roof: its label, "RF 屋上", fills the KitSigns label's whole 1.12 m, and the 1F
+    # capsule's round ends cropped its R (restyle session, 2026-11-15).
+    iw, n_ind = (PA.LIFT_IND_W, 2.8) if tag == '1F' else (PA.LIFT_IND_W_RF, 4.0)
+    ih, iy = PA.LIFT_IND_H, PA.LIFT_IND_Y
+    rim = moulded(W / 2 - iw / 2, W / 2 + iw / 2, iy - ih / 2, iy + ih / 2, 0.0, 0.03, n_ind, 0.0, 0.012, axis='z')
+    face = moulded(W / 2 - iw / 2 + 0.025, W / 2 + iw / 2 - 0.025, iy - ih / 2 + 0.025, iy + ih / 2 - 0.025,
+                   0.02, 0.034, n_ind - 0.2, 0.0, 0.004, axis='z')
+    # Call panel: silver, two round buttons in cyan rings (one on the roof: it only goes down).
+    cx, cy = x1 + 0.35, 1.1
+    panel = moulded(cx - 0.045, cx + 0.045, cy - 0.115, cy + 0.115, 0.0, 0.016, 4.0, 0.0, 0.006, axis='z')
+    rings, buttons, arrows = [], [], []
+    for sgn in ((1, -1) if tag == '1F' else (-1,)):
+        by = cy + sgn * 0.045 if tag == '1F' else cy - 0.02
+        ring = cylinder(0.027, 0.004, segments=28, axis='Y')
+        move(ring, -cx, -0.017, by)
+        btn = cylinder(0.021, 0.008, segments=28, axis='Y')
+        move(btn, -cx, -0.02, by)
+        tip = by + sgn * 0.009
+        arrows.append(prism_xy([(cx - 0.009, by - sgn * 0.005), (cx + 0.009, by - sgn * 0.005), (cx, tip)], 0.024, 0.0255))
+        rings.append(ring)
+        buttons.append(btn)
+    logo = badge_disc(0.62, 3.45, 0.0, 0.32, 0.002)
+    trim = part(f'Kit_Lift_Door_Frame_4m_{tag}_Trim',
+                join(paint(join(portal, reveals, kick, rim, panel, *buttons), 0), paint(face, 1),
+                     paint(join(*rings), 2), paint(join(seams, *arrows), 3), paint(logo, 4)),
+                [M_FRAME, M_SCREEN, M_LED, M_TRIM, M_P_LOGO], smooth=40)
+    expect(parts[0], size=(x0, T, CLEAR_H + P.SLAB))
+    group(f'Kit_Lift_Door_Frame_4m_{tag}', *parts, trim)
+
+
+def lift_door_panel_aero():
+    """One bi-parting landing leaf (Lift_Aero sheet 1): brushed silver with softened edges and an aqua etched line
+    down the meeting edge on both faces. Pivot at the bottom of the meeting edge, centred on its thickness; the leaf
+    runs +X and the lift opens it by sliding LIFT_LEAF_W along +X. Box collider."""
+    w, h, t = P.LIFT_LEAF_W, P.LIFT_LEAF_H, P.LIFT_LEAF_T
+    leaf = rbox(0, w, 0, h, -t / 2, t / 2, 0.003, 2)
+    lines = join(u(0.006, 0.01, 0.0, h, t / 2 - 0.0005, t / 2 + 0.0005), u(0.006, 0.01, 0.0, h, -t / 2 - 0.0005, -t / 2 + 0.0005))
+    # WHY plain brushed silver, not the ribbed trim band: in KitOffice the ribs read as corrugated sheet (sheet 1 is smooth)
+    ob = part('Kit_Lift_Door_Panel', join(paint(leaf, 0), paint(lines, 1)), [M_FRAME, M_AQUA], smooth=35)
+    expect(ob, size=(w, t + 0.001, h), tol=0.002)
+    collider(ob, 'box')
+
+
+def lift_shaft_wall_aero():
+    """The glass shaft wall on the upper floor (Lift_Aero sheet 3): a round silver corner post at its start, a
+    silver base band and head rail, clear glass, and a frosted-aqua ribbon at the foot of the glass. Same
+    extents, thickness (-Z) and box collider as kit_pieces.py. One post per wall: the four walls round the
+    shaft give the four corners."""
+    W, T = P.BAY, P.PART_T
+    zc = -T / 2
+    y0, r = -P.SLAB, P.PART_RAIL
+    post_r = T / 2
+    post = lathe([(post_r, y0), (post_r, CLEAR_H)], 24, cx=post_r, cz=-T / 2)
+    frame = join(rbox(post_r, W, y0, r, -T, 0, 0.01, 2), rbox(post_r, W, CLEAR_H - r, CLEAR_H, -T, 0, 0.01, 2))
+    fr = part('Kit_Lift_Shaft_Wall_4m_Frame', join(paint(frame, 0), paint(post, 1)), [M_FRAME, M_CHROME], smooth=40)
+    glass = part('Kit_Lift_Shaft_Wall_4m_Glass',
+                 u(T, W, r + PA.LIFT_RIBBON_H, CLEAR_H - r, zc - P.GLASS_T / 2, zc + P.GLASS_T / 2), M_GLASS, smooth=None)
+    ribbon = part('Kit_Lift_Shaft_Wall_4m_Ribbon',
+                  u(T, W, r, r + PA.LIFT_RIBBON_H, zc - P.GLASS_T / 2, zc + P.GLASS_T / 2), M_FROST, smooth=None)
+    expect(fr, size=(W, T, CLEAR_H + P.SLAB), tol=0.002)
+    collider(fr, 'box')
+    group('Kit_Lift_Shaft_Wall_4m', fr, glass, ribbon)
+
+
+def lift_shaft_wall_solid():
+    """The opaque shaft wall for 1F and the roof head-house (Lift_Aero sheet 3): pearl cladding with rounded R20 ends
+    and fine seams, a silver base band. Runs +X from the pivot, thickness -Z, from the slab line to the soffit, like
+    Lift_Shaft_Wall_4m. Box collider."""
+    W, T = P.BAY, P.PART_T
+    y0 = -P.SLAB
+    wall = moulded(0, W, y0, CLEAR_H, -T, 0, 8.0, 0.0, 0.0)
+    band = moulded(0.01, W - 0.01, y0, PA.LIFT_KICK_H, -T + 0.004, 0.004, 8.0, 0.0, 0.0)
+    seams = join(*[u(x - 0.004, x + 0.004, PA.LIFT_KICK_H, CLEAR_H - 0.02, 0, 0.002) for x in (W / 3, 2 * W / 3)])
+    ob = part('Kit_Lift_Shaft_Wall_4m_Solid', join(paint(wall, 0), paint(band, 1), paint(seams, 2)),
+              [M_WALL, M_FRAME, M_TRIM], smooth=40)
+    collider(ob, 'box')
+
+
+def lift_cap():
+    """The roof head-house's cap (Lift_Aero sheet 3): a pearl lid over the 4 x 4 m shaft with a 140 mm rolled edge
+    and a 30 mm navy shadow reveal under it, no overhang past the shaft. Same pivot and grid as Slab_4x4 (front-left
+    corner at the head-house's roof line; it hangs SLAB below and rises CAP_H above). Box collider."""
+    S_, sl = P.BAY, P.SLAB
+    reveal = moulded(0.02, S_ - 0.02, -sl, -sl + 0.03, -S_ + 0.02, -0.02, 8.0, 0.0, 0.0)
+    cap = moulded(0, S_, -sl + 0.03, PA.LIFT_CAP_H, -S_, 0, 8.0, 0.02, 0.14)
+    ob = part('Kit_Lift_Cap_4x4', join(paint(cap, 0), paint(reveal, 1)), [M_WALL, M_TRIM], smooth=40)
+    expect(ob, size=(S_, S_, sl + PA.LIFT_CAP_H), tol=0.002)
+    collider(ob, 'box')
+
+
+def lift_car_aero():
+    """The car (Lift_Aero sheet 2): a mist resin floor with a silver threshold, pearl side walls, a mirror-silver back
+    wall, a glowing frosted ceiling panel in a pearl ceiling, a round silver handrail with rounded returns along the
+    back and both sides, and a silver car operating panel by the door (smoked display, round 1F / 2F / RF buttons in
+    cyan rings, open and close keys, the AONAGI ring). Same parts and box colliders as kit_pieces.py (floor, sides,
+    back, ceiling, header), so the rider box doesn't move; the rail and panel are a visual part. Pivot at the floor's
+    top centre; open side +Z. Moving: the lift script drives its height."""
+    W, D, H, F, t = P.LIFT_CAR_W, P.LIFT_CAR_D, P.LIFT_CAR_H, P.LIFT_CAR_FLOOR, P.LIFT_CAR_WALL
+    slab = u(-W / 2, W / 2, -F, -0.004, -D / 2, D / 2)
+    resin = u(-W / 2 + t, W / 2 - t, -0.004, 0, -D / 2 + t, D / 2 - 0.08)
+    threshold = u(-W / 2 + t, W / 2 - t, -0.004, 0, D / 2 - 0.08, D / 2)
+    floor = part('Kit_Lift_Car_Floor', join(paint(slab, 0), paint(resin, 1), paint(threshold, 0)), [M_FRAME, M_MIST],
+                 smooth=None)
+    sides = []
+    for name, (a, b) in (('Left', (-W / 2, -W / 2 + t)), ('Right', (W / 2 - t, W / 2))):
+        sides.append(part(f'Kit_Lift_Car_{name}', moulded(a, b, 0, H, -D / 2, D / 2, 8.0, 0.0, 0.0), M_WALL, smooth=40))
+    # WHY brushed silver, not chrome: a true mirror showed the reflection probe's sky as a smear in KitOffice; the
+    # sheet's "mirror-silver" back reads as a soft satin sheen.
+    back = part('Kit_Lift_Car_Back', moulded(-W / 2 + t, W / 2 - t, 0, H, -D / 2, -D / 2 + t, 8.0, 0.0, 0.0), M_FRAME,
+                smooth=40)
+    ceil = u(-W / 2, W / 2, H, H + 0.1, -D / 2, D / 2)
+    glow = moulded(-1.35, 1.35, H - 0.012, H, -1.2, 1.05, 5.0, 0.0, 0.0)
+    rim = moulded(-1.4, 1.4, H - 0.02, H, -1.25, 1.1, 5.0, 0.0, 0.0)
+    ceiling = part('Kit_Lift_Car_Ceiling', join(paint(ceil, 0), paint(rim, 2), paint(glow, 1)), [M_WALL, M_LIGHT, M_FRAME],
+                   smooth=None)
+    header = part('Kit_Lift_Car_Header', u(-W / 2 + t, W / 2 - t, P.LIFT_OPEN_H, H, D / 2 - t, D / 2), M_WALL, smooth=None)
+    for ob in (floor, *sides, back, ceiling, header):
+        collider(ob, 'box')
+    # Handrail: back and both sides, 40 mm, 0.95 m high, 60 mm off the walls, rolling round the back corners.
+    ry, off, rr = PA.LIFT_RAIL_Y, 0.06, 0.02
+    xi, zb = W / 2 - t - off, -D / 2 + t + off
+    zf = D / 2 - 0.45
+    rail = [(-xi, ry, zf), (-xi, ry, zb + 0.09)]
+    rail += [(-xi + 0.09 - 0.09 * math.cos(math.pi / 2 * k / 6), ry, zb + 0.09 - 0.09 * math.sin(math.pi / 2 * k / 6))
+             for k in range(1, 7)]
+    rail += [(xi - 0.09 + 0.09 * math.sin(math.pi / 2 * k / 6), ry, zb + 0.09 - 0.09 * math.cos(math.pi / 2 * k / 6))
+             for k in range(0, 7)]
+    rail += [(xi, ry, zf)]
+    rail_bm = tube(rail, rr, 12)
+    ends = []
+    for x in (-xi, xi):    # returns into the side walls at the front ends
+        ends.append(tube([(x, ry, zf), (x, ry, zf + 0.04), (x + (0.06 if x < 0 else -0.06) * -1, ry, zf + 0.06)], rr, 12))
+    brackets = [tube([(x, ry, z), (x + (-off if x < 0 else off), ry, z)], 0.008, 8) for x in (-xi, xi) for z in (-0.4, 0.5)]
+    brackets += [tube([(x, ry, zb), (x, ry, zb - off)], 0.008, 8) for x in (-1.0, 0.0, 1.0)]
+    # Car operating panel on the right side wall, by the door, facing into the car (-X).
+    px = W / 2 - t
+    pz0, pz1 = D / 2 - 0.42, D / 2 - 0.18
+    cop = moulded(px - 0.016, px, 0.85, 1.6, pz0, pz1, 4.0, 0.0, 0.0)
+    disp = u(px - 0.019, px - 0.016, 1.45, 1.53, pz0 + 0.06, pz1 - 0.06)
+    rings, keys = [], []
+    for i, by in enumerate((1.36, 1.27, 1.18)):
+        ring = cylinder(0.022, 0.004, segments=24, axis='X'); move(ring, -(px - 0.018), -(pz0 + pz1) / 2, by)
+        key = cylinder(0.017, 0.008, segments=24, axis='X'); move(key, -(px - 0.02), -(pz0 + pz1) / 2, by)
+        rings.append(ring); keys.append(key)
+    for dz in (-0.045, 0.045):
+        key = cylinder(0.016, 0.008, segments=20, axis='X'); move(key, -(px - 0.02), -((pz0 + pz1) / 2 + dz), 1.06)
+        keys.append(key)
+    mark = cylinder(0.025, 0.002, segments=28, axis='X'); move(mark, -(px - 0.017), -(pz0 + pz1) / 2, 0.95)
+    trim = part('Kit_Lift_Car_Trim', join(paint(join(rail_bm, *ends, *brackets), 0), paint(join(cop, *keys), 1),
+                                          paint(disp, 2), paint(join(*rings), 3), paint(mark, 4)),
+                [M_CHROME, M_FRAME, M_SCREEN, M_LED, M_P_RING], smooth=40)
+    expect(floor, size=(W, D, F))
+    group('Kit_Lift_Car', floor, *sides, back, ceiling, header, trim)
+
+
 # ---------------------------------------------------------------- pieces
 
 PIECES_AERO = {
@@ -1170,6 +1404,13 @@ PIECES_AERO = {
     'Wall_Door_4m': wall_door_aero,
     'Wall_Door_2m': lambda: wall_door_aero(P.INFILL),
     'Door_Leaf': door_leaf_aero,
+    'Lift_Door_Frame_4m_1F': lambda: lift_door_frame_aero('1F'),
+    'Lift_Door_Frame_4m_RF': lambda: lift_door_frame_aero('RF'),
+    'Lift_Door_Panel': lift_door_panel_aero,
+    'Lift_Shaft_Wall_4m': lift_shaft_wall_aero,
+    'Lift_Shaft_Wall_4m_Solid': lift_shaft_wall_solid,
+    'Lift_Cap_4x4': lift_cap,
+    'Lift_Car': lift_car_aero,
 }
 
 if P.PIECE in PIECES_AERO:
