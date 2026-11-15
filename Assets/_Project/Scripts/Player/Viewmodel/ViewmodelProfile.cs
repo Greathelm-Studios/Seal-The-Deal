@@ -199,5 +199,8 @@ namespace CloseTheDeal.Player
 
         [Tooltip("Where the gun is held in the body view, measured from where the usual view frames it, in metres: X right (negative = toward the middle of the screen), Y up, Z further out. Raise Y to bring the arm up into view; the arm cannot reach further than its own length, so a large Z only straightens it.")]
         public Vector3 BodyViewGunShift = new Vector3(-0.04f, 0.07f, 0.04f);
+
+        [Tooltip("In the body view, anything of a character closer to your eye than this, in metres, is not drawn on your own screen: your own head, hair and collar. Raise it if hair or your collar pokes into view; lower it if your raised hand or gun gets cut away. Mirrors, shadows and other players always see the whole body.")]
+        [Range(0f, 0.5f)] public float BodyViewHeadClip = 0.22f;
     }
 }

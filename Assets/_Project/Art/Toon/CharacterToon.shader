@@ -6,6 +6,9 @@
 //              2000s corporate future aesthetic" (recommendation: soft building, graphic people)
 //  Modified  : Claude Fable 5.2, 2026-11-15 — the base and contour passes mark stencil bit 8 so
 //              blood splats skip characters (Harvey: "Exclude them too").
+//  Modified  : Claude Fable 5.2, 2026-11-15 — a per-camera near clip, so the body view can hide
+//              a player's own head from their own eye only (Harvey, shown his headless
+//              reflection: "Well this definitely cant happen").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : The character half of the art bible's lighting formula, "soft world light + hard
 //              character value breaks" (bible §04, §05). Characters need a different lighting
@@ -69,6 +72,19 @@ Shader "Close the Deal/Character Toon"
 
         TEXTURE2D(_BaseMap);
         SAMPLER(sampler_BaseMap);
+
+        // Set per camera by PlayerViewmodel while the body view is on: for the camera a player
+        // looks out of their own body with, fragments nearer the eye than this many metres are
+        // not drawn, which hides that player's own head, hair and collar from that one camera.
+        // 0 for every other camera, so mirrors, other players and shadows keep the whole body.
+        // A global, not a material property, so it stays outside UnityPerMaterial.
+        float _BodyViewNearClip;
+
+        // SV_POSITION.w is the distance from the eye along its view, in metres.
+        void ClipNearOwnEye(float4 positionCS)
+        {
+            clip(positionCS.w - _BodyViewNearClip);
+        }
 
         // WHY one block shared by every pass: the SRP Batcher only batches a shader whose passes
         // all declare the same UnityPerMaterial layout.
@@ -172,6 +188,7 @@ Shader "Close the Deal/Character Toon"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                ClipNearOwnEye(input.positionCS);
 
                 half3 normalWS = normalize(input.normalWS);
                 half3 viewDirWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
@@ -333,6 +350,7 @@ Shader "Close the Deal/Character Toon"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                ClipNearOwnEye(input.positionCS);
                 return half4(MixFog(_OutlineColor.rgb, input.fogFactor), 1);
             }
             ENDHLSL
@@ -439,6 +457,7 @@ Shader "Close the Deal/Character Toon"
 
             half4 Frag(Varyings input) : SV_Target
             {
+                ClipNearOwnEye(input.positionCS);
                 return input.positionCS.z;
             }
             ENDHLSL
@@ -484,6 +503,7 @@ Shader "Close the Deal/Character Toon"
 
             half4 Frag(Varyings input) : SV_Target
             {
+                ClipNearOwnEye(input.positionCS);
                 // Same two encodings as URP's own depth-normals pass (UnlitDepthNormalsPass.hlsl).
                 #if defined(_GBUFFER_NORMALS_OCT)
                     float3 normalWS = normalize(input.normalWS);

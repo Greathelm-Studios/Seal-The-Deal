@@ -331,13 +331,13 @@ namespace CloseTheDeal.Player
         /// <summary>What the body view was the last time this player applied it; null before the first time.</summary>
         bool? _appliedBodyView;
         Transform _head;
-        BodyViewHead _headHider;
+        static readonly int BodyViewNearClipId = Shader.PropertyToID("_BodyViewNearClip");
 
         /// <summary>Applies the body view, or undoes it, for the player this machine controls.</summary>
         /// <remarks>
-        /// The head is shrunk to nothing by <see cref="BodyViewHead"/>, which folds the face,
-        /// hair and eye cards into a point behind the eye. Known cost: the owner's own shadow
-        /// has no head.
+        /// The owner's own head is hidden from their own eye only, by a near clip the character
+        /// shader applies for that one camera (see <see cref="OnBeginCameraRendering"/>). The
+        /// head itself is untouched, so mirrors, shadows and other cameras show it.
         /// </remarks>
         void ApplyBodyView(bool on)
         {
@@ -350,15 +350,6 @@ namespace CloseTheDeal.Player
                 _head = animator != null ? animator.HeadBone : null;
                 if (_head == null && on)
                     _appliedBodyView = null; // The skeleton is not found yet: try again next frame.
-            }
-            if (_head != null)
-            {
-                if (_headHider == null)
-                    _headHider = gameObject.AddComponent<BodyViewHead>();
-                if (on)
-                    _headHider.Hide(_head);
-                else
-                    _headHider.Release();
             }
 
             PlayerCamera eye = PlayerCamera.Instance;
@@ -552,6 +543,7 @@ namespace CloseTheDeal.Player
                 return;
 
             RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
+            Shader.SetGlobalFloat(BodyViewNearClipId, 0f);
 
             if (_baseCamera != null)
                 _baseCamera.GetUniversalAdditionalCameraData().cameraStack.Remove(_armsCamera);
@@ -564,9 +556,20 @@ namespace CloseTheDeal.Player
             _baseCamera = null;
         }
 
-        /// <summary>The arms are drawn by their own camera and by no other.</summary>
+        /// <summary>
+        /// The arms are drawn by their own camera and by no other. In the body view, the camera
+        /// the owner looks through also skips whatever of a character is right at the eye.
+        /// </summary>
+        /// <remarks>
+        /// WHY a clip per camera and not a shrunken head bone, which the first version used: a
+        /// bone is posed once a frame for every camera, so the mirror showed the player a
+        /// headless reflection and the shadow had no head either (Harvey: "this definitely cant
+        /// happen"). A value set here is seen only by the camera about to render.
+        /// </remarks>
         void OnBeginCameraRendering(ScriptableRenderContext context, Camera rendering)
         {
+            bool ownEye = _appliedBodyView == true && rendering == _baseCamera;
+            Shader.SetGlobalFloat(BodyViewNearClipId, ownEye ? _profile.BodyViewHeadClip : 0f);
             if (_arms != null)
                 _arms.SetVisible(rendering == _armsCamera && !BodyView);
         }
