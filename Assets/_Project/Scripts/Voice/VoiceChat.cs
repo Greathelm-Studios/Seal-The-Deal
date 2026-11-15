@@ -7,8 +7,13 @@
 //              read through Unity, compressed by our own VoiceCodec and sent in our own
 //              packets, so voice works with or without Steam (Harvey: "Make our own custom
 //              VOIP for this").
+//  Modified  : Claude Fable 5.2, 2026-11-15 — Opus compression (Concentus), RNNoise noise
+//              suppression, a chosen microphone, 20 ms pieces at 48 kHz, lost pieces rebuilt,
+//              and a mic test that works with no game running (Harvey: "The quality isnt
+//              great / We probably need noise suppression / There's a delay", then "do the
+//              delay and mic picker", "go grab that", "Yes on the RNNoise").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : Proximity voice chat. Records this player's microphone, compresses it, sends it
+//  Summary   : Proximity voice chat. Records this player's microphone, cleans and compresses it, sends it
 //              to the host, and the host passes it on only to players within earshot of the
 //              speaker. Each machine plays what it receives from the speaker's head.
 // -----------------------------------------------------------------------------
@@ -69,18 +74,20 @@ namespace CloseTheDeal.Voice
     }
 
     /// <summary>
-    /// Proximity voice chat for every player in the game. All of it is ours: no voice
-    /// service, no Steam voice, no added package.
+    /// Proximity voice chat for every player in the game. The path is ours (capture, packets,
+    /// who hears whom, playback); the compression is Opus and the noise removal is RNNoise.
+    /// No voice service and no Steam voice.
     /// </summary>
     /// <remarks>
-    /// <para>The path of a word: this machine reads the microphone through Unity, cuts it
-    /// into 40 ms pieces, drops the silent ones, compresses the rest with
-    /// <see cref="VoiceCodec"/> and sends each to the host. The host passes a piece to each
-    /// other player whose body is within <see cref="RelayRange"/> of the speaker's. Each of
-    /// those machines decompresses it and plays it from the speaker's head with a fade over
-    /// distance.</para>
-    /// <para>A packet is a 2-byte running number, then one <see cref="VoiceCodec"/> packet.
-    /// The number lets a listener throw away a piece that arrives late or twice.</para>
+    /// <para>The path of a word: this machine reads the chosen microphone through Unity, cuts
+    /// it into 20 ms pieces, cleans each with <see cref="VoiceCleaner"/>, drops the ones with
+    /// no speech, compresses the rest with <see cref="VoiceEncoder"/> and sends each to the
+    /// host. The host passes a piece to each other player whose body is within
+    /// <see cref="RelayRange"/> of the speaker's. Each of those machines decompresses it and
+    /// plays it from the speaker's head with a fade over distance.</para>
+    /// <para>A packet is a 2-byte running number, then one Opus packet. The number lets a
+    /// listener throw away a piece that arrives late or twice, and see that one was lost so
+    /// it can be rebuilt.</para>
     /// <para>WHY the host decides who hears: the game is host-authoritative, and a client
     /// that was sent every voice could listen to the whole map whatever its own volume
     /// curve said. The host also caps how much each player may send.</para>
@@ -92,11 +99,23 @@ namespace CloseTheDeal.Voice
     [DisallowMultipleComponent]
     public sealed class VoiceChat : MonoBehaviour
     {
-        /// <summary>Samples a second voice travels and plays at. 16 kHz carries speech clearly (wideband telephone quality) at a third of the size of 48 kHz.</summary>
-        const int SampleRate = 16000;
+        /// <summary>
+        /// Samples a second voice is recorded, sent and played at. 48 kHz is what RNNoise
+        /// needs and what sound cards run at, so nothing is resampled on the way.
+        /// </summary>
+        const int SampleRate = 48000;
 
-        /// <summary>Samples in one piece of voice: 40 ms. Shorter pieces mean more packets for the same sound; longer ones add delay and lose more when one goes missing.</summary>
-        const int FrameSamples = SampleRate / 25;
+        /// <summary>
+        /// Samples in one piece of voice: 20 ms, the piece Opus is built around, and two
+        /// RNNoise pieces. Shorter adds packets; longer adds delay.
+        /// </summary>
+        const int FrameSamples = SampleRate / 50;
+
+        /// <summary>
+        /// Bits a second of compressed voice. 32,000 is clear full-band speech; with the
+        /// packet's 2-byte number that is about 4.1 kB a second while someone talks.
+        /// </summary>
+        const int Bitrate = 32000;
 
         /// <summary>Bytes before the compressed sound in a packet: the running number.</summary>
         const int NumberBytes = 2;
@@ -105,14 +124,32 @@ namespace CloseTheDeal.Voice
         const int MicSeconds = 1;
 
         /// <summary>
-        /// Loudness (0 to 1, root mean square) above which a piece counts as speech. With an
-        /// open microphone, quieter pieces are not sent, so room noise costs no bandwidth and
-        /// is not played to everyone nearby.
+        /// How sure RNNoise must be that a piece is speech (0 to 1) for an open microphone to
+        /// send it. Used when noise suppression is on.
+        /// </summary>
+        const float SpeechChance = 0.5f;
+
+        /// <summary>
+        /// Loudness (0 to 1, root mean square) above which a piece counts as speech when noise
+        /// suppression is off or missing. With an open microphone, quieter pieces are not
+        /// sent, so room noise costs no bandwidth and is not played to everyone nearby.
         /// </summary>
         const float GateLevel = 0.012f;
 
-        /// <summary>Seconds the gate stays open after the last loud piece, so the quiet ends of words are not clipped.</summary>
+        /// <summary>Loudness below which a piece is silence whatever RNNoise says about it.</summary>
+        const float SilenceLevel = 0.001f;
+
+        /// <summary>Seconds the gate stays open after the last speech, so the quiet ends of words are not clipped.</summary>
         const float GateHold = 0.35f;
+
+        /// <summary>Seconds of not sending after which the encoder starts fresh, so the last sentence does not colour the next.</summary>
+        const float EncoderForget = 0.5f;
+
+        /// <summary>Most lost pieces in a row a listener fills in. A longer gap is left as a gap: guessing that much speech sounds worse than silence.</summary>
+        const int MaxFill = 3;
+
+        /// <summary>Seconds between looks at which microphones are plugged in. Asking Unity for the list is slow and makes garbage.</summary>
+        const float DeviceCheckInterval = 2f;
 
         /// <summary>Metres within which a voice is at full volume: across a desk.</summary>
         const float FullRange = 3f;
@@ -126,14 +163,14 @@ namespace CloseTheDeal.Voice
         /// </summary>
         const float RelayRange = HearRange + 4f;
 
-        /// <summary>Largest voice packet the host accepts, in bytes. A real one is 325; anything much bigger is not ours.</summary>
-        const int MaxPacketBytes = 600;
+        /// <summary>Largest voice packet the host accepts, in bytes. A real one is about 82 and Opus may briefly go over; anything much bigger is not ours.</summary>
+        const int MaxPacketBytes = 400;
 
         /// <summary>
         /// Voice bytes a second the host accepts from one player. Talking non-stop is about
-        /// 8,100; this leaves room for a burst and stops a client flooding the host.
+        /// 4,100; this leaves room for a burst and stops a client flooding the host.
         /// </summary>
-        const float BytesPerSecondCap = 14000f;
+        const float BytesPerSecondCap = 8000f;
 
         /// <summary>Seconds of silence from a speaker after which their running number is forgotten, so a rejoining player is not ignored.</summary>
         const float NumberForget = 1f;
@@ -160,21 +197,29 @@ namespace CloseTheDeal.Voice
             public float NextSearch;
             public ushort LastNumber;
             public bool HasNumber;
+            public VoiceDecoder Decoder;
         }
 
         readonly Dictionary<int, Heard> _heard = new();
         readonly Dictionary<int, float> _allowance = new();
-        readonly byte[] _packet = new byte[NumberBytes + VoiceCodec.PacketBytes(FrameSamples)];
+        readonly byte[] _packet = new byte[MaxPacketBytes];
         readonly float[] _frame = new float[FrameSamples];
-        readonly float[] _decoded = new float[FrameSamples * 2];
+        readonly float[] _decoded = new float[FrameSamples];
         readonly List<int> _scratchIds = new();
 
         NetworkManager _net;
         AudioClip _mic;
+        /// <summary>The microphone being recorded, as Unity names it; null is the system default.</summary>
+        string _micDevice;
         float[] _micFrame;
         int _micRead;
         bool _warnedMic;
-        VoiceCodec.State _encoder;
+        string[] _devices = Array.Empty<string>();
+        float _nextDeviceCheck = float.NegativeInfinity;
+        VoiceEncoder _encoder;
+        VoiceCleaner _cleaner;
+        bool _cleanerTried;
+        bool _wasConnected;
         ushort _number;
         float _gateOpenUntil = float.NegativeInfinity;
         PlayerMotor _keyOwner;
@@ -182,9 +227,40 @@ namespace CloseTheDeal.Voice
         AudioMixerGroup _output;
         bool _outputLooked;
         float _lastSent = float.NegativeInfinity;
+        float _lastEncoded = float.NegativeInfinity;
 
         /// <summary>True when this machine has a microphone to talk with. Hearing others needs none.</summary>
-        public bool Available => Microphone.devices.Length > 0;
+        public bool Available => Devices.Length > 0;
+
+        /// <summary>The microphones plugged in, as Unity names them. Looked up again every couple of seconds.</summary>
+        public string[] Devices
+        {
+            get
+            {
+                if (Time.unscaledTime >= _nextDeviceCheck)
+                {
+                    _nextDeviceCheck = Time.unscaledTime + DeviceCheckInterval;
+                    _devices = Microphone.devices;
+                }
+
+                return _devices;
+            }
+        }
+
+        /// <summary>True when the RNNoise library loaded, so noise suppression can run on this machine.</summary>
+        public bool CanSuppressNoise
+        {
+            get
+            {
+                if (!_cleanerTried)
+                {
+                    _cleanerTried = true;
+                    _cleaner = VoiceCleaner.Create();
+                }
+
+                return _cleaner != null;
+            }
+        }
 
         /// <summary>True while this player's microphone is open (not muted, or the key is held).</summary>
         public bool MicOpen { get; private set; }
@@ -212,6 +288,8 @@ namespace CloseTheDeal.Voice
         {
             Unhook();
             StopMic();
+            _cleaner?.Dispose();
+            _cleaner = null;
             if (Instance == this)
                 Instance = null;
         }
@@ -226,8 +304,17 @@ namespace CloseTheDeal.Voice
             }
 
             bool connected = _net != null && _net.ClientManager.Started;
-            if (!connected && _heard.Count > 0)
+            // Leaving a game ends every voice from it. Not every frame while disconnected:
+            // the mic test plays through a speaker of its own with no game running.
+            if (_wasConnected && !connected)
                 ClearSpeakers();
+            _wasConnected = connected;
+            if (!VoiceSettings.HearSelf && _heard.TryGetValue(SelfId, out Heard own))
+            {
+                if (own.Speaker != null)
+                    Destroy(own.Speaker.gameObject);
+                _heard.Remove(SelfId);
+            }
 
             ReadKey();
             RunMic(connected);
@@ -308,8 +395,8 @@ namespace CloseTheDeal.Voice
         }
 
         /// <summary>
-        /// Keeps the microphone recording while connected (unless voice is off), and sends
-        /// each finished piece that should go out.
+        /// Keeps the microphone recording while connected (unless voice is off) or while the
+        /// mic test is on, and deals with each finished piece.
         /// </summary>
         /// <remarks>
         /// WHY it records the whole time and not only while the mic is open: starting a
@@ -318,7 +405,8 @@ namespace CloseTheDeal.Voice
         /// </remarks>
         void RunMic(bool connected)
         {
-            bool record = connected && VoiceSettings.Mode != MicMode.Off && Available;
+            bool test = VoiceSettings.HearSelf;
+            bool record = ((connected && VoiceSettings.Mode != MicMode.Off) || test) && Available;
             if (!record)
             {
                 StopMic();
@@ -326,15 +414,18 @@ namespace CloseTheDeal.Voice
                 return;
             }
 
+            // The player picked another microphone, or the one in use was unplugged.
+            if (_mic != null && WantedDevice() != _micDevice)
+                StopMic();
             if (_mic == null && !StartMic())
             {
                 MicOpen = false;
                 return;
             }
 
-            MicOpen = WantsMic();
+            MicOpen = connected && WantsMic();
             int length = _mic.samples;
-            int waiting = (Microphone.GetPosition(null) - _micRead + length) % length;
+            int waiting = (Microphone.GetPosition(_micDevice) - _micRead + length) % length;
             // After a stall (a long frame, a paused editor) only the newest sound is worth
             // sending: skip to it so the voice does not run late.
             if (waiting > length / 2)
@@ -348,14 +439,23 @@ namespace CloseTheDeal.Voice
                 _mic.GetData(_micFrame, _micRead);
                 _micRead = (_micRead + _micFrame.Length) % length;
                 waiting -= _micFrame.Length;
-                if (MicOpen)
-                    SendPiece();
+                HandlePiece(MicOpen, test);
             }
+        }
+
+        /// <summary>The saved microphone if it is plugged in, else null for the system default.</summary>
+        string WantedDevice()
+        {
+            string saved = VoiceSettings.Device;
+            if (saved.Length == 0)
+                return null;
+            return Array.IndexOf(Devices, saved) >= 0 ? saved : null;
         }
 
         bool StartMic()
         {
-            _mic = Microphone.Start(null, true, MicSeconds, SampleRate);
+            _micDevice = WantedDevice();
+            _mic = Microphone.Start(_micDevice, true, MicSeconds, SampleRate);
             if (_mic == null)
             {
                 if (!_warnedMic)
@@ -370,8 +470,10 @@ namespace CloseTheDeal.Voice
             // A device that cannot record at our rate gives its own; the piece is then
             // stretched or squeezed to ours as it is read.
             _micFrame = new float[Mathf.Max(1, Mathf.RoundToInt(FrameSamples * (_mic.frequency / (float)SampleRate)))];
-            _micRead = Microphone.GetPosition(null);
-            _encoder = default;
+            _micRead = Microphone.GetPosition(_micDevice);
+            _encoder ??= new VoiceEncoder(SampleRate, Bitrate);
+            _encoder.Reset();
+            _ = CanSuppressNoise; // loads RNNoise the first time
             return true;
         }
 
@@ -379,46 +481,78 @@ namespace CloseTheDeal.Voice
         {
             if (_mic == null)
                 return;
-            Microphone.End(null);
+            Microphone.End(_micDevice);
             Destroy(_mic);
             _mic = null;
         }
 
-        /// <summary>Compresses the piece just read from the microphone and sends it, unless it is silence.</summary>
-        void SendPiece()
+        /// <summary>
+        /// Cleans the piece just read from the microphone, decides whether it is speech, and
+        /// if so compresses it and sends it, plays it back for the mic test, or both.
+        /// </summary>
+        /// <param name="send">True when the microphone is open and a game is running.</param>
+        /// <param name="test">True when the player is listening to themselves.</param>
+        void HandlePiece(bool send, bool test)
         {
             // Bring the piece to our rate. With a microphone already at our rate this is a copy.
             int source = _micFrame.Length;
-            double squares = 0.0;
             for (int i = 0; i < FrameSamples; i++)
             {
                 float at = i * (source - 1) / (float)(FrameSamples - 1);
                 int low = (int)at;
                 int high = Mathf.Min(low + 1, source - 1);
-                float value = Mathf.Lerp(_micFrame[low], _micFrame[high], at - low);
-                _frame[i] = value;
-                squares += value * value;
+                _frame[i] = Mathf.Lerp(_micFrame[low], _micFrame[high], at - low);
             }
 
-            // Push-to-talk sends everything while the key is held; an open mic sends speech only.
-            if (VoiceSettings.Mode == MicMode.Open)
+            // Cleaned even when nothing will be sent: RNNoise learns the room's noise as it
+            // goes, and a cleaner that only woke on a key press would start each time deaf.
+            float speechChance = -1f;
+            if (_cleaner != null && VoiceSettings.NoiseSuppression)
             {
-                if (Math.Sqrt(squares / FrameSamples) >= GateLevel)
+                speechChance = 0f;
+                for (int at = 0; at + VoiceCleaner.FrameSamples <= FrameSamples; at += VoiceCleaner.FrameSamples)
+                    speechChance = Mathf.Max(speechChance, _cleaner.Process(_frame, at));
+            }
+
+            if (!send && !test)
+                return;
+
+            // A held push-to-talk key sends everything. Otherwise only speech goes out.
+            bool held = VoiceSettings.Mode == MicMode.PushToTalk && _key != null && _key.IsPressed();
+            if (!held)
+            {
+                double squares = 0.0;
+                for (int i = 0; i < FrameSamples; i++)
+                    squares += _frame[i] * _frame[i];
+                double level = Math.Sqrt(squares / FrameSamples);
+                bool speech = speechChance >= 0f
+                    ? speechChance >= SpeechChance && level >= SilenceLevel
+                    : level >= GateLevel;
+                if (speech)
                     _gateOpenUntil = Time.unscaledTime + GateHold;
                 if (Time.unscaledTime > _gateOpenUntil)
                     return;
             }
 
+            if (Time.unscaledTime - _lastEncoded > EncoderForget)
+                _encoder.Reset();
+            _lastEncoded = Time.unscaledTime;
+
             _number++;
             _packet[0] = (byte)_number;
             _packet[1] = (byte)(_number >> 8);
-            int bytes = NumberBytes + VoiceCodec.Encode(_frame, FrameSamples, _packet, NumberBytes, ref _encoder);
+            int bytes = NumberBytes + _encoder.Encode(_frame, FrameSamples, _packet, NumberBytes);
             var payload = new ArraySegment<byte>(_packet, 0, bytes);
 
-            _lastSent = Time.unscaledTime;
-            // Unreliable: a lost piece is 40 ms of sound, and resending it would only make it late.
-            _net.ClientManager.Broadcast(new VoiceFrame { Payload = payload }, Channel.Unreliable);
-            if (VoiceSettings.HearSelf)
+            if (send)
+            {
+                _lastSent = Time.unscaledTime;
+                // Unreliable: a lost piece is 20 ms of sound the next packet can rebuild, and
+                // resending it would only make it late.
+                _net.ClientManager.Broadcast(new VoiceFrame { Payload = payload }, Channel.Unreliable);
+            }
+
+            if (test)
                 Play(SelfId, payload);
         }
 
@@ -469,7 +603,7 @@ namespace CloseTheDeal.Voice
         static bool LooksLikeVoice(ArraySegment<byte> payload)
         {
             return payload.Array != null
-                && payload.Count > NumberBytes + VoiceCodec.HeaderBytes
+                && payload.Count > NumberBytes
                 && payload.Count <= MaxPacketBytes;
         }
 
@@ -487,18 +621,33 @@ namespace CloseTheDeal.Voice
             byte[] bytes = payload.Array;
             int offset = payload.Offset;
 
-            // Drop a piece that arrives after a newer one, or twice. The subtraction wraps
-            // with the 16-bit number, so "newer" still works when it rolls over.
+            // How many pieces on from the last one this is: 1 is the next in line, 2 means
+            // one was lost, 0 or less is late or a repeat. The subtraction wraps with the
+            // 16-bit number, so it still works when the number rolls over.
             ushort number = (ushort)(bytes[offset] | bytes[offset + 1] << 8);
-            bool stale = Time.unscaledTime - heard.Speaker.LastHeard > NumberForget;
-            if (heard.HasNumber && !stale && (short)(number - heard.LastNumber) <= 0)
+            bool fresh = !heard.HasNumber || Time.unscaledTime - heard.Speaker.LastHeard > NumberForget;
+            int ahead = fresh ? 1 : (short)(number - heard.LastNumber);
+            if (ahead <= 0)
                 return;
             heard.LastNumber = number;
             heard.HasNumber = true;
+            if (fresh)
+                heard.Decoder.Reset();
 
-            int samples = VoiceCodec.Decode(bytes, offset + NumberBytes, payload.Count - NumberBytes, _decoded);
-            if (samples > 0)
-                heard.Speaker.Push(_decoded, samples);
+            int sound = offset + NumberBytes;
+            int soundBytes = payload.Count - NumberBytes;
+
+            // Fill a short gap: carry the voice on through all but the last lost piece, then
+            // rebuild that one from the spare copy this packet carries.
+            int lost = ahead - 1;
+            if (lost > 0 && lost <= MaxFill)
+            {
+                for (int i = 0; i < lost - 1; i++)
+                    heard.Speaker.Push(_decoded, heard.Decoder.Conceal(_decoded, FrameSamples));
+                heard.Speaker.Push(_decoded, heard.Decoder.Decode(bytes, sound, soundBytes, _decoded, FrameSamples, previous: true));
+            }
+
+            heard.Speaker.Push(_decoded, heard.Decoder.Decode(bytes, sound, soundBytes, _decoded, FrameSamples));
         }
 
         Heard SpeakerFor(int speakerId)
@@ -508,7 +657,7 @@ namespace CloseTheDeal.Voice
 
             var go = new GameObject(speakerId == SelfId ? "Voice (own, mic test)" : "Voice (client " + speakerId + ")");
             go.transform.SetParent(transform, false);
-            heard = new Heard { Speaker = go.AddComponent<VoiceSpeaker>() };
+            heard = new Heard { Speaker = go.AddComponent<VoiceSpeaker>(), Decoder = new VoiceDecoder(SampleRate) };
             heard.Speaker.Init(SampleRate, Output(), FullRange, HearRange);
             heard.Speaker.SetSpatial(speakerId != SelfId);
             _heard[speakerId] = heard;

@@ -1,3 +1,4 @@
+using CloseTheDeal.Voice;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,8 +7,13 @@ namespace CloseTheDeal.UI
     /// <summary>
     /// Settings › Audio: one slider per mixer bus (Master, Music, Effects, Voice, Interface) through the sound lane's
     /// UiAudio, a Play test sound button and a live output meter in the right column (the sound lane's UiSoundMeter
-    /// on the listener, added only while this tab shows).
+    /// on the listener, added only while this tab shows). Below the sliders, voice chat: which microphone, how it
+    /// opens, noise suppression, and a mic test that plays the player's own voice back (values in VoiceSettings).
     /// </summary>
+    /// <remarks>
+    /// Modified: Claude Fable 5.2, 2026-11-15, the four voice chat rows (Harvey: "do the delay and mic picker and do
+    /// the settings in the settings menu"). NOT YET REVIEWED BY A HUMAN.
+    /// </remarks>
     [AddComponentMenu("Close the Deal/UI/Settings Page - Audio")]
     public sealed class AudioPage : UiSettingsPage
     {
@@ -19,8 +25,51 @@ namespace CloseTheDeal.UI
         [SerializeField] RectTransform _meterBar;
         [Tooltip("The meter bar's full width in pixels.")]
         [SerializeField] float _meterWidth = 400f;
+        [Tooltip("Voice chat: which microphone to record from. The first choice is the system default.")]
+        [SerializeField] UiStepper _microphone;
+        [Tooltip("Voice chat: open microphone, push to talk, or off.")]
+        [SerializeField] UiStepper _micMode;
+        [Tooltip("Voice chat: clean keyboard, fan and room noise out of the microphone.")]
+        [SerializeField] UiToggle _noise;
+        [Tooltip("Voice chat: play the player's own voice back to them while this tab shows.")]
+        [SerializeField] UiToggle _micTest;
 
         static readonly AudioBus[] Order = { AudioBus.Master, AudioBus.Music, AudioBus.Sfx, AudioBus.Voice, AudioBus.Ui };
+        static readonly string[] ModeNames = { "Open microphone", "Push to talk", "Off" };
+        const string DefaultMicName = "System default";
+
+        /// <summary>Longest microphone name the stepper shows before it is cut with an ellipsis.</summary>
+        const int MicNameLength = 18;
+
+        /// <summary>
+        /// True when this prefab has the voice rows. A settings prefab built before they existed has none, and the
+        /// sliders must still work.
+        /// </summary>
+        bool HasVoice => _microphone != null && _micMode != null && _noise != null && _micTest != null;
+
+        /// <summary>Unity's names for the microphones on offer, in the stepper's order after "System default".</summary>
+        string[] _devices = System.Array.Empty<string>();
+
+        /// <summary>"Microphone (Yeti Classic)" reads as "Yeti Classic": Windows wraps every name the same way.</summary>
+        static string ShortName(string device)
+        {
+            string name = device;
+            int open = name.IndexOf('(');
+            if (open >= 0 && name.EndsWith(")"))
+                name = name.Substring(open + 1, name.Length - open - 2);
+            return name.Length > MicNameLength ? name.Substring(0, MicNameLength - 1).TrimEnd() + "\u2026" : name;
+        }
+
+        /// <summary>Reads the microphones plugged in now and shows the saved choice. A saved one that is unplugged shows as the default.</summary>
+        void ShowMicrophones()
+        {
+            _devices = Microphone.devices;
+            var names = new string[_devices.Length + 1];
+            names[0] = DefaultMicName;
+            for (int i = 0; i < _devices.Length; i++)
+                names[i + 1] = ShortName(_devices[i]);
+            _microphone.SetOptions(names, System.Array.IndexOf(_devices, VoiceSettings.Device) + 1);
+        }
 
         /// <summary>The row's own name, as the player reads it beside the slider.</summary>
         static string RowName(Component control)
@@ -53,6 +102,14 @@ namespace CloseTheDeal.UI
             _test.ConfirmSound = UiSoundEvent.None;   // its answer is the test sound; a Confirm in the same frame masks it
             _test.Clicked += OnTest;
             AttachMeter();
+            if (HasVoice)
+            {
+                _micMode.SetOptions(ModeNames, (int)VoiceSettings.Mode);
+                _microphone.Changed += OnMicrophone;
+                _micMode.Changed += OnMicMode;
+                _noise.Changed += OnNoise;
+                _micTest.Changed += OnMicTest;
+            }
         }
 
         void OnDisable()
@@ -61,6 +118,15 @@ namespace CloseTheDeal.UI
                 _buses[i].Changed -= _handlers[i];
             _test.Clicked -= OnTest;
             DetachMeter();
+            if (HasVoice)
+            {
+                _microphone.Changed -= OnMicrophone;
+                _micMode.Changed -= OnMicMode;
+                _noise.Changed -= OnNoise;
+                _micTest.Changed -= OnMicTest;
+            }
+
+            VoiceSettings.HearSelf = false;
         }
 
         public override void ShowSaved()
@@ -69,7 +135,16 @@ namespace CloseTheDeal.UI
             AttachMeter();
             for (int i = 0; i < _buses.Length; i++)
                 _buses[i].SetDisplayWithoutNotify(Mathf.RoundToInt(UiAudio.Get(Order[i]) * 20f) * 5);
+            if (!HasVoice)
+                return;
+            ShowMicrophones();
+            _micMode.SetWithoutNotify((int)VoiceSettings.Mode);
+            _noise.SetWithoutNotify(VoiceSettings.NoiseSuppression);
+            _micTest.SetWithoutNotify(VoiceSettings.HearSelf);
         }
+
+        /// <summary>Nine rows fill the page, as on Controls: there is no room for the changes summary under them.</summary>
+        public override bool ShowsChanges => !HasVoice;
 
         public override bool AtDefaults
         {
@@ -81,7 +156,7 @@ namespace CloseTheDeal.UI
                         return false;
                 }
 
-                return true;
+                return VoiceSettings.AtDefaults;
             }
         }
 
@@ -89,10 +164,18 @@ namespace CloseTheDeal.UI
         {
             for (int i = 0; i < Order.Length; i++)
                 UiAudio.SetVolume(Order[i], UiAudio.DefaultOf(Order[i]));
+            VoiceSettings.ResetToDefaults();
             ShowSaved();
         }
 
-        public override void Hidden() => DetachMeter();
+        public override void Hidden()
+        {
+            DetachMeter();
+            // The mic test ends with the tab, so nobody walks off still hearing themselves.
+            VoiceSettings.HearSelf = false;
+            if (HasVoice)
+                _micTest.SetWithoutNotify(false);
+        }
 
         public override void DescribeChanges(System.Collections.Generic.List<string> lines)
         {
@@ -124,6 +207,27 @@ namespace CloseTheDeal.UI
         }
 
         void OnTest() => UiSound.Play(UiSoundEvent.Notification);
+
+        void OnMicrophone(int index)
+        {
+            VoiceSettings.Device = index <= 0 || index > _devices.Length ? string.Empty : _devices[index - 1];
+            RaiseSaved();
+        }
+
+        void OnMicMode(int index)
+        {
+            VoiceSettings.Mode = (MicMode)index;
+            RaiseSaved();
+        }
+
+        void OnNoise(bool on)
+        {
+            VoiceSettings.NoiseSuppression = on;
+            RaiseSaved();
+        }
+
+        // Not saved: the test is only for while this tab is open.
+        void OnMicTest(bool on) => VoiceSettings.HearSelf = on;
 
         void AttachMeter()
         {

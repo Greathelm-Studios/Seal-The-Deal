@@ -29,6 +29,7 @@ namespace CloseTheDeal.Editor.UI
         {
             ("Jump", null), ("Sprint", null), ("Crouch", null), ("Attack", null),
             ("AltFire", null), ("Reload", null), ("Lean", "negative"), ("Lean", "positive"),
+            ("Voice", null),
         };
 
         internal static GameObject Build()
@@ -200,7 +201,7 @@ namespace CloseTheDeal.Editor.UI
             rect.pivot = new Vector2(1f, 0.5f);
             rect.anchoredPosition = new Vector2(-12f, 0f);
             if (control is UiStepper)
-                rect.sizeDelta = new Vector2(300f, rect.sizeDelta.y); // room for "Borderless window" and resolutions
+                WidenStepper(rect, 300f); // room for "Borderless window", resolutions and microphone names
 
             UiControlFx fx = control is UiControl c ? c.Fx : ((UiSlider)(Component)control).Fx;
             fx.RowHighlight = highlight;
@@ -212,6 +213,24 @@ namespace CloseTheDeal.Editor.UI
             EditorUtility.SetDirty(control);
             y += height;
             return control;
+        }
+
+        /// <summary>
+        /// Makes a row's stepper wider than the kit's and moves its right arrow, and the arrow's click zone, out to
+        /// the new right edge. The kit places both from the left, so on a widened stepper they sat under the end of a
+        /// long choice ("Borderless window", "System default").
+        /// </summary>
+        static void WidenStepper(RectTransform stepper, float width)
+        {
+            float added = width - stepper.sizeDelta.x;
+            stepper.sizeDelta = new Vector2(width, stepper.sizeDelta.y);
+            foreach (RectTransform part in stepper.GetComponentsInChildren<RectTransform>(true))
+            {
+                if (part.name != "Next" && part.name != "NextZone")
+                    continue;
+                part.anchoredPosition += new Vector2(added, 0f);
+                EditorUtility.SetDirty(part);
+            }
         }
 
         static void Wire(UiSettingsPage page, string title, Selectable[] rows)
@@ -373,7 +392,7 @@ namespace CloseTheDeal.Editor.UI
                 "Everything the game plays.",
                 "The soundtrack.",
                 "Guns, blasts, glass, furniture and footsteps.",
-                "The secretary and other voices.",
+                "Other players' voices in voice chat, and the secretary.",
                 "Menu and interface sounds.",
             };
             var sliders = new UiSlider[names.Length];
@@ -391,12 +410,26 @@ namespace CloseTheDeal.Editor.UI
             SetLabel(test, "Play test sound");
             test.Description = "Plays one interface sound through every level above.";
 
-            var rows = new List<Selectable>(sliders) { test };
+            // Voice chat, under the volumes. Nine rows in all: the page hides its changes summary to make room.
+            UiStepper microphone = Row<UiStepper>(pageRoot, UiKitComponents.Stepper, "Microphone", "Microphone", ref y,
+                "The microphone voice chat records from. System default follows the one Windows is set to.");
+            UiStepper micMode = Row<UiStepper>(pageRoot, UiKitComponents.Stepper, "MicMode", "Microphone mode", ref y,
+                "Open microphone: always on, and the voice key mutes it. Push to talk: on only while the voice key is held. Off: nobody hears you.");
+            UiToggle noise = Row<UiToggle>(pageRoot, UiKitComponents.Toggle, "NoiseSuppression", "Noise suppression", ref y,
+                "Takes keyboard, fan and room noise out of your voice before other players hear it.");
+            UiToggle micTest = Row<UiToggle>(pageRoot, UiKitComponents.Toggle, "MicTest", "Hear my own voice", ref y,
+                "Plays your voice back as other players hear it, to check your microphone. Use headphones. It switches off when you leave this tab.");
+
+            var rows = new List<Selectable>(sliders) { microphone, micMode, noise, micTest, test };
             var page = pageRoot.gameObject.AddComponent<AudioPage>();
             Wire(page, "Audio", rows.ToArray());
             SetArray(page, "_buses", sliders);
             Set(page, "_test", test);
             Set(page, "_meterBar", bar);
+            Set(page, "_microphone", microphone);
+            Set(page, "_micMode", micMode);
+            Set(page, "_noise", noise);
+            Set(page, "_micTest", micTest);
             return page;
         }
 
