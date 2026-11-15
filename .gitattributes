@@ -50,3 +50,5 @@ tools/git-hooks/* text eol=lf
 *.cubemap  filter=lfs diff=lfs merge=lfs -text
 *.unitypackage filter=lfs diff=lfs merge=lfs -text
 LightingData.asset filter=lfs diff=lfs merge=lfs -text
+# Substance 3D Painter projects (ArtSource/Kit/trim/painter/Trim_Aero.spp)
+*.spp filter=lfs diff=lfs merge=lfs -text

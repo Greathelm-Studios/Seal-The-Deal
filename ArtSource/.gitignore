@@ -4,3 +4,9 @@
 *.build.json
 Kit/build/
 Kit/export/
+# The trim sheet's bake inputs and generated fill swatches (ArtSource/Kit/trim/README.md rebuilds them). The Painter
+# export stays tracked: KitImport.cs copies the trim maps from it, like the kit's textures/ folder.
+Kit/trim/build/*
+!Kit/trim/build/export/
+Kit/trim/painter/swatches/
+*.painter_lock
