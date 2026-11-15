@@ -69,3 +69,9 @@ steam_appid.txt
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Art source tool leftovers: Python caches, render caches and tool logs
+__pycache__/
+*.pyc
+/ArtSource/**/cache/
+/ArtSource/**/*.log

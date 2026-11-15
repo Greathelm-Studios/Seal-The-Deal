@@ -5,6 +5,8 @@
 //  Prompt    : Alex: "make the dummy and arsenal section be on the ceiling. to access it, you
 //              should [take] an elevator"; "open rooftop"; "what could be funny is if added a pool";
 //              "tell the elevator chat to start building the roof"
+//  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-14 — the HitDummy and its roof mirror move up only
+//              once the lift is in the scene, so a rebuild cannot strand the dummy on an unreachable roof.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Dresses KitOffice's roof as the open-air test range and wires the lift's script. Its own
 //              file, not a method in KitOfficeScene, because another session holds that file while it
@@ -28,8 +30,8 @@ namespace CloseTheDeal.Editor.Art
     /// <remarks>
     /// <para>The roof has nothing overhead: Alex asked for an open roof so the sky box shows.</para>
     /// <para>Everything it makes sits under one "Roof range" group, which it deletes and rebuilds; it touches
-    /// nothing else in the scene except the HitDummy instance, which it moves (agreed with the hit-reaction
-    /// session: nothing reads the dummy's position). Kit pieces that are not modelled yet (the pool, the lift)
+    /// nothing else in the scene except the HitDummy instance, which it moves once the lift exists (agreed with
+    /// the hit-reaction session: nothing reads the dummy's position). Kit pieces that are not modelled yet (the pool, the lift)
     /// are skipped with a line in the report, so the roof can be built before they exist.</para>
     /// <para>Layout and the reasons for each distance: docs/systems/ELEVATOR.md.</para>
     /// </remarks>
@@ -80,6 +82,26 @@ namespace CloseTheDeal.Editor.Art
         static readonly Vector3 BayCorner = new Vector3(7f, 0f, -16f);
         /// <summary>Bay size, metres, as the weapons session asked.</summary>
         const float BayWidth = 8f, BayDepth = 6f;
+
+        const string ArsenalFolder = "Assets/_Project/Prefabs/Arsenal";
+        /// <summary>Centres of the three Storage_Low display counters along the rack wall, bay-local metres (each is 1.6 long).</summary>
+        static readonly float[] RackCentres = { 2f, 4f, 6f };
+        /// <summary>Counter centre to the rack wall's face, metres: half of Storage_Low's 0.45 depth plus a 0.075 gap.</summary>
+        const float RackOffWall = 0.3f;
+        /// <summary>Top of Storage_Low, metres (kit_pieces STORE_H).</summary>
+        const float RackTop = 1f;
+        /// <summary>Weapons rest this far above the counter top, metres, so they do not z-fight with it.</summary>
+        const float WeaponClearance = 0.005f;
+        /// <summary>
+        /// Stand-in weapons on the counters: (prefab, x along the wall in bay-local metres, half its resting
+        /// thickness in metres, laid flat). Sizes as the weapon-assets session measured them, 2026-11-14. Display
+        /// only: no physics and no pickup until the pickup question is answered.
+        /// </summary>
+        static readonly (string prefab, float x, float halfThickness, bool flat)[] Weapons =
+        {
+            ("Arsenal_Pistol", 1.7f, 0.0275f, true), ("Arsenal_Grenade", 2.3f, 0.05f, false),
+            ("Arsenal_Rifle", 4f, 0.0545f, true), ("Arsenal_Launcher", 6f, 0.086f, true),
+        };
 
         // ---- Pool: north-west of the roof.
         /// <summary>Pool piece pivot (its front-left corner), roof-local metres: an 8 × 4 m pool clear of everything else.</summary>
@@ -146,10 +168,14 @@ namespace CloseTheDeal.Editor.Art
             roof.localPosition = new Vector3(0f, RoofHeight, 0f);
 
             int placed = Edges(roof);
-            placed += ArsenalBay(roof);
+            placed += ArsenalBay(roof, report);
             placed += Pool(roof, report);
             placed += LooseProps(roof, report);
-            Dummy(roof, report);
+            // WHY the dummy waits for the lift: without the lift nothing but a fly camera reaches the roof, and a
+            // dummy up there could not be hit or judged in play. Until the kit's "Lift" group is in the scene the
+            // dummy stays where KitOfficeScene put it, on the upper floor.
+            if (office.Find(LiftGroupName + "/" + CarName) != null) Dummy(roof, report);
+            else report.Append("HitDummy left on the upper floor: there is no lift to reach the roof yet. ");
             report.Append(placed).Append(" pieces on the roof. ");
             WireLift(office, report);
             return report.ToString();
@@ -182,16 +208,37 @@ namespace CloseTheDeal.Editor.Art
         }
 
         /// <summary>The weapons session's reserved bay: a rack wall along its south side and an empty hook to place into.</summary>
-        static int ArsenalBay(Transform roof)
+        static int ArsenalBay(Transform roof, StringBuilder report)
         {
-            // WHY empty: no weapon pickups exist yet. The weapons session parents its racks to "ArsenalBay",
-            // whose origin is the bay's north-west corner, +X along the rack wall, firing line on its east edge.
+            // "ArsenalBay" is the weapons sessions' hook: its origin is the bay's north-west corner, +X along the
+            // rack wall, firing line on its east edge.
             var bay = Group(roof, "ArsenalBay");
             bay.localPosition = BayCorner;
             var wall = Group(roof, "Arsenal rack wall");
             int count = 0;
             for (float x = 0f; x < BayWidth; x += Cell, count++)
                 Kit(wall, "Partition_Header_4m", BayCorner.x + x, BayCorner.z - BayDepth, 0f);
+
+            // Display counters against the rack wall, fronts toward the bay (+Z), with the stand-in weapons on top.
+            foreach (float x in RackCentres)
+            {
+                Kit(bay, "Storage_Low", x, -BayDepth + RackOffWall, 0f);
+                count++;
+            }
+            foreach (var (name, x, halfThickness, flat) in Weapons)
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{ArsenalFolder}/{name}.prefab");
+                if (prefab == null)
+                {
+                    report.Append("Weapon ").Append(name).Append(" missing, skipped. ");
+                    continue;
+                }
+                var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, bay);
+                go.transform.localPosition = new Vector3(x, RackTop + halfThickness + WeaponClearance, -BayDepth + RackOffWall);
+                // Laid on its side with the muzzle along the wall (+X); a grenade just stands.
+                go.transform.localRotation = flat ? Quaternion.Euler(0f, 90f, 0f) * Quaternion.Euler(0f, 0f, 90f) : Quaternion.identity;
+                count++;
+            }
             return count;
         }
 

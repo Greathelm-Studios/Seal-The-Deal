@@ -183,5 +183,24 @@ namespace CloseTheDeal.Player
 
         [Tooltip("How far the gun rolls onto its side at the deepest point of the reload, in degrees.")]
         [Range(0f, 90f)] public float ReloadRoll = 25f;
+
+        [Header("Body view (looking out of the real body)")]
+        [Tooltip("How much of the head QUICK movement the eye takes in the body view: the bob of each step and the jolt of a hit. 0 = none, a gliding eye (most comfortable); 1 = all of it (most likely to make people feel sick). Slow movement, like leaning into a run or looking at the floor, is always followed in full.")]
+        [Range(0f, 1f)] public float BodyViewHeadFollow = 0.2f;
+
+        [Tooltip("How long the eye takes to settle onto where the head has moved to in the body view, in seconds. Higher = steadier and floatier, but the body can get ahead of the eye when you start to sprint; lower = tighter and shakier.")]
+        [Range(0.01f, 0.5f)] public float BodyViewSmoothing = 0.12f;
+
+        [Tooltip("How far in front of the head bone the eye sits in the body view, in metres: where the face is. Raise it if you can see inside your own collar or shoulders; lower it if your arms look too short.")]
+        [Range(0f, 0.3f)] public float BodyViewForward = 0.07f;
+
+        [Tooltip("The most quick head movement the eye may take in the body view, in metres, before the share above is applied. A cap so a hard hit cannot throw the view about.")]
+        [Range(0f, 0.5f)] public float BodyViewMaxOffset = 0.15f;
+
+        [Tooltip("Where the gun is held in the body view, measured from where the usual view frames it, in metres: X right (negative = toward the middle of the screen), Y up, Z further out. Raise Y to bring the arm up into view; the arm cannot reach further than its own length, so a large Z only straightens it.")]
+        public Vector3 BodyViewGunShift = new Vector3(-0.04f, 0.07f, 0.04f);
+
+        [Tooltip("In the body view, anything of a character within this distance of the middle of your own head, in metres, is not drawn on your own screen: your head and hair. Raise it if hair pokes into view; lower it if your own shoulder or sleeve gets cut away. Mirrors, shadows and other players always see the whole body.")]
+        [Range(0f, 0.5f)] public float BodyViewHeadClip = 0.22f;
     }
 }

@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ec6cb1548daac84696ac66c4f25efd5, type: 3}
+  m_Name: BloodProfile
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Effects.BloodProfile
+  BloodColor: {r: 0.66, g: 0.07, b: 0.15, a: 1}
+  CutColor: {r: 0.33, g: 0.05, b: 0.17, a: 1}
+  BaseSize: 0.8
+  ReferenceImpulse: 20
+  MaxSize: 2
+  SizeVariation: 0.25
+  Depth: 0.7
+  BulletSplats: 2
+  MeleeSplats: 4
+  ExtraSplatsPer100Impulse: 1
+  MaxSplatsPerHit: 8
+  BulletCone: 10
+  MeleeCone: 35
+  ConeBonusPer100Impulse: 5
+  Reach: 3.5
+  BulletStretch: 0.85
+  MeleeStretch: 0.6
+  FloorSize: 0.8
+  FloorReach: 3
+  Lifetime: 10
+  ShrinkTime: 1.5
+  PopTime: 0.14
+  PopOvershoot: 0.25
+  MaxLiveSplats: 48

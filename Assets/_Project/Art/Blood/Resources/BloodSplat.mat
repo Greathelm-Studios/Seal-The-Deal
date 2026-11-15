@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: BloodSplat
+  m_Shader: {fileID: 4800000, guid: c57f537c831a6744f905aaf1be599b87, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _AngleCut: 0.3
+    - _CutSize: 0.09
+    - _RimWidth: 0.025
+    m_Colors:
+    - _Color: {r: 0.66, g: 0.07, b: 0.15, a: 1}
+    - _CutColor: {r: 0.33, g: 0.05, b: 0.17, a: 1}
+    - _Params: {r: 1, g: 0, b: 0.5, a: 1}
+    - _RimColor: {r: 0.07, g: 0.11, b: 0.22, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

@@ -4,6 +4,11 @@
 //  Generated : 2026-11-11
 //  Prompt    : Alex: "do what you recommend, as long as it fits the art direction and that
 //              2000s corporate future aesthetic" (recommendation: soft building, graphic people)
+//  Modified  : Claude Fable 5.2, 2026-11-15 — the base and contour passes mark stencil bit 8 so
+//              blood splats skip characters (Harvey: "Exclude them too").
+//  Modified  : Claude Fable 5.2, 2026-11-15 — a per-camera near clip, so the body view can hide
+//              a player's own head from their own eye only (Harvey, shown his headless
+//              reflection: "Well this definitely cant happen").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : The character half of the art bible's lighting formula, "soft world light + hard
 //              character value breaks" (bible §04, §05). Characters need a different lighting
@@ -68,6 +73,32 @@ Shader "Close the Deal/Character Toon"
         TEXTURE2D(_BaseMap);
         SAMPLER(sampler_BaseMap);
 
+        // Set per camera by PlayerViewmodel while the body view is on: for the camera a player
+        // looks out of their own body with, fragments nearer the eye than this many metres are
+        // not drawn, which hides that player's own head, hair and collar from that one camera.
+        // 0 for every other camera, so mirrors, other players and shadows keep the whole body.
+        // A global, not a material property, so it stays outside UnityPerMaterial.
+        float _BodyViewNearClip;
+        // How far behind that camera the middle of the head is, metres. Set with the above.
+        float _BodyViewClipBack;
+
+        // Skips what is inside a ball of radius _BodyViewNearClip around the middle of the
+        // owner's head. WHY a ball and not "everything nearer than a distance", which the first
+        // version did: a flat cut also sliced through the owner's own shoulder and sleeve,
+        // which sit beside the eye, and left the arm with an open end (Harvey: "It got worse").
+        // The ball covers the head and hair and stops short of the shoulders.
+        void ClipNearOwnEye(float4 positionCS)
+        {
+            // Where this pixel is, measured from the camera: sideways from its place on the
+            // screen and its depth (SV_POSITION.w is the distance along the view, in metres).
+            // abs() because only the distance matters, which also makes the screen's up-or-down
+            // convention irrelevant.
+            float2 fromCentre = abs(positionCS.xy / _ScaledScreenParams.xy * 2.0 - 1.0);
+            float2 sideways = fromCentre * positionCS.w / float2(UNITY_MATRIX_P[0][0], abs(UNITY_MATRIX_P[1][1]));
+            float ahead = positionCS.w + _BodyViewClipBack;
+            clip(dot(sideways, sideways) + ahead * ahead - _BodyViewNearClip * _BodyViewNearClip);
+        }
+
         // WHY one block shared by every pass: the SRP Batcher only batches a shader whose passes
         // all declare the same UnityPerMaterial layout.
         CBUFFER_START(UnityPerMaterial)
@@ -93,6 +124,10 @@ Shader "Close the Deal/Character Toon"
         {
             Name "ForwardLit"
             Tags { "LightMode" = "UniversalForward" }
+            // Marks every pixel a character covers, so the blood splat shader can skip them
+            // (BloodSplat.shader tests the same bit). Bit 8 is one of the four URP leaves to
+            // projects; nothing else in the game uses it.
+            Stencil { Ref 8 WriteMask 8 Comp Always Pass Replace }
 
             HLSLPROGRAM
             #pragma vertex Vert
@@ -166,6 +201,7 @@ Shader "Close the Deal/Character Toon"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                ClipNearOwnEye(input.positionCS);
 
                 half3 normalWS = normalize(input.normalWS);
                 half3 viewDirWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
@@ -247,6 +283,8 @@ Shader "Close the Deal/Character Toon"
             // WHY this tag: URP's opaque pass draws SRPDefaultUnlit alongside UniversalForward,
             // which gives a second pass with no renderer feature.
             Tags { "LightMode" = "SRPDefaultUnlit" }
+            // Same mark as the base pass, so the contour's rim is not painted either.
+            Stencil { Ref 8 WriteMask 8 Comp Always Pass Replace }
             Cull Front
 
             HLSLPROGRAM
@@ -325,6 +363,7 @@ Shader "Close the Deal/Character Toon"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                ClipNearOwnEye(input.positionCS);
                 return half4(MixFog(_OutlineColor.rgb, input.fogFactor), 1);
             }
             ENDHLSL
@@ -431,6 +470,7 @@ Shader "Close the Deal/Character Toon"
 
             half4 Frag(Varyings input) : SV_Target
             {
+                ClipNearOwnEye(input.positionCS);
                 return input.positionCS.z;
             }
             ENDHLSL
@@ -476,6 +516,7 @@ Shader "Close the Deal/Character Toon"
 
             half4 Frag(Varyings input) : SV_Target
             {
+                ClipNearOwnEye(input.positionCS);
                 // Same two encodings as URP's own depth-normals pass (UnlitDepthNormalsPass.hlsl).
                 #if defined(_GBUFFER_NORMALS_OCT)
                     float3 normalWS = normalize(input.normalWS);
