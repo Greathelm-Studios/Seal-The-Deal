@@ -29,6 +29,17 @@ The bible text is at [art_bible.txt](../../ArtSource/Kit/concepts/Office/refs/ar
 - Face: [Character eyes](CHARACTER_EYES.md) owns the head-mounted eye cards, their alpha-clipped shader and the artist texture layout.
 - Review renders: [ArtSource/Toon/review/](../../ArtSource/Toon/review/) includes the capsule stand-in and the rigged STDMC front, back and 12 m views.
 
+## Stencil mark
+
+The base and contour passes set stencil bit 8 on every pixel a character covers (added 2026-11-15).
+The blood splat shader reads it to leave characters unpainted ([BLOOD.md](BLOOD.md)).
+Bit 8 is one of the four bits URP leaves to projects; any other effect that wants "is this pixel a character" can test the same bit.
+
+## Near clip for the body view
+
+Every pass except the shadow pass skips fragments inside a ball of radius `_BodyViewNearClip`, centred `_BodyViewClipBack` metres behind the camera (two globals, added 2026-11-15; the eye-card shader does the same).
+It is 0 for every camera except the one a player looks out of their own body with, in the body view ([VIEWMODEL.md](VIEWMODEL.md)), so it changes nothing anywhere else.
+
 ## Tuning a material
 
 | Inspector value | What it does |

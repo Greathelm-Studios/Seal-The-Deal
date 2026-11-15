@@ -50,7 +50,6 @@ Captures for review (shared notes folder of this session group, `shooting-lane-c
 - **Held gun:** `WeaponView`'s "Draw Held Gun" turns off the first-person gun so Alex's `PlayerViewmodel` can show it; other players still see `WeaponView`'s gun on the body. Left **on** by default until Adam decides which owns the held gun. Alex's weapons session has the event list.
 - **Not built yet:** the combat HUD itself; it waits on lane 5's UI foundation.
 - Lane 3 fixed "taking a gun fires a dropped event" in `Pickup.cs` on its branch.
-- Movement is removing `PlayerMotor`'s test blast; once merged, delete `Profiles/Weapons/NoTestBlast.asset` and its lines in `ShootingLaneSetup.PatchPlayerPrefab`.
 
 ## Combat HUD (2026-11-14, not seen yet)
 
@@ -59,12 +58,23 @@ Captures for review (shared notes folder of this session group, `shooting-lane-c
 - The capture's sound check saw 0 UI sound requests: not yet explained (maybe `UiSound.Played` only fires once a player is registered). Check before claiming sounds.
 - Gun sounds drafted, not in the project yet: `CombatSoundSet` + `CombatSounds` in the session scratchpad; lane 9's clips are on claude/lane-ui-sound (259535f), not in buffer yet.
 
+## Next step for Adam to approve: the arms viewmodel draws the gun
+
+Not built: the owner said no more gameplay or mechanics work for now. Harvey's `PlayerViewmodel` (in `buffer` since the harvey-netcode merge) is not on `Player.prefab` yet. To hand it the gun, add-only:
+
+1. **Put it on the player:** run Harvey's `Close the Deal > Greybox > Rebuild Viewmodel` / the greybox tool's add-only path so `Player.prefab` gains `PlayerViewmodel` (it adds `PlayerHeldWeapon` to Graphics at spawn). Don't commit a prefab rewritten by any tool that drops other lanes' components.
+2. **Turn this lane's gun models off:** on `Player.prefab`'s `WeaponView`, untick **Draw Held Gun** (first person). Harvey's layer also draws the body gun, so `WeaponView` needs a second switch, "Draw Body Gun", added (about 5 lines in `OnWeaponChanged`/`ShouldDraw`). Tracers, impacts and the view's kick, shake and FOV punch stay with `WeaponView`.
+3. **Wire the events (about 15 lines, a new `ViewmodelBridge` on the player root, every machine):** `PlayerViewmodel.Driven = true` once; `WeaponHolder.WeaponChanged` → `PlayerViewmodel.Equip(new WeaponHold(model, gripPos, gripRot, supportPos, supportRot, twoHanded))` then `WeaponView.SetExternalMuzzle(PlayerViewmodel.Muzzle)`; `Fired` with `Predicted` → `Fire()`; `ReloadStarted(seconds)` → `Reload(seconds)`; `ReloadCancelled` → `CancelReload()`.
+4. **Seats per gun:** add to `WeaponDefinition` `GripSeat`/`GripEuler`, `SupportSeat`/`SupportEuler`, `TwoHanded` (metres and degrees in the ViewPrefab's space; +Z where the fingers point). Pistol starting values are on Harvey's arms prefab (grip (0.03, 0.005, −0.055) turned (−6, −4, 0); support (−0.04, −0.02, −0.045) turned (−12, 28, 0)); the AR-15's need setting by eye.
+5. **ViewPrefab rules Harvey's layer assumes:** muzzle along +Z, pivot at the middle of the grip, real-world scale, a `Muzzle` child, no colliders or scripts. This lane's greybox gun prefabs have a `Muzzle` and no colliders, but their pivot is at the body's centre, not the grip: re-pivot them or replace them with real models.
+
+Verify when it is built: host and a client each see the same gun in the hand after a switch; the tracer leaves the arms model's muzzle; a reload plays the arms' dip for the reload's time; carrying a chair puts the gun away in both views.
+
 ## Open questions and risks
 
 - **Feel target, for Adam to confirm** (the orchestrator's reading of "the movement needs to feel like STRAFTAT and high mobility good gun play"): first shot on the crosshair; recoil a fixed, learnable pattern rather than random bloom; running and jumping barely cost accuracy; fast time-to-kill (pistol 3 hits, AR-15 5 hits); instant feedback with a host-confirmed hit and a separate kill confirm; quick draw (0.2 / 0.3 s) and reload (1.1 / 1.7 s). Numbers are starting points on the gun assets.
 - **GDD mismatch:** [GDD.md](GDD.md) still says combat "should feel chaotic rather than precise" and calls the rifle the reliable gun. Built to Adam's newer words; the GDD needs his edit (not changed here).
 - **Owner decisions newer than the GDD** this lane follows: teams are rival firms; window glass breaks (the GDD and TOWER.md say there is no glass in the bays).
-- **Workaround:** PlayerMotor's left-click test blast shares the fire button, so Set Up Shooting points the motor at `Profiles/Weapons/NoTestBlast.asset` (a blast that does nothing) and clears its two blast masks. The real fix is in the movement lane: take the test blast out of `PlayerMotor`. Then delete that asset.
 - **Muzzle light cost unmeasured:** every shot lights a real-time point light for 0.03–0.04 s; eight players on full auto may hit URP's per-object light limit. Profile in a 4v4 build; if it costs, keep the light on the shooter's own gun only.
 - **Release risk carried:** favour-the-shooter means a target can be hit up to 0.25 s after reaching cover on a laggy shooter's screen. That is the price of fair hits on fast targets.
 

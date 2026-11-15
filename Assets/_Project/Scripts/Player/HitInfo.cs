@@ -22,7 +22,9 @@ namespace CloseTheDeal.Player
         /// <summary>A thrown or flying object (a chair, a desk): a heavy push at one point.</summary>
         ThrownProp = 1,
         /// <summary>An explosion: a push on the whole body, away from the blast's centre.</summary>
-        Blast = 2
+        Blast = 2,
+        /// <summary>A swing with a held weapon or a fist: a heavy push at one point, from close by.</summary>
+        Melee = 3
     }
 
     /// <summary>

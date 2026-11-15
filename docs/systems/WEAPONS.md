@@ -154,7 +154,7 @@ All of these are on the local player's own `WeaponHolder` and `Health` (find the
 
 ## Sounds the guns still need
 
-**Nothing plays a sound yet.** Every sound below has its event; a sound pass only has to listen. Timings are from the event. The three UI sounds come from the UI sound set (lane 9); every gun, reload, impact and glass sound is for a later weapons sound pass.
+**Wired, not yet heard by anyone.** `CombatSounds` on the player plays every sound below from its event, through `Profiles/Weapons/CombatSounds.asset` (shared sounds and the mixer's Master/SFX bus) and each gun's own Sounds slots; Set Up Shooting fills empty slots from lane 9's synthesised clips in `Assets/_Project/Audio/Weapons/`. Shots and impacts vary their pitch by 3 %. Timings are from the event. The three UI sounds come from the UI sound set (lane 9); every gun, reload, impact and glass sound is for a later weapons sound pass.
 
 | Sound | Event | When | Notes |
 |---|---|---|---|
@@ -187,10 +187,10 @@ Defined in code in `WeaponHolder.WeaponInput`, not in the shared actions asset, 
 
 | Action | Binding |
 |---|---|
-| Fire | `<Mouse>/leftButton` |
-| Reload | `<Keyboard>/r` |
-| Weapon Slot 1 | `<Keyboard>/1` |
-| Weapon Slot 2 | `<Keyboard>/2` |
+| Fire | `<Mouse>/leftButton`, `<Gamepad>/rightTrigger` |
+| Reload | `<Keyboard>/r`, `<Gamepad>/buttonNorth` (Y) |
+| Weapon Slot 1 | `<Keyboard>/1`, `<Gamepad>/dpad/left` |
+| Weapon Slot 2 | `<Keyboard>/2`, `<Gamepad>/dpad/right` |
 
 ## Scripts
 
@@ -216,7 +216,6 @@ Set-up is one editor file, [ShootingLaneSetup.cs](../../Assets/_Project/Editor/L
 - **No ragdoll.** A dead body is the capsule tipped flat and thrown; `Health.Died` carries the impulse a ragdoll would use.
 - **Ammo is endless**: a reload always fills the magazine. No reserve ammo exists; that is a design question.
 - **Friendly fire is on.** Firms exist now (`FirmMember.Firm`), but whether a teammate's shot hurts is Adam's decision; until then every shot hurts everyone.
-- **The left-click test blast in `PlayerMotor` is switched off by the set-up menu**, by pointing the motor at a blast profile that does nothing (`Profiles/Weapons/NoTestBlast.asset`) and clearing its two blast masks, because it shares the fire button. It is a workaround: the real fix is for the movement lane to remove the test blast from `PlayerMotor`. Until explosives exist, locked doors are broken with bullets instead (`DoorDamage`, 300 damage by default).
 - **Respawn is "last place this player stood on the ground"**, sampled four times a second, not a spawn point on the floor. A player killed after falling to the street respawns in the street. Window exits don't yet go to a checkpoint (no checkpoints exist).
 - **A dead player can still look around**, and their body still blocks others until it respawns.
 - **Lag allowance trusts the shooter's reported view tick**, capped at 0.25 s. A cheating client could always claim the cap; acceptable for a friends-only game. What a client can't do: start a shot behind a wall or a locked door (the host checks it can see the claimed eye position), choose its spread (each shot's number must follow the last), or hit a player at their corpse (rewound ticks before a respawn are ignored).
@@ -226,4 +225,5 @@ Set-up is one editor file, [ShootingLaneSetup.cs](../../Assets/_Project/Editor/L
 - **Tuned on paper and against dummies, not in a playtest.** Every number above is a starting point on the gun assets.
 - Bullets don't push furniture.
 - **Fair hits on fast players are measured on dummies, not on sprinting players.** The one-tick favour was measured on the transform-synced dummies; players arrive through prediction and may sit at a different delay (see the handover).
-- **No sound at all.** Every event a gunshot, hit, kill or glass sound needs exists; nothing plays yet. This is what most makes the shooting read as a demo.
+- **The sounds are synthesised stand-ins nobody has heard.** Judge them by ear (lane 9's audition page, `ArtSource/UI/review/10_sound_audition.html`); synthesised gunshots are the least certain of the set.
+- **A modified client can still aim around its own spread**: each shot's spread comes from its number and the owner's id, which the owner knows, so it can pre-correct its aim. Closing that needs a host-only salt and the host sending the spread back, at the cost of the owner's tracer matching the host's at once. A design trade-off, left as it is.

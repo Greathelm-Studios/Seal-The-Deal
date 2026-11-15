@@ -83,7 +83,11 @@ namespace CloseTheDeal.UI
             foreach (BindingRow row in _bindings)
             {
                 if (row.Button != null)
+                {
+                    // A key cell answers with KeyBindListen; a Confirm in the same frame would mask it.
+                    row.Button.ConfirmSound = UiSoundEvent.None;
                     row.Button.Clicked += row.Listen ??= () => StartListening(row);
+                }
             }
         }
 
@@ -367,7 +371,7 @@ namespace CloseTheDeal.UI
             string otherName = NameOfAction(other.name, other.bindings[otherIndex].name);
             _status.Set(key + " is already used for " + otherName + ".", UiStatusKind.Refusal);
             UiSound.Play(UiSoundEvent.Error);
-            _dialog.Configure(key + " is already used for " + otherName + ".", "Assigning it here clears it there.", "Assign", "Cancel", AssignAnyway, CancelClash);
+            _dialog.Configure(key + " is already used for " + otherName + ".", "Assigning it here clears it there.", "Assign", "Cancel", AssignAnyway, CancelClash, UiSoundEvent.None); // Assign answers with KeyBindSet
             GetComponentInParent<UiScreen>().Stack.Push(_dialog);
         }
 

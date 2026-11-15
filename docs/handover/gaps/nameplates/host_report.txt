@@ -1,0 +1,37 @@
+ROLE host: hosting; a second copy joins late as the client. Profile at /private/tmp/claude-501/-Users-adamf-Documents-GitHub-Seal-The-Deal--claude-worktrees-lane-gaps-5e5605/35fa725e-fd0a-4c37-8a2b-6871411d7903/scratchpad/runs/hc/host_profile.json
+PASS  this copy is the host, on its own port
+hint (reception): Sign in with a firm at one of the stands, then ready up at the desk. Press F at either.
+said (Secretary, MatchStart): The quarter is open. Please carry the briefcase upward.
+match 1 running before anyone else joined
+hint (briefcase-rule): One briefcase decides the match. Carry it onto either roof and your firm wins.
+said (Reception, Arrival): Associate 2 is here. I've let the lifts know.
+PASS  HOST: the late joiner has a line of their own  · k0 d0 f0 wk0 pick0 steal0 open0 carry0s best0 played0s
+said (Secretary, FirstKill): Associate 1 has let Associate 2 go. HR has been informed.
+PASS  HOST: a kill counts for the killer and a death for the victim  · them k0 d1 f0 wk0 pick0 steal0 open0 carry0s best0 played0s · me k1 d0 f0 wk0 pick0 steal0 open0 carry0s best0 played0s
+PASS  HOST: the dead body carried out of the building is not a second loss or a window kill  · them k0 d1 f0 wk0 pick0 steal0 open0 carry0s best0 played0s · me k1 d0 f0 wk0 pick0 steal0 open0 carry0s best0 played0s
+said (Secretary, WindowKill): Associate 2 has taken the express route down, courtesy of Associate 1.
+PASS  HOST: a fall after the host's hit is the host's window kill  · them k0 d1 f1 wk0 pick0 steal0 open0 carry0s best0 played0s · me k2 d0 f0 wk1 pick0 steal0 open0 carry0s best0 played0s
+hint (carrying): You have the briefcase. Every floor you carry it onto opens for both towers. Press G to hand it to a teammate.
+said (Secretary, FloorOpened): Roof has been unlocked. The staff there are thrilled.
+said (Secretary, Won): Ashcombe & Pryce has sealed the deal. Drinks are in the boardroom. They're not free.
+PASS  HOST: match 1 is in the host's profile as a win with two kills  · matches 1, wins 1, losses 0, kills 2, deaths 0, falls 0, window kills 1, carry 2s, best floor 5, history 1
+hint (kept): Every finished match is kept. Your wins, kills and time with the briefcase carry over.
+said (Secretary, MatchStart): Today's agenda: one briefcase, two roofs. Any other business can wait.
+said (Secretary, FirstPickup): The briefcase is with Associate 1. Please don't shake it.
+said (Secretary, FloorOpened): Roof is open. Please mind the wet paint.
+said (Secretary, Won): Deal sealed. Ashcombe & Pryce may now use the executive lift.
+PASS  HOST: match 2 ended while the client was dead  · client dead at the end
+said (Secretary, MatchStart): The quarter is open. Please carry the briefcase upward.
+PASS  NAMES: a teammate in view has their name over their head
+wrote host_nameplate_team_1080p.png
+wrote host_nameplate_team_720p.png
+PASS  NAMES: a teammate across the street, within range, still has a name  · 24.1 m away, shown True
+wrote host_nameplate_across_street_1080p.png
+wrote host_nameplate_across_street_720p.png
+PASS  NAMES: a rival inside this tower is marked, with no name
+wrote host_nameplate_raider_1080p.png
+wrote host_nameplate_raider_720p.png
+PASS  NAMES: the rival's marker goes after its 2 s
+match 3 running: the host now leaves mid-match
+PASS  HOST: leaving mid-match wrote nothing to the host's profile  · matches 2, wins 2, losses 0, kills 3, deaths 0, falls 0, window kills 1, carry 2s, best floor 5, history 2
+RESULT: 0 failed, 12 passed (host).

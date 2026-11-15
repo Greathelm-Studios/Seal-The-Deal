@@ -19,6 +19,8 @@
 //              looks about (Alex: "more animations in the idle ... to give it more life")
 //              2026-11-13 — the motor is optional, so a body with no player behind it (the
 //              hit-reaction test dummy) can stand, breathe and fidget with the same component
+//              2026-11-14 — stops quietly, instead of throwing every frame, after Unity
+//              reloads scripts in the middle of Play Mode
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Poses the player's humanoid skeleton every frame from how the body is moving,
 //              with no animation clips. Its own component, not part of PlayerMotor, because it
@@ -348,6 +350,14 @@ namespace CloseTheDeal.Player
 
         Transform _model;
         Bone _hips, _spine, _chest, _upperChest, _neck, _head;
+
+        /// <summary>
+        /// The character's head bone, or null before <c>Start</c> has found the skeleton. For
+        /// the body view's eye (PlayerViewmodel.BodyView). WHY from here and not from the
+        /// Animator: the Animator's avatar is gone once this has taken over the skeleton, so
+        /// a bone lookup on it fails while playing.
+        /// </summary>
+        public Transform HeadBone => _head.T;
         /// <summary>The collar bones, which lift with each breath. Optional in a humanoid rig; null transforms if this one has none.</summary>
         Bone _leftShoulder, _rightShoulder;
         Bone _leftUpperArm, _leftLowerArm, _rightUpperArm, _rightLowerArm;
@@ -482,6 +492,7 @@ namespace CloseTheDeal.Player
 
             // The graph itself is made on the first frame; see BuildClipGraph for why.
             _usesClips = _profile.HasClips;
+            _ready = true;
         }
 
         void OnDestroy()
@@ -575,7 +586,37 @@ namespace CloseTheDeal.Player
             };
         }
 
-        void LateUpdate() => Step(Time.deltaTime);
+        /// <summary>
+        /// True once <c>Start</c> has found the bones, and false again if Unity reloads scripts
+        /// while playing.
+        /// </summary>
+        /// <remarks>
+        /// WHY, and why not serialized: when scripts are recompiled during Play Mode, Unity
+        /// rebuilds every component and carries its plain fields across (bools, floats) but not
+        /// the bones, springs or the clip graph, and does not run <c>Start</c> again. The
+        /// component then believed it was set up (<c>_usesClips</c> was still true) and threw a
+        /// NullReferenceException from <see cref="BuildClipGraph"/> every frame. Marked
+        /// NonSerialized, this flag is the one thing that does not survive, so the component
+        /// can tell. It cannot set itself up again there (the avatar it found its bones through
+        /// has been taken off), so it logs one error, switches itself off, and the character holds
+        /// its last pose until Play is restarted.
+        /// </remarks>
+        [System.NonSerialized] bool _ready;
+
+        void LateUpdate()
+        {
+            if (_ready)
+            {
+                Step(Time.deltaTime);
+                return;
+            }
+
+            // LateUpdate never runs before Start, and Start switches the component off when it
+            // cannot set up, so the only way here is a script reload during Play. Say so once,
+            // as PlayerRagdoll does, rather than leave a frozen character with no clue why.
+            Debug.LogError("[PlayerAnimator] Lost its bones because the code was reloaded during Play. The character holds its last pose; stop and start Play to get it back.", this);
+            enabled = false;
+        }
 
         /// <summary>
         /// Advances the animation by one frame and poses the skeleton.

@@ -122,7 +122,10 @@ namespace CloseTheDeal.Lobby
                 name + " leaves the lobby at once. They can join again from your Steam profile or an invite.",
                 "Remove", "Keep them", () =>
                 {
-                    _roster.RequestKick(clientId);
+                    // The player may have left, and the id gone to someone new, while the dialog was up.
+                    int now = _roster.IndexOf(clientId);
+                    if (now >= 0 && _roster[now].Name == name)
+                        _roster.RequestKick(clientId);
                     _stack.Pop(false); // The dialog only reports the confirm; it is ours to close.
                 });
             _stack.Push(_confirm);

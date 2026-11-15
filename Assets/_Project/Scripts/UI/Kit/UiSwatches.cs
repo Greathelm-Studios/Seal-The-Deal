@@ -80,7 +80,7 @@ namespace CloseTheDeal.UI
                 return;
             SetWithoutNotify(index);
             _fx.Stamp();
-            UiSound.Play(UiSoundEvent.Select);
+            UiSound.PlaySlider(_swatches.Length > 1 ? (float)_index / (_swatches.Length - 1) : 0.5f);   // a value step: the pitched tick
             Changed?.Invoke(_index);
         }
 

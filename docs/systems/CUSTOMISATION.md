@@ -65,7 +65,7 @@ Late joiners get everyone's outfit with each player's spawn.
 ## Files
 
 - Scripts: [Assets/_Project/Scripts/Customisation/](../../Assets/_Project/Scripts/Customisation/) (`PlayerOutfit`, `OutfitView`, `OutfitLoadout`, `OutfitSave`, `OutfitCatalog`, `OutfitSlot`, `OutfitOption`, `FittingRoom`, `FittingRoomScreen`, `FittingRoomMirror`).
-- Prefab: `Assets/_Project/Prefabs/Lobby/OutfitCharacter.prefab` (STDMC fitted to 1.8 m, feet at 0, facing +Z, under a `Fit` pivot the bob scales). **Set Up Lobby** puts it on `Player.prefab` under `Graphics/Lean` at y −0.9 and turns off the greybox capsule and nose renderers.
+- Prefab: `Assets/_Project/Prefabs/Lobby/OutfitCharacter.prefab` (STDMC fitted to 1.8 m, feet at 0, facing +Z, under a `Fit` pivot the bob scales). On `Player.prefab` the outfit lives on the real character at `Graphics/Lean/Body` (an `OutfitView` there, `PlayerOutfit` > View pointing at it); **Set Up Lobby** only stands this figure under `Graphics/Lean` at y −0.9, hiding the capsule and nose, on a greybox player that has no model yet.
 
 ## The rigged character (now in the branch)
 

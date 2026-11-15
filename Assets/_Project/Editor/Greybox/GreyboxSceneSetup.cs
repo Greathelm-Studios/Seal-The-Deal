@@ -191,6 +191,8 @@ namespace CloseTheDeal.Editor.Greybox
 
             AddAnimator(graphics, motor);
             GreyboxViewmodelSetup.AddTo(root, motor, actions);
+            // After the ragdoll exists (AddAnimator), so its hit profile can be filled in.
+            GreyboxHitsSetup.AddTo(root, GreyboxHitsSetup.EnsureProfile());
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             Object.DestroyImmediate(root);

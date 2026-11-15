@@ -1848,7 +1848,14 @@ namespace CloseTheDeal.Editor.Lanes
 
             // A loose prop with no Visual child: looked at (brightened), carried, dropped, and
             // drawn at its own colour again (review ITM-16).
-            Pickup loose = FindLoose(p => p.IsDerived && p.Definition.WeightKg <= me.Profile.MaxCarryWeight, me);
+            // The biggest one, so the look lands on it and not on the desk under a flat tablet.
+            Pickup loose = null;
+            foreach (Pickup p in UnityEngine.Object.FindObjectsByType<Pickup>())
+            {
+                if (p.IsDerived && p.State == PickupState.InWorld && p.Definition.WeightKg <= me.Profile.MaxCarryWeight
+                    && (loose == null || p.Definition.WeightKg > loose.Definition.WeightKg))
+                    loose = p;
+            }
             if (loose == null)
             {
                 Note("NOT CHECKED  a definition-free prop's highlight: this scene has none loose");

@@ -4,6 +4,12 @@
 //  Generated : 2026-11-13
 //  Prompt    : Alex: "a test dummy in the scene to test animations of being hit by certain
 //              powers of weapons (bullets bombs explosions props, etc)"
+//  Modified  : Claude Opus 5.5, 2026-11-14 — says whether the dummy can be hit and
+//              what each hit did (Alex: "nothing happens"; the cause was a code reload
+//              during Play, which the bench could not show); with its Dummy slot empty it
+//              hits the dummy nearest the camera (Alex: the dummy had moved to the roof)
+//              2026-11-15 — a Melee hit preset (Harvey: "add hit reactions when hit by
+//              guns/melee weapons for the players")
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : An Editor window that hits the test dummy with a chosen kind and strength of
 //              hit at a chosen body part and direction, so reactions can be judged before the
@@ -64,9 +70,9 @@ namespace CloseTheDeal.Editor.Dev
         /// own. A chair of 8 kg at 10 m/s; a desk of 40 kg at 8 m/s; a blast throwing the 49 kg
         /// ragdoll at the test blast's 12 m/s in the middle and 40% of that at its edge; a
         /// pistol shot is far above a real bullet's 3 or so, so that it shows. The 3 m reach is
-        /// the test blast's radius.
+        /// the test blast's radius. A melee hit is the stand-in V swing's 60, three pistol shots.
         /// </summary>
-        const float PistolImpulse = 20f, ChairImpulse = 80f, DeskImpulse = 320f,
+        const float PistolImpulse = 20f, MeleeImpulse = 60f, ChairImpulse = 80f, DeskImpulse = 320f,
             NearBlastImpulse = 590f, FarBlastImpulse = 235f,
             NearBlastDistance = 1f, FarBlastDistance = 2.7f, BlastReach = 3f;
 
@@ -77,6 +83,8 @@ namespace CloseTheDeal.Editor.Dev
         From _from = From.Front;
         float _blastDistance = NearBlastDistance;
         float _blastRadius = BlastReach;
+        /// <summary>What the last press of Hit did, shown under the button. Empty until the first hit.</summary>
+        string _lastResult = "";
 
         /// <summary>Opens the bench.</summary>
         [MenuItem("Close the Deal/Dev/Hit Bench")]
@@ -84,13 +92,14 @@ namespace CloseTheDeal.Editor.Dev
 
         void OnGUI()
         {
-            _dummy = (HitDummy)EditorGUILayout.ObjectField(new GUIContent("Dummy", "The dummy to hit. Left empty, the first one in the scene is used."), _dummy, typeof(HitDummy), true);
+            _dummy = (HitDummy)EditorGUILayout.ObjectField(new GUIContent("Dummy", "The dummy to hit. Left empty, the one nearest your camera is used, so the bench hits the dummy you are looking at wherever it stands."), _dummy, typeof(HitDummy), true);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Presets", EditorStyles.boldLabel);
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (GUILayout.Button("Pistol shot")) Preset(HitType.Bullet, PistolImpulse);
+                if (GUILayout.Button("Melee hit")) Preset(HitType.Melee, MeleeImpulse);
                 if (GUILayout.Button("Thrown chair")) Preset(HitType.ThrownProp, ChairImpulse);
                 if (GUILayout.Button("Thrown desk")) Preset(HitType.ThrownProp, DeskImpulse);
             }
@@ -123,6 +132,66 @@ namespace CloseTheDeal.Editor.Dev
             }
             if (!Application.isPlaying)
                 EditorGUILayout.HelpBox("Press Play first: the dummy's body only exists while playing.", MessageType.Info);
+            else
+                EditorGUILayout.HelpBox(Status(FindDummy()), MessageType.None);
+            if (_lastResult.Length > 0)
+                EditorGUILayout.LabelField("Last hit", _lastResult, EditorStyles.wordWrappedLabel);
+        }
+
+        /// <summary>Redraws a few times a second while playing, so the status line follows the dummy.</summary>
+        void OnInspectorUpdate()
+        {
+            if (Application.isPlaying)
+                Repaint();
+        }
+
+        /// <summary>
+        /// The dummy set in the window's Dummy slot, or else the one nearest the game camera
+        /// (the Scene view's outside Play Mode). Null when there is none.
+        /// </summary>
+        /// <remarks>
+        /// WHY nearest and not remembered: dummies move (the roof range, one placed in front of
+        /// you while playing), and the bench used to keep hitting whichever it found first,
+        /// which could be on another floor. It is worked out afresh on every call; an Editor
+        /// window, so the scene search costs nothing in the game.
+        /// </remarks>
+        HitDummy FindDummy()
+        {
+            if (_dummy != null)
+                return _dummy;
+            Camera camera = Application.isPlaying ? Camera.main : null;
+            if (camera == null && SceneView.lastActiveSceneView != null)
+                camera = SceneView.lastActiveSceneView.camera;
+            Vector3 eye = camera != null ? camera.transform.position : Vector3.zero;
+            HitDummy nearest = null;
+            float best = float.MaxValue;
+            foreach (HitDummy dummy in FindObjectsByType<HitDummy>(FindObjectsInactive.Exclude))
+            {
+                float distance = (dummy.transform.position - eye).sqrMagnitude;
+                if (distance < best)
+                {
+                    best = distance;
+                    nearest = dummy;
+                }
+            }
+            return nearest;
+        }
+
+        /// <summary>One line on whether the dummy can take a hit right now, and if not, why not and what to do.</summary>
+        static string Status(HitDummy dummy)
+        {
+            if (dummy == null)
+                return "No dummy in this scene. Place one with Close the Deal > Dev > Place Hit Dummy.";
+            PlayerRagdoll body = dummy.GetComponentInChildren<PlayerRagdoll>();
+            if (body == null)
+                return dummy.name + " has no ragdoll. Rebuild it with Close the Deal > Dev > Build Hit Dummy Prefab.";
+            if (!body.TakesHits)
+                return dummy.name + "'s ragdoll has no hit profile, so hits do nothing. Rebuild it with Close the Deal > Dev > Build Hit Dummy Prefab.";
+            if (!body.Running)
+                return dummy.name + "'s body is not running. If the code changed during this Play session, stop and press Play again "
+                    + "(Edit > Preferences > General > Script Changes While Playing > Recompile After Finished Playing stops it happening). "
+                    + "Otherwise read the Console for a [PlayerRagdoll] or [PlayerAnimator] error.";
+            return body.Down ? dummy.name + " is knocked down." : dummy.name + " is ready.";
         }
 
         /// <summary>Fills in a point hit's kind and strength.</summary>
@@ -143,18 +212,16 @@ namespace CloseTheDeal.Editor.Dev
         /// <summary>Builds the hit from the window's values and delivers it.</summary>
         void Hit()
         {
-            if (_dummy == null)
+            HitDummy dummy = FindDummy();
+            PlayerRagdoll ragdoll = dummy != null ? dummy.GetComponentInChildren<PlayerRagdoll>() : null;
+            if (ragdoll == null || !ragdoll.Running || !ragdoll.TakesHits)
             {
-                HitDummy[] found = FindObjectsByType<HitDummy>(FindObjectsInactive.Exclude);
-                _dummy = found.Length > 0 ? found[0] : null;
-            }
-            if (_dummy == null)
-            {
-                Debug.LogWarning("[HitBench] No dummy in the scene. Place one with Close the Deal > Dev > Place Hit Dummy.");
+                _lastResult = "Not hit. " + Status(dummy);
+                Debug.LogWarning("[HitBench] " + _lastResult, dummy);
                 return;
             }
 
-            Transform body = _dummy.transform;
+            Transform body = dummy.transform;
             // The way the hit travels: from the chosen side, toward the body.
             Vector3 direction = _from switch
             {
@@ -177,7 +244,12 @@ namespace CloseTheDeal.Editor.Dev
                 Vector2 offset = SpotOffsets[_spot];
                 hit.Point = body.TransformPoint(new Vector3(offset.x, offset.y, 0f));
             }
-            _dummy.Hit(hit);
+            bool wasDown = ragdoll.Down;
+            dummy.Hit(hit);
+            string where = _type == HitType.Blast ? _blastDistance.ToString("F1") + " m away" : "on the " + Spots[_spot].ToLowerInvariant();
+            string outcome = !wasDown && ragdoll.Down ? "knocked down" : wasDown ? "already down, pushed" : "flinched";
+            _lastResult = _type + ", " + _impulse.ToString("F0") + " N·s, from the " + _from.ToString().ToLowerInvariant() + ", " + where + ": " + outcome + ".";
+            Debug.Log("[HitBench] " + dummy.name + ": " + _lastResult, dummy);
         }
     }
 }

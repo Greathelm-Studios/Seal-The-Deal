@@ -117,6 +117,30 @@ Pressed buttons are on `PlayerInputReader` (owner only): `Pressed(PlayerPress)` 
 
 For help text, the real bindings come from the actions asset: read them with `InputAction.GetBindingDisplayString` for the action names in the Controls table above, so the card changes with the player's rebinding and the device in use.
 
+## Feel and feedback (2026-11-14 pass, owner: "a tad faster, bouncier jump, sliding, much better feedback")
+
+| Value | Was | Now | Why |
+|---|---|---|---|
+| Walk Speed | 6 | 6.75 m/s | +12.5%, ratio to sprint kept at 1.5 |
+| Sprint Speed | 9 | 10.1 m/s | +12.5% |
+| Ground Acceleration | 70 | 80 | keeps starts snappy and stays above grip × sprint (60.6) |
+| Crouch Speed | 3 | 3.3 m/s | same +10% |
+| Air Gravity Multiplier (rising) | 2 | 1.6 | a slower, floatier rise |
+| Apex Gravity Multiplier | (none) | 0.6 under 1.5 m/s | a moment's hang at the top: the bounce |
+| Fall Gravity Multiplier | 3 | 2.4 | still quicker down than up, less of a slam |
+| Knocked Gravity Multiplier | (was the air value, 2) | 2 | blasts keep their old flight |
+| Coyote Time / Jump Buffer | 0.10 / 0.12 s | 0.12 / 0.15 s | more forgiving chains |
+
+**Camera (local, `PlayerCamera.Feedback.cs`):** one damped spring (6 per second, damping 0.5, so it overshoots once) that movement kicks: take-off dips and springs up (Jump Kick), landing by fall speed (Land Kick Per Speed, capped), the drop into a slide, a gather before a climb, a slight lag when sprint starts and a nudge forward on a hard stop. It moves the eye along the view's own axes and never turns it, so aim is untouched; `PlayerCamera.FeedbackOffset` / `FeedbackRoll` expose it for the viewmodel. Sliding rolls the view about 2° and widens it 4° on top of the speed widening. **Reduce motion** (Settings > Accessibility) turns the kicks, the roll and every field-of-view change off.
+
+**Crosshair:** besides opening with speed and in the air, it opens 4 px while sliding and pulses on take-off (0.2) and on the start of a slide (0.35).
+
+**Rumble (gamepad only, the pad the player last touched):** on landing by fall speed (0.05 per m/s, at most 0.7) and on the start of a slide (0.35), 0.14 s each; stopped when the camera lets go.
+
+**Sound (`MovementSounds`, added to each player at wake when `MovementProfile.Sounds` is set; heard flat for your own body, placed in the world for others, on the mixer's SFX bus):** clip names the sound lane's generator makes into `Assets/_Project/Audio/Movement/`: `Move_Footstep_Walk_*`, `Move_Footstep_Run_*` (variations, stepped by distance: 1.7 m strides walking, 2.4 m sprinting), `Move_Jump`, `Move_Land_Light`, `Move_Land_Heavy` (from 11 m/s), `Move_Slide_Start`, `Move_Slide_Loop`, `Move_Slide_Stop`, `Move_Mantle`, `Move_Vault`, `Move_Wind_Loop` (own player only, from 10.5 to 18 m/s). `Close the Deal > Lanes > Set Up Movement Sounds` makes the set, routes it to SFX and fills empty slots from that folder. Until the clips exist, movement is silent.
+
+**Sliding is taught:** after 1.2 s of sprinting without having slid this session, a kit status line says "Sprinting: press <crouch key> to slide." (the key for the device in use) with the Notification sound, for 3 s or until the player slides. The controls card has its own Slide line. Sprint then crouch, or land from a hop while holding crouch, starts a slide whenever the player is moving at 7 m/s or more.
+
 ## Movement's HUD
 
 Built from the UI kit's prefabs by `Close the Deal > Lanes > Add Movement HUD To Open Scene` (also run by `Set Up Movement`), under the game menu's `Hud`; it only adds what is missing. Script: `Player/Hud/MovementHud.cs`.

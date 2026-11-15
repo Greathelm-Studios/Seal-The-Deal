@@ -29,7 +29,7 @@ It is not limp. Animation clips say what the body should be doing every frame (s
 - **Stopping:** the legs keep their stride for a fifth of a second after the speed drops (so a flip of direction is not mistaken for a stop), then ease into the stance in about a quarter of a second; the arms come out for a moment.
 - **Jumping:** a held air pose with the arms out and the legs staggered, braced harder than on the floor.
 - **Landing:** a crouch whose depth grows with how fast the body came down, then it stands up into whatever it is doing next.
-- **Hits and knock-back:** running into something, or being blasted, weakens every joint for a moment, so the body goes properly limp. Reactions to weapon hits (so far only on a test dummy) are in [HIT_REACTIONS.md](HIT_REACTIONS.md).
+- **Hits and knock-back:** running into something, or being blasted, weakens every joint for a moment, so the body goes properly limp. Reactions to weapon hits (a flinch on players and on a test dummy; knock-down on the dummy only) are in [HIT_REACTIONS.md](HIT_REACTIONS.md).
 - **Collisions:** every part bumps into the level and into other players' ragdolls.
 
 It hangs from its hips, which a spring drags along after the player. **It does not balance on its feet and cannot fall over**; the player capsule still decides where you are.
@@ -130,6 +130,7 @@ The headers marked "procedural pose only" do nothing while the clips are assigne
 - **It cannot fall over or lie on the floor.** The hips are always held up by their spring. A true free ragdoll on knock-out would need the motor to hand control over, which is netcode work.
 - **Joint limits are generic.** They are ordinary human ranges measured from the T-pose, not fitted to this character; the shoulders have none.
 - **Its own parts pass through each other.** With self-collision the arms caught on the ribs every stride.
+- **No carrying or throwing yet.** Alex's direction (2026-11-13, not yet in the GDD) is that any loose object can be picked up and thrown. When that arrives the body needs a carry pose for small and large objects, a throw, and a reaction to being hit by one; none exist. The pickup system itself is Adam's lane 3, not this one.
 - **Level copies stand still.** Doors that move and props that are thrown are not followed, so the ragdoll does not react to a chair hitting it. Only box, sphere, capsule and mesh colliders are copied.
 - **Feet do not grip the floor.** Nothing holds a planted foot in place.
 - **The model's Animator has no avatar while playing.** Anything added later that asks it for a bone at runtime (not at spawn) will get nothing.

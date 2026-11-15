@@ -50,6 +50,7 @@ namespace CloseTheDeal.UI
                 _buses[i].Changed += _handlers[i];
             }
 
+            _test.ConfirmSound = UiSoundEvent.None;   // its answer is the test sound; a Confirm in the same frame masks it
             _test.Clicked += OnTest;
             AttachMeter();
         }

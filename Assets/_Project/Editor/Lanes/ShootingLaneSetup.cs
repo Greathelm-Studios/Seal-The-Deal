@@ -49,8 +49,11 @@ namespace CloseTheDeal.Editor.Lanes
         const string PistolPath = WeaponProfileFolder + "/Pistol.asset";
         const string RiflePath = WeaponProfileFolder + "/AR15.asset";
         const string CatalogPath = WeaponProfileFolder + "/WeaponCatalog.asset";
-        const string NoBlastPath = WeaponProfileFolder + "/NoTestBlast.asset";
         const string GlassProfilePath = GlassProfileFolder + "/DefaultGlass.asset";
+        const string CombatSoundsPath = WeaponProfileFolder + "/CombatSounds.asset";
+        const string WeaponAudioFolder = "Assets/_Project/Audio/Weapons";
+        const string MixerPath = "Assets/_Project/Audio/UI/GameMixer.mixer";
+        const string SfxGroup = "Master/SFX";
         const string TestBlastPath = "Assets/_Project/Profiles/TestBlast.asset";
         const string KitGlassPath = "Assets/_Project/Art/Kit/Materials/Glass_Clear.mat";
         const string GreyboxGlassPath = "Assets/_Project/Floors/GreyboxGlass.mat";
@@ -65,6 +68,24 @@ namespace CloseTheDeal.Editor.Lanes
         const string PlatePrefabPath = "Assets/_Project/UI/Kit/Plate.prefab";
         const string ChevronSpritePath = "Assets/_Project/UI/Kit/Sprites/Kit_Chevron.png";
         const string WhiteSpritePath = "Assets/_Project/UI/Kit/Sprites/Kit_White.png";
+
+        /// <summary>Replaces the open scene's combat HUD with a fresh one from the current builder, after asking. For a scene saved with an older HUD.</summary>
+        [MenuItem("Close the Deal/Lanes/Rebuild Combat HUD In Open Scene")]
+        static void RebuildCombatHud()
+        {
+            GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
+            Transform old = menu != null ? menu.transform.Find("Hud/" + CombatHudName) : null;
+            if (old != null)
+            {
+                bool ask = !Application.isBatchMode;
+                if (ask && !EditorUtility.DisplayDialog("Rebuild the combat HUD?", "This replaces the combat HUD in the open scene, dropping any changes made to it there.", "Rebuild", "Keep it"))
+                    return;
+                Object.DestroyImmediate(old.gameObject);
+            }
+
+            EnsureCombatHud();
+            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        }
 
         /// <summary>
         /// Adds the combat HUD under the game menu's Hud, built from the UI kit: kit plates, the
@@ -185,11 +206,13 @@ namespace CloseTheDeal.Editor.Lanes
             const float right = -32f, width = 320f;
 
             RectTransform weapon = PlateAt(root, plate, "WeaponPlate", corner, corner, new Vector2(right, 32f), new Vector2(width, 118f));
-            TMP_Text ammo = HudText(weapon, "Ammo", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -10f), new Vector2(150f, 56f), tokens.Heading, tokens.Navy, TextAlignmentOptions.BottomLeft, "12");
+            TMP_Text ammo = HudText(weapon, "Ammo", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -4f), new Vector2(130f, 70f), tokens.Heading, tokens.Navy, TextAlignmentOptions.BottomLeft, "12");
             ammo.fontSize = 52f;
-            TMP_Text magazine = HudText(weapon, "Magazine", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(150f, -38f), new Vector2(80f, 24f), tokens.Caption, tokens.Ink3, TextAlignmentOptions.BottomLeft, "/ 12");
+            Unclipped(ammo);
+            TMP_Text magazine = HudText(weapon, "Magazine", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(140f, -46f), new Vector2(90f, 26f), tokens.Label, tokens.Ink3, TextAlignmentOptions.BottomLeft, "/ 12");
             TMP_Text name = HudText(weapon, "WeaponName", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -16f), new Vector2(140f, 24f), tokens.Label, tokens.Navy, TextAlignmentOptions.TopRight, "PISTOL");
-            TMP_Text state = HudText(weapon, "State", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(20f, 26f), new Vector2(width - 40f, 20f), tokens.Caption, tokens.Ink3, TextAlignmentOptions.MidlineLeft, "READY");
+            TMP_Text state = HudText(weapon, "State", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(20f, 24f), new Vector2(width - 40f, 22f), tokens.Caption, tokens.Ink3, TextAlignmentOptions.MidlineLeft, "READY");
+            state.fontSize = Mathf.Max(state.fontSize, MinHudCaption);
             RectTransform track = Anchored(weapon, "ProgressTrack", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(20f, 14f), new Vector2(width - 40f, 3f));
             Solid(track, tokens.Hair);
             RectTransform fill = Anchored(track, "Fill", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(width - 40f, 3f));
@@ -212,7 +235,7 @@ namespace CloseTheDeal.Editor.Lanes
             var group = health.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
             group.interactable = false;
-            HudText(health, "Label", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20f, 6f), new Vector2(120f, 20f), tokens.Caption, tokens.Ink3, TextAlignmentOptions.MidlineLeft, "HEALTH");
+            HudText(health, "Label", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20f, 6f), new Vector2(120f, 22f), tokens.Caption, tokens.Ink3, TextAlignmentOptions.MidlineLeft, "HEALTH").fontSize = Mathf.Max(tokens.Caption.Size, MinHudCaption);
             TMP_Text number = HudText(health, "Number", new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-20f, 6f), new Vector2(80f, 22f), tokens.Label, tokens.Navy, TextAlignmentOptions.MidlineRight, "100");
             RectTransform healthTrack = Anchored(health, "Track", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(20f, 10f), new Vector2(width - 40f, 4f));
             Solid(healthTrack, tokens.Hair);
@@ -241,13 +264,26 @@ namespace CloseTheDeal.Editor.Lanes
             var group = card.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
             group.interactable = false;
-            HudText(card, "Title", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -18f), new Vector2(420f, 28f), tokens.Section, tokens.Navy, TextAlignmentOptions.Center, "YOU HAVE BEEN LET GO");
-            HudText(card, "Line", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -50f), new Vector2(420f, 20f), tokens.Caption, tokens.Ink3, TextAlignmentOptions.Center, "BACK ON THIS FLOOR IN");
-            TMP_Text count = HudText(card, "Count", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 14f), new Vector2(200f, 62f), tokens.Heading, tokens.Navy, TextAlignmentOptions.Center, "5");
+            TMP_Text title = HudText(card, "Title", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -18f), new Vector2(420f, 28f), tokens.Section, tokens.Navy, TextAlignmentOptions.Center, "YOU HAVE BEEN LET GO");
+            TMP_Text line = HudText(card, "Line", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -50f), new Vector2(420f, 22f), tokens.Caption, tokens.Ink3, TextAlignmentOptions.Center, "BACK ON THIS FLOOR IN");
+            line.fontSize = Mathf.Max(line.fontSize, MinHudCaption);
+            so.FindProperty("_downTitle").objectReferenceValue = title;
+            so.FindProperty("_downLine").objectReferenceValue = line;
+            TMP_Text count = HudText(card, "Count", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 8f), new Vector2(200f, 74f), tokens.Heading, tokens.Navy, TextAlignmentOptions.Center, "5");
             count.fontSize = 56f;
+            Unclipped(count);
             so.FindProperty("_downGroup").objectReferenceValue = group;
             so.FindProperty("_downCount").objectReferenceValue = count;
         }
+
+        /// <summary>The kit's text clips with an ellipsis; a big number would vanish whole if its line ran a pixel over its box.</summary>
+        static void Unclipped(TMP_Text text)
+        {
+            text.overflowMode = TextOverflowModes.Overflow;
+        }
+
+        /// <summary>Smallest caption on the HUD, in pixels at 1080p: smaller is unreadable at 1280 x 720.</summary>
+        const float MinHudCaption = 15f;
 
         static void SetObjects(SerializedObject so, string field, Object[] values)
         {
@@ -306,9 +342,9 @@ namespace CloseTheDeal.Editor.Lanes
             public WeaponDefinition Rifle;
             public WeaponCatalog Catalog;
             public GlassProfile Glass;
-            public BlastProfile NoBlast;
             public Material PaneMaterial;
             public Material DummyMaterial;
+            public CombatSoundSet Sounds;
         }
 
         // ---- Assets --------------------------------------------------------------------------
@@ -411,7 +447,7 @@ namespace CloseTheDeal.Editor.Lanes
 
             assets.Catalog = EnsureCatalog(assets.Pistol, assets.Rifle);
             assets.Glass = EnsureGlassProfile(shards, assets.PaneMaterial);
-            assets.NoBlast = EnsureNoBlast();
+            assets.Sounds = EnsureCombatSounds(assets.Pistol, assets.Rifle);
             // Saved now: opening the test scene next unloads assets nothing references, unsaved changes with them.
             AssetDatabase.SaveAssets();
             return assets;
@@ -479,11 +515,62 @@ namespace CloseTheDeal.Editor.Lanes
                 Rifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(RiflePath),
                 Catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalog>(CatalogPath),
                 Glass = AssetDatabase.LoadAssetAtPath<GlassProfile>(GlassProfilePath),
-                NoBlast = AssetDatabase.LoadAssetAtPath<BlastProfile>(NoBlastPath),
+                Sounds = AssetDatabase.LoadAssetAtPath<CombatSoundSet>(CombatSoundsPath),
                 DummyMaterial = AssetDatabase.LoadAssetAtPath<Material>(WeaponPrefabFolder + "/TargetDummy.mat"),
                 PaneMaterial = AssetDatabase.LoadAssetAtPath<Material>(KitGlassPath) ?? AssetDatabase.LoadAssetAtPath<Material>(LaneGlassPath)
             };
         }
+
+        /// <summary>
+        /// The combat sound set, made when missing, and lane 9's weapon clips filled into it and into
+        /// each gun wherever a slot is still empty (a designer's choice is never replaced). The set
+        /// plays through the game mixer's SFX group once it exists.
+        /// </summary>
+        static CombatSoundSet EnsureCombatSounds(WeaponDefinition pistol, WeaponDefinition rifle)
+        {
+            var set = AssetDatabase.LoadAssetAtPath<CombatSoundSet>(CombatSoundsPath);
+            if (set == null)
+            {
+                set = ScriptableObject.CreateInstance<CombatSoundSet>();
+                AssetDatabase.CreateAsset(set, CombatSoundsPath);
+                Debug.Log("[Shooting Lane] Created " + CombatSoundsPath);
+            }
+
+            var mixer = AssetDatabase.LoadAssetAtPath<UnityEngine.Audio.AudioMixer>(MixerPath);
+            UnityEngine.Audio.AudioMixerGroup[] groups = mixer != null ? mixer.FindMatchingGroups(SfxGroup) : null;
+            if (set.Output == null && groups != null && groups.Length > 0)
+                set.Output = groups[0];
+
+            set.ImpactWorld = set.ImpactWorld != null ? set.ImpactWorld : Clip("ImpactWorld");
+            set.ImpactBody = set.ImpactBody != null ? set.ImpactBody : Clip("ImpactBody");
+            set.GlassShatter = set.GlassShatter != null ? set.GlassShatter : Clip("GlassShatter");
+            set.Hurt = set.Hurt != null ? set.Hurt : Clip("Hurt");
+            set.Death = set.Death != null ? set.Death : Clip("Death");
+            set.Respawn = set.Respawn != null ? set.Respawn : Clip("Respawn");
+            EditorUtility.SetDirty(set);
+
+            FillGunSounds(pistol, "PistolShot", "ReloadSlide");
+            FillGunSounds(rifle, "AR15Shot", "ReloadCharge");
+            if (set.Output == null)
+                Debug.Log($"[Shooting Lane] Combat sounds have no mixer bus yet: no {SfxGroup} group at {MixerPath}.");
+            return set;
+        }
+
+        static void FillGunSounds(WeaponDefinition gun, string shot, string reloadEnd)
+        {
+            if (gun == null)
+                return;
+
+            gun.ShotSound = gun.ShotSound != null ? gun.ShotSound : Clip(shot);
+            gun.DryFireSound = gun.DryFireSound != null ? gun.DryFireSound : Clip("DryFire");
+            gun.DrawSound = gun.DrawSound != null ? gun.DrawSound : Clip("Swap");
+            gun.MagazineOutSound = gun.MagazineOutSound != null ? gun.MagazineOutSound : Clip("ReloadMagOut");
+            gun.MagazineInSound = gun.MagazineInSound != null ? gun.MagazineInSound : Clip("ReloadMagIn");
+            gun.ReloadEndSound = gun.ReloadEndSound != null ? gun.ReloadEndSound : Clip(reloadEnd);
+            EditorUtility.SetDirty(gun);
+        }
+
+        static AudioClip Clip(string name) => AssetDatabase.LoadAssetAtPath<AudioClip>($"{WeaponAudioFolder}/Weapon_{name}.wav");
 
         static WeaponDefinition EnsureWeapon(string path, Action<WeaponDefinition> defaults)
         {
@@ -548,29 +635,6 @@ namespace CloseTheDeal.Editor.Lanes
             }
 
             return profile;
-        }
-
-        /// <summary>
-        /// A blast that does nothing, for PlayerMotor's left-click test blast. Guns fire on the
-        /// same button, so with both live every shot would also blow up whatever it hit. The
-        /// motor still reads its eye height from this profile. The real fix is for the movement
-        /// lane to take the test blast out of PlayerMotor; then this asset goes too.
-        /// </summary>
-        static BlastProfile EnsureNoBlast()
-        {
-            var existing = AssetDatabase.LoadAssetAtPath<BlastProfile>(NoBlastPath);
-            if (existing != null)
-                return existing;
-
-            var blast = ScriptableObject.CreateInstance<BlastProfile>();
-            blast.Range = 0f;
-            blast.Radius = 0f;
-            blast.Speed = 0f;
-            blast.PropSpeed = 0f;
-            blast.ControlLossSeconds = 0f;
-            AssetDatabase.CreateAsset(blast, NoBlastPath);
-            Debug.Log("[Shooting Lane] Created " + NoBlastPath);
-            return blast;
         }
 
         static Material EnsureMaterial(string path, string shaderName, Color colour, bool transparent)
@@ -835,6 +899,7 @@ namespace CloseTheDeal.Editor.Lanes
                 Health health = GetOrAdd<Health>(root);
                 WeaponHolder holder = GetOrAdd<WeaponHolder>(root);
                 WeaponView view = GetOrAdd<WeaponView>(root);
+                CombatSounds sounds = GetOrAdd<CombatSounds>(root);
 
                 Transform lean = FindDeep(root.transform, "Lean");
                 // No fall pivot on players: the character rig and its ragdoll own the body's pose
@@ -851,7 +916,9 @@ namespace CloseTheDeal.Editor.Lanes
                 FillReference(serializedView, "_thirdPersonAnchor", hand);
                 serializedView.ApplyModifiedPropertiesWithoutUndo();
 
-                SwitchOffTestBlast(root.GetComponent<PlayerMotor>(), assets.NoBlast);
+                var serializedSounds = new SerializedObject(sounds);
+                FillReference(serializedSounds, "_set", assets.Sounds);
+                serializedSounds.ApplyModifiedPropertiesWithoutUndo();
 
                 PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             }
@@ -863,7 +930,7 @@ namespace CloseTheDeal.Editor.Lanes
             // Only a prefab that was the tool's stays the tool's; one a person has taken over stays theirs.
             if (toolOwned)
                 GeneratedAssetGuard.MarkGenerated(AssetDatabase.LoadMainAssetAtPath(PlayerPrefabPath));
-            Debug.Log("[Shooting Lane] Player.prefab has Health, WeaponHolder and WeaponView; its left-click test blast is switched off.");
+            Debug.Log("[Shooting Lane] Player.prefab has Health, WeaponHolder, WeaponView and CombatSounds.");
         }
 
         /// <summary>A pivot at the feet between the smoothed visual and the lean pivot, so the whole body can fall flat without touching the motor's own lean.</summary>
@@ -894,33 +961,6 @@ namespace CloseTheDeal.Editor.Lanes
             return hand.transform;
         }
 
-        /// <summary>
-        /// The motor's left-click test blast shares the fire button. While the motor still has one
-        /// and it is the greybox test blast (or none), point it at a blast that does nothing and
-        /// clear its targets. Anything else is someone's choice and is left; once the movement
-        /// lane removes the test blast this finds no field and does nothing.
-        /// </summary>
-        static void SwitchOffTestBlast(PlayerMotor motor, BlastProfile noBlast)
-        {
-            if (motor == null)
-                return;
-
-            var serialized = new SerializedObject(motor);
-            SerializedProperty blast = serialized.FindProperty("_blast");
-            if (blast == null)
-                return;
-
-            Object current = blast.objectReferenceValue;
-            bool isTestBlast = current == null || AssetDatabase.GetAssetPath(current) == TestBlastPath;
-            if (!isTestBlast)
-                return;
-
-            blast.objectReferenceValue = noBlast;
-            SetIntIfPresent(serialized, "_playerMask", 0);
-            SetIntIfPresent(serialized, "_propMask", 0);
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-        }
-
         static void FillReference(SerializedObject so, string field, Object value)
         {
             SerializedProperty p = so.FindProperty(field);
@@ -933,13 +973,6 @@ namespace CloseTheDeal.Editor.Lanes
         {
             SerializedProperty p = so.FindProperty(field);
             if (p != null && p.intValue == ~0)
-                p.intValue = value;
-        }
-
-        static void SetIntIfPresent(SerializedObject so, string field, int value)
-        {
-            SerializedProperty p = so.FindProperty(field);
-            if (p != null)
                 p.intValue = value;
         }
 
@@ -1445,6 +1478,12 @@ namespace CloseTheDeal.Editor.Lanes
 
             Check("spawns with both guns", s.Holder.WeaponInSlot(0) != null && s.Holder.WeaponInSlot(1) != null,
                 $"slot 1 {Name(s.Holder.WeaponInSlot(0))}, slot 2 {Name(s.Holder.WeaponInSlot(1))}, in hand {Name(s.Holder.ActiveWeapon)} with {s.Holder.AmmoInMagazine} rounds");
+            CombatSounds sounds = s.Me.GetComponent<CombatSounds>();
+            var set = sounds != null ? new SerializedObject(sounds).FindProperty("_set").objectReferenceValue as CombatSoundSet : null;
+            WeaponDefinition pistol = s.Holder.WeaponInSlot(0);
+            bool wired = set != null && set.Output != null && set.ImpactWorld != null && pistol != null && pistol.ShotSound != null && pistol.ReloadEndSound != null;
+            Check("gun sounds are wired (headless Unity has no audio device, so nothing is heard here)", wired,
+                $"player has CombatSounds {sounds != null}, bus {(set != null && set.Output != null ? set.Output.name : "none")}, pistol shot {(pistol != null && pistol.ShotSound != null ? pistol.ShotSound.name : "none")}");
             Check("panes numbered", s.Glass != null && s.Glass.PaneCount == 9, $"{(s.Glass != null ? s.Glass.PaneCount : -1)} panes known (4 with a Glass Pane + 1 glass-room wall + 4 by material), {s.Glass?.BrokenCount} broken");
 
             StartClip("clip_pistol_and_rifle");
@@ -2159,11 +2198,18 @@ namespace CloseTheDeal.Editor.Lanes
             if (hud == null)
                 yield break;
 
-            // Hosting may leave the menu up in some scenes; the HUD shows only with it closed.
+            // The HUD shows only with the menu closed. Headless, the cursor never locks, and the menu
+            // reopens whenever the mouse is free; so close it and stop it watching for this run.
             GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
-            if (menu != null && menu.IsOpen)
+            if (menu != null)
+            {
+                // Same step: a frame later the menu would have seen the free cursor and reopened.
                 menu.Resume();
+                menu.enabled = false;
+            }
+
             yield return Seconds(0.5f);
+            Check("the HUD is showing", hud.isActiveAndEnabled, $"HUD active {hud.isActiveAndEnabled}");
             int sounds = 0;
             UiSound.Played += e => { if (e == UiSoundEvent.HitMarker || e == UiSoundEvent.HitMarkerHead || e == UiSoundEvent.KillConfirm || e == UiSoundEvent.CountdownTick) sounds++; };
 

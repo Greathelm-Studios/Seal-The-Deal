@@ -125,7 +125,10 @@ namespace CloseTheDeal.UI
             }
 
             if (_countdown <= 0f)
+            {
+                UiSound.Play(UiSoundEvent.Back);   // the time ran out: the change is undone, so it answers like Revert
                 Revert();
+            }
         }
 
         /// <summary>Leaving the tab or the screen with a resolution unconfirmed goes back to the old one (the dialog closes with the screen).</summary>

@@ -2,6 +2,8 @@ using System;
 using CloseTheDeal.Lobby;
 using CloseTheDeal.MatchMode;
 using CloseTheDeal.Player;
+using CloseTheDeal.UI;
+using UnityEngine.InputSystem;
 using UnityEngine;
 
 namespace CloseTheDeal.Customisation
@@ -101,11 +103,20 @@ namespace CloseTheDeal.Customisation
 
         public bool IsOpen => _phase != Phase.Closed;
 
+        /// <summary>False when the scene's form is missing (an older build): the mirror then offers nothing.</summary>
+        public bool IsUsable => _screen != null;
+
         void Awake()
         {
             Instance = this;
             int player = LayerMask.NameToLayer("Player");
             _wallMask = player >= 0 ? ~(1 << player) : ~0;
+            if (_screen == null || !_screen.IsWired)
+            {
+                Debug.LogError($"[Lobby] {name}: the fitting room has no working form, so the mirror is closed. Run Close the Deal > Lanes > Set Up Lobby (or Set Up Integration) to rebuild it.", this);
+                _screen = null;
+                return;
+            }
             _screen.SlotFocused += FocusSlotAt;
             _screen.OptionChosen += ChooseOption;
             _screen.KeepPressed += () => Leave(true);
@@ -126,7 +137,7 @@ namespace CloseTheDeal.Customisation
 
         public void Enter(FittingRoomMirror mirror)
         {
-            if (_phase != Phase.Closed || PlayerOutfit.Local == null || PlayerMotor.Local == null || PlayerCamera.Instance == null)
+            if (_screen == null || _phase != Phase.Closed || PlayerOutfit.Local == null || PlayerMotor.Local == null || PlayerCamera.Instance == null)
                 return;
             if (LobbyRoster.Instance != null && LobbyRoster.Instance.RunInProgress)
                 return; // The host would refuse the fitting request; the run is about to move everyone.
@@ -138,6 +149,7 @@ namespace CloseTheDeal.Customisation
 
             TakeControls();
             RememberFirstPerson();
+            GameMenu.HoldCursor(this); // The mouse works the form; Esc still opens the menu over it.
 
             _working = _outfit.Worn;
             if (!_outfit.Catalog.IsValid(_working))
@@ -208,6 +220,7 @@ namespace CloseTheDeal.Customisation
         /// <summary>Hands everything back to first person. Safe to call with the player gone.</summary>
         void Finish()
         {
+            GameMenu.ReleaseCursor(this);
             if (_outfit != null)
                 _outfit.View.ForceVisible(false);
             if (_input != null)
@@ -273,7 +286,7 @@ namespace CloseTheDeal.Customisation
             }
 
             // The game menu frees the mouse; while it is up, the fitting room waits.
-            if (_phase == Phase.Open && LobbyInput.Captured)
+            if (_phase == Phase.Open && !GameMenu.OpenInGame)
                 ReadInput();
         }
 
@@ -340,7 +353,9 @@ namespace CloseTheDeal.Customisation
         void ReadTurn()
         {
             float turn = LobbyInput.Rotate.ReadValue<float>() * _turnSpeed * Time.deltaTime;
-            turn += LobbyInput.RotatePointer.ReadValue<float>() * _mouseTurn;
+            // The mouse is free for the form, so it turns the character only while the right button drags.
+            if (LobbyInput.Captured || (Mouse.current != null && Mouse.current.rightButton.isPressed))
+                turn += LobbyInput.RotatePointer.ReadValue<float>() * _mouseTurn;
             if (!_waitForInteractRelease && !Mathf.Approximately(turn, 0f))
             {
                 _userOrbit += turn;

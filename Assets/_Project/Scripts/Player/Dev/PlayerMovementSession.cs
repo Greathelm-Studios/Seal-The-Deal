@@ -138,6 +138,7 @@ namespace CloseTheDeal.Player.Dev
                 case "client": return Client();
                 case "tower": return Tower();
                 case "hud": return HudRole();
+                case "film": return FilmRoute();
                 default:
                     Check("known session role", false, _role);
                     return Wait(0f);
@@ -939,6 +940,81 @@ namespace CloseTheDeal.Player.Dev
 
         // ---- Solo: every move, measured ------------------------------------------------------
 
+        // ---- Film: the same route before and after a feel change --------------------------------
+
+        bool _recording;
+        int _filmFrame;
+        float _nextFilmFrame;
+        RenderTexture _filmTarget;
+        Texture2D _filmReadback;
+        const float FilmFrameSeconds = 1f / 30f;
+
+        /// <summary>
+        /// Plays the route the owner judges feel by (vault out over the sill, a chain of held hops,
+        /// a slide down the ramp into a jump, a slide down the spiral stairs into a jump) while
+        /// writing the player's view, HUD included, as numbered frames for a clip.
+        /// </summary>
+        IEnumerator FilmRoute()
+        {
+            HoldMenuClosed(true);
+            yield return Wait(1f);
+            Directory.CreateDirectory(Path.Combine(_outFolder, "frames"));
+            SetOverlaysThroughCamera(true);
+            _recording = true;
+            yield return SillVaultCheck();
+            yield return HopChecks();
+            yield return RampSlideJumpCheck();
+            yield return StairSlideMeasure();
+            _recording = false;
+            SetOverlaysThroughCamera(false);
+            Note($"film: {_filmFrame} frames at about 30 a second");
+        }
+
+        void SetOverlaysThroughCamera(bool through)
+        {
+            Camera camera = Camera.main;
+            foreach (Canvas canvas in FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+            {
+                if (!canvas.isRootCanvas)
+                    continue;
+                if (through && canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+                {
+                    canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                    canvas.worldCamera = camera;
+                    canvas.planeDistance = camera.nearClipPlane + 0.05f;
+                }
+                else if (!through && canvas.renderMode == RenderMode.ScreenSpaceCamera && canvas.worldCamera == camera)
+                {
+                    canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                }
+            }
+        }
+
+        void LateUpdate()
+        {
+            if (!_recording || Time.unscaledTime < _nextFilmFrame || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+                return;
+
+            _nextFilmFrame = Time.unscaledTime + FilmFrameSeconds;
+            Camera camera = Camera.main;
+            if (_filmTarget == null)
+            {
+                _filmTarget = new RenderTexture(CaptureWidth, CaptureHeight, 24);
+                _filmReadback = new Texture2D(CaptureWidth, CaptureHeight, TextureFormat.RGB24, false);
+            }
+
+            RenderTexture before = camera.targetTexture;
+            camera.targetTexture = _filmTarget;
+            camera.Render();
+            camera.targetTexture = before;
+            RenderTexture active = RenderTexture.active;
+            RenderTexture.active = _filmTarget;
+            _filmReadback.ReadPixels(new Rect(0, 0, CaptureWidth, CaptureHeight), 0, 0);
+            RenderTexture.active = active;
+            _filmFrame++;
+            File.WriteAllBytes(Path.Combine(_outFolder, "frames", $"f{_filmFrame:00000}.jpg"), _filmReadback.EncodeToJPG(88));
+        }
+
         IEnumerator Solo()
         {
             yield return Wait(0.5f);
@@ -1418,7 +1494,7 @@ namespace CloseTheDeal.Player.Dev
         /// <summary>Hold jump out of a sprint: three hops in a row, with nothing lost on the landings.</summary>
         IEnumerator HopChecks()
         {
-            yield return Place(new Vector3(-18f, 0.05f, 4f), 90f);
+            yield return Place(new Vector3(-19f, 0.05f, 4f), 90f);
             StartTrace("hops_straight");
             Press(Key.W, Key.LeftShift);
             yield return Wait(0.7f);
@@ -1426,7 +1502,8 @@ namespace CloseTheDeal.Player.Dev
             int jumps = _localJumps;
             OpenWindow();
             Press(Key.Space);
-            yield return Until(() => _localJumps >= jumps + 4, 6f, "three hops chained by holding jump");
+            // Three jumps: the first and two chained off the landings. The street ends 38 m from the start.
+            yield return Until(() => _localJumps >= jumps + 3, 6f, "three hops chained by holding jump");
             string hops = CloseWindow();
             float slowest = _minSpeed;
             ReleaseAll();
@@ -1700,7 +1777,7 @@ namespace CloseTheDeal.Player.Dev
         {
             yield return Place(new Vector3(0f, 0.05f, -5f), 0f);
             float floor = Feet.y;
-            float expected = 4.5f * 4.5f / (2f * -Physics.gravity.y * Me.Profile.AirGravityMultiplier);
+            float expected = 4.5f * 4.5f / (2f * -Physics.gravity.y * Me.Profile.KnockedGravityMultiplier);
             Vector3 from = Feet;
             OpenWindow();
             Me.ApplyKnockback(new Vector3(0f, 4.5f, 6f), 0.7f);

@@ -7,7 +7,7 @@ Then check [docs/GDD.md](docs/GDD.md) for scope, [docs/notes/INDEX.md](docs/note
 ## Claude-only: memory
 
 Shared notes live in [docs/notes/](docs/notes/) (AGENTS.md §12), so other people's agents see them too. That copy is the record.
-The harness also reads a per-user mirror at `~/.claude/projects/C--Users-xyada-Documents-GitHub-TowerRace/memory/` for recall at session start. If the folder is renamed, that path changes with it.
+The harness also reads a per-user mirror at `~/.claude/projects/<this checkout's path with slashes turned to dashes>/memory/` for recall at session start. The path is different on each person's machine and changes if the folder is renamed.
 
 When writing or updating a memory about this project:
 

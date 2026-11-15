@@ -26,9 +26,12 @@ namespace CloseTheDeal.UI
         Action _onConfirm;
         Action _onStay;
 
-        /// <summary>Sets the words and actions. onStay (optional) runs when the player keeps things as they were (Stay, Esc).</summary>
-        public void Configure(string title, string body, string confirmLabel, string stayLabel, Action onConfirm, Action onStay = null)
+        /// <summary>Sets the words and actions. onStay (optional) runs when the player keeps things as they were (Stay, Esc).
+        /// confirmSound: what the confirm button plays; None when onConfirm plays its own answer (it would be masked).</summary>
+        public void Configure(string title, string body, string confirmLabel, string stayLabel, Action onConfirm, Action onStay = null,
+            UiSoundEvent confirmSound = UiSoundEvent.Confirm)
         {
+            if (_confirm != null) _confirm.ConfirmSound = confirmSound;
             _onStay = onStay;
             if (_title != null) _title.text = title;
             if (_body != null) _body.text = body;

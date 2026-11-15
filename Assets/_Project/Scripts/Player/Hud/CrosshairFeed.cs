@@ -47,7 +47,11 @@ namespace CloseTheDeal.Player.Hud
         void Bind(PlayerMotor motor)
         {
             if (_motor != null)
+            {
                 _motor.Landed -= OnLanded;
+                _motor.Jumped -= OnJumped;
+                _motor.SlideChanged -= OnSlideChanged;
+            }
             if (_weapons != null)
             {
                 _weapons.HitConfirmed -= OnHit;
@@ -57,7 +61,11 @@ namespace CloseTheDeal.Player.Hud
             _motor = motor;
             _weapons = motor != null ? motor.GetComponent<WeaponHolder>() : null;
             if (_motor != null)
+            {
                 _motor.Landed += OnLanded;
+                _motor.Jumped += OnJumped;
+                _motor.SlideChanged += OnSlideChanged;
+            }
             if (_weapons != null)
             {
                 _weapons.HitConfirmed += OnHit;
@@ -87,6 +95,8 @@ namespace CloseTheDeal.Player.Hud
             float open = Mathf.Max(0f, state.PlanarSpeed - profile.WalkSpeed) * profile.CrosshairOpenPerSpeed;
             if (!state.Grounded && !state.Mantling)
                 open += profile.CrosshairOpenInAir;
+            if (state.Sliding)
+                open += profile.CrosshairOpenSliding;
             return Mathf.Min(open, profile.CrosshairOpenMax);
         }
 
@@ -113,6 +123,18 @@ namespace CloseTheDeal.Player.Hud
         {
             if (_crosshair != null && fallSpeed >= _motor.Profile.CrosshairLandingPulseSpeed)
                 _crosshair.Pulse(LandingPulse);
+        }
+
+        void OnJumped()
+        {
+            if (_crosshair != null)
+                _crosshair.Pulse(_motor.Profile.CrosshairJumpPulse);
+        }
+
+        void OnSlideChanged(bool sliding)
+        {
+            if (sliding && _crosshair != null)
+                _crosshair.Pulse(_motor.Profile.CrosshairSlidePulse);
         }
 
         void OnHit(Vector3 point, float damage, bool killed, bool precision)

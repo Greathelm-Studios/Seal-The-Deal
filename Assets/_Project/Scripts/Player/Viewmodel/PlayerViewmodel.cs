@@ -15,6 +15,17 @@
 //  Modified  : Claude Fable 5.2, 2026-11-14 — weapon code can now drive it: swap the held model,
 //              time and cancel a reload, and turn the stand-in keys off (Harvey: "Take the best
 //              option and get it ready").
+//  Modified  : Claude Fable 5.2, 2026-11-14 — the stand-in uses the Reload action when there
+//              is one (Adam's review lane).
+//  Modified  : Claude Fable 5.2, 2026-11-14 — the stand-in shot also sends a local ray that
+//              hits the test dummy (Alex: "i want it so when i actuall shoot him with my gun").
+//  Modified  : Claude Opus 5.5, 2026-11-15 — the stand-in shot also hits other players
+//              through the host, and V swings a stand-in melee hit (Harvey: "add hit
+//              reactions when hit by guns/melee weapons for the players so that when a shooter
+//              hits another player, they see a visible reaction in the person").
+//  Modified  : Claude Fable 5.2, 2026-11-15 — an experimental body view on F5: look out of the
+//              real body, with the separate arms hidden (Harvey: "what about true POV for
+//              the player? Could we try that out?").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Sits on the player prefab. For the player this client controls, and nobody
 //              else, it hangs the first-person arms on the camera, draws them with a camera
@@ -91,6 +102,24 @@ namespace CloseTheDeal.Player
         /// <summary>Input action for the attack button, in the actions asset's Player map.</summary>
         const string AttackAction = "Player/Attack";
 
+        /// <summary>Input action for reload, in the actions asset's Player map. Missing on some branches; the R key is read then.</summary>
+        const string ReloadAction = "Player/Reload";
+
+        /// <summary>How far the stand-in bullet reaches, in metres. Longer than any room in the test scenes. The host's check (<see cref="PlayerHits"/>) uses the same.</summary>
+        internal const float StandInBulletRange = 100f;
+
+        /// <summary>
+        /// Push a stand-in pistol bullet gives what it hits, in newton-seconds. The figure
+        /// agreed with the hit-reaction work for a pistol round on the 49 kg ragdoll.
+        /// </summary>
+        internal const float StandInBulletImpulse = 20f;
+
+        /// <summary>How far the stand-in melee swing reaches from the eye, in metres. WHY 2: an arm and a short club past the front of the 0.35 m capsule.</summary>
+        internal const float StandInMeleeReach = 2f;
+
+        /// <summary>Push the stand-in melee swing gives what it hits, in newton-seconds. WHY 60: three pistol shots, so a swing clearly outweighs a shot; a placeholder until a real melee weapon reports its own.</summary>
+        internal const float StandInMeleeImpulse = 60f;
+
         /// <summary>Below this planar speed, in metres per second, the player counts as standing still and the bob fades out. Well above the jitter of a resting body.</summary>
         const float MovingSpeed = 0.2f;
 
@@ -113,6 +142,10 @@ namespace CloseTheDeal.Player
         Camera _baseCamera;
         Camera _armsCamera;
         InputAction _attack;
+        /// <summary>The reload action, or null when the actions asset has none.</summary>
+        InputAction _reload;
+        /// <summary>What the stand-in bullet can hit: every layer but the arms' own. Set when the arms are shown.</summary>
+        int _standInBulletMask;
 
         Quaternion _lastCameraRotation;
         Vector2 _lag;
@@ -144,6 +177,8 @@ namespace CloseTheDeal.Player
         /// <summary>How long the current reload move lasts, in seconds.</summary>
         float _reloadSeconds;
         PlayerHeldWeapon _body;
+        /// <summary>This player's hit taker, which the stand-in shot and swing ask the host through. Null on a player prefab without one.</summary>
+        PlayerHits _hits;
         /// <summary>What weapon code last asked the hands to hold; used again when the arms are rebuilt.</summary>
         WeaponHold _hold;
         bool _hasHold;
@@ -173,12 +208,6 @@ namespace CloseTheDeal.Player
 
         /// <summary>How the gun is turned at rest right now, blended the same way as <see cref="RestPosition"/>.</summary>
         public Quaternion RestTurn => Quaternion.Slerp(Quaternion.Euler(_profile.GunTurn), Quaternion.Euler(_profile.TwoHandedTurn), _twoHand);
-
-        /// <summary>
-        /// Set by weapon code once it is driving this viewmodel. While true, the stand-in keys
-        /// (attack kicks, R reloads, T switches hands) are ignored.
-        /// </summary>
-        public bool Driven { get; set; }
 
         /// <summary>
         /// The muzzle of the first-person weapon: the child of the held model named "Muzzle", or
@@ -223,6 +252,14 @@ namespace CloseTheDeal.Player
         /// <summary>True from the start of a reload move until the gun is back on aim.</summary>
         public bool IsReloading => _reloadElapsed >= 0f;
 
+        /// <summary>
+        /// Set true by weapon code that calls <see cref="Fire"/> and <see cref="Reload"/> itself.
+        /// The stand-in input (<see cref="ReadTestInput"/>: attack, reload, the T hand switch
+        /// and the V swing) then does nothing, so one shot cannot kick the gun twice.
+        /// </summary>
+        /// <remarks>Local to this machine and not serialized: whatever drives the arms sets it when it starts, typically once at spawn.</remarks>
+        public bool Driven { get; set; }
+
         /// <summary>Kicks the gun. Does nothing on players this client does not control, or during a reload.</summary>
         public void Fire()
         {
@@ -256,7 +293,11 @@ namespace CloseTheDeal.Player
         void Awake()
         {
             if (_actions != null)
+            {
                 _attack = _actions.FindAction(AttackAction, false);
+                _reload = _actions.FindAction(ReloadAction, false);
+            }
+            _hits = GetComponent<PlayerHits>();
 
             // Every player's body, not only the local one: this is what the others see.
             var body = GetComponentInChildren<PlayerAnimator>(true);
@@ -266,6 +307,59 @@ namespace CloseTheDeal.Player
                 _twoHand = _twoHanded ? 1f : 0f;
                 _body = PlayerHeldWeapon.Attach(body.gameObject, _motor, this, _profile, _armsPrefab);
             }
+        }
+
+        /// <summary>
+        /// The body view: the owner looks out of the real body (its own arms, gun and legs)
+        /// and the separate first-person arms are not drawn. Off is the usual view. One switch
+        /// for this machine, remembered between sessions; nothing is networked, since it only
+        /// changes what this player's own screen draws.
+        /// </summary>
+        /// <remarks>An experiment (Harvey: "Instead of the set arm in your camera, what about true POV for the player?"): F5 switches it while playing, in the Editor and development builds.</remarks>
+        public static bool BodyView
+        {
+            get => _bodyView ??= PlayerPrefs.GetInt(BodyViewPref, 0) != 0;
+            set
+            {
+                _bodyView = value;
+                PlayerPrefs.SetInt(BodyViewPref, value ? 1 : 0);
+            }
+        }
+
+        const string BodyViewPref = "ctd.dev.bodyView";
+        static bool? _bodyView;
+        /// <summary>What the body view was the last time this player applied it; null before the first time.</summary>
+        bool? _appliedBodyView;
+        Transform _head;
+        static readonly int BodyViewNearClipId = Shader.PropertyToID("_BodyViewNearClip");
+        static readonly int BodyViewClipBackId = Shader.PropertyToID("_BodyViewClipBack");
+
+        /// <summary>Applies the body view, or undoes it, for the player this machine controls.</summary>
+        /// <remarks>
+        /// The owner's own head is hidden from their own eye only, by a near clip the character
+        /// shader applies for that one camera (see <see cref="OnBeginCameraRendering"/>). The
+        /// head itself is untouched, so mirrors, shadows and other cameras show it.
+        /// </remarks>
+        void ApplyBodyView(bool on)
+        {
+            _appliedBodyView = on;
+            _motor.SetOwnBodyShown(on);
+
+            if (_head == null)
+            {
+                var animator = GetComponentInChildren<PlayerAnimator>(true);
+                _head = animator != null ? animator.HeadBone : null;
+                if (_head == null && on)
+                    _appliedBodyView = null; // The skeleton is not found yet: try again next frame.
+            }
+
+            PlayerCamera eye = PlayerCamera.Instance;
+            if (eye == null)
+                return;
+            if (on && _head != null)
+                eye.SetBodyView(_head, _profile.BodyViewHeadFollow, _profile.BodyViewSmoothing, _profile.BodyViewForward, _profile.BodyViewMaxOffset);
+            else
+                eye.ClearBodyView();
         }
 
         void OnDisable()
@@ -285,7 +379,24 @@ namespace CloseTheDeal.Player
             if (local && _arms == null)
                 Show();
             else if (!local && _arms != null)
+            {
+                // Give the body back as it was before this player stopped being ours.
+                if (_appliedBodyView == true)
+                    ApplyBodyView(false);
+                _appliedBodyView = null;
                 Hide();
+            }
+
+            if (local && _profile != null)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Keyboard keys = Keyboard.current;
+                if (keys != null && keys.f5Key.wasPressedThisFrame)
+                    BodyView = !BodyView;
+#endif
+                if (_appliedBodyView != BodyView)
+                    ApplyBodyView(BodyView);
+            }
 
             if (_arms != null && !Driven)
                 ReadTestInput();
@@ -293,28 +404,87 @@ namespace CloseTheDeal.Player
 
         /// <summary>
         /// Stand-in trigger until slice 2's weapon code calls <see cref="Fire"/> and
-        /// <see cref="Reload"/>: the attack button kicks, R reloads, T switches between one hand and both.
+        /// <see cref="Reload"/>: the attack button kicks and shoots, R reloads, T switches between
+        /// one hand and both, V swings a melee hit at whatever is within 2 m.
         /// </summary>
         /// <remarks>
-        /// WHY the R key is read straight from the keyboard: the actions asset has no reload
-        /// action yet, and adding one belongs with the weapon input in slice 2. Remove this
-        /// method then.
+        /// Skipped once weapon code sets <see cref="Driven"/>. Remove this method when every
+        /// build has such code.
+        /// WHY the R key is a fallback: the actions asset on this branch has no reload action;
+        /// the movement lane's asset has one (Player/Reload), and it is used when present.
+        /// Temporary limit: this reads the project's actions asset, not a player's rebound
+        /// copy, so a rebound attack or reload key is not followed here.
         /// </remarks>
         void ReadTestInput()
         {
             if (Cursor.lockState != CursorLockMode.Locked)
                 return;
 
-            if (_attack != null && _attack.WasPressedThisFrame())
+            // Not during a reload: Fire() ignores the press then, and so must the bullet.
+            if (_attack != null && _attack.WasPressedThisFrame() && !IsReloading)
+            {
                 Fire();
+                StandInStrike(StandInBulletRange, StandInBulletImpulse, HitType.Bullet);
+            }
 
             Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.rKey.wasPressedThisFrame)
+            bool reloadPressed = _reload != null
+                ? _reload.WasPressedThisFrame()
+                : keyboard != null && keyboard.rKey.wasPressedThisFrame;
+            if (reloadPressed)
                 Reload();
             // Stand-in until a two-handed weapon exists: T switches the pistol between one hand
             // and both. Only this machine sees the switch; remove with the rest of this method.
             if (keyboard != null && keyboard.tKey.wasPressedThisFrame)
                 TwoHanded = !TwoHanded;
+            // Stand-in until a melee weapon exists: V swings at whatever is just in front.
+            // Not during a reload, like the shot. Remove with the rest of this method.
+            if (keyboard != null && keyboard.vKey.wasPressedThisFrame && !IsReloading)
+                StandInStrike(StandInMeleeReach, StandInMeleeImpulse, HitType.Melee);
+        }
+
+        /// <summary>
+        /// Stand-in shot or swing, so the test dummy and other players can be hit before the
+        /// weapons exist: one ray from the eye along the look. The dummy it lands on is hit
+        /// here; another player it lands on is reported to the host, which checks the ray
+        /// again and hits that player on every machine.
+        /// </summary>
+        /// <param name="reach">How far the ray goes, metres.</param>
+        /// <param name="impulse">Push given to the dummy, newton-seconds. The host picks its own for a player.</param>
+        /// <param name="kind">Bullet for the attack button, Melee for V.</param>
+        /// <remarks>
+        /// The dummy part is local and visual only, like the dummy. The player part sends only
+        /// where the eye was and which way it looked (<see cref="PlayerHits.RequestStandInHit"/>);
+        /// the host decides the hit (AGENTS.md §3). It is not the game's shooting, which lives
+        /// with the weapon code; that code sets <see cref="Driven"/> and this never runs.
+        /// THROWAWAY: remove with <see cref="ReadTestInput"/>.
+        /// WHY from the eye and not the muzzle: the crosshair is the eye's line, and a shot
+        /// from the gun's off-centre muzzle would miss what is under it at close range.
+        /// The ray starts inside the player's own capsule, which a ray does not report.
+        /// </remarks>
+        void StandInStrike(float reach, float impulse, HitType kind)
+        {
+            Transform eye = _baseCamera.transform;
+            if (!Physics.Raycast(eye.position, eye.forward, out RaycastHit hit, reach, _standInBulletMask, QueryTriggerInteraction.Ignore))
+                return;
+
+            // Only on a hit, and only once per press, so the lookups are not a per-frame cost.
+            var dummy = hit.collider.GetComponentInParent<HitDummy>();
+            if (dummy != null)
+            {
+                dummy.Hit(new HitInfo
+                {
+                    Point = hit.point,
+                    Direction = eye.forward,
+                    Impulse = impulse,
+                    Type = kind
+                });
+                return;
+            }
+
+            var victim = hit.collider.GetComponentInParent<PlayerHits>();
+            if (victim != null && victim != _hits && _hits != null)
+                _hits.RequestStandInHit(eye.position, eye.forward, kind);
         }
 
         void Show()
@@ -330,6 +500,8 @@ namespace CloseTheDeal.Player
             cameraObject.transform.SetParent(_baseCamera.transform, false);
             _armsCamera = cameraObject.AddComponent<Camera>();
             _armsCamera.cullingMask = 1 << layer;
+            // Everything but the arms' own layer, so a held model with a collider cannot stop the shot.
+            _standInBulletMask = ~(1 << layer);
             _armsCamera.fieldOfView = _profile.FieldOfView;
             _armsCamera.nearClipPlane = _profile.NearDistance;
             _armsCamera.farClipPlane = _profile.FarDistance;
@@ -372,6 +544,7 @@ namespace CloseTheDeal.Player
                 return;
 
             RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
+            Shader.SetGlobalFloat(BodyViewNearClipId, 0f);
 
             if (_baseCamera != null)
                 _baseCamera.GetUniversalAdditionalCameraData().cameraStack.Remove(_armsCamera);
@@ -384,11 +557,25 @@ namespace CloseTheDeal.Player
             _baseCamera = null;
         }
 
-        /// <summary>The arms are drawn by their own camera and by no other.</summary>
+        /// <summary>
+        /// The arms are drawn by their own camera and by no other. In the body view, the camera
+        /// the owner looks through also skips whatever of a character is right at the eye.
+        /// </summary>
+        /// <remarks>
+        /// WHY a clip per camera and not a shrunken head bone, which the first version used: a
+        /// bone is posed once a frame for every camera, so the mirror showed the player a
+        /// headless reflection and the shadow had no head either (Harvey: "this definitely cant
+        /// happen"). A value set here is seen only by the camera about to render.
+        /// </remarks>
         void OnBeginCameraRendering(ScriptableRenderContext context, Camera rendering)
         {
+            bool ownEye = _appliedBodyView == true && rendering == _baseCamera;
+            Shader.SetGlobalFloat(BodyViewNearClipId, ownEye ? _profile.BodyViewHeadClip : 0f);
+            // The eye sits BodyViewForward in front of the middle of the head, so the middle
+            // of the head is that far behind the eye.
+            Shader.SetGlobalFloat(BodyViewClipBackId, ownEye ? _profile.BodyViewForward : 0f);
             if (_arms != null)
-                _arms.SetVisible(rendering == _armsCamera);
+                _arms.SetVisible(rendering == _armsCamera && !BodyView);
         }
 
         /// <summary>Places the gun for this frame: authored framing, then look lag, walk bob, fire kick and the reload dip on top. The arms prefab then reaches the hand to it.</summary>
