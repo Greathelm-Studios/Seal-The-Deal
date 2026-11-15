@@ -26,7 +26,7 @@ All by the scripted session (`Scripts/Player/Dev/PlayerMovementSession.cs`), whi
 - HUD captures at 1920×1080, 1280×720 and 2560×1080 in `Lane_Movement.unity` and `Lane_Integration.unity`: default, refusal, refusal faded, help on keyboard, help on pad, menu over the card. Every sound event fired (Error, PanelOpen, PanelClose).
 - Not seen: a second real machine, Steam, more than two players, packet loss, ping above 120 ms, the real greybox tower's stairs (the automated run placed the body wrongly and measured nothing), and anyone playing it by hand.
 
-## Known issues (open; gameplay work is stopped by the owner, so these are left for later)
+## Known issues
 
 - **Sprint dips going up the spiral stairs.** The speed trace (`solo_trace_stairs_up.csv` from the scripted session) shows it is not the turn (`Ground Turn Rate` holds speed there) but contacts: a drop from 9.0 to 6.9 m/s about 2.9 m up the flight and the worst, to 5.1 m/s, at 4.39 m, where the flight's top meets the upper floor's slab edge. Likely cause: the capsule catching on the 48 flat facets of the flight mesh and on the lip at the top. Likely fix: a smoother collider for the flight (more segments, or a separate collision mesh) and a flush top edge, in the tower tool rather than the motor. The scripted check for it fails for this reason.
 - **A Space press is sometimes swallowed in the scripted session.** In about half the solo runs, the first press after the menu-opened-mid-jump check does not start the next climb; the menu check itself passes. Not seen outside the scripted session; cause not found. The likely area is the game menu's close-on-Submit-release guard (Space is also UI Submit) interacting with the session holding the menu closed.
@@ -38,7 +38,17 @@ All by the scripted session (`Scripts/Player/Dev/PlayerMovementSession.cs`), whi
 - PlayerPrefs are one file shared by every checkout on this Mac (productName is still "CloseTheDeal"; renaming is Adam's call). The scripted session ignores saved rebinds, and puts back any look setting or rebind its settings check changed, even when play is stopped mid-check.
 - The scripted session holds the game menu closed while it runs, because a headless editor cannot lock the cursor; a real player never sees that.
 
+## Movement feel pass (owner re-opened movement, 2026-11-14/15)
+
+- "Make movement a touch faster, the jump bouncier, and every move answer" (93faace): walk 6.75, sprint 10.1 m/s; rising gravity 1.6x, an apex hang (0.6x under 1.5 m/s), falling 2.4x; coyote 0.12 s, buffer 0.15 s; camera spring, slide roll and FOV, crosshair pulses, gamepad rumble, movement sound events, slide hint and a Slide line on the controls card. Measured in the filmed route: hops keep 10.1 m/s, apex 1.69 m after 0.56 s (was about 0.40 s), the ramp slide builds 9.75 to 11.5 m/s.
+- This slice: the crosshair feed now adds itself to the HUD crosshair of any scene when the camera starts following the local player (so Lane_Integration gets it without a scene edit), sound slots take lane 9's variations (Move_Jump_01, _02 and so on), and a doubled comment is fixed.
+- Reduce motion: the camera kicks, slide roll and FOV changes stop; the crosshair pulses also stop, because the kit's crosshair checks the same Accessibility setting.
+
 ## Assumptions made while Adam was away (confirm or change)
+
+- A hop now lasts about 1.1 s in the air (was about 0.73 s, worked out from the profile values): "bouncier" read as more hang. If it feels floaty, Apex Gravity Multiplier (0.6) and Air Gravity Multiplier (1.6) on the movement profile tune it.
+- Gamepad sprint stays a held left-stick click; a toggle would be kinder while sliding but is a design call.
+- Movement is silent until recorded clips land; lane 9's generator writes them into Assets/_Project/Audio/Movement/ and Set Up Movement Sounds fills the slots.
 
 - Feel target is STRAFTAT-like momentum, not the GDD's "chaotic, not precise".
 - Hold Space to keep hopping (`Hold To Hop` on), not timed hops.

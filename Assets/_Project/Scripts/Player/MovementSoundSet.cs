@@ -26,12 +26,12 @@ namespace CloseTheDeal.Player
         [Min(0.3f)] public float RunStride = 2.4f;
 
         [Header("Jumping and landing")]
-        [Tooltip("Take-off (Move_Jump).")]
-        public AudioClip Jump;
+        [Tooltip("Take-off (Move_Jump_01, _02...). Variations are picked at random.")]
+        public AudioClip[] Jump = new AudioClip[0];
         [Tooltip("A landing slower than the heavy speed below (Move_Land_Light).")]
-        public AudioClip LandLight;
+        public AudioClip[] LandLight = new AudioClip[0];
         [Tooltip("A landing at or above the heavy speed (Move_Land_Heavy).")]
-        public AudioClip LandHeavy;
+        public AudioClip[] LandHeavy = new AudioClip[0];
         [Tooltip("Falling speed, in metres per second, from which a landing uses the heavy sound. A full jump lands at about 8.")]
         [Min(0f)] public float HeavyLandSpeed = 11f;
         [Tooltip("Falling speed, in metres per second, that plays a landing at full volume; slower ones are quieter.")]
@@ -47,9 +47,9 @@ namespace CloseTheDeal.Player
 
         [Header("Climbing")]
         [Tooltip("Pulling up onto something (Move_Mantle).")]
-        public AudioClip Mantle;
+        public AudioClip[] Mantle = new AudioClip[0];
         [Tooltip("Vaulting over something thin, like the window sill (Move_Vault).")]
-        public AudioClip Vault;
+        public AudioClip[] Vault = new AudioClip[0];
 
         [Header("Wind")]
         [Tooltip("Air rushing past at speed, heard only by the player moving (Move_Wind_Loop). Loops.")]

@@ -44,7 +44,6 @@ namespace CloseTheDeal.Player
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void HookPrefs() => InputPrefs.BindingsHooked = true;
 
-        /// <summary>The player's saved rebinding, put on this reader's own copy of the actions (overrides are not copied by Instantiate).</summary>
         /// <summary>The rebind text last put on this reader's actions; null until the first apply.</summary>
         string _appliedBindings;
 
