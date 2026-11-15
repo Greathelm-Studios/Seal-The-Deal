@@ -6,7 +6,7 @@ namespace CloseTheDeal.Lobby
 {
     /// <summary>
     /// Gives the reception's moments their UI sounds from the shared sound set (UiSound): looking
-    /// at a desk or stand, using it, readying, signing in, a refusal, the short-handed confirm,
+    /// at a desk or stand, using it, readying, signing in, someone joining or leaving, a refusal, the short-handed confirm,
     /// the start, and stepping into and out of the fitting room. The kit's own controls already
     /// sound for themselves; this covers what is not a kit control. Local only.
     /// </summary>
@@ -47,6 +47,8 @@ namespace CloseTheDeal.Lobby
             _roster = roster;
             if (_roster == null)
                 return;
+            _roster.OnArrived += OnArrived;
+            _roster.OnDeparted += OnDeparted;
             _roster.OnReadyChanged += OnReadyChanged;
             _roster.OnFirmChosen += OnFirmChosen;
             _roster.OnFirmRefused += OnRefused;
@@ -69,6 +71,8 @@ namespace CloseTheDeal.Lobby
         {
             if (_roster == null)
                 return;
+            _roster.OnArrived -= OnArrived;
+            _roster.OnDeparted -= OnDeparted;
             _roster.OnReadyChanged -= OnReadyChanged;
             _roster.OnFirmChosen -= OnFirmChosen;
             _roster.OnFirmRefused -= OnRefused;
@@ -92,6 +96,8 @@ namespace CloseTheDeal.Lobby
                 UiSound.Play(ready ? UiSoundEvent.LobbyReady : UiSoundEvent.LobbyUnready);
         }
 
+        void OnArrived(LobbyMember member) => UiSound.Play(UiSoundEvent.PlayerJoined);
+        void OnDeparted(LobbyMember member) => UiSound.Play(UiSoundEvent.PlayerLeft);
         void OnFirmChosen(int firm) => UiSound.Play(UiSoundEvent.Confirm);
         void OnRefused(int firm) => UiSound.Play(UiSoundEvent.Error);
         void OnStartBlocked(StartBlock block) => UiSound.Play(UiSoundEvent.Error);

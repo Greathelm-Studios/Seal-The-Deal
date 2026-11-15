@@ -349,6 +349,11 @@ EVENTS = {
     "TransitionPaneSlide": E(0.28, "ui", "three glass taps E6 D6 C6 + slide", b_tr_pane),
     "TransitionFrameZoom": E(0.86, "sting", "rising whoosh landing on C5 G5 C6 E6: the game starts", b_tr_zoom),
     "TransitionFade": E(0.13, "ui", "small puff of air (reduced motion)", b_tr_fade),
+    # Added 2026-11-15. Shipped as recordings (ArtSource/Audio/recorded/UI); the synthesised fallbacks borrow the
+    # nearest existing builder so a missing recording never leaves the event silent.
+    "PlayerJoined": E(0.24, "ui", "someone joins the reception (fallback: ready's steps up)", b_ready),
+    "PlayerLeft": E(0.22, "ui", "someone leaves the reception (fallback: unready's steps down)", b_unready),
+    "Tip": E(0.46, "ui", "a gameplay hint appears (fallback: notification's two notes)", b_notify),
 }
 PEAK = {"ui": 0.70, "sting": 0.80, "combat": 0.90}      # peak ceiling per class (linear full scale)
 LOUD = {"ui": -14.0, "sting": -11.0, "combat": -11.0}    # target perceived level per class, dB (A-weighted, loudest 46 ms)

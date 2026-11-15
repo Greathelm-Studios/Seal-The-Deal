@@ -173,7 +173,7 @@ namespace CloseTheDeal.Player.Hud
             string key = _reader.BindingText("Crouch", _reader.LastUsedGamepad);
             _slideHint.Set($"Sprinting: press {key} to slide.", UiStatusKind.Info);
             _hintHold = _slideHintSeconds;
-            UiSound.Play(UiSoundEvent.Notification);
+            UiSound.Play(UiSoundEvent.Tip);
         }
 
         /// <summary>The words for a refused climb: say why, in the house voice.</summary>
