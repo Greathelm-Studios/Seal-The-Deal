@@ -4,6 +4,7 @@
 #  Generated : 2026-11-15
 #  Prompt    : Alex on the L2 KitOffice build: "looks good but bland and boring ... I want them to follow the
 #              structure with purpose and intent" -> build the markings system (concepts/Layout/MARKINGS.md)
+#  Modified  : Claude Opus 5.5, 2026-11-15 - mood D in blue: the two half blues as paint, giant zone numbers.
 #  Reviewed  : NOT YET REVIEWED BY A HUMAN
 #  Summary   : Draws every floor, ceiling and wall marking of the L2 office as textures, from the plan's own data
 #              (concepts/Layout/L2/layouts.json for the ring, nodes, case, gates and district colours; l2_on_kit.json
@@ -47,6 +48,12 @@ SILVER = (0xC9, 0xCE, 0xD3)            # kit_pieces M_STAIR / frame aluminium
 GATE_RED = ms.SEAL                     # the locked-door red: "blocked" everywhere in the game
 COVE = (0xE8, 0xF8, 0xFF)              # light cove: near-white with the slightest ice, the kit's light strips
 SAFETY_GREEN = (0x1E, 0x8C, 0x4E)      # evacuation signage green (ISO 7010 family)
+# Mood D in blue (concepts/Mood/DECISION.md, Alex 2026-11-15): each firm's half owns one blue, as whole surfaces and light.
+HALF_A_BLUE = (0x1D, 0x3F, 0xC4)       # firm A's west half: deep cobalt
+HALF_B_BLUE = (0x1E, 0x9B, 0xFF)       # firm B's east half: bright azure
+COURT_SKY = (0x8F, 0xC3, 0xF5)         # the court's own blue: pale sky, between the two halves' blues
+COURT_FIELD = (16.4, 10.4, 23.6, 21.6) # the court's floor field, plan metres: inside the court, clear of its edges
+ZONE_NUMBER_H = 2.6                    # giant zone number height on a wall field, metres (D: "giant 01 / 04")
 
 # ---- Sizes, metres (MARKINGS.md)
 RING_W = 0.30                          # ring inlay band
@@ -59,7 +66,7 @@ TENANCY_BAND = 0.15                    # each firm's band on the tenancy line
 GATE_W = 0.30                          # gate band at a stair arrival
 EDGE_W = 0.08                          # navy edge strip on a void or hole edge, plus a silver line
 DOOR_OPEN = 1.2                        # door opening the base band stops at (kit DOOR_W)
-WALL_T = {'solid': 0.2, 'glass': 0.1, 'frost': 0.1}   # kit WALL and PART_T
+WALL_T = {'solid': 0.2, 'glass': 0.1, 'frost': 0.1, 'fluted': 0.1, 'louvre': 0.1}   # kit WALL and PART_T
 
 
 # ---------------------------------------------------------------- data
@@ -249,6 +256,11 @@ def floor_sheet(floor):
             if turned:
                 a, bb, fr, to = turn(a), turn(bb), TURN_LETTER[fr], TURN_LETTER[to]
             threshold(s, a, bb, fr, to, threshold_sign(th))
+    # Mood D: the court's floor field in its sky blue, under the tenancy line and the plinth (ground floor only).
+    if floor == '1F':
+        x0, y0, x1, y1 = COURT_FIELD
+        s.rrect((x0 + x1) / 2, (y0 + y1) / 2, x1 - x0 + 2 * RING_EDGE, y1 - y0 + 2 * RING_EDGE, 0.6, SILVER)
+        s.rrect((x0 + x1) / 2, (y0 + y1) / 2, x1 - x0, y1 - y0, 0.58, COURT_SKY)
     # 3. The tenancy line: the two leases meet on the court's axis, from the lift door to the south baffle.
     tenancy(s, b['liftDoor'], b['southBaffle'])
     # 4. The deal plinth at the case start (ground floor: upstairs it is the void).
@@ -412,6 +424,10 @@ def ceiling_sheets():
             s.d.line([s.p(a[0] + cx, a[1] + cy), s.p(bb[0] + cx, bb[1] + cy)], fill=DISTRICT_COLOUR[d],
                      width=s.m(0.2 + 2 * SOFFIT_BAND))
         b = KITPLAN['built']
+        if floor == '1F':   # mood D: the bridge's and the canopy's undersides in the court's sky blue
+            v = KITPLAN['built']['void']
+            s.rect(v[0], 10.0, v[2], v[1], COURT_SKY)
+            s.rect(v[0], v[3], v[2], 22.0, COURT_SKY)
         if floor == '1F':   # the ground floor's soffit is the upper slab, open over the void and the stair flights
             s.clear(*b['void'])
             s.clear(*b['stairHole'])
@@ -564,6 +580,16 @@ def evac(name, here, face, floor):
     ms.save_label(img, name)
 
 
+def zone_numbers():
+    """Giant white zone numbers for the coloured wall fields (mood D): 01 and 02 on firm A's half, 03 and 04 on B's."""
+    for n in ('01', '02', '03', '04'):
+        img, den = ms.canvas(2.6, ZONE_NUMBER_H, 200)
+        d = ImageDraw.Draw(img)
+        f = ms.fitted(ms.LATIN, ZONE_NUMBER_H * 0.72, den, body=n, max_w_px=img.width)
+        d.text((img.width // 2, img.height - ms.lpx(0.25, den)), n, font=f, fill=WHITE, anchor='ms')
+        ms.save_label(img, f'Zone_Number_{n}')
+
+
 def plain(name, colour):
     Image.new('RGBA', (8, 8), colour + (255,)).save(os.path.join(OUT, name + '.png'))
 
@@ -590,5 +616,10 @@ if __name__ == '__main__':
     firm_lightboxes()
     evac_plans()
     plain('Band_Cobalt', COBALT)
+    plain('Paint_HalfA', HALF_A_BLUE)
+    plain('Paint_HalfB', HALF_B_BLUE)
+    plain('Paint_Court', COURT_SKY)
+    plain('Glow_Blue', (0x5C, 0xA8, 0xFF))   # the feature stair's glowing edge (mood D)
+    zone_numbers()
     review(floors)
     print('firms:', FIRM_A, FIRM_B)

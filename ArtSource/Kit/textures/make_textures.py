@@ -29,7 +29,7 @@ CEILING = (0xF3, 0xF4, 0xF4)   # Paper White, bible §03
 CEILING_SEAM = (0xD3, 0xD8, 0xDE)   # grid tee colour: a cool light grey, so the grid reads without going busy
 CEILING_SEAM_PX = 6     # seam width, pixels (12 mm): the width of a cheap exposed-tee ceiling grid
 CARPET = (0x64, 0x6E, 0x86)    # old Floor_Carpet value (kit_pieces.py before the polished floor)
-CARPET_DARK = (0x7E, 0x96, 0xAC)   # Carpet_Dark (kit_pieces.py): paler blue work-area carpet (Japanese_Aero/DECISION.md)
+CARPET_DARK = (0x2E, 0x36, 0x48)   # charcoal-blue since 2026-11-15 (mood D: dark floor fields for contrast); was 7E96AC   # Carpet_Dark (kit_pieces.py): paler blue work-area carpet (Japanese_Aero/DECISION.md)
 CARPET_SEAM = 0.88      # seam brightness relative to the carpet. WHY: just visible, so tiles read as tiles
 CARPET_STRIPE = 0.035   # stripe contrast, fraction of the base value. WHY: the bible asks for low-contrast carpet
 CARPET_STRIPE_PX = 10   # stripe pitch, pixels (20 mm): a fine loop-pile line at walking distance
@@ -95,9 +95,34 @@ def floor_tile(name='Floor_Carpet.png'):
     im.save(os.path.join(HERE, name))
 
 
+FLUTES_PER_M = 32       # fluted glass: reeds per metre (31 mm pitch). WHY a whole number: the texture repeats every metre
+FLUTE_COLOUR = (0xDC, 0xEB, 0xF5)   # Glass_Fluted's pale blue-white
+LOUVRE_COLOUR = (0x6F, 0xA8, 0xFF)  # the louvre slats' blue: first try in pale blue-white read white in daylight
+FLUTE_ALPHA = (150, 215)            # alpha across one reed: thin at its crest, denser at its valleys (0-255)
+
+
+def fluted_glass(name='Glass_Fluted.png', colour=FLUTE_COLOUR):
+    """Reeded frosted glass, 1 m square: vertical flutes, each a soft highlight at its crest and a denser, slightly
+    darker valley, so the glass reads as ribbed and scatters what is behind it (mood D, Alex's references)."""
+    import math
+    im = Image.new('RGBA', (SIZE, SIZE))
+    px = im.load()
+    for x in range(SIZE):
+        t = (x * FLUTES_PER_M / SIZE) % 1.0
+        crest = 0.5 + 0.5 * math.cos(2 * math.pi * t)          # 1 at a reed's crest, 0 in the valley
+        light = 0.92 + 0.08 * crest
+        a = int(FLUTE_ALPHA[1] - (FLUTE_ALPHA[1] - FLUTE_ALPHA[0]) * crest)
+        col = tuple(min(255, int(c * light + 18 * crest)) for c in colour) + (a,)
+        for y in range(SIZE):
+            px[x, y] = col
+    im.save(os.path.join(HERE, name))
+
+
 if __name__ == '__main__':
     ceiling()
     ceiling('Ceiling_Grid.png')   # the same grid under the name of the work-area ceiling material
     floor_tile()   # Floor_Carpet.png is the white tile floor since 2026-11-15; the old carpet() stays for reference
     carpet(CARPET_DARK, 'Carpet_Dark.png')
+    fluted_glass()
+    fluted_glass('Glass_Louvre.png', LOUVRE_COLOUR)   # the louvre slats: the reeds in blue (KitImport makes them glow)
     print('wrote the ceiling, ceiling grid, carpet and dark carpet textures to', HERE)

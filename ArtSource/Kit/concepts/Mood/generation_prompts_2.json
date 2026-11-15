@@ -1,0 +1,189 @@
+{
+  "date": "2026-11-15",
+  "request": "REQUEST_2.md",
+  "tool": "image_gen.imagegen",
+  "mode": "built-in image editing; one call per final image",
+  "input_roles": "First image in each call is its source capture and sole edit target; subsequent images are style references only.",
+  "export": "System.Drawing full-frame resizing only; no cropping or procedural recolouring. Contact sheet assembled with System.Drawing.",
+  "source_sha256": {
+    "source/L1_window_hall.png": "891D66FA606FF3891A4CC9A91AF2AE50F59227501EED42AF8B489E6F8D3C3DC7",
+    "source/L3_court_feature_stair.png": "CCA80238F9F4E37F73DEC7D41D5955F2B0D5D6CABE21BDFD5D05657BBF643762",
+    "source/L4_west_ring_ribbon.png": "F6D1B64DF4ADB57C4CF64E8E9C20991E80998805A57F00B88D0844492C2C02AF",
+    "source/look_bench.png": "A554CD142AF625F731C53CF224A22AFE29856CE827FFFB418D61B7999EDE6DA4"
+  },
+  "contact_sheet": {
+    "file": "contact_sheet_2.png",
+    "dimensions": [
+      3456,
+      1536
+    ],
+    "rows": [
+      "Source",
+      "D",
+      "E"
+    ],
+    "columns": [
+      "L1_window_hall",
+      "L3_court_feature_stair",
+      "L4_west_ring_ribbon",
+      "look_bench"
+    ],
+    "references": [
+      "refs_alex/01_lobby_tree_waterfall.png",
+      "refs_alex/02_fluted_glass_blue_digits.png",
+      "refs_alex/03_green_division.png",
+      "refs_alex/06_blue_atrium.png",
+      "refs_alex/13_dark_floor_lightboxes.png",
+      "refs_alex/14_night_blue_tech.png"
+    ]
+  },
+  "images": [
+    {
+      "file": "D_L1_window_hall.png",
+      "prompt": "Use case: style-transfer. Asset type: Seal the Deal game environment art-direction paintover.\nInput images: Image 1 is the SOLE EDIT TARGET and dictates every pixel of the camera composition and every architectural boundary. Any further input images are STYLE REFERENCES ONLY; borrow material/lighting principles, never their layout or branding.\nSTRICT INVARIANTS: preserve exact source camera position, lens, aspect ratio, framing, vanishing points, all silhouettes of architecture, walls, door openings, glazing frames, ceiling rafts, furniture counts and positions, stairs/landings, cover heights, player capsules, and clear walkable routes. Paint directly on this source capture; do not reimagine or redesign its geometry. No crop or reframe. Material, colour, lighting, graphic surface treatments, restrained nonblocking dressing only.\nPolished credible 3D game concept paintover, crisp architecture, strong readable value contrast. Clean maintained corporate office. All lettering flat painted/applied vinyl/backlit, never extruded. Invent original graphics only. Brand, if visible: AONAGI (open aqua ring with red dot); firms Ashcombe & Pryce and Halloran Voss. No copied logos/text from references, no reference watermarks. No bubbles, ivy, cyan floor light trails, dirt, decay, sci-fi greeble, additional people or UI. Floor light may be physically motivated reflection ONLY.\nDIRECTION D — COLOUR-CODED: bright daylight; glossy clean white is the canvas, genuine charcoal dark planes and reflections provide contrast. A bold saturated zone accent arrives as illumination flooding white surfaces, also occupying selected whole surfaces; never a pale pastel tint or merely thin trim. WEST / Firm A / Ashcombe & Pryce = vivid orange; EAST / Firm B / Halloran Voss = saturated green. Court/lift lobby = cool blue skylight shafts. Enclosed utility stair = orange steel, but keep the court's open feature staircase geometry unchanged. White balance stays white outside local colour spill. Fluted frosted glass treatments retain the exact existing glazing extents. One giant original flat graphic per view. Hard shaped sun or slat shadows where motivated. Keep circulation unblocked.\nVIEW: L1 window hall, 1600x900. Existing long desk bank runs down the left window wall; bulky panelled wall and AONAGI poster at right, clear corridor between. This is west / Firm A: ORANGE ONLY as zone accent, no green or cyan decoration. Keep white desktops/chairs, use dark glossy graphite corridor floor and muted neutral under-desk carpet for value contrast. Paint selected right wall panels saturated orange, add warm orange light spilling from existing end-room glazing, orange bumper rails as flat surface colour at existing panel mid-height without changing wall silhouette. Rework existing right poster into large original orange/white backlit AONAGI graphic with an enormous flat '01'; retain its size/position. Existing sun casts strong diagonal window-grid shadows. Make existing glass fluted/frosted where appropriate, keep exterior window glass clear. One small distant blue court glimpse only if already visible through end opening. Keep every desk/chair/CRT in exactly its source position.",
+      "edit_target": "source/L1_window_hall.png",
+      "style_references": [
+        "refs_alex/09_white_orange_corridor.png",
+        "refs_alex/03_green_division.png"
+      ],
+      "generated_dimensions": [
+        1672,
+        941
+      ],
+      "export_dimensions": [
+        1600,
+        900
+      ]
+    },
+    {
+      "file": "D_L3_court_feature_stair.png",
+      "prompt": "Use case: style-transfer. Asset type: Seal the Deal game environment art-direction paintover.\nInput images: Image 1 is the SOLE EDIT TARGET and dictates every pixel of the camera composition and every architectural boundary. Any further input images are STYLE REFERENCES ONLY; borrow material/lighting principles, never their layout or branding.\nSTRICT INVARIANTS: preserve exact source camera position, lens, aspect ratio, framing, vanishing points, all silhouettes of architecture, walls, door openings, glazing frames, ceiling rafts, furniture counts and positions, stairs/landings, cover heights, player capsules, and clear walkable routes. Paint directly on this source capture; do not reimagine or redesign its geometry. No crop or reframe. Material, colour, lighting, graphic surface treatments, restrained nonblocking dressing only.\nPolished credible 3D game concept paintover, crisp architecture, strong readable value contrast. Clean maintained corporate office. All lettering flat painted/applied vinyl/backlit, never extruded. Invent original graphics only. Brand, if visible: AONAGI (open aqua ring with red dot); firms Ashcombe & Pryce and Halloran Voss. No copied logos/text from references, no reference watermarks. No bubbles, ivy, cyan floor light trails, dirt, decay, sci-fi greeble, additional people or UI. Floor light may be physically motivated reflection ONLY.\nDIRECTION D — COLOUR-CODED: bright daylight; glossy clean white is the canvas, genuine charcoal dark planes and reflections provide contrast. A bold saturated zone accent arrives as illumination flooding white surfaces, also occupying selected whole surfaces; never a pale pastel tint or merely thin trim. WEST / Firm A / Ashcombe & Pryce = vivid orange; EAST / Firm B / Halloran Voss = saturated green. Court/lift lobby = cool blue skylight shafts. Enclosed utility stair = orange steel, but keep the court's open feature staircase geometry unchanged. White balance stays white outside local colour spill. Fluted frosted glass treatments retain the exact existing glazing extents. One giant original flat graphic per view. Hard shaped sun or slat shadows where motivated. Keep circulation unblocked.\nVIEW: L3 court feature stair, exact source framing 1600x900. LOCK the long diagonal open feature stair, glass balustrade, left upper mezzanine, foreground left/right rounded waist-high white cover blocks, and both dark capsules to the exact source silhouettes. Do not add or move closing table: source has no table; SPOTLIGHT THE EXISTING ROUND CENTRE DAIS around the foreground capsule without changing it. Court is white lit by BLUE shafts from above with dramatic light/shadow; floor alternates pearl and graphite reflective fields using existing tile boundaries. BLUE is dominant court accent. On existing far-left wing only orange light and large flat orange 'H' district graphic on the original H wall; on far-right east wall/glass only a contained saturated GREEN glow and fluted glazing, never green spilling into central blue court. Small orange steel treatment confined to any enclosed service stair visible; keep open feature stair white/blue. Hero object: a very slim sheet of indoor water washing straight down an EXISTING BACK WALL PANEL UNDER THE STAIR at rear centre-right, hugging the wall plane, with hidden drain, zero new floor footprint, no obstruction or displacement of door. No tree, no hanging objects.",
+      "edit_target": "source/L3_court_feature_stair.png",
+      "style_references": [
+        "refs_alex/06_blue_atrium.png",
+        "refs_alex/01_lobby_tree_waterfall.png",
+        "refs_alex/03_green_division.png"
+      ],
+      "generated_dimensions": [
+        1672,
+        941
+      ],
+      "export_dimensions": [
+        1600,
+        900
+      ]
+    },
+    {
+      "file": "D_L4_west_ring_ribbon.png",
+      "prompt": "Use case: style-transfer. Asset type: Seal the Deal game environment art-direction paintover.\nInput images: Image 1 is the SOLE EDIT TARGET and dictates every pixel of the camera composition and every architectural boundary. Any further input images are STYLE REFERENCES ONLY; borrow material/lighting principles, never their layout or branding.\nSTRICT INVARIANTS: preserve exact source camera position, lens, aspect ratio, framing, vanishing points, all silhouettes of architecture, walls, door openings, glazing frames, ceiling rafts, furniture counts and positions, stairs/landings, cover heights, player capsules, and clear walkable routes. Paint directly on this source capture; do not reimagine or redesign its geometry. No crop or reframe. Material, colour, lighting, graphic surface treatments, restrained nonblocking dressing only.\nPolished credible 3D game concept paintover, crisp architecture, strong readable value contrast. Clean maintained corporate office. All lettering flat painted/applied vinyl/backlit, never extruded. Invent original graphics only. Brand, if visible: AONAGI (open aqua ring with red dot); firms Ashcombe & Pryce and Halloran Voss. No copied logos/text from references, no reference watermarks. No bubbles, ivy, cyan floor light trails, dirt, decay, sci-fi greeble, additional people or UI. Floor light may be physically motivated reflection ONLY.\nDIRECTION D — COLOUR-CODED: bright daylight; glossy clean white is the canvas, genuine charcoal dark planes and reflections provide contrast. A bold saturated zone accent arrives as illumination flooding white surfaces, also occupying selected whole surfaces; never a pale pastel tint or merely thin trim. WEST / Firm A / Ashcombe & Pryce = vivid orange; EAST / Firm B / Halloran Voss = saturated green. Court/lift lobby = cool blue skylight shafts. Enclosed utility stair = orange steel, but keep the court's open feature staircase geometry unchanged. White balance stays white outside local colour spill. Fluted frosted glass treatments retain the exact existing glazing extents. One giant original flat graphic per view. Hard shaped sun or slat shadows where motivated. Keep circulation unblocked.\nVIEW: L4 west ring ribbon corridor, exact source 1600x900. Left side is original long white panelled wall with existing doors; right is original full-height glass meeting room wall and exact chairs/cover beyond; two dark player capsules unchanged, one near corridor centre and one in right room. WEST/Firm A so vivid ORANGE is the SINGLE zone accent. Make the lower/selected existing right meeting-room glass fluted frosted with warm orange room light flooding through it; retain all current black mullions, clear upper panes and door outlines. Keep chairs beyond visible as silhouettes; don't delete or move them. Original left wall selected panel group and distant END WALL become saturated orange with believable coloured light spill; orange bumper band as flat applied enamel through existing wall panels, no added depth. One giant original orange/white flat vinyl '04' on the near left blank panel; no tiny signs or 3D type. White glossy ceiling rafts, hard directional slatted/window shadows, white wall canvas elsewhere, existing narrow dark floor ribbon remains same course; give corridor glossy pearl and charcoal reflective tile fields. Capsules remain clearly readable against bright/orange-lit background. No greens, no extra blue accent or cyan trail.",
+      "edit_target": "source/L4_west_ring_ribbon.png",
+      "style_references": [
+        "refs_alex/02_fluted_glass_blue_digits.png",
+        "refs_alex/09_white_orange_corridor.png"
+      ],
+      "generated_dimensions": [
+        1672,
+        941
+      ],
+      "export_dimensions": [
+        1600,
+        900
+      ]
+    },
+    {
+      "file": "D_look_bench.png",
+      "prompt": "Use case: style-transfer. Asset type: Seal the Deal game environment art-direction paintover.\nInput images: Image 1 is the SOLE EDIT TARGET and dictates every pixel of the camera composition and every architectural boundary. Any further input images are STYLE REFERENCES ONLY; borrow material/lighting principles, never their layout or branding.\nSTRICT INVARIANTS: preserve exact source camera position, lens, aspect ratio, framing, vanishing points, all silhouettes of architecture, walls, door openings, glazing frames, ceiling rafts, furniture counts and positions, stairs/landings, cover heights, player capsules, and clear walkable routes. Paint directly on this source capture; do not reimagine or redesign its geometry. No crop or reframe. Material, colour, lighting, graphic surface treatments, restrained nonblocking dressing only.\nPolished credible 3D game concept paintover, crisp architecture, strong readable value contrast. Clean maintained corporate office. All lettering flat painted/applied vinyl/backlit, never extruded. Invent original graphics only. Brand, if visible: AONAGI (open aqua ring with red dot); firms Ashcombe & Pryce and Halloran Voss. No copied logos/text from references, no reference watermarks. No bubbles, ivy, cyan floor light trails, dirt, decay, sci-fi greeble, additional people or UI. Floor light may be physically motivated reflection ONLY.\nDIRECTION D — COLOUR-CODED: bright daylight; glossy clean white is the canvas, genuine charcoal dark planes and reflections provide contrast. A bold saturated zone accent arrives as illumination flooding white surfaces, also occupying selected whole surfaces; never a pale pastel tint or merely thin trim. WEST / Firm A / Ashcombe & Pryce = vivid orange; EAST / Firm B / Halloran Voss = saturated green. Court/lift lobby = cool blue skylight shafts. Enclosed utility stair = orange steel, but keep the court's open feature staircase geometry unchanged. White balance stays white outside local colour spill. Fluted frosted glass treatments retain the exact existing glazing extents. One giant original flat graphic per view. Hard shaped sun or slat shadows where motivated. Keep circulation unblocked.\nVIEW: look_bench close-up, EXACT source 1280x720 16:9 framing. Keep all source desks, EVERY CRT monitor and keyboard, towers, drawer units, paper trays, all foreground and rear chairs/casters, dividers and window mullions at exactly their source positions and sizes. This is the WEST window-hall bench / Ashcombe & Pryce, so ORANGE is the SINGLE zone accent: existing aqua desktop privacy-divider glass becomes fluted orange-tinted frosted glass, physically motivated orange light passing through onto white desktops; existing chair stem accents and file trays orange enamel, CRTs remain off dark with a few neutral white work displays if needed. Keep glossy white monitor casings and desk surfaces; deepen muted graphite carpet under desks for contrast, retain exact tile pattern. Clear bright day outside, strong hard diagonal window-grid shadows, restrained orange spill on white surfaces, rich charcoal screen faces and chair upholstery. One giant graphic: original overscale flat translucent orange '01' vinyl applied to upper clear glazing behind the desk bank, unobtrusive, no new sign board or mullion. No green, no cyan accent, no added objects.",
+      "edit_target": "source/look_bench.png",
+      "style_references": [
+        "refs_alex/02_fluted_glass_blue_digits.png",
+        "refs_alex/09_white_orange_corridor.png",
+        "refs_alex/03_green_division.png"
+      ],
+      "generated_dimensions": [
+        1672,
+        941
+      ],
+      "export_dimensions": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "E_L1_window_hall.png",
+      "prompt": "Use case: style-transfer. Asset type: Seal the Deal game environment art-direction paintover.\nInput images: Image 1 is the SOLE EDIT TARGET and dictates every pixel of the camera composition and every architectural boundary. Any further input images are STYLE REFERENCES ONLY; borrow material/lighting principles, never their layout or branding.\nSTRICT INVARIANTS: preserve exact source camera position, lens, aspect ratio, framing, vanishing points, all silhouettes of architecture, walls, door openings, glazing frames, ceiling rafts, furniture counts and positions, stairs/landings, cover heights, player capsules, and clear walkable routes. Paint directly on this source capture; do not reimagine or redesign its geometry. No crop or reframe. Material, colour, lighting, graphic surface treatments, restrained nonblocking dressing only.\nPolished credible 3D game concept paintover, crisp architecture, strong readable value contrast. Clean maintained corporate office. All lettering flat painted/applied vinyl/backlit, never extruded. Invent original graphics only. Brand, if visible: AONAGI (open aqua ring with red dot); firms Ashcombe & Pryce and Halloran Voss. No copied logos/text from references, no reference watermarks. No bubbles, ivy, cyan floor light trails, dirt, decay, sci-fi greeble, additional people or UI. Floor light may be physically motivated reflection ONLY.\nDIRECTION E — NIGHT TECH: exactly the same office after dark; deep night-blue ambient, glossy charcoal/navy floors reflecting luminous surfaces, convincing readable dark/light separation. White surfaces glow via soft cove lighting and backlit lightboxes. Existing rounded forms receive pillowed-looking glossy finishes without changing silhouettes. Glowing CRT faces and desk panels. Electric cyan-blue is the ONLY accent, used SPARINGLY in select screens and reflected light, never everywhere. A single small warm amber note is allowed at reception; otherwise no orange or green. Court is the brightest lit volume, closing area spotlit and feature stair edges luminous. Night sky through unchanged windows. Existing dark capsules remain same pose, scale, location and silhouette; rim light them from white light behind. Lighting remains bright enough to read architecture and routes. No luminous floor-path lines; floor reflections only.\nVIEW: L1 window hall, 1600x900. Keep original long left desk bank, window geometry, ceiling rafts, large right wall and poster exactly. After dark outside. Corridor floor becomes glossy graphite/night-navy with clear white-lightbox and ceiling reflections; under-desk carpet stays a dark muted blue-grey, furniture luminous pearl white. Existing right poster becomes crisp white backlit AONAGI lightbox with restrained cyan-blue abstract ring, same exact frame. Soft white cove around existing ceiling rafts, selected broad white illuminated wall panels, desk CRT screens softly glowing white/cyan. Add dark inset treatment to selected existing wall panels for contrast. Very sparse cyan accents, readable blue-grey shadows; one small distant reception warm light only at existing far end. No added lamps or furniture.",
+      "edit_target": "source/L1_window_hall.png",
+      "style_references": [
+        "refs_alex/13_dark_floor_lightboxes.png",
+        "refs_alex/14_night_blue_tech.png"
+      ],
+      "generated_dimensions": [
+        1672,
+        941
+      ],
+      "export_dimensions": [
+        1600,
+        900
+      ]
+    },
+    {
+      "file": "E_L3_court_feature_stair.png",
+      "prompt": "Use case: style-transfer. Asset type: Seal the Deal game environment art-direction paintover.\nInput images: Image 1 is the SOLE EDIT TARGET and dictates every pixel of the camera composition and every architectural boundary. Any further input images are STYLE REFERENCES ONLY; borrow material/lighting principles, never their layout or branding.\nSTRICT INVARIANTS: preserve exact source camera position, lens, aspect ratio, framing, vanishing points, all silhouettes of architecture, walls, door openings, glazing frames, ceiling rafts, furniture counts and positions, stairs/landings, cover heights, player capsules, and clear walkable routes. Paint directly on this source capture; do not reimagine or redesign its geometry. No crop or reframe. Material, colour, lighting, graphic surface treatments, restrained nonblocking dressing only.\nPolished credible 3D game concept paintover, crisp architecture, strong readable value contrast. Clean maintained corporate office. All lettering flat painted/applied vinyl/backlit, never extruded. Invent original graphics only. Brand, if visible: AONAGI (open aqua ring with red dot); firms Ashcombe & Pryce and Halloran Voss. No copied logos/text from references, no reference watermarks. No bubbles, ivy, cyan floor light trails, dirt, decay, sci-fi greeble, additional people or UI. Floor light may be physically motivated reflection ONLY.\nDIRECTION E — NIGHT TECH: exactly the same office after dark; deep night-blue ambient, glossy charcoal/navy floors reflecting luminous surfaces, convincing readable dark/light separation. White surfaces glow via soft cove lighting and backlit lightboxes. Existing rounded forms receive pillowed-looking glossy finishes without changing silhouettes. Glowing CRT faces and desk panels. Electric cyan-blue is the ONLY accent, used SPARINGLY in select screens and reflected light, never everywhere. A single small warm amber note is allowed at reception; otherwise no orange or green. Court is the brightest lit volume, closing area spotlit and feature stair edges luminous. Night sky through unchanged windows. Existing dark capsules remain same pose, scale, location and silhouette; rim light them from white light behind. Lighting remains bright enough to read architecture and routes. No luminous floor-path lines; floor reflections only.\nVIEW: L3 court feature stair, exact source framing 1600x900. Preserve diagonal glass-railed stair, every landing/mezzanine, glazed doorway, central circle, both player capsules and white foreground cover blocks exactly. There is NO TABLE in source, so spotlight the EXISTING CENTRAL CIRCLE, never add a table or cover. Night-blue sky through windows, glossy charcoal/navy tiled floors, deep navy shadowed upper volumes. This COURT is the BRIGHTEST place in the night scheme: luminous pearl-white wall volume, white cove lighting tucked into existing soffit/ceiling seams, white light along the EXISTING stair stringer/tread edges, no extra rails or supports. Restrained electric cyan-blue light only in selected existing wall panel/graphic and gentle reflected fill. Rework original flat H wall graphic into broad white backlit 'H' and giant flat '03' on the existing upper wall if legible, no added signs/geometry. Bright white light directly behind each capsule for readable white/cool rim along its original dark silhouette. Existing cover blocks have soft glowing white undersides only; no added floor strips. Hero drama is light itself, no extra object. No orange or green.",
+      "edit_target": "source/L3_court_feature_stair.png",
+      "style_references": [
+        "refs_alex/14_night_blue_tech.png",
+        "refs_alex/13_dark_floor_lightboxes.png",
+        "refs_alex/12_pillowed_blue_washroom.png"
+      ],
+      "generated_dimensions": [
+        1672,
+        941
+      ],
+      "export_dimensions": [
+        1600,
+        900
+      ]
+    },
+    {
+      "file": "E_L4_west_ring_ribbon.png",
+      "prompt": "Use case: style-transfer. Asset type: Seal the Deal game environment art-direction paintover.\nInput images: Image 1 is the SOLE EDIT TARGET and dictates every pixel of the camera composition and every architectural boundary. Any further input images are STYLE REFERENCES ONLY; borrow material/lighting principles, never their layout or branding.\nSTRICT INVARIANTS: preserve exact source camera position, lens, aspect ratio, framing, vanishing points, all silhouettes of architecture, walls, door openings, glazing frames, ceiling rafts, furniture counts and positions, stairs/landings, cover heights, player capsules, and clear walkable routes. Paint directly on this source capture; do not reimagine or redesign its geometry. No crop or reframe. Material, colour, lighting, graphic surface treatments, restrained nonblocking dressing only.\nPolished credible 3D game concept paintover, crisp architecture, strong readable value contrast. Clean maintained corporate office. All lettering flat painted/applied vinyl/backlit, never extruded. Invent original graphics only. Brand, if visible: AONAGI (open aqua ring with red dot); firms Ashcombe & Pryce and Halloran Voss. No copied logos/text from references, no reference watermarks. No bubbles, ivy, cyan floor light trails, dirt, decay, sci-fi greeble, additional people or UI. Floor light may be physically motivated reflection ONLY.\nDIRECTION E — NIGHT TECH: exactly the same office after dark; deep night-blue ambient, glossy charcoal/navy floors reflecting luminous surfaces, convincing readable dark/light separation. White surfaces glow via soft cove lighting and backlit lightboxes. Existing rounded forms receive pillowed-looking glossy finishes without changing silhouettes. Glowing CRT faces and desk panels. Electric cyan-blue is the ONLY accent, used SPARINGLY in select screens and reflected light, never everywhere. A single small warm amber note is allowed at reception; otherwise no orange or green. Court is the brightest lit volume, closing area spotlit and feature stair edges luminous. Night sky through unchanged windows. Existing dark capsules remain same pose, scale, location and silhouette; rim light them from white light behind. Lighting remains bright enough to read architecture and routes. No luminous floor-path lines; floor reflections only.\nVIEW: L4 west ring ribbon corridor exact 1600x900. Preserve full original left panelled wall and every door, right full-height black-framed glazing, chairs and cover visible through glass, both dark capsules and all routes. Set outside to night, pale walls to deep cool blue shadow except broad luminous pearl-white cove-lit sections. Existing floor becomes glossy black-navy with believable white lightbox reflections and the original longitudinal dark ribbon subtly preserved, absolutely no glowing floor path. Use broad backlit WHITE wall panels on the existing left wall, giant flat minimal '04' graphic on the near left panel, original ceiling rafts with soft white perimeter glow. Existing right meeting-room glass develops fluted frosted strips lower down and soft luminous white room glow; only a few restrained cyan screen-like panels visible inside. No new furniture or wall openings. Strong white light behind corridor capsule and right-room capsule gives both a cool-white rim while their bodies stay dark and exact silhouettes. Backlit surfaces do the lighting, not blue neon outlining everything. No warm note here, no green, no orange.",
+      "edit_target": "source/L4_west_ring_ribbon.png",
+      "style_references": [
+        "refs_alex/13_dark_floor_lightboxes.png",
+        "refs_alex/12_pillowed_blue_washroom.png",
+        "refs_alex/14_night_blue_tech.png"
+      ],
+      "generated_dimensions": [
+        1672,
+        941
+      ],
+      "export_dimensions": [
+        1600,
+        900
+      ]
+    },
+    {
+      "file": "E_look_bench.png",
+      "prompt": "Use case: style-transfer. Asset type: Seal the Deal game environment art-direction paintover.\nInput images: Image 1 is the SOLE EDIT TARGET and dictates every pixel of the camera composition and every architectural boundary. Any further input images are STYLE REFERENCES ONLY; borrow material/lighting principles, never their layout or branding.\nSTRICT INVARIANTS: preserve exact source camera position, lens, aspect ratio, framing, vanishing points, all silhouettes of architecture, walls, door openings, glazing frames, ceiling rafts, furniture counts and positions, stairs/landings, cover heights, player capsules, and clear walkable routes. Paint directly on this source capture; do not reimagine or redesign its geometry. No crop or reframe. Material, colour, lighting, graphic surface treatments, restrained nonblocking dressing only.\nPolished credible 3D game concept paintover, crisp architecture, strong readable value contrast. Clean maintained corporate office. All lettering flat painted/applied vinyl/backlit, never extruded. Invent original graphics only. Brand, if visible: AONAGI (open aqua ring with red dot); firms Ashcombe & Pryce and Halloran Voss. No copied logos/text from references, no reference watermarks. No bubbles, ivy, cyan floor light trails, dirt, decay, sci-fi greeble, additional people or UI. Floor light may be physically motivated reflection ONLY.\nDIRECTION E — NIGHT TECH: exactly the same office after dark; deep night-blue ambient, glossy charcoal/navy floors reflecting luminous surfaces, convincing readable dark/light separation. White surfaces glow via soft cove lighting and backlit lightboxes. Existing rounded forms receive pillowed-looking glossy finishes without changing silhouettes. Glowing CRT faces and desk panels. Electric cyan-blue is the ONLY accent, used SPARINGLY in select screens and reflected light, never everywhere. A single small warm amber note is allowed at reception; otherwise no orange or green. Court is the brightest lit volume, closing area spotlit and feature stair edges luminous. Night sky through unchanged windows. Existing dark capsules remain same pose, scale, location and silhouette; rim light them from white light behind. Lighting remains bright enough to read architecture and routes. No luminous floor-path lines; floor reflections only.\nVIEW: look_bench close-up EXACT 1280x720 16:9 composition. LOCK every original CRT casing/stand, keyboard, computer tower, drawer unit, desktop tray, paper stack, foreground and rear chair, desk legs and window frame to source positions, sizes and silhouette. Same office after dark: night-blue city/sky beyond the original windows; midnight ambient with soft white cove-like spill from above, all white desk/CRT/chair surfaces clean luminous pearl against dark blue-grey shadow. Original CRT screen faces ON with sparse electric cyan-blue/white abstract document and waveform windows, no readable copied text, gentle screen spill onto keyboard; original PC power lights glow cyan. Existing aqua glass privacy screens become softly frosted neutral-white with a faint cyan transmission, same exact extents; selected existing desktop front panels white backlit, no added hardware. Under-desk FLOOR is dark glossy graphite tile with subtle reflections of luminous desk panels, preserve original tile divisions, not a luminous path. Strong value contrast, readable furniture. No orange, green, red accent or warm note in this view, no added desk lamps or extra objects.",
+      "edit_target": "source/look_bench.png",
+      "style_references": [
+        "refs_alex/14_night_blue_tech.png",
+        "refs_alex/13_dark_floor_lightboxes.png",
+        "refs_alex/12_pillowed_blue_washroom.png"
+      ],
+      "generated_dimensions": [
+        1672,
+        941
+      ],
+      "export_dimensions": [
+        1280,
+        720
+      ]
+    }
+  ],
+  "validation": {
+    "all_pngs_decoded": true,
+    "visual_review": "Eight generated outputs and assembled contact sheet reviewed.",
+    "source_hashes_unchanged": true,
+    "limitation": "Generated furniture, glazing and cover contours drift slightly; source captures remain construction/layout authority. No Unity validation or runtime changes."
+  }
+}

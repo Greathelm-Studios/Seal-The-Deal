@@ -40,6 +40,9 @@
 //              the lightboxes, a spot on the court's plinth; corridors left darker (Alex: "too evenly lit").
 //  Modified  : Claude Opus 5.5, 2026-11-15 evening - clipping fixes: walls trimmed at the facade, the stair holes
 //              clear of the flights, south corner columns.
+//  Modified  : Claude Opus 5.5, 2026-11-15 night - mood D in blue (concepts/Mood/DECISION.md): the halves' blue wall
+//              fields and light, giant zone numbers, the court's sky light and waterfall.
+//  Modified  : Claude Opus 5.5, 2026-11-15 night - satirical wall text wrapping round the cores (posters/COPY.md).
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Lays out the office floor from the kit prefabs, so the approved kit and floor plan can be walked
 //              and lit in Unity as a space. Its own file because KitImport proves the pieces snap (a small
@@ -182,6 +185,10 @@ namespace CloseTheDeal.Editor.Art
             GreyboxSceneSetup.EnsurePlayRig(SpawnA, SpawnB);
             EditorSceneManager.SaveScene(scene, ScenePath);
             OfficeLook.Apply(askFirst: false);
+            // The animated background (Codex, mood D: CRT screens, reception LED tickers, court shafts and dust, drifting
+            // louvre shadows on the sun). After the look, because it puts its cookie on the look's sun.
+            var office = GameObject.Find("Kit Office").transform;
+            Debug.Log(KitOfficeAnimation.AddTo(office));
             // WHY here: bounce light and floor reflections are baked into the scene, so a rebuild without them
             // loses the polished floor's mirror (Alex, 2026-11-13: "the mirror is missing"). Order as BounceLight's
             // own report asks: bounce first, then the reflections, so they include the lifted ceiling.
@@ -191,11 +198,19 @@ namespace CloseTheDeal.Editor.Art
             // They are flush decals; the floor's reflections don't need them.
             var marks = GameObject.Find("Kit Office/Markings");
             if (marks != null) marks.SetActive(false);
+            // The animated shafts and dust are additive and moving: a photograph of them would freeze a glow into the floor.
+            // The CRT overlays too: they hang on the monitors, outside the Animated group, and with them in the bake every
+            // probe came out cyan (2026-11-15, the same cast the marks gave).
+            var unbaked = new List<GameObject>();
+            foreach (var t in office.GetComponentsInChildren<Transform>(false))
+                if (t.name == "Animated" || t.name.Contains("CRT")) unbaked.Add(t.gameObject);
+            foreach (var g in unbaked) g.SetActive(false);
             Debug.Log(FloorReflections.Bake(askFirst: false));
             // Zone probes after the floor probes (that bake flags the building for probes): local highlights on gloss
             // props (2026-11-15, the props' concept sheets).
             Debug.Log(ZoneReflections.Bake(askFirst: false));
             if (marks != null) marks.SetActive(true);
+            foreach (var g in unbaked) g.SetActive(true);
             Debug.Log(GiveNetworkSceneIds(scene));
             EditorSceneManager.SaveScene(scene);
         }
@@ -311,7 +326,10 @@ namespace CloseTheDeal.Editor.Art
         // ------------------------------------------------------------------ layout
 
         /// <summary>Which way a wall run is built: the kit family it takes its 4 m, 2 m and door pieces from.</summary>
-        enum Kind { Solid, Glass, Frost, Guard }
+        /// <remarks>Fluted and Louvre since 2026-11-15 (mood D, Alex: "the frosted and unique glass panels look", and "a mix of
+        /// all"): full-height reeded frost for back rooms, frosted louvres with see-through gaps for rooms lit in their
+        /// half's blue; Frost is now fluted bands below 1.1 m and above 2.1 m with clear glass at eye height.</remarks>
+        enum Kind { Solid, Glass, Frost, Fluted, Louvre, Guard }
 
         /// <summary>A plan rectangle, metres: x0..x1 east, y0..y1 south.</summary>
         readonly struct Rect2
@@ -341,6 +359,27 @@ namespace CloseTheDeal.Editor.Art
         const float WashIntensity = 5f, WashRange = 6f, WashAngle = 80f, WashOffset = 1.2f;
         /// <summary>The court's spot on the closing-table plinth, from the roof soffit 8.8 m up: intensity, range, cone.</summary>
         const float PlinthIntensity = 14f, PlinthRange = 12f, PlinthAngle = 50f;
+        // ---- Mood D in blue (concepts/Mood/DECISION.md, Alex 2026-11-15): each firm's half owns one blue, as whole wall
+        // fields and as the colour of its light; the court takes pale sky light from above.
+        /// <summary>Light colour of firm A's half (deep cobalt light) and firm B's (bright azure light), over white surfaces.</summary>
+        static readonly Color HalfALight = new Color(0.52f, 0.62f, 1f), HalfBLight = new Color(0.5f, 0.84f, 1f);
+        /// <summary>The court's light from above: pale sky blue.</summary>
+        static readonly Color CourtLight = new Color(0.55f, 0.78f, 1f);   // saturated enough to read on white (first try 0.78, 0.9 vanished)
+        /// <summary>A painted wall field: from just above the skirting to just under the soffit reveal, metres.</summary>
+        const float FieldBottom = 0.08f, FieldTop = 4.25f, FieldGap = 0.004f;
+        /// <summary>Giant zone number on a field: its size (make_markings.py zone_numbers) and centre height, metres.</summary>
+        static readonly Vector2 ZoneNumberSize = new Vector2(2.6f, 2.6f);
+        const float ZoneNumberY = 2.2f;
+        /// <summary>Court waterfall: the kit's Water_Wall cassettes hung on E2's court face, plan y of their starts (each runs
+        /// 1.8 m north). WHY there: the court's one long blank wall, clear of the H sign (y 18.4-21.6) and every route.</summary>
+        static readonly float[] WaterfallY = { 25.6f, 23.8f };
+        /// <summary>Court sphere pendants, Unity metres: (x, z) inside the void (x 16-24, z -12 to -20), and how far the cable top
+        /// sits above the roof soffit (0 hangs the sphere's centre 3.45 m under it; 1 lifts it a metre, the cable hidden in the
+        /// slab). WHY these: spread over the void, off the flight's line (z -12 to -14) and the plinth spot's axis.</summary>
+        static readonly (float x, float z, float lift)[] PendantSpots =
+        {
+            (17.4f, -15.6f, 0f), (21.8f, -17.8f, 1f), (18.6f, -18.8f, 1f), (22.6f, -15.2f, 0f), (20.2f, -19.2f, 0.5f),
+        };
         /// <summary>FishNet's generated list of spawnable prefabs, which the scene's NetworkManager needs to initialise.</summary>
         const string DefaultPrefabObjectsPath = "Assets/DefaultPrefabObjects.asset";
         /// <summary>The L2 walls and doors as built on the kit grid: shared with make_markings.py, so every mark stops at a real doorway.</summary>
@@ -356,6 +395,14 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>Door plate: its size, centre height and offset from the door's centre along the wall (onto the jamb), metres.</summary>
         static readonly Vector2 PlateSize = new Vector2(0.32f, 0.14f);
         const float PlateY = 1.5f, PlateAlong = 0.8f;
+        /// <summary>
+        /// Satirical wall text (posters/COPY.md, Alex 2026-11-15: "texts that wrap around the wall"): the strip's height and its
+        /// centre height, metres. WHY 3.95 m: above the 2.4 m door heads, the 3.6 m lightbox tops and the zone numbers,
+        /// under the soffit, so one line can run unbroken over doors and round the core's corners.
+        /// </summary>
+        /// <remarks>A 0.62 m stripe since 2026-11-15 (Alex: "larger and more visible"): 3.64-4.26 m, the whole height
+        /// between the lightbox tops and the soffit reveal.</remarks>
+        const float WallTextBand = 0.62f, WallTextY = 3.95f;
         /// <summary>Evacuation plan card size, metres (make_markings.py evac()).</summary>
         static readonly Vector2 EvacSize = new Vector2(0.6f, 0.42f);
         /// <summary>Stair floor-number graphic size, metres (make_markings.py floor_numbers()).</summary>
@@ -371,7 +418,9 @@ namespace CloseTheDeal.Editor.Art
         [System.Serializable] sealed class KitRun { public string kind; public float[] a, b; public KitDoor[] doors; public float trimA, trimB; }
         static readonly float[] NoDoors = new float[0];
         [System.Serializable] sealed class KitEvac { public string id; public float[] at, face; public float y; }
-        [System.Serializable] sealed class KitDecals { public KitEvac[] evac; }
+        [System.Serializable] sealed class KitTextFace { public float[] a, b, face; public string ink; }
+        [System.Serializable] sealed class KitWallText { public KitTextFace[] core, south; }
+        [System.Serializable] sealed class KitDecals { public KitEvac[] evac; public KitWallText wallText; }
         /// <summary>markings/l2_on_kit.json as JsonUtility reads it (its "rooms" and "districts" maps are for make_markings.py).</summary>
         [System.Serializable] sealed class KitPlan { public KitRun[] half, once, groundHalf, upperHalf; public KitDecals decals; }
         /// <summary>
@@ -423,14 +472,14 @@ namespace CloseTheDeal.Editor.Art
                 return P(parent, piece, u.x, u.y, yaw + (turned ? 180f : 0f), decorate);
             }
             // A shadowless spot light at a Unity-space point, aimed along dir (a pool of light, see PoolColour).
-            void Pool(Transform t, Vector3 at, Vector3 dir, float intensity, float range, float angle)
+            void Pool(Transform t, Vector3 at, Vector3 dir, float intensity, float range, float angle, Color? colour = null)
             {
                 var go = new GameObject("Light Pool");
                 go.transform.SetParent(t, false);
                 go.transform.SetLocalPositionAndRotation(at, Quaternion.LookRotation(dir));
                 var light = go.AddComponent<Light>();
                 light.type = LightType.Spot;
-                light.color = PoolColour;
+                light.color = colour ?? PoolColour;
                 light.intensity = intensity;
                 light.range = range;
                 light.spotAngle = angle;
@@ -440,10 +489,21 @@ namespace CloseTheDeal.Editor.Art
             // A plan direction to Unity (X = x, Z = −y), turned with the half.
             Vector3 Dir(float fx, float fy, bool turned) => turned ? new Vector3(-fx, 0f, fy) : new Vector3(fx, 0f, -fy);
             // A wall decal: centre (x, y) on the wall face in plan metres, height h, facing plan direction (fx, fy).
-            GameObject WallDecal(Transform t, string texture, float x, float y, float h, float fx, float fy, Vector2 size, bool turned)
+            GameObject WallDecal(Transform t, string texture, float x, float y, float h, float fx, float fy, Vector2 size, bool turned,
+                                 KitSigns.Finish finish = KitSigns.Finish.Printed, float gap = DecalGap)
             {
-                Vector2 u = U(x + fx * DecalGap, y + fy * DecalGap, turned);
-                return KitSigns.Decal(t, texture, new Vector3(u.x, h, u.y), KitSigns.Facing(Dir(fx, fy, turned), Vector3.up), size);
+                Vector2 u = U(x + fx * gap, y + fy * gap, turned);
+                return KitSigns.Decal(t, texture, new Vector3(u.x, h, u.y), KitSigns.Facing(Dir(fx, fy, turned), Vector3.up), size, finish);
+            }
+            // A glossy painted field over a whole wall face (mood D), and optionally a giant zone number on it. (x, y) is the
+            // face's centre, len its length; the number sits 4 mm proud of the paint.
+            void Field(Transform t, string paint, float x, float y, float len, float fx, float fy, bool turned, string number = null)
+            {
+                // WHY 4 mm: in front of the walls' 3 mm joint lines, behind the 6 mm signs and lightbox graphics.
+                WallDecal(t, paint, x, y, (FieldBottom + FieldTop) * 0.5f, fx, fy, new Vector2(len, FieldTop - FieldBottom), turned,
+                          KitSigns.Finish.Inlay, FieldGap);
+                if (number != null)
+                    WallDecal(t, $"Zone_Number_{number}", x, y, ZoneNumberY, fx, fy, ZoneNumberSize, turned, gap: DecalGap + 0.004f);
             }
             void Runs(Transform t, int level, KitRun[] runs, bool turned)
             {
@@ -632,10 +692,19 @@ namespace CloseTheDeal.Editor.Art
                 // Wall-washers on both lightboxes, from the soffit a little out from the wall, aimed down at the graphic.
                 float soffitY = FloorHeight - 0.2f - PoolDrop;
                 Vector2 firm = U(0.2f + WashOffset, 6f, turned), aonagi = U(11f, 6f - WashOffset, turned);
+                Color halfLight = a ? HalfALight : HalfBLight;
                 Pool(t, new Vector3(firm.x, soffitY, firm.y), (Dir(-1f, 0f, turned) + Vector3.down * 1.5f).normalized,
-                     WashIntensity, WashRange, WashAngle);
+                     WashIntensity, WashRange, WashAngle, halfLight);
                 Pool(t, new Vector3(aonagi.x, soffitY, aonagi.y), (Dir(0f, 1f, turned) + Vector3.down * 1.5f).normalized,
-                     WashIntensity, WashRange, WashAngle);
+                     WashIntensity, WashRange, WashAngle, halfLight);
+                // Mood D: the half's blue on E1's two ring faces, the window hall's (north, behind the AONAGI lightbox) and
+                // the west ring's (with the giant zone number: 01 / 02 downstairs, 03 / 04 upstairs).
+                string paint = a ? "Paint_HalfA" : "Paint_HalfB";
+                string zone = level == 0 ? (a ? "01" : "02") : (a ? "03" : "04");
+                Field(t, paint, 11f, 6f, 6f, 0f, -1f, turned);
+                Field(t, paint, 8f, 10f, 8f, -1f, 0f, turned, zone);
+                // The court's sky blue on E1's (and turned, E2's) court face, behind the H sign and the waterfall.
+                if (level == 0) Field(t, "Paint_Court", 14f, 10f, 8f, 1f, 0f, turned);
                 Sign(t, a ? "L" : "R", 0.4f, 8f, 0f, turned);                // on the conference's north wall, seen from reception
                 Sign(t, a ? "A" : "C", 4f, 22.4f, 90f, turned);              // on the back office's east wall, facing the ring
                 if (level == 0) Sign(t, "H", 14f, 10.4f, 90f, turned);       // E1's east face, toward the court
@@ -655,6 +724,16 @@ namespace CloseTheDeal.Editor.Art
                         WallDecal(t, $"Plate_{d.room}_{side}_{floor}", x + fx * off, y + fy * off, PlateY, fx, fy, PlateSize, turned);
                     }
                 }
+                // Satirical wall text, one whole message per wall face (posters/COPY.md); a different set per half and floor.
+                string textSet = (a ? "A" : "B") + (level + 1);
+                foreach (var (run, faces) in new[] { ("core", plan.decals.wallText.core), ("south", plan.decals.wallText.south) })
+                    for (int k = 0; k < faces.Length; k++)
+                    {
+                        var f = faces[k];
+                        float len = Mathf.Abs(f.b[0] - f.a[0]) + Mathf.Abs(f.b[1] - f.a[1]);
+                        WallDecal(t, $"WallText_{textSet}_{run}_{k}", (f.a[0] + f.b[0]) * 0.5f, (f.a[1] + f.b[1]) * 0.5f, WallTextY,
+                                  f.face[0], f.face[1], new Vector2(len, WallTextBand), turned, gap: DecalGap + 0.004f);
+                    }
                 foreach (var e in plan.decals.evac)
                     WallDecal(t, $"Evac_{e.id}_{side}_{floor}", e.at[0], e.at[1], e.y, e.face[0], e.face[1], EvacSize, turned);
                 // Stair floor numbers at room height: the ground floor's on E1's north wall above the landing (seen up the
@@ -683,10 +762,24 @@ namespace CloseTheDeal.Editor.Art
                     var mid = new Vector3((StringerTop.x + StringerFoot.x) * 0.5f, (StringerTop.y + StringerFoot.y) * 0.5f,
                                           -(FeatureY + Half) - DecalGap);
                     var up = Vector3.Cross(Vector3.forward, along).normalized;   // in the stringer's plane, across the band
-                    KitSigns.Decal(t, "Band_Cobalt", mid, KitSigns.Facing(Vector3.back, up),
-                                   new Vector2(along.magnitude, StringerBandHeight), KitSigns.Finish.Inlay);
+                    // Mood D (Alex's atrium reference): the band glows blue, on both stringers' outer faces.
+                    KitSigns.Decal(t, "Glow_Blue", mid, KitSigns.Facing(Vector3.back, up),
+                                   new Vector2(along.magnitude, StringerBandHeight), KitSigns.Finish.Light);
+                    var north = new Vector3(mid.x, mid.y, -FeatureY + DecalGap);
+                    KitSigns.Decal(t, "Glow_Blue", north, KitSigns.Facing(Vector3.forward, Vector3.Cross(Vector3.back, along).normalized),
+                                   new Vector2(along.magnitude, StringerBandHeight), KitSigns.Finish.Light);
+                    // Glowing sphere pendants hung from the roof into the court's void (Alex's atrium reference), at two
+                    // heights, clear of the flight and of the upper floor's guards.
+                    foreach (var (px, pz, lift) in PendantSpots)
+                        P(t, "Pendant_Sphere", px, pz).transform.localPosition = new Vector3(px, RoofY - 0.2f + lift, pz);
                     // The case start's spot, from the roof soffit down the open court.
-                    Pool(t, new Vector3(20f, RoofY - 0.2f - PoolDrop, -16f), Vector3.down, PlinthIntensity, PlinthRange, PlinthAngle);
+                    Pool(t, new Vector3(20f, RoofY - 0.2f - PoolDrop, -16f), Vector3.down, PlinthIntensity, PlinthRange, PlinthAngle, CourtLight);
+                    // Mood D's court waterfall: water-wall cassettes on E2's court face (yaw -90 faces -X and runs north).
+                    foreach (float wy in WaterfallY) P(t, "Water_Wall", CourtX1 + Half, -wy, -90f);
+                    // Two more sky shafts from the roof: down the feature flight and onto the waterfall wall.
+                    Pool(t, new Vector3(19.6f, RoofY - 0.2f - PoolDrop, -13f), Vector3.down, PlinthIntensity, PlinthRange, PlinthAngle, CourtLight);
+                    Pool(t, new Vector3(24.6f, RoofY - 0.2f - PoolDrop, -23f), (Vector3.down * 3f + Vector3.right).normalized,
+                         PlinthIntensity, PlinthRange, PlinthAngle, CourtLight);
                     return;
                 }
                 // The floor number where the feature flight arrives, on E1's east face straight ahead.
@@ -714,30 +807,38 @@ namespace CloseTheDeal.Editor.Art
                     // Window hall desks (L2 benches), both floors.
                     // At x 9.6 and 12.6, clear of the L | H threshold strip at x 14 (l2_on_kit.json thresholds).
                     foreach (float x in new[] { 2f, 9.6f, 12.6f }) Bench(t, x, 2f, 0f, turned);
-                    // Print and copy: the copier and storage against the kitchen wall.
-                    Put(t, "Copier", 12.4f, 17.45f, 0f, turned);
-                    Put(t, "Storage_Low", 9.8f, 17.7f, 0f, turned);
+                    // Print and copy: the copier and storage against the kitchen wall. WHY these y values: every prop that
+                    // stands at a wall sits 3 cm off it (the 2026-11-15 tidy, Alex: "placements look sloppy"); they
+                    // were 7-28 cm off, each by a different amount.
+                    Put(t, "Copier", 12.4f, 17.64f, 0f, turned);
+                    Put(t, "Storage_Low", 9.8f, 17.74f, 0f, turned);
                     // Kitchen: the counter (L2 cover), the drinks machine and the water server against the print wall.
                     Put(t, "Counter_Capsule_2m", 11f, 20.2f, 0f, turned);
-                    Put(t, "Water_Server", 13f, 18.6f, 180f, turned);
+                    // The kitchen glows in its half's blue behind its louvred court front (mood D).
+                    Vector2 k = U(11f, 20f, turned);
+                    Pool(t, new Vector3(k.x, FloorHeight - 0.2f - PoolDrop, k.y), Vector3.down, RoomPoolIntensity, RoomPoolRange,
+                         RoomPoolAngle, turned ? HalfBLight : HalfALight);
+                    Put(t, "Water_Server", 13f, 18.41f, 180f, turned);   // 3 cm off the print wall
                     if (level == 0)
                     {
                         Put(t, "Vending_Machine", 9.2f, 18.2f + VendHalfDepth, 180f, turned);
-                        // Reception: the desk in front of the firm's logo lightbox, the umbrella stand by the way in.
+                        // Reception: the desk in front of the firm's logo lightbox, the umbrella stand against the
+                        // facade by the way in (it stood loose in the middle of the floor before the tidy).
                         Put(t, "Desk_Reception", 2.4f, 6.4f, 0f, turned);
-                        Put(t, "Umbrella_Stand", 3.6f, 4.6f, 0f, turned);
+                        Put(t, "Umbrella_Stand", 0.48f, 4.6f, 0f, turned);
                         // The legal conference and the back office: a counter each (L2 cover) with pod chairs, storage.
                         Put(t, "Counter_Capsule_2m", 2f, 12f, 0f, turned);
                         Put(t, "Chair_Pod", 2f, 10.9f, 180f, turned);
                         Put(t, "Chair_Pod", 2f, 13.1f, 0f, turned);
                         Put(t, "Counter_Capsule_2m", 2f, 24f, 0f, turned);
-                        Put(t, "Storage_Low", 2f, 27.4f, 0f, turned);
-                        Put(t, "Planter_Box", 0.8f, 15.2f, 0f, turned);
+                        Put(t, "Storage_Low", 2f, 27.65f, 0f, turned);   // 3 cm off the south facade
+                        Put(t, "Planter_Box", 0.68f, 15.2f, 0f, turned); // 3 cm off the west facade
                     }
                     else
                     {
                         // Upstairs the wing rooms are open-plan work rooms; reception is a lounge.
-                        foreach (float y in new[] { 10.2f, 13.8f, 22.6f, 26.2f }) Bench(t, 2f, y, 90f, turned);
+                        // Two benches per room, centred on it (rooms y 8-16 and 20-28); the back room's pair sat 0.4 m south.
+                        foreach (float y in new[] { 10.2f, 13.8f, 22.2f, 25.8f }) Bench(t, 2f, y, 90f, turned);
                         Put(t, "Desk_Sculpt", 2.4f, 6f, 0f, turned);
                         Put(t, "Chair_Pod", 2.4f, 5.2f, 180f, turned);   // north of the desk, facing it
                         Put(t, "Slipper_Cabinet", 9.2f, 18.2f + 0.175f, 180f, turned);
@@ -812,7 +913,7 @@ namespace CloseTheDeal.Editor.Art
                                 P(t, "Carpet_Overlay_4x4", x, z).transform.localPosition = new Vector3(x, floorY, z);
                                 P(t, "Ceiling_Panel_4x4", x, z).transform.localPosition = new Vector3(x, soffit, z);
                                 Pool(t, new Vector3(x + Cell * 0.5f, soffit - PoolDrop, z - Cell * 0.5f), Vector3.down,
-                                     RoomPoolIntensity, RoomPoolRange, RoomPoolAngle);
+                                     RoomPoolIntensity, RoomPoolRange, RoomPoolAngle, x < Width * 0.5f ? HalfALight : HalfBLight);
                                 continue;
                             }
                             if (!walls[level].Exists(w => Crosses(w, cell))) continue;   // circulation: the bare lit soffit
@@ -886,6 +987,8 @@ namespace CloseTheDeal.Editor.Art
             "solid" => Kind.Solid,
             "glass" => Kind.Glass,
             "frost" => Kind.Frost,
+            "fluted" => Kind.Fluted,
+            "louvre" => Kind.Louvre,
             "guard" => Kind.Guard,
             _ => throw new System.ArgumentException($"Unknown wall kind '{kind}' in {KitPlanPath}."),
         };
@@ -895,6 +998,8 @@ namespace CloseTheDeal.Editor.Art
             Kind.Solid => $"Wall_Solid_{metres}m",
             Kind.Glass => $"Partition_Glass_{metres}m",
             Kind.Frost => $"Partition_Frost_{metres}m",
+            Kind.Fluted => $"Partition_Fluted_{metres}m",
+            Kind.Louvre => $"Partition_Louvre_{metres}m",
             _ => $"Guard_Glass_{metres}m",
         };
 
@@ -902,7 +1007,7 @@ namespace CloseTheDeal.Editor.Art
         static string DoorPiece(Kind kind) => kind switch
         {
             Kind.Solid => "Wall_Door_2m",
-            Kind.Glass or Kind.Frost => "Partition_Glass_Door_2m",
+            Kind.Glass or Kind.Frost or Kind.Fluted or Kind.Louvre => "Partition_Glass_Door_2m",
             _ => throw new System.ArgumentException("A guard has no door."),
         };
 
@@ -939,11 +1044,14 @@ namespace CloseTheDeal.Editor.Art
                 // piece −X with its face toward −Z, the lobby; every wall's thickness lands inside the shaft.
                 string south = level == 0 ? "Lift_Door_Frame_4m_1F" : level == Levels ? "Lift_Door_Frame_4m_RF" : "Lift_Shaft_Wall_4m";
                 Put(south, x1, y, z1, 180f);
-                Put("Lift_Shaft_Wall_4m", x0, y, z0, 0f);      // north: the façade
-                Put("Lift_Shaft_Wall_4m", x1, y, z0, 90f);     // east
-                Put("Lift_Shaft_Wall_4m", x0, y, z1, -90f);    // west
+                // The approved lift sheet (props session, 2026-11-15): an opaque shaft on 1F and in the roof head-house,
+                // glass only on the upper floor, where the car is seen riding past the court.
+                string side = level == 1 ? "Lift_Shaft_Wall_4m" : "Lift_Shaft_Wall_4m_Solid";
+                Put(side, x0, y, z0, 0f);      // north: the façade
+                Put(side, x1, y, z0, 90f);     // east
+                Put(side, x0, y, z1, -90f);    // west
             }
-            Put("Slab_4x4", x0, RoofY + FloorHeight, z0, 0f);   // the head-house cap, on the roof storey's walls
+            Put("Lift_Cap_4x4", x0, RoofY + FloorHeight, z0, 0f);   // the head-house's rounded cap, on the roof storey's walls
             Put("Lift_Car", CarCentre.x, 0f, CarCentre.y, 180f, "Lift_Car");   // open side toward the doors (−Z)
             foreach (var (stop, y) in new[] { ("1F", 0f), ("RF", RoofY) })
             {

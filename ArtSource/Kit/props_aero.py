@@ -64,7 +64,8 @@ PA = params(
     TOWER_WIN_T=0.004,     # frosted side panel thickness
     TOWER_FOOT_H=0.008,    # rubber feet
     # ---- Sheets 1-4 (README.md)
-    BENCH_FRAME_R=0.012,   # divider U-frame tube radius (README: 20 mm frame)
+    BENCH_FRAME_R=0.012,
+    BENCH_FLUTE_PITCH=0.03, BENCH_FLUTE_D=0.004,   # divider flutes: spacing and depth of each rounded flute, metres   # divider U-frame tube radius (README: 20 mm frame)
     RECEPTION_END_R=0.2,   # reception front-shell plan corner radius. WHY 200, not the README's R40: the sheet paints
                            # pillowed capsule ends, and 40 mm reads as a box corner at 4 m
     RECEPTION_RING_D=0.3,  # AONAGI ring on the reception front, metres (sheet 2: about the name's height)
@@ -223,6 +224,8 @@ glow(M_LED, (0.13, 0.83, 0.90))
 # tray baskets) read as clearly aqua acrylic, while Glass_Frosted is a pale 65 %-opaque wall frost that came out grey on
 # the props in KitOffice (Alex, 2026-11-15: "it doesnt match the references still"). Partitions keep Glass_Frosted.
 M_FROST = material('Plastic_Aqua_Frost', hexc('8FDCE0'), roughness=0.2)
+# The bench divider's pale blue-white frost (mood D): one prefab serves the cobalt and the azure halves.
+M_FROST_PALE = material('Plastic_Frost_Pale', hexc('DCEBF5'), roughness=0.25)
 
 
 # Trim-sheet detail bands (trim/trim_layout.json). A face in one of these gets that band's relief and colour from the
@@ -660,7 +663,18 @@ def workstation_bench():
              for k in range(1, 6)]
     path += [(xs, ytop - 0.04, 0.0), (xs, H - 0.005, 0.0)]
     silver.append(tube(path, fr, 10))
-    plate = rplate_xy(-xs + 0.005, xs - 0.005, H - 0.005, ytop - 0.004, 0.035, -0.009, 0.009)
+    # Fluted frosted pane (mood D, Alex 2026-11-15: "fluted frosted dividers"): vertical rounded flutes on both faces,
+    # in a pale blue-white frost so the one prefab sits in both firms' colour halves.
+    pitch, depth, half = PA.BENCH_FLUTE_PITCH, PA.BENCH_FLUTE_D, 0.009
+    n_fl = max(1, int(round((2 * xs - 0.01) / pitch)))
+    span = 2 * xs - 0.01
+    front, back = [], []
+    for i in range(n_fl * 8 + 1):
+        x = -xs + 0.005 + span * i / (n_fl * 8)
+        bulge = depth * abs(math.sin(math.pi * (x + xs - 0.005) / (span / n_fl)))
+        front.append((x, half - depth + bulge))
+        back.append((x, -half + depth - bulge))
+    plate = prism_xz(front + list(reversed(back)), H - 0.005, ytop - 0.004)
     for xg, zg in ((-0.85, -0.68), (0.85, 0.68)):
         g = cylinder(0.03, 0.004, segments=20, base='bottom'); move(g, -xg, -zg, H - 0.0035); chrome.append(g)
         g = cylinder(0.02, 0.0045, segments=16, base='bottom'); move(g, -xg, -zg, H - 0.0035); navy.append(g)
@@ -668,7 +682,7 @@ def workstation_bench():
     tag = u(-L / 2, -L / 2 + 0.002, 0.53, 0.565, -0.36, -0.24)
     ob = part('Kit_Workstation_Bench', join(paint(join(*pearl), 0), paint(join(*silver), 1), paint(join(*chrome), 2),
                                            paint(join(*navy), 3), paint(plate, 4), paint(tag, 5)),
-              [M_WALL, M_FRAME, M_CHROME, M_TRIM, M_FROST, M_P_TAG], smooth=35)
+              [M_WALL, M_FRAME, M_CHROME, M_TRIM, M_FROST_PALE, M_P_TAG], smooth=35)
     expect(ob, size=(L, D, T), tol=0.003)
     collider(ob, 'box')
 

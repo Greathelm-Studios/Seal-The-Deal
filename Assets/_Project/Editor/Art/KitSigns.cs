@@ -115,8 +115,7 @@ namespace CloseTheDeal.Editor.Art
             // at z −0.05). Curtain walls, windows, guards and the lift shaft are fixed glass and carry none.
             ["Partition_Glass_4m"] = Glazing("Glazing_4m", 2f, 4f),
             ["Partition_Glass_2m"] = Glazing("Glazing_2m", 1f, 2f),
-            ["Partition_Frost_4m"] = Glazing("Glazing_4m", 2f, 4f),
-            ["Partition_Frost_2m"] = Glazing("Glazing_2m", 1f, 2f),
+            // Frost partitions have fluted bands since 2026-11-15 (mood D) and need no dots; only clear glass carries them.
             ["Partition_Glass_Door_2m"] = Concat(Glazing("Glazing_Jamb", GlazingJamb * 0.5f, GlazingJamb),
                                                  Glazing("Glazing_Jamb", 2f - GlazingJamb * 0.5f, GlazingJamb)),
         };

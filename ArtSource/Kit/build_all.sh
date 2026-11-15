@@ -28,7 +28,8 @@ Stair_Straight_2m Ramp_2x4 Guard_Glass_4m Guard_Glass_2m Slab_4x4_LightLine Sign
 Sign_Zone_H Sign_Zone_A Guard_Rail_4m Guard_Rail_2m Partition_Header_4m Partition_Header_2m Partition_Header_Curve_2x2
 Carpet_Overlay_4x4 Ceiling_Grid_4x4 Logo_Aonagi Sign_LED_Reception Water_Wall Lift_Door_Frame_4m_1F Lift_Door_Frame_4m_RF
 Lift_Door_Panel Lift_Shaft_Wall_4m Lift_Car Pool_Raised_8x4 Wall_Curtain_4m Ceiling_Beams_4x4 Ribbon_Floor_16m Ribbon_Ceiling_16m
-Lightbox_Wall_Wave Lightbox_Wall_Logo Ceiling_Panel_4x4 Partition_Glass_Door_2m Stair_Straight_Half_2m"
+Lightbox_Wall_Wave Lightbox_Wall_Logo Ceiling_Panel_4x4 Partition_Glass_Door_2m Stair_Straight_Half_2m
+Partition_Fluted_4m Partition_Fluted_2m Partition_Louvre_4m Partition_Louvre_2m Pendant_Sphere"
 
 for p in $PIECES; do
   $MDL build "$HERE/kit_pieces.py" --out "$HERE/build/$p.blend" --set PIECE="$p" > "$HERE/build/$p.build.log"

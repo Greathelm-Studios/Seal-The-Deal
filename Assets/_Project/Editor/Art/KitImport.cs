@@ -102,6 +102,8 @@ namespace CloseTheDeal.Editor.Art
         const float GlassAlpha = 0.05f;
         /// <summary>The kit glass's shader: near-clear with drawn diagonal streaks (GlassSheen.shader).</summary>
         const string GlassShaderName = "Close the Deal/Glass Sheen";
+        /// <summary>Glow of the louvre slats, linear HDR: pale blue, a little over white so the slats read as backlit without blooming.</summary>
+        static readonly Color LouvreGlow = new Color(0.3f, 0.55f, 1.3f);   // more saturated: 0.55/0.75/1.1 read white in daylight
         /// <summary>Capture size for the review renders, pixels.</summary>
         const int RenderWidth = 1280, RenderHeight = 720;
 
@@ -132,6 +134,8 @@ namespace CloseTheDeal.Editor.Art
             "Wall_Curtain_4m", "Ceiling_Beams_4x4",
             // Ribbons and lightboxes, PANLINE reference (Alex, 2026-11-15)
             "Ribbon_Floor_16m", "Ribbon_Ceiling_16m", "Lightbox_Wall_Wave", "Lightbox_Wall_Logo", "Ceiling_Panel_4x4",
+            // Mood D glass and the court's pendants (Alex's references, 2026-11-15)
+            "Partition_Fluted_4m", "Partition_Fluted_2m", "Partition_Louvre_4m", "Partition_Louvre_2m", "Pendant_Sphere",
             // L2 layout (Alex approved the twin-core court, 2026-11-15): doors on the 2 m grid, enclosed return stairs
             "Wall_Door_2m", "Partition_Glass_Door_2m", "Stair_Straight_Half_2m",
             // Aero props on the trim sheet (ArtSource/Kit/props_aero.py, 2026-11-15): the new loose PC tower
@@ -146,7 +150,7 @@ namespace CloseTheDeal.Editor.Art
             "Stair_Steps", "Ceiling_LightStrip", "Sign_Zone_L", "Sign_Zone_R", "Sign_Zone_C", "Sign_Zone_H", "Sign_Zone_A",
             "Light_Pendant_Linear", "Carpet_Overlay_4x4", "Ceiling_Grid_4x4",
             "Logo_Aonagi", "Sign_LED_Reception", "Ceiling_Beams_4x4", "Ribbon_Floor_16m", "Ribbon_Ceiling_16m",
-            "Ceiling_Panel_4x4",
+            "Ceiling_Panel_4x4", "Pendant_Sphere",
         };
 
         /// <summary>Pieces whose mesh is only a collider: the stair ramp is walked on, Stair_Steps is what is seen.</summary>
@@ -161,7 +165,7 @@ namespace CloseTheDeal.Editor.Art
         // separate materials on overlay pieces, so the polished floor and flat ceiling stay elsewhere.
         // Floor_Carpet again since 2026-11-15, as big white tiles with thin joints (PANLINE reference): the same white,
         // the same mirror gloss, now with a joint grid that reads in the reflections.
-        static readonly HashSet<string> Textured = new HashSet<string> { "Carpet_Dark", "Ceiling_Grid", "Floor_Carpet" };
+        static readonly HashSet<string> Textured = new HashSet<string> { "Carpet_Dark", "Ceiling_Grid", "Floor_Carpet", "Glass_Fluted", "Glass_Louvre" };
 
         /// <summary>Pieces with no collider mesh whose render mesh is the collider, not convex (kit README).</summary>
         static readonly HashSet<string> RenderMeshColliders = new HashSet<string> { "Slab_Stairwell", "Stair_Flight" };
@@ -188,7 +192,9 @@ namespace CloseTheDeal.Editor.Art
             ("Light_Strip", "FFFFFF", 0f, 0.5f, false),
             ("Door_LockedRed", "C0281E", 0f, 0.55f, false),
             ("Glass_Frosted", "C6E9E6", 0f, 0.3f, false),
-            ("Carpet_Dark", "7E96AC", 0f, 0.06f, false),
+            ("Glass_Fluted", "DCEBF5", 0f, 0.6f, false),   // reeded frost, mood D (2026-11-15); the flutes are its texture
+            ("Glass_Louvre", "CFE6FF", 0f, 0.6f, false),   // the louvres' slats: the reeds, glowing pale blue (backlit)
+            ("Carpet_Dark", "2E3648", 0f, 0.06f, false),   // charcoal-blue since 2026-11-15 (mood D); was 7E96AC
             ("Ceiling_Grid", "F0F5F5", 0f, 0.1f, false),
             ("Plant_Leaf", "70AF59", 0f, 0.24f, false),
             ("Accent_Aqua", "45BFC7", 0f, 0.76f, false),
@@ -202,7 +208,13 @@ namespace CloseTheDeal.Editor.Art
             // The props' frosted aqua acrylic (divider, bottle, reception band, trays): more aqua and more opaque than
             // the walls' Glass_Frosted, which read as grey glass on the props (Alex, 2026-11-15).
             (PropFrostName, "8FDCE0", 0f, 0.8f, false),
+            // The bench divider's fluted pale blue-white frost (mood D, 2026-11-15): one prefab in both colour halves.
+            (PaleFrostName, "DCEBF5", 0f, 0.75f, false),
         };
+
+        /// <summary>The bench divider's pale frost (ArtSource/Kit/props_aero.py M_FROST_PALE); as transparent as the
+        /// props' aqua frost.</summary>
+        const string PaleFrostName = "Plastic_Frost_Pale";
 
         /// <summary>The Aero props' frosted acrylic material (ArtSource/Kit/props_aero.py M_FROST).</summary>
         const string PropFrostName = "Plastic_Aqua_Frost";
@@ -317,12 +329,14 @@ namespace CloseTheDeal.Editor.Art
                     c.a = FrostAlpha;
                     MakeTransparent(mat);
                 }
+                // Fluted glass takes its alpha from its texture (the reeds), so it is transparent with a white base.
+                if (m.name == "Glass_Fluted" || m.name == "Glass_Louvre") MakeTransparent(mat);
                 if (m.name == "Glass_Frosted")
                 {
                     c.a = FrostAlpha;
                     MakeTransparent(mat);
                 }
-                if (m.name == PropFrostName)
+                if (m.name == PropFrostName || m.name == PaleFrostName)
                 {
                     c.a = PropFrostAlpha;
                     MakeTransparent(mat);
@@ -342,6 +356,15 @@ namespace CloseTheDeal.Editor.Art
                     // WHY: a material that has dropped its texture (the ceiling tiles, 2026-11-12) must lose it
                     // here too, or the old map keeps showing under the new colour.
                     mat.SetTexture("_BaseMap", null);
+                }
+                if (m.name == "Glass_Louvre")
+                {
+                    // WHY emissive: the slats read as lit from the blue room behind them (Alex's "DIVISION" reference); a
+                    // light inside the room can't light a transparent slat's outer face.
+                    mat.EnableKeyword("_EMISSION");
+                    mat.SetTexture("_EmissionMap", ImportTexture(m.name));
+                    mat.SetColor("_EmissionColor", LouvreGlow);
+                    mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
                 }
                 if (m.name == "Light_Strip")
                 {

@@ -67,8 +67,18 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: Glass_Fluted
+    second: {fileID: 2100000, guid: dc5bc864b9347a548b2f47ad4d7712c4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: Glass_Frosted
     second: {fileID: 2100000, guid: 46aedf6b0882a5a4bb54c508893ceaac, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Glass_Louvre
+    second: {fileID: 2100000, guid: 5c2d2a924bb3dd14caaadda1903ec689, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
@@ -82,6 +92,16 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: Plastic_Aqua_Frost
+    second: {fileID: 2100000, guid: 2a48fe8cd39eacb45b008b54f010b837, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Plastic_Frost_Pale
+    second: {fileID: 2100000, guid: 1be05d2113796754191f89c949ff5846, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: Pool_Water
     second: {fileID: 2100000, guid: 18391769dabc59f41bf8d63ce5bf6a86, type: 2}
   - first:
@@ -89,6 +109,11 @@ ModelImporter:
       assembly: UnityEngine.CoreModule
       name: Stair_Aluminium
     second: {fileID: 2100000, guid: 2e45a99799898114e9f61ba81ddacbe4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Trim_Aero
+    second: {fileID: 2100000, guid: 6f6ed70b2b9ad6641bbf95ac74e9b000, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule

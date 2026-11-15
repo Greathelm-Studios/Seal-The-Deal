@@ -339,6 +339,27 @@ A collider sweep of KitOffice found these, and close-ups confirmed them:
 
 What the sweep still reports is designed contact: columns over glass, walls meeting at corners, partition ends inside solid walls, props on desks, and the lift's own parts, which the lift remodel will replace. Unsaved scene state before the rebuild: `KitOffice_PreClipFix.unity`.
 
+### Mood D in blue, 2026-11-15 night (Alex: "I like D but make it blue ... some animated stuff in the background")
+
+Built to [concepts/Mood/DECISION.md](concepts/Mood/DECISION.md) and Alex's references:
+- **Two blues by half:** firm A's half is deep cobalt and firm B's bright azure. Each has whole glossy wall fields with giant zone numbers: 01 and 02 downstairs, 03 and 04 upstairs.
+- **Half-coloured light:** the room, kitchen and lightbox light is tinted in its half's blue.
+- **Charcoal-blue carpet**, for contrast.
+- **A sky-blue court:** a floor field, the court walls, and the bridge and canopy undersides, plus two water-wall cassettes and glowing sphere pendants (`Pendant_Sphere`). The feature stair has glowing blue edges.
+- **Glass, a mix by room:**
+  - `Partition_Fluted` is full-height reeded frost (`Glass_Fluted`), on the back rooms.
+  - `Partition_Louvre` is frosted slats with see-through gaps, glowing blue (`Glass_Louvre`), on the conference and kitchen fronts.
+  - `Partition_Frost` is now fluted bands below 1.1 m and above 2.1 m, clear at eye height.
+  - Clear glass stays by the windows; only clear glass keeps the breakable-glass dots.
+- **Animated background:** built by Codex (`ArtSource/Kit/animated/README.md`, `KitOfficeAnimation.AddTo`, called by the build after the look):
+  - 80 scrolling CRT screens;
+  - LED tickers over both receptions;
+  - six breathing court light shafts with dust;
+  - a drifting louvre cookie on the sun.
+- **Reflection bake:** the CRT overlays, the animated group and the marks are hidden while the reflection probes bake, because each of them gave the probes a cyan cast.
+
+Checked in Play, hosting locally: the lift and the roof props spawn, and the louvre drift runs. Captures: `review/unity_office/moodD_phase2.png` and `frost_sheet.png`.
+
 ## Checks run
 
 - Every piece passes `mdl.mjs check` with no errors (2026-11-12, 26 pieces). The warnings are long thin faces: on thin boxes (rails, panes, slab edges), and where the shadow-gap cuts slice the flat-shaded walls. They are flat faces, so they shade correctly; they would only matter for automatic LODs, which the kit doesn't use. The locked door's lock plates touch its faces without a boolean union (a "faces cut through each other" warning).

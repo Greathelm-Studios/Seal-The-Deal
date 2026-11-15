@@ -17,6 +17,8 @@
 #              floating ceiling panel.
 #  Modified  : Claude Opus 5.5, 2026-11-15 — L2 layout pieces: Wall_Door_2m, Partition_Glass_Door_2m,
 #              Stair_Straight_Half_2m.
+#  Modified  : Claude Opus 5.5, 2026-11-15 night - mood D glass: fluted frost (Glass_Fluted), Partition_Fluted,
+#              Partition_Louvre, frost bands raised to 1.1 m, the court's Pendant_Sphere.
 #  Reviewed  : NOT YET REVIEWED BY A HUMAN
 #  Summary   : Every piece of the minimum office snap kit, one piece per build, chosen with
 #              --set PIECE=<name>. One script so the grid, heights, thicknesses and materials
@@ -88,6 +90,12 @@ P = params(
     DOOR_T=0.04,           # leaf thickness, metres
     # ---- Glass partition: GreyboxTowerSetup.GlassRoom (0.1 m thick, 2.5 m high)
     PART_T=0.1, PART_H=2.5,
+    LOUVRE_SLAT=0.12,      # louvre partition: frosted glass slat height, metres (Alex's "DIVISION" reference, 2026-11-15)
+    LOUVRE_PITCH=0.2,      # slat spacing, metres: 80 mm see-through gaps between slats, so players still read through
+    LOUVRE_T=0.012,        # slat thickness, metres
+    SPHERE_R=0.45,         # court sphere pendant radius, metres (Alex's atrium reference, 2026-11-15)
+    SPHERE_DROP=3.0,       # sphere pendant: cable length from the soffit to the sphere's top, metres
+    SPHERE_CABLE_R=0.006,  # sphere pendant cable radius, metres
     PART_RAIL=0.08,        # base and top rail height, metres
     # ---- Spiral stairs: GreyboxTowerSetup
     STAIR_R=2.6, COLUMN_R=0.8, FLIGHT_T=0.25, FLIGHT_SEGMENTS=48,
@@ -142,7 +150,9 @@ P = params(
     COUNTER_SEGMENTS=16,            # facets on each counter end
     BLOCK_L=2.0, BLOCK_W=0.6,       # block cover plan, metres (junctions B / glass B "low block")
     BLOCK_BEVEL=0.04,               # block edge bevel, metres
-    FROST_LOW=0.35,        # low frosted strip top, metres (README_r5: 0-350 mm)
+    FROST_LOW=1.1,         # low frosted band top, metres. 1.1 since 2026-11-15 (Alex's fluted-glass references, mood D):
+                           # a fluted band to crouch height, the clear band 1.1-2.1 m keeps standing players visible
+                           # (README_r5 had 0.35)
     FROST_HIGH=2.1,        # high frosted strip bottom, metres (README_r5: 2,100-2,500 mm)
     STAIR_W=2.0,           # straight stair clear width, metres (README_r5 atrium B)
     STAIR_RISERS=24,       # risers per storey: 4.5 m / 24 = 0.1875 m each (README_r5)
@@ -308,6 +318,12 @@ emissive(M_LIGHT)
 # Round 5: frosted glass for the high and low strips. A pale, mostly opaque white so it reads as "you can't see
 # through here" next to the near-clear Glass_Clear; KitImport sets its transparency in Unity.
 M_FROST = material('Glass_Frosted', hexc('C6E9E6'), roughness=0.7)   # aqua pearl frost (the mix)
+# Fluted (reeded) frosted glass, mood D (Alex's references, 2026-11-15): pale blue-white; the flutes are its texture
+# (textures/make_textures.py fluted_glass, 1 m per repeat on the kit's box-mapped UVs).
+M_FLUTED = material('Glass_Fluted', hexc('DCEBF5'), roughness=0.4)
+# The louvres' slats: the same reeded frost, glowing pale blue as if lit from the room behind (Alex's "DIVISION" reference;
+# KitImport sets the emission). WHY their own material: light from inside a room can't light a transparent slat's outer face.
+M_LOUVRE = material('Glass_Louvre', hexc('CFE6FF'), roughness=0.4)
 # Detail pass 2026-11-13 (Alex's reference plates). Carpet and ceiling grid get tile textures in Unity (KitImport).
 M_CARPET = material('Carpet_Dark', hexc('7E96AC'), roughness=0.95)   # paler blue work-area carpet (the mix)
 M_GRID = material('Ceiling_Grid', hexc('F0F5F5'), roughness=0.9)    # tiled ceiling over work areas
@@ -614,6 +630,52 @@ def partition_glass(width):
     collider(frame, 'box')   # the rails' box spans the full wall, so it blocks the pane too
     expect(frame, size=(width, P.PART_T, P.PART_H))
     group(f'Kit_Partition_Glass_{width:g}m', frame, pane)
+
+
+def partition_fluted(width):
+    """Full-height fluted frosted glass wall (mood D, Alex's references, 2026-11-15): the meeting-room glass frame with a
+    reeded pane that turns whoever is behind it into a soft silhouette. For back rooms. One box collider."""
+    zc = -P.PART_T * 0.5
+    rails = join(u(0, width, 0, P.PART_RAIL, -P.PART_T, 0),
+                 u(0, width, P.PART_H - P.PART_RAIL, P.PART_H, -P.PART_T, 0))
+    rails = join(rails, *mullion_grid(0, width, P.PART_RAIL, P.PART_H - P.PART_RAIL, zc, P.PART_T))
+    frame = part(f'Kit_Partition_Fluted_{width:g}m_Frame', rails, M_RAIL, smooth=None)
+    pane = part(f'Kit_Partition_Fluted_{width:g}m_Glass',
+                u(0, width, P.PART_RAIL, P.PART_H - P.PART_RAIL, zc - P.GLASS_T * 0.5, zc + P.GLASS_T * 0.5),
+                M_FLUTED, smooth=None)
+    collider(frame, 'box')
+    expect(frame, size=(width, P.PART_T, P.PART_H))
+    group(f'Kit_Partition_Fluted_{width:g}m', frame, pane)
+
+
+def partition_louvre(width):
+    """Horizontal frosted-glass louvre wall (mood D, Alex's "DIVISION" reference, 2026-11-15): fluted glass slats with
+    see-through gaps between them, in the meeting-room frame, for rooms lit in their half's colour. One box collider."""
+    zc = -P.PART_T * 0.5
+    rails = join(u(0, width, 0, P.PART_RAIL, -P.PART_T, 0),
+                 u(0, width, P.PART_H - P.PART_RAIL, P.PART_H, -P.PART_T, 0))
+    rails = join(rails, *mullion_grid(0, width, P.PART_RAIL, P.PART_H - P.PART_RAIL, zc, P.PART_T))
+    frame = part(f'Kit_Partition_Louvre_{width:g}m_Frame', rails, M_RAIL, smooth=None)
+    slats = []
+    y = P.PART_RAIL + (P.LOUVRE_PITCH - P.LOUVRE_SLAT) * 0.5
+    while y + P.LOUVRE_SLAT <= P.PART_H - P.PART_RAIL + 1e-6:
+        slats.append(u(0, width, y, y + P.LOUVRE_SLAT, zc - P.LOUVRE_T * 0.5, zc + P.LOUVRE_T * 0.5))
+        y += P.LOUVRE_PITCH
+    glass = part(f'Kit_Partition_Louvre_{width:g}m_Slats', join(*slats), M_LOUVRE, smooth=None)
+    collider(frame, 'box')
+    expect(frame, size=(width, P.PART_T, P.PART_H))
+    group(f'Kit_Partition_Louvre_{width:g}m', frame, glass)
+
+
+def pendant_sphere():
+    """A glowing sphere pendant for the court (mood D, Alex's atrium reference, 2026-11-15): an emissive frosted ball on
+    a silver cable and ceiling cap. Pivot at the cable's top on the soffit; everything hangs below y 0. Visual only."""
+    r, drop = P.SPHERE_R, P.SPHERE_DROP
+    ball = move(sphere(r, segments=32, rings=16), 0, 0, -(drop + r))
+    cable = move(cylinder(P.SPHERE_CABLE_R, drop, segments=8), 0, 0, -drop * 0.5)
+    cap = move(cylinder(0.08, 0.05, segments=24), 0, 0, -0.025)
+    ob = part('Kit_Pendant_Sphere', join(paint(ball, 0), paint(join(cable, cap), 1)), [M_LIGHT, M_FRAME], smooth=30)
+    expect(ob, size=(2 * r, 2 * r, drop + 2 * r), tol=0.01)
 
 
 def partition_glass_door(width):
@@ -967,7 +1029,7 @@ def partition_frost(width):
                  M_GLASS, smooth=None)
     frost = part(f'Kit_Partition_Frost_{width:g}m_Frost',
                  join(u(0, width, P.PART_RAIL, P.FROST_LOW, g0, g1),
-                      u(0, width, P.FROST_HIGH, P.PART_H - P.PART_RAIL, g0, g1)), M_FROST, smooth=None)
+                      u(0, width, P.FROST_HIGH, P.PART_H - P.PART_RAIL, g0, g1)), M_FLUTED, smooth=None)   # fluted since 2026-11-15
     collider(frame, 'box')   # as Partition_Glass: one box over the whole wall; breakable glass is the shooting lane's
     expect(frame, size=(width, P.PART_T, P.PART_H))
     group(f'Kit_Partition_Frost_{width:g}m', frame, clear, frost)
@@ -1901,6 +1963,11 @@ PIECES = {
     'Cover_Block_2m': cover_block,
     'Partition_Frost_4m': lambda: partition_frost(P.BAY),
     'Partition_Frost_2m': lambda: partition_frost(P.INFILL),
+    'Partition_Fluted_4m': lambda: partition_fluted(P.BAY),
+    'Partition_Fluted_2m': lambda: partition_fluted(P.INFILL),
+    'Partition_Louvre_4m': lambda: partition_louvre(P.BAY),
+    'Partition_Louvre_2m': lambda: partition_louvre(P.INFILL),
+    'Pendant_Sphere': pendant_sphere,
     'Stair_Straight_2m': stair_straight,
     'Stair_Straight_Half_2m': lambda: stair_straight(P.FLOOR_H / 2),
     'Ramp_2x4': ramp,

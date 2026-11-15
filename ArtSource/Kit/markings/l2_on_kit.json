@@ -1,22 +1,22 @@
 {
-  "_about": "AI-GENERATED (Claude Opus 5.5, 2026-11-15), NOT YET REVIEWED BY A HUMAN. The L2 plan (concepts/Layout/L2/layouts.json) as built on the kit's 2 m grid: the wall runs KitOfficeScene.cs places and make_markings.py marks, so the marks stop exactly at the built doorways. Plan metres, x east and y south from the NW corner. 'half' is firm A's half; the builder also places it turned 180 degrees about (20, 16) for firm B. A run's thickness lies on the right of its direction of travel as the plan is drawn (east -> south side). doors: 'at' is the door's centre on the run's axis; 'room' names the room behind it (rooms below) and 'face' points from the wall to the corridor side its plate faces; a door without a room gets no plate. trimA / trimB: metres off a run's start or end where it meets the facade (0.15 curtain wall, 0.2 window sill), so it stops at the glass. The ground-floor wall under E1's upper flight sits south of y 14 and the stair hole starts at x 11.8, so neither cuts the flight. Snaps from layouts.json: doors move to odd metres (2 m door pieces); the back office's ring door moves from y 24 to 21 and its north door from x 2 to 1; the feature flight's top moves from x 16.4 to 16.",
+  "_about": "AI-GENERATED (Claude Opus 5.5, 2026-11-15), NOT YET REVIEWED BY A HUMAN. The L2 plan (concepts/Layout/L2/layouts.json) as built on the kit's 2 m grid: the wall runs KitOfficeScene.cs places and make_markings.py marks, so the marks stop exactly at the built doorways. Plan metres, x east and y south from the NW corner. 'half' is firm A's half; the builder also places it turned 180 degrees about (20, 16) for firm B. A run's thickness lies on the right of its direction of travel as the plan is drawn (east -> south side). doors: 'at' is the door's centre on the run's axis; 'room' names the room behind it (rooms below) and 'face' points from the wall to the corridor side its plate faces; a door without a room gets no plate. trimA / trimB: metres off a run's start or end where it meets the facade (0.15 curtain wall, 0.2 window sill), so it stops at the glass. The ground-floor wall under E1's upper flight sits south of y 14 and the stair hole starts at x 11.8, so neither cuts the flight. Glass kinds (mood D, 2026-11-15): fluted = full-height reeded frost (back rooms), louvre = frosted slats with see-through gaps (rooms lit in their half's blue), frost = fluted bands with clear glass at eye height, glass = clear. Snaps from layouts.json: doors move to odd metres (2 m door pieces); the back office's ring door moves from y 24 to 21 and its north door from x 2 to 1; the feature flight's top moves from x 16.4 to 16.",
   "half": [
     {"kind": "solid", "a": [8, 6], "b": [14, 6], "doors": []},
     {"kind": "solid", "a": [8, 14], "b": [8, 6], "doors": []},
     {"kind": "solid", "a": [14, 6], "b": [14, 14], "doors": []},
     {"kind": "solid", "a": [8, 18], "b": [8, 14], "doors": [{"at": 15, "room": "print", "face": [-1, 0]}]},
-    {"kind": "glass", "a": [14, 14], "b": [14, 18], "doors": [{"at": 17, "room": "print", "face": [1, 0]}]},
+    {"kind": "fluted", "a": [14, 14], "b": [14, 18], "doors": [{"at": 17, "room": "print", "face": [1, 0]}]},
     {"kind": "solid", "a": [8, 18], "b": [14, 18], "doors": []},
     {"kind": "solid", "a": [8, 22], "b": [8, 18], "doors": [{"at": 20, "room": "kitchen", "face": [-1, 0]}]},
-    {"kind": "glass", "a": [14, 18], "b": [14, 22], "doors": [{"at": 21, "room": "kitchen", "face": [1, 0]}]},
+    {"kind": "louvre", "a": [14, 18], "b": [14, 22], "doors": [{"at": 21, "room": "kitchen", "face": [1, 0]}]},
     {"kind": "solid", "a": [8, 22], "b": [14, 22], "doors": [{"at": 11, "room": "", "face": [0, 0]}]},
-    {"kind": "frost", "a": [8, 24], "b": [8, 22], "doors": [{"at": 23, "room": "wc", "face": [-1, 0]}]},
+    {"kind": "fluted", "a": [8, 24], "b": [8, 22], "doors": [{"at": 23, "room": "wc", "face": [-1, 0]}]},
     {"kind": "solid", "a": [14, 24], "b": [8, 24], "doors": []},
     {"kind": "solid", "a": [12, 22], "b": [12, 24], "doors": []},
     {"kind": "solid", "a": [14, 22], "b": [14, 24], "doors": []},
     {"kind": "solid", "a": [0, 8], "b": [4, 8], "doors": [], "trimA": 0.15},
     {"kind": "solid", "a": [4, 16], "b": [0, 16], "doors": [], "trimB": 0.15},
-    {"kind": "glass", "a": [4, 8], "b": [4, 16], "doors": [{"at": 9, "room": "conference", "face": [1, 0]}, {"at": 15, "room": "conference", "face": [1, 0]}]},
+    {"kind": "louvre", "a": [4, 8], "b": [4, 16], "doors": [{"at": 9, "room": "conference", "face": [1, 0]}, {"at": 15, "room": "conference", "face": [1, 0]}]},
     {"kind": "frost", "a": [0, 20], "b": [4, 20], "doors": [{"at": 1, "room": "office", "face": [0, -1]}], "trimA": 0.15},
     {"kind": "solid", "a": [4, 20], "b": [4, 28], "doors": [{"at": 21, "room": "office", "face": [1, 0]}]},
     {"kind": "glass", "a": [4, 28], "b": [0, 28], "doors": [], "trimB": 0.15},
@@ -66,6 +66,18 @@
     "evac": [
       {"id": "E1", "at": [8.2, 16.9], "face": [1, 0], "y": 1.5},
       {"id": "Lobby", "at": [15, 11], "face": [1, 0], "y": 1.5}
-    ]
+    ],
+    "_wallTextAbout": "Wall text (posters/COPY.md 'Wall text', Alex 2026-11-15): each run is wall faces in reading order; each face carries one whole message of its own (Alex: 'one per wall, the wrapping is confusing'). a -> b along the face as the reader reads it (left to right), face = the direction it faces, ink = its colour (white over the cobalt fields, navy on white). Firm A's half; turned for B. Centre height and letter height in KitOfficeScene.",
+    "wallText": {
+      "core": [
+        {"a": [14, 10], "b": [14, 6], "face": [1, 0], "ink": "navy"},
+        {"a": [14, 6], "b": [8, 6], "face": [0, -1], "ink": "white"},
+        {"a": [8, 6], "b": [8, 14], "face": [-1, 0], "ink": "white"},
+        {"a": [8, 14], "b": [8, 22], "face": [-1, 0], "ink": "navy"}
+      ],
+      "south": [
+        {"a": [8, 24], "b": [14, 24], "face": [0, 1], "ink": "navy"}
+      ]
+    }
   }
 }
