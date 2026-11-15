@@ -31,3 +31,14 @@ Three show the same pictures as the art bible plates in [Kit/concepts/Office/ref
 ## Where they disagree with what was built first
 
 The first UI kit (pass A) used solid dark navy chips and panels. Nothing in these references is a dark panel. Follow these.
+
+## Online sources Adam added (2026-11-15)
+
+Reference only, nothing from them ships:
+
+- **[palletism.art/collections](https://palletism.art/collections)**: "taste packs" of AI-generated images with a palette and art direction each. Use for palette and direction ideas. Its images are AI-made and come with no copyright, and its terms (https://palletism.art/terms) forbid republishing the catalogue or training models on it.
+- **[designeer.xyz](https://designeer.xyz)**: a curated directory of design links (galleries, UI kits, fonts, tools), with a "Game UI" tag. Work shown belongs to its makers; check each maker's own licence before using anything found through it.
+
+Sounds that may ship: **[効果音ラボ button and system sounds](https://soundeffect-lab.info/sound/button/)**, see `ArtSource/Audio/LICENCES.md`.
+
+Adam's other image references from the same day, saved as `10_`–`12_` here, same rules as 01–09: a 2007 aero web page (a white glass panel framed by blue, rounded and glossy), a "Plan / Do / Check / Act" board UI (white field, one solid cobalt bar, outlined rows, checkboxes, bracketed mono labels), and a blue line-art poster with gold serif callout letters (margin tick brackets, axis lines, registration marks).

@@ -39,6 +39,34 @@ namespace CloseTheDeal.Editor.UI
             Canvas = Ensure(ScreenFolder + "/KitCanvas.prefab", BuildCanvas, rebuild);
         }
 
+        /// <summary>
+        /// Rebuilds only TitleScreen.prefab from BuildTitle, with the kit's pieces as they are (not rebuilt). The kit
+        /// canvas and Lane_Integration nest it, so they pick the change up. For working on the title in small steps.
+        /// </summary>
+        [MenuItem("Close the Deal/UI/Rebuild Title Screen")]
+        static void RebuildTitleScreen()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                Debug.LogError("[UI] Stop Play mode first, then rebuild the title.");
+                return;
+            }
+
+            UiTokens tokens = EnsureTokens();
+            UiKitArt.Ensure(tokens);
+            UiKitComponents.Primary = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Button_Primary.prefab");
+            UiKitComponents.Secondary = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Button_Secondary.prefab");
+            UiKitComponents.Quiet = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Button_Quiet.prefab");
+            UiKitComponents.StatusLine = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/StatusLine.prefab");
+            string path = ScreenFolder + "/TitleScreen.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null)
+                Greybox.GeneratedAssetGuard.MarkGenerated(existing);   // its last edit was the font tool's; the builder now makes the same faces
+            Title = Ensure(path, BuildTitle, true);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[UI] Title screen rebuilt from UiKitScreens.BuildTitle.");
+        }
+
         static GameObject Ensure(string path, System.Func<GameObject> build, bool rebuild)
         {
             GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -157,41 +185,27 @@ namespace CloseTheDeal.Editor.UI
 
             RectTransform lockup = RevealLine(frame, "Lockup");
             reveal.Add(lockup.GetComponent<CanvasGroup>());
-            Label(lockup, "Strip", 112f, 684f, 1000f, 20f, "SEAL THE DEAL · MAIN MENU · EARLY ACCESS", t.Micro, t.Ink3);
-            Label(lockup, "StripRight", 1208f, 684f, 600f, 20f, "TERMS AND CONDITIONS APPLY", t.Micro, t.Ink3, TextAlignmentOptions.MidlineRight);
-            Box(lockup, "Rule", 112f, 712f, 1696f, 1f, t.Black);
-            Ticks(lockup, 112f, 706f, 1808f);
-            Label(lockup, "Title", 112f, 736f, 700f, 72f, "SEAL THE DEAL", t.Title, t.Navy);
-            Box(lockup, "TitleRule", 112f, 810f, 640f, 1f, t.Hair);
-            Box(lockup, "TermsBullet", 112f, 828f, 8f, 8f, t.Black);
-            Label(lockup, "Terms", 128f, 818f, 380f, 28f, "Terms and Conditions Apply.", t.Body, t.Ink2);
+            // Refs 08 and 05: one large thin title and a small line under it, low on the white. Nothing else in the lockup.
+            // The box is taller than the type: Saira's line is taller than its capitals, and TMP hides a line that
+            // doesn't fit its box.
+            Label(lockup, "Title", 112f, 724f, 700f, 96f, "SEAL THE DEAL", t.Title, t.Navy);
+            Label(lockup, "Terms", 112f, 818f, 380f, 28f, "Terms and Conditions Apply.", t.Body, t.Ink2);
             TextMeshProUGUI version = Label(lockup, "Version", 552f, 818f, 200f, 28f, "v0.1.0 · Early Access", t.Caption, t.Ink3, TextAlignmentOptions.MidlineRight);
 
             RectTransform modeLine = RevealLine(frame, "Mode");
             reveal.Add(modeLine.GetComponent<CanvasGroup>());
-            Label(modeLine, "ModeCaption", 112f, 868f, 300f, 18f, "§ 0.2  CONNECTION", t.Section, t.Ink3).fontSize = 12f;
-            Box(modeLine, "ModeBullet", 112f, 898f, 8f, 8f, t.Cobalt);
-            TextMeshProUGUI mode = Label(modeLine, "ModeText", 132f, 888f, 640f, 28f, "Starting...", t.Body, t.Navy);
-            KeyHints(modeLine, 112f, 944f);
+            // One short connection line (ref 08's small text block). No section labels, no key hints: it's a menu.
+            TextMeshProUGUI mode = Label(modeLine, "ModeText", 112f, 872f, 640f, 28f, "Starting...", t.Body, t.Navy);
 
+            // The status line stays for what the player must know (busy, a refusal); TitleScreen hides it when idle.
             RectTransform statusGroup = RevealLine(frame, "Status");
             reveal.Add(statusGroup.GetComponent<CanvasGroup>());
-            Label(statusGroup, "StatusCaption", 832f, 722f, 440f, 18f, "§ 0.1  STATUS", t.Section, t.Ink3).fontSize = 12f;
-            var status = Place<UiStatusLine>(UiKitComponents.StatusLine, statusGroup, "StatusLine", 832f, 752f);
-            ((RectTransform)status.transform).sizeDelta = new Vector2(440f, 52f);
-            ((RectTransform)status.transform.Find("Text")).sizeDelta = new Vector2(418f, 52f);
-            TextMeshProUGUI hint = Label(statusGroup, "JoinHint", 854f, 806f, 420f, 56f,
-                "To join a friend, accept their invite or choose Join Game on their name in Steam.", t.Body, t.Ink2, TextAlignmentOptions.TopLeft, true);
-
-            RectTransform info = RevealLine(frame, "FocusInfo");
-            reveal.Add(info.GetComponent<CanvasGroup>());
-            TextMeshProUGUI heading = Label(info, "FocusHeading", 854f, 896f, 420f, 24f, "§ HOST GAME", t.Section, t.Navy);
-            Box(info, "FocusRule", 854f, 922f, 420f, 1f, t.Hair);
-            TextMeshProUGUI body = Label(info, "FocusBody", 854f, 932f, 420f, 56f, string.Empty, t.Body, t.Ink2, TextAlignmentOptions.TopLeft, true);
+            var status = Place<UiStatusLine>(UiKitComponents.StatusLine, statusGroup, "StatusLine", 112f, 912f);
+            ((RectTransform)status.transform).sizeDelta = new Vector2(640f, 52f);
+            ((RectTransform)status.transform.Find("Text")).sizeDelta = new Vector2(618f, 52f);
 
             RectTransform menuLine = RevealLine(frame, "Menu");
             reveal.Add(menuLine.GetComponent<CanvasGroup>());
-            Label(menuLine, "MenuCaption", 1388f, 722f, 420f, 18f, "§ 1  MAIN MENU", t.Section, t.Ink3).fontSize = 12f;
             RectTransform column = At(menuLine, "Column", 1388f, 744f, 420f, 256f);
             var layout = column.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.spacing = t.SpaceS;
@@ -211,13 +225,6 @@ namespace CloseTheDeal.Editor.UI
             settings.Description = "Controls, video, audio and accessibility. Kept on this PC.";
             quit.Description = "Close Seal the Deal. Your settings are already saved.";
 
-            RectTransform footer = RevealLine(frame, "Footer");
-            reveal.Add(footer.GetComponent<CanvasGroup>());
-            CropMarks(footer);
-            Label(footer, "Microtype", 112f, 1036f, 1100f, 20f,
-                "SEAL THE DEAL · TERMS AND CONDITIONS APPLY · KEPT ON THIS PC", t.Micro, t.Ink3);
-            TextMeshProUGUI build = Label(footer, "Build", 1208f, 1036f, 420f, 20f, string.Empty, t.Micro, t.Ink3, TextAlignmentOptions.MidlineRight);
-            Box(footer, "Barcode", 1648f, 1012f, 160f, 20f, t.Navy, UiKitArt.Barcode);
 
             var screen = root.gameObject.AddComponent<TitleScreen>();
             WireScreen(screen, frame, reveal, host);
@@ -231,29 +238,10 @@ namespace CloseTheDeal.Editor.UI
             Set(screen, "_quit", quit);
             Set(screen, "_mode", mode);
             Set(screen, "_status", status);
-            Set(screen, "_joinHint", hint);
-            Set(screen, "_focusHeading", heading);
-            Set(screen, "_focusBody", body);
-            Set(screen, "_build", build);
             SetArray(screen, "_versionLines", new Object[] { version });
             Set(screen, "_menuGroup", menuLine.GetComponent<CanvasGroup>());
-            SetArray(screen, "_centreGroups", new Object[] { statusGroup.GetComponent<CanvasGroup>(), info.GetComponent<CanvasGroup>() });
+            SetArray(screen, "_centreGroups", new Object[] { statusGroup.GetComponent<CanvasGroup>() });
             return root.gameObject;
-        }
-
-        /// <summary>Small tick marks along a rule: the survey's measuring marks.</summary>
-        static void Ticks(Transform parent, float x0, float y, float x1)
-        {
-            for (float x = x0; x <= x1; x += 96f)
-                Box(parent, "Tick", x, y, 1f, 6f, Tokens.Black);
-        }
-
-        /// <summary>The keys row: select, back and move, named for the device the player is on (Enter or A or Cross).</summary>
-        static void KeyHints(Transform parent, float x, float y)
-        {
-            Hint(parent, "SelectHint", x, y, "Select", "UI/Submit");
-            Hint(parent, "BackHint", x + 150f, y, "Back", "UI/Cancel");
-            Hint(parent, "MoveHint", x + 300f, y, "Move", keyboard: "\u2191\u2193", padControl: "leftStick");
         }
 
         /// <summary>
@@ -391,18 +379,6 @@ namespace CloseTheDeal.Editor.UI
             lit.pivot = new Vector2(1f, 0.5f);
             lit.sizeDelta = new Vector2(1f, 0f);
             Img(lit, UiKitArt.White, Tokens.Hair);
-        }
-
-        static void CropMarks(Transform parent)
-        {
-            RectTransform left = At(parent, "CropLeft", 48f, 1004f, 28f, 28f);
-            left.localScale = new Vector3(1f, -1f, 1f);
-            left.pivot = new Vector2(0f, 0f);
-            Img(left, UiKitArt.Bracket, Tokens.Navy);
-            RectTransform right = At(parent, "CropRight", 1844f, 1004f, 28f, 28f);
-            right.localScale = new Vector3(-1f, -1f, 1f);
-            right.pivot = new Vector2(1f, 0f);
-            Img(right, UiKitArt.Bracket, Tokens.Navy);
         }
 
         // ---- Confirm dialog ---------------------------------------------------------------------------------

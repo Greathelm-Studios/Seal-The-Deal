@@ -73,17 +73,33 @@ All code is on the **local branch `buffer`** (worktree `.claude/worktrees/buffer
 - **Unfinished, saved on local branches only:** `claude/lane-ui` (in-game menu follow-up) and `claude/lane-gunhold-e2156d` (gun held at the hip), each one WIP commit made with hooks skipped. Not reviewed or compiled; don't merge as is.
 - **F5 body view** needs Harvey's `PlayerViewmodel` on the player (`Close the Deal > Greybox > Rebuild Viewmodel`, add-only).
 
+## Where we left off (2026-11-15, evening)
+
+Adam chose **mockups first, then build in Unity**, one screen at a time, each approved before the next.
+
+- **Tools (open source only, Adam's rule):** VectorCraft, FigCraft, PhotoCraft, EffectCraft, MaterialCraft, SoundCraft, FilmCraft (all from the ArtCraft launcher's GitHub releases, notarised), BeeRef (unsigned; Adam decides whether to keep it), Blender. PhotoCraft's MCP server (`photocraft-cli mcp`) is registered at user scope next to VectorCraft's. PureRef is out (not open source).
+- **Fonts:** 24 OFL families in [ArtSource/UI/fonts/](../ArtSource/UI/fonts/) with their licences; `static/` holds instanced Saira Expanded Light/ExtraLight and Archivo SemiExpanded Regular/Medium (TMP can't pick a variable instance). Current picks: Saira Expanded Light (display), Archivo SemiExpanded (UI), IBM Plex Mono (data). Candidates sheet: `ArtSource/UI/review/18_font_candidates.png`. M PLUS Rounded 1c came without its OFL.txt. None is in Unity yet.
+- **Title mockup:** Adam liked v2 (lowercase Saira title on a glass plate, no window bars, sky behind one sheet of glass, soft glass shapes) and asked to "push the white". **v3 is the current one, awaiting his call:** white field, sky in one rounded glass window, blue line work (margin ticks, axis, -1/0/1 ruler, crop marks, bracketed mono labels), menu styled on his Plan/Do/Check/Act board ref. Generators: [make_title_v2.py](../ArtSource/UI/tools/make_title_v2.py), [make_title_v3.py](../ArtSource/UI/tools/make_title_v3.py) (run with a Python that has Pillow). Exports in `ArtSource/UI/review/17_*`, `19_title_v3_white.png`; VectorCraft files in `ArtSource/UI/passes/`.
+- **Adam's taste so far:** no orange/amber annotation cards on mockups (notes go in chat); soft, blended glass, never hard outlines; more white, blue as line accent. New refs he gave: a 2007 aero web page (white glass panel framed by blue), a Plan/Do/Check/Act board UI, a blue line-art poster with gold serif callouts.
+- **Known faults in the mockups:** a horizontal seam in the sky where the window bar was painted out of the capture (the game won't have it); the glass isn't truly frosted (needs PhotoCraft or the Unity glass shader).
+- **AI research** (open-weight only): use AI for paint-overs, icons (Z-Image + LoRA + vtracer) and hero art; build panels, glass, grids and brackets as Canvas Shader Graphs and vectors. Any shipped AI art must be declared on Steam.
+- **Font swap plan for Unity** (not started, needs Adam's go): fonts are baked into ~800 TMP texts in UI prefabs and `Lane_Integration.unity`, so a token change alone does nothing; plan is an add-only import menu, a dry-run retype report, then apply, with Liberation kept as the last fallback.
+
+**Workflow (from 2026-11-15, evening):** all UI design lives on one FigCraft board, `ArtSource/UI/board/SealTheDeal_UI.figcraft`, built by [make_board.py](../ArtSource/UI/tools/make_board.py). It has a section per screen, with in-game captures and every mockup version side by side, oldest left. A new version gets a new number, is added to its section in the script, and the board is rebuilt; nothing is overwritten. Adam's taste rules for these mockups: no annotation cards, and no "AI tells" (corner-tick boxes, decorative rule lines, AI-voiced status copy, key-hint rows); icons for stats.
+
+**Font swap in Unity (uncommitted, ready for review):** Close the Deal > UI > Fonts (1 Import, 2 Report, 3 Retype) moved every UI prefab and `Lane_Integration.unity` onto Saira Expanded Light, Archivo SemiExpanded and Martian Mono Light. Report: `ArtSource/UI/review/font_swap_report.md`. Kit controls no longer pose themselves in edit mode (`UiControl.cs`, `UiSlider.cs`), which used to push the hover brackets out 6 px on every editor save.
+
 ## Open questions for Adam
 
-- Merge `buffer` into `main`? (It is pushed as `origin/buffer`.)
-- Download the target fonts?
-- Sound: which source (recordings, a text-to-sound model, or a person designing them)? Change the GDD's "no packs ship" line?
-- Firm names (currently proposals: "Ashcombe & Pryce" and others in the firm assets).
-- Floor gates, locked doors, or both; headshots; friendly fire (all gameplay, parked).
-- Harvey asked for a reply on Discord.
+- Title v3: right amount of white? Shrink the sky window or wash it lighter?
+- Fonts: which candidates to try in the mockups?
+- The gold callout colour from his third ref is outside the bible palette: add it?
+- Sound source; firm names; gameplay questions (parked, unchanged).
 
 ## Next steps
 
-1. Open the `buffer` worktree in Unity, run "Close the Deal > Lanes > Set Up Integration", open `Assets/_Project/Scenes/Lanes/Lane_Integration.unity`, press Play, and capture the title, settings, the in-game menu (Esc) and the HUD as they are now. Compare against the keyframes.
-2. Fix the look in this order: typeface (once Adam allows it), the in-game HUD chips and plates onto the kit and glass, the amber error box as an edge, then motion and sound polish against `feel_wii_ds.md`.
-3. Show Adam a capture or short clip per change and wait for his call before the next visible change.
+1. Title v3, two changes, then show Adam:
+   - Fill the big empty space bottom-left (below the status line, above the key hints, left of the menu; Adam circled it). Proposals to mock up: a ref-01-style schematic control strip (connection log lines, signal glyphs, a progress readout, barcodes), and/or a firm record card that only fills once you've played (deals sealed, last match, time on the floor), which gives a reason to come back. Draw only what the game can feed or will save.
+   - Use PhotoCraft (MCP) for real frosted glass on the window and to remove the sky seam.
+2. Once the title is approved: Esc menu mockup over a fresh capture (Adam presses Play; Unity is open on the main checkout), then HUD, settings, problem screens.
+3. After the mockups: font swap in Unity, then each screen rebuilt to its approved mockup, one clip per screen.
