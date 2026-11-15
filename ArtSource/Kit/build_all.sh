@@ -29,7 +29,8 @@ Sign_Zone_L Sign_Zone_R Sign_Zone_C Sign_Zone_H Sign_Zone_A Desk_Sculpt Chair_Po
 Column_Graphic Column_Graphic_Tall Workstation_Bench Chair_Task Storage_Low Copier Desk_Reception Guard_Rail_4m
 Guard_Rail_2m Partition_Header_4m Partition_Header_2m Partition_Header_Curve_2x2 Light_Pendant_Linear Carpet_Overlay_4x4 Ceiling_Grid_4x4 Planter_Box
 Water_Server Umbrella_Stand Vending_Machine Slipper_Cabinet Phone_Desk Doc_Tray Logo_Aonagi Sign_LED_Reception Water_Wall
-Monitor_Flat Keyboard Lift_Door_Frame_4m_1F Lift_Door_Frame_4m_RF Lift_Door_Panel Lift_Shaft_Wall_4m Lift_Car Pool_Raised_8x4"
+Monitor_Flat Keyboard Lift_Door_Frame_4m_1F Lift_Door_Frame_4m_RF Lift_Door_Panel Lift_Shaft_Wall_4m Lift_Car Pool_Raised_8x4
+Wall_Curtain_4m Ceiling_Beams_4x4"
 
 for p in $PIECES; do
   $MDL build "$HERE/kit_pieces.py" --out "$HERE/build/$p.blend" --set PIECE="$p" > "$HERE/build/$p.build.log"

@@ -15,6 +15,8 @@
 //  Modified  : Claude Fable 5.2, 2026-11-14 — a Driven switch so real weapon code can turn
 //              the stand-in attack and reload input off (Adam's review lane: a shot would
 //              otherwise kick twice); the stand-in uses the Reload action when there is one.
+//  Modified  : Claude Fable 5.2, 2026-11-14 — the stand-in shot also sends a local ray that
+//              hits the test dummy (Alex: "i want it so when i actuall shoot him with my gun").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Sits on the player prefab. For the player this client controls, and nobody
 //              else, it hangs the first-person arms on the camera, draws them with a camera
@@ -89,6 +91,15 @@ namespace CloseTheDeal.Player
         /// <summary>Input action for reload, in the actions asset's Player map. Missing on some branches; the R key is read then.</summary>
         const string ReloadAction = "Player/Reload";
 
+        /// <summary>How far the stand-in bullet reaches, in metres. Longer than any room in the test scenes.</summary>
+        const float StandInBulletRange = 100f;
+
+        /// <summary>
+        /// Push a stand-in pistol bullet gives what it hits, in newton-seconds. The figure
+        /// agreed with the hit-reaction work for a pistol round on the 49 kg ragdoll.
+        /// </summary>
+        const float StandInBulletImpulse = 20f;
+
         /// <summary>Below this planar speed, in metres per second, the player counts as standing still and the bob fades out. Well above the jitter of a resting body.</summary>
         const float MovingSpeed = 0.2f;
 
@@ -113,6 +124,8 @@ namespace CloseTheDeal.Player
         InputAction _attack;
         /// <summary>The reload action, or null when the actions asset has none.</summary>
         InputAction _reload;
+        /// <summary>What the stand-in bullet can hit: every layer but the arms' own. Set when the arms are shown.</summary>
+        int _standInBulletMask;
 
         Quaternion _lastCameraRotation;
         Vector2 _lag;
@@ -254,8 +267,12 @@ namespace CloseTheDeal.Player
             if (Cursor.lockState != CursorLockMode.Locked)
                 return;
 
-            if (_attack != null && _attack.WasPressedThisFrame())
+            // Not during a reload: Fire() ignores the press then, and so must the bullet.
+            if (_attack != null && _attack.WasPressedThisFrame() && !IsReloading)
+            {
                 Fire();
+                FireStandInBullet();
+            }
 
             Keyboard keyboard = Keyboard.current;
             bool reloadPressed = _reload != null
@@ -267,6 +284,39 @@ namespace CloseTheDeal.Player
             // and both. Only this machine sees the switch; remove with the rest of this method.
             if (keyboard != null && keyboard.tKey.wasPressedThisFrame)
                 TwoHanded = !TwoHanded;
+        }
+
+        /// <summary>
+        /// Stand-in shot, so the test dummy can be shot with the gun in the view: one ray from
+        /// the eye along the look, and a pistol hit on the dummy if it lands on one.
+        /// </summary>
+        /// <remarks>
+        /// Local and visual only, like the dummy: nothing is sent and no player is hurt. It is
+        /// not the game's shooting, which is host-decided (AGENTS.md §3) and lives with the
+        /// weapon code; that code sets <see cref="Driven"/> and this never runs. Remove with
+        /// <see cref="ReadTestInput"/>.
+        /// WHY from the eye and not the muzzle: the crosshair is the eye's line, and a shot
+        /// from the gun's off-centre muzzle would miss what is under it at close range.
+        /// The ray starts inside the player's own capsule, which a ray does not report.
+        /// </remarks>
+        void FireStandInBullet()
+        {
+            Transform eye = _baseCamera.transform;
+            if (!Physics.Raycast(eye.position, eye.forward, out RaycastHit hit, StandInBulletRange, _standInBulletMask, QueryTriggerInteraction.Ignore))
+                return;
+
+            // Only on a hit, and only once per press, so the lookup is not a per-frame cost.
+            var dummy = hit.collider.GetComponentInParent<HitDummy>();
+            if (dummy == null)
+                return;
+
+            dummy.Hit(new HitInfo
+            {
+                Point = hit.point,
+                Direction = eye.forward,
+                Impulse = StandInBulletImpulse,
+                Type = HitType.Bullet
+            });
         }
 
         void Show()
@@ -282,6 +332,8 @@ namespace CloseTheDeal.Player
             cameraObject.transform.SetParent(_baseCamera.transform, false);
             _armsCamera = cameraObject.AddComponent<Camera>();
             _armsCamera.cullingMask = 1 << layer;
+            // Everything but the arms' own layer, so a held model with a collider cannot stop the shot.
+            _standInBulletMask = ~(1 << layer);
             _armsCamera.fieldOfView = _profile.FieldOfView;
             _armsCamera.nearClipPlane = _profile.NearDistance;
             _armsCamera.farClipPlane = _profile.FarDistance;

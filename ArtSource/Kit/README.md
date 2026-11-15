@@ -168,6 +168,21 @@ Agreed with the elevator session (spec: side-session notes, `elevator-rooftop-sp
 
 **Loose (pick up and throw; convex box or hull colliders):** `Monitor_Flat`, `Keyboard`, `Phone_Desk`, `Doc_Tray`, `Chair_Task`, `Chair_Pod`. **Fixed:** everything else, including the bench, `Planter_Box`, `Copier`, `Vending_Machine`, `Storage_Low`, `Water_Server`, the lift pieces (the car and leaves are moved by code, not carried) and the pool. KitOffice places 115 loose kit props: 28 monitors, 28 keyboards, 14 phones, 14 trays, 28 task chairs, 3 pod chairs (the roof range adds its own). That is far over the 16-per-floor netcode cap in docs/systems/PROPS.md: which of them become host-simulated props is the props lane's call.
 
+### Glass and structure, 2026-11-14 (Alex: the AEROSET look, Persona 3's graphic identity "to an extent")
+
+Lessons taken, not assets: glass crossed by thin dense lines, exposed structure, a near-mirror white floor, a stronger sun. Alex's calls: the floor stays white, the sky is unchanged, no bubbles or ivy.
+
+| Piece / change | What | Collider |
+|---|---|---|
+| `Wall_Curtain_4m` | Floor-to-soffit clear glass on a navy grid: base and head rails, mullions every 1 m, transoms at 2.6 and 3.45 m (nothing across a standing figure). Same footprint as `Wall_Solid_4m` | Box on the frame |
+| `Ceiling_Beams_4x4` | Two silver beams along X either side of the slab's light line and a lighter cross beam, hung under a soffit | None |
+| `Window_4m`, `_2m` | Navy mullions every metre and the same two transoms | Unchanged |
+| Materials | `Floor_Carpet` smoothness 0.85 → 0.96 (still white), `Wall_PaperWhite` 0.70 → 0.85 | |
+
+In `KitOffice.unity` every outer bay with nothing hung on or stood against it is now a curtain wall (26 bays); bays carrying signs, the copier, vending machine, slipper cabinet, storage or the DevMirror stay solid white (`KitOfficeScene.OuterWall`). Beams hang under every soffit outside the tiled work areas, the shaft and the atrium's open middle (55 cells). `OfficeLook.cs`: sun 3.2 → 4.2, ambient 0.6 → 0.5 and a third nearer neutral, a whiter colour filter, saturation 6 → 16, bloom 0.55 → 0.75; the sky is untouched. The scene's unsaved state before this rebuild is kept as `KitOffice_PreAeroset.unity`.
+
+Interior, the same day: `Partition_Glass_*`, `Partition_Frost_*` and `Partition_Header_*` carry navy mullions every metre (stopping under the header band); plain `Wall_Solid_*` walls carry thin navy joint lines on the same grid on both faces (verticals every metre, lines at 2.6 and 3.45 m, 2-3 mm proud), so walls kept solid for cover still read as part of the grid. The cobalt, portal-head, door and niche walls are unchanged. The A/R boundary wall at x 20, z -20 to -24 is now a curtain wall. Unsaved scene state before that rebuild: `KitOffice_PreInteriorGlass.unity`.
+
 ## Checks run
 
 - Every piece passes `mdl.mjs check` with no errors (2026-11-12, 26 pieces). The warnings are long thin faces: on thin boxes (rails, panes, slab edges), and where the shadow-gap cuts slice the flat-shaded walls. They are flat faces, so they shade correctly; they would only matter for automatic LODs, which the kit doesn't use. The locked door's lock plates touch its faces without a boolean union (a "faces cut through each other" warning).

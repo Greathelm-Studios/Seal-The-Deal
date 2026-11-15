@@ -50,7 +50,7 @@ Open to the sky: nothing is overhead except the lift's head-house. Roof-local me
 | Hit dummy, facing west | (27, −19) | 4 m of clear floor all round, as the hit-reaction session asked. It and its mirror move up only once the lift is in the scene; until then the dummy stays on the upper floor, where it can be reached |
 | Full-height glass screens | East edge south of z −12, south edge east of x 20 | A blasted body must not clear a 1.1 m rail; walls within 6 m of the dummy |
 | Second DevMirror, 8 m | Inside the east screen, behind the dummy | Reactions are judged in a mirror |
-| Arsenal bay, 8 × 6 m, with a rack wall | Corner (7, −16), wall along z −22 | Its east edge is the firing line, 12 m from the dummy. Empty until weapon pickups exist; the weapons session parents racks to `ArsenalBay` |
+| Arsenal bay, 8 × 6 m, with a rack wall | Corner (7, −16), wall along z −22 | Its east edge is the firing line, 12 m from the dummy. Three `Storage_Low` counters against the rack wall carry four stand-in weapons from `Assets/_Project/Prefabs/Arsenal/` (pistol, grenade, rifle, launcher): display only, no physics and no pickup until the pickup question is settled |
 | Loose props: 3 monitors, 3 chairs, 2 cabinets | x 19 to 21, z −14.5 to −21.5 | Things to throw at the dummy. 8 of the 16-per-floor cap ([PROPS.md](PROPS.md)). Placed as scene objects because KitOffice has no tower for `PropSpawner` |
 | Raised pool, 8 × 4 m | Corner (6, −6) | Alex: "what could be funny is if added a pool". Kit piece `Pool_Raised_8x4`; knee-deep, no swimming |
 

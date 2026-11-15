@@ -19,6 +19,8 @@
 //              cabinet, phones and document trays on the benches.
 //  Modified  : Claude Opus 5.5, 2026-11-13 — the lift (shaft, landings, car, leaves), loose monitors and keyboards
 //              on the benches, the rooftop range hook (KitOfficeRoof), Mirror's-Edge-width zone graphics.
+//  Modified  : Claude Opus 5.5, 2026-11-14 — AEROSET reference: glass curtain walls on the outer bays nothing hangs
+//              on, exposed ceiling beams.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Lays out an office labyrinth from the kit prefabs, so the approved round-5 kit can be walked
 //              and lit in Unity as a space. Its own file because KitImport proves the pieces snap (a small
@@ -264,7 +266,7 @@ namespace CloseTheDeal.Editor.Art
                 {
                     P(shell, "Window_4m", i * Cell, 0f);
                     if (i > 0) P(shell, "Column_Facade", i * Cell, 0f);
-                    P(shell, "Wall_Solid_4m", (i + 1) * Cell, -Depth, 180f);
+                    P(shell, OuterWall(level, 'S', i), (i + 1) * Cell, -Depth, 180f);
                 }
                 P(shell, "Column_CornerL", 0f, 0f);
                 P(shell, "Column_CornerR", Width, 0f);
@@ -272,8 +274,8 @@ namespace CloseTheDeal.Editor.Art
                 {
                     float z = -j * Cell;
                     if (level == 0 && j == 2) P(shell, "Wall_Niche_4m", 0.2f, z, 90f);   // zone L's landmark, facing in
-                    else P(shell, "Wall_Solid_4m", 0f, z - Cell, -90f);
-                    P(shell, "Wall_Solid_4m", Width, z, 90f);
+                    else P(shell, OuterWall(level, 'W', j), 0f, z - Cell, -90f);
+                    P(shell, OuterWall(level, 'E', j), Width, z, 90f);
                 }
             }
 
@@ -341,7 +343,7 @@ namespace CloseTheDeal.Editor.Art
             P(zoneR, "Wall_Solid_4m_Cobalt", AtriumX1, -12f, 90f);        // yaw 90 turns the cobalt face toward R (+X)
             P(zoneR, "Wall_Door_4m", AtriumX1, -16f, 90f);
             P(zoneR, "Door_Leaf", AtriumX1 + LeafZ, -16f - LeafX, 90f);
-            P(zoneR, "Wall_Solid_4m", AtriumX1, -20f, 90f);
+            P(zoneR, "Wall_Curtain_4m", AtriumX1, -20f, 90f);   // glass since 2026-11-14 (AEROSET); nothing hangs on it
 
             // Upper floor: open, with cover over the rooms below.
             var upper = G("Upper floor cover", FloorHeight);
@@ -437,6 +439,20 @@ namespace CloseTheDeal.Editor.Art
                             new Vector3(x + Cell * 0.5f, soffit, z - Cell * 0.5f);
                     }
 
+            // Exposed ceiling structure (AEROSET reference, Alex 2026-11-14): beams under every plain soffit; the work
+            // areas keep their tiled grid and pendants, and the shaft and the atrium's open middle get none.
+            var beams = G("Ceiling beams");
+            for (int level = 0; level < Levels; level++)
+                for (int i = 0; i < Cols; i++)
+                    for (int j = 0; j < Rows; j++)
+                    {
+                        float x = i * Cell, z = -j * Cell, soffit = level * FloorHeight + FloorHeight - 0.2f;
+                        if (x == ShaftX && z == ShaftZ) continue;
+                        if (level == 0 && InAtrium(x, z)) continue;   // no slab above: the roof beams show instead
+                        if (HasTileGrid(level, x, z)) continue;
+                        P(beams, "Ceiling_Beams_4x4", x, z).transform.localPosition = new Vector3(x, soffit, z);
+                    }
+
             Figures(root);
             Massing(root);
             DevMirror();
@@ -519,6 +535,29 @@ namespace CloseTheDeal.Editor.Art
         }
 
         /// <summary>True for a 4 m cell (NW corner at x, z) inside the atrium void.</summary>
+        /// <summary>
+        /// Which outer wall a perimeter bay gets: glass curtain wall (AEROSET reference, Alex 2026-11-14: "glass
+        /// everywhere, crossed by thin dense lines") unless something hangs on or stands against it, which keeps
+        /// it solid white. side is 'S', 'W' or 'E'; bay is the column (S) or row (W, E) index.
+        /// </summary>
+        /// <remarks>Kept solid: south 1F under the C and A signs and the copier, south 2F behind the vending machine and
+        /// slipper cabinet; west 2F behind the storage; east 1F under the R sign; all of east 2F (the DevMirror
+        /// runs along it, and the copier and storage stand at its south end).</remarks>
+        static string OuterWall(int level, char side, int bay)
+        {
+            bool solid = side switch
+            {
+                'S' => level == 0 ? bay is 0 or 1 or 3 or 4 : bay == 2,
+                'W' => level == 1 && bay == 1,
+                _ => level == 1 || bay == 1,
+            };
+            return solid ? "Wall_Solid_4m" : "Wall_Curtain_4m";
+        }
+
+        /// <summary>True where the work areas' tiled ceiling grid hangs (the carpet loop below), so no beams go there.</summary>
+        static bool HasTileGrid(int level, float x, float z) =>
+            (level == 1 && (x < 12f || x >= 20f) && z <= -4f) || (level == 0 && x < 8f && z <= -16f);
+
         static bool InAtrium(float x, float z) => x >= AtriumX0 && x < AtriumX1 && z <= AtriumZ0 && z - Cell >= AtriumZ1;
 
         /// <summary>Dark-suited capsules at player height, one per zone: the read the art bible asks for.</summary>

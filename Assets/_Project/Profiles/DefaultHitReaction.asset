@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b2ffe635ff027045941ffe6e7ab296a, type: 3}
   m_Name: DefaultHitReaction
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Player.HitReactionProfile
-  ImpulseShare: 1
-  NeighbourShare: 0.4
+  ImpulseShare: 2
+  NeighbourShare: 0.6
   MaxKickSpeed: 8
   FlinchFullImpulse: 25
-  FlinchLimpShare: 0.15
-  FlinchRecover: 0.35
+  FlinchLimpShare: 0.1
+  FlinchRecover: 0.5

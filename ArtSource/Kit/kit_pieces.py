@@ -8,6 +8,10 @@
 #              character").
 #  Modified  : Claude Opus 5.5, 2026-11-13 — loose Monitor_Flat and Keyboard split out of the bench, colliders on
 #              the phone and tray, the lift (frame, leaf, shaft wall, car) and the rooftop pool.
+#  Modified  : Claude Opus 5.5, 2026-11-14 — AEROSET reference: navy mullion grid on the façade, Wall_Curtain_4m,
+#              Ceiling_Beams_4x4, glossier walls and floor.
+#  Modified  : Claude Opus 5.5, 2026-11-14 — interior: mullions on the glass partitions, navy joint lines on the
+#              plain solid walls.
 #  Reviewed  : NOT YET REVIEWED BY A HUMAN
 #  Summary   : Every piece of the minimum office snap kit, one piece per build, chosen with
 #              --set PIECE=<name>. One script so the grid, heights, thicknesses and materials
@@ -210,6 +214,12 @@ P = params(
     POOL_RIM_H=0.5, POOL_RIM_W=0.4,   # raised pearl rim, metres
     POOL_WATER=0.4,           # water surface above the basin floor, metres: wading depth, no swimming
     POOL_STEP_L=3.0,          # width of the two steps up to the rim on the front long side, metres
+    # ---- Glass and structure (Alex 2026-11-14, AEROSET reference: "glass everywhere, crossed by thin dense lines")
+    MULLION_W=0.04,        # navy mullion face width, metres: thin lines that read at 20 m
+    MULLION_PITCH=1.0,     # vertical mullion spacing, metres: a quarter bay, so the grid lines up across pieces
+    TRANSOMS=(2.6, 3.45),  # transom heights, metres. WHY above 2.1: no bars across a standing figure (kept rules)
+    BEAM_W=0.08, BEAM_D=0.16,          # exposed ceiling beams along X, metres
+    PURLIN_W=0.05, PURLIN_D=0.09,      # the lighter cross beam along Z, metres
     LED_W=1.2, LED_H=0.18, LED_T=0.06, LED_Y=2.65,   # reception dot-matrix sign and its bottom height, metres
     WATER_W=1.8, WATER_T=0.08, WATER_H=2.7,          # contained water-wall cassette, metres
 )
@@ -245,11 +255,11 @@ def hexc(h):
 
 # WHY 646E86: the approved concepts' carpet is a darker grey-blue than the old #8A94A3 placeholder; this is
 # their painted value (#5E6A96 to #6D79A3, lit by a blue sky) pulled back toward grey so it reads as albedo.
-M_FLOOR = material('Floor_Carpet', hexc('DCE8EC'), roughness=0.15)   # polished walkway, the mix (Japanese_Aero/DECISION.md)
+M_FLOOR = material('Floor_Carpet', hexc('DCE8EC'), roughness=0.04)   # polished walkway, the mix (Japanese_Aero/DECISION.md)
 # WHY B8C2CE, near-mirror: round 5 drops carpet for a polished pale resin floor (Alex, 2026-11-12). The name stays
 # Floor_Carpet because Unity maps the exported material by name; KitImport.cs holds the same values.
 M_CEIL = material('Ceiling_Tile', hexc('F0F5F5'), roughness=0.9)
-M_WALL = material('Wall_PaperWhite', hexc('F4F8F8'), roughness=0.3)   # pearl lacquer at satin gloss (the mix)
+M_WALL = material('Wall_PaperWhite', hexc('F4F8F8'), roughness=0.15)   # pearl lacquer, gloss (AEROSET: gloss everywhere)
 M_FRAME = material('Frame_Aluminium', hexc('C8D2D9'), metallic=0.85, roughness=0.35)   # silver (the mix)
 M_GLASS = material('Glass_Clear', (0.70, 0.85, 0.95), roughness=0.05)
 M_DOOR = material('Door_Leaf', hexc('C9CED3'), roughness=0.6)
@@ -388,12 +398,36 @@ def end_chamfers(x0, x1):
     return join(*cuts)
 
 
+JOINT_W = 0.02      # navy joint line width on solid white walls, metres
+JOINT_PROUD = (0.002, 0.003)   # vertical and horizontal joint lines stand this far proud, metres. WHY two values:
+                               # where they cross, the horizontal one's face lies in front, so no two faces coincide
+
+
+def wall_joints(width):
+    """Thin navy joint lines on both faces of a solid wall, on the curtain walls' grid: verticals every MULLION_PITCH
+    and lines at the TRANSOMS heights, between the skirting and the soffit reveal. The AEROSET lesson (Alex,
+    2026-11-14) carried onto walls that must stay solid for cover: thin dense lines instead of a blank plane."""
+    lines = []
+    for z0, sign in ((0.0, 1.0), (-P.WALL, -1.0)):
+        dv, dh = (sign * d for d in JOINT_PROUD)
+        x = P.MULLION_PITCH
+        while x < width - 1e-6:
+            lines.append(u(x - JOINT_W / 2, x + JOINT_W / 2, P.SKIRT_H, CLEAR_H - P.TOP_H, min(z0, z0 + dv), max(z0, z0 + dv)))
+            x += P.MULLION_PITCH
+        for ty in P.TRANSOMS:
+            lines.append(u(0, width, ty - JOINT_W / 2, ty + JOINT_W / 2, min(z0, z0 + dh), max(z0, z0 + dh)))
+    return join(*lines)
+
+
 def wall_solid(width, finish=''):
-    """Opaque wall, floor to soffit, with shadow-gap skirting, a soffit reveal and chamfered ends. Box collider."""
+    """Opaque wall, floor to soffit, with shadow-gap skirting, a soffit reveal and chamfered ends. Box collider.
+    The plain white finish carries navy joint lines on the curtain walls' grid (wall_joints, 2026-11-14)."""
     bm = recessed(u(0, width, 0, CLEAR_H, -P.WALL, 0), wall_cuts(0, width, portal=finish == '_PortalHead'))
     bm = boolean(bm, paint(end_chamfers(0, width), 0))
+    if finish == '':
+        bm = join(bm, paint(wall_joints(width), 1))
     ob = part(f'Kit_Wall_Solid_{width:g}m{finish}', finish_face(bm, finish), wall_mats(finish), smooth=None)
-    expect(ob, size=(width, P.WALL, CLEAR_H))
+    expect(ob, size=(width, P.WALL + (2 * JOINT_PROUD[1] if finish == '' else 0), CLEAR_H), tol=0.002)
     collider(ob, 'box')
 
 
@@ -448,15 +482,61 @@ def window_bay(width):
     sill = part(f'Kit_Window_{width:g}m_Sill', recessed(u(0, width, 0, P.SILL, -P.WALL, 0), pocket),
                 [M_WALL, M_TRIM], smooth=None)
     collider(sill, 'box')
-    rails = join(u(c, width - c, P.SILL, P.SILL + P.RAIL, zc - P.RAIL_D * 0.5, zc + P.RAIL_D * 0.5),
-                 u(c, width - c, CLEAR_H - P.RAIL, CLEAR_H, zc - P.RAIL_D * 0.5, zc + P.RAIL_D * 0.5))
-    frame = part(f'Kit_Window_{width:g}m_Frame', rails, M_RAIL, smooth=None)
+    rails = [u(c, width - c, P.SILL, P.SILL + P.RAIL, zc - P.RAIL_D * 0.5, zc + P.RAIL_D * 0.5),
+             u(c, width - c, CLEAR_H - P.RAIL, CLEAR_H, zc - P.RAIL_D * 0.5, zc + P.RAIL_D * 0.5)]
+    rails += mullion_grid(c, width - c, P.SILL + P.RAIL, CLEAR_H - P.RAIL, zc, P.RAIL_D)
+    frame = part(f'Kit_Window_{width:g}m_Frame', join(*rails), M_RAIL, smooth=None)
     pane = part(f'Kit_Window_{width:g}m_Glass',
                 u(c, width - c, P.SILL + P.RAIL, CLEAR_H - P.RAIL, zc - P.GLASS_T * 0.5, zc + P.GLASS_T * 0.5),
                 M_GLASS, smooth=None)
     expect(sill, size=(width, P.WALL, P.SILL))
     expect(pane, size=(width - P.COLUMN_W, P.GLASS_T, CLEAR_H - P.SILL - 2 * P.RAIL))
     group(f'Kit_Window_{width:g}m', sill, frame, pane)
+
+
+def mullion_grid(x0, x1, y0, y1, zc, depth):
+    """Thin navy mullions every MULLION_PITCH metres between x0 and x1 (on the kit's 1 m grid, so neighbouring pieces
+    line up) and transoms at TRANSOMS, all from y0 to y1, centred on zc. Boxes to join into a frame."""
+    w, d = P.MULLION_W, depth * 0.5
+    bars = []
+    x = math.floor(x0 / P.MULLION_PITCH + 1) * P.MULLION_PITCH
+    while x < x1 - 1e-6:
+        bars.append(u(x - w / 2, x + w / 2, y0, y1, zc - d, zc + d))
+        x += P.MULLION_PITCH
+    for ty in P.TRANSOMS:
+        if y0 < ty < y1:
+            bars.append(u(x0, x1, ty - w / 2, ty + w / 2, zc - d, zc + d))
+    return bars
+
+
+def wall_curtain(width):
+    """A glass curtain wall in place of a solid one, floor to soffit: clear glass on a navy grid (a base and head
+    rail, mullions every metre, transoms at 2.6 and 3.45 m). Same footprint as Wall_Solid: runs +X from the pivot,
+    thickness toward -Z. Stops bullets and players like a wall (box collider on the frame) but hides nothing.
+    The AEROSET lesson (Alex, 2026-11-14): many thin dark lines over glass instead of blank white planes."""
+    zc, dp, r = -P.WALL * 0.5, P.RAIL_D, P.RAIL
+    bars = [u(0, width, 0, r, zc - dp / 2, zc + dp / 2), u(0, width, CLEAR_H - r, CLEAR_H, zc - dp / 2, zc + dp / 2),
+            u(0, P.MULLION_W / 2, r, CLEAR_H - r, zc - dp / 2, zc + dp / 2),
+            u(width - P.MULLION_W / 2, width, r, CLEAR_H - r, zc - dp / 2, zc + dp / 2)]
+    bars += mullion_grid(0, width, r, CLEAR_H - r, zc, dp)
+    frame = part(f'Kit_Wall_Curtain_{width:g}m_Frame', join(*bars), M_RAIL, smooth=None)
+    glass = part(f'Kit_Wall_Curtain_{width:g}m_Glass',
+                 u(0, width, r, CLEAR_H - r, zc - P.GLASS_T / 2, zc + P.GLASS_T / 2), M_GLASS, smooth=None)
+    expect(frame, size=(width, dp, CLEAR_H))
+    collider(frame, 'box')
+    group(f'Kit_Wall_Curtain_{width:g}m', frame, glass)
+
+
+def ceiling_beams():
+    """Exposed structure under a 4 x 4 m soffit: two silver beams along X either side of the slab's light line, and a
+    lighter cross beam along Z through the middle. Pivot at the soffit's NW corner, like a slab with its top at
+    the soffit: everything hangs below y 0. Visual only. The AEROSET lesson: a thin-beam roof with rows of lights,
+    not a flat plane."""
+    B = P.BAY
+    beams = [u(0, B, -P.BEAM_D, 0, z - P.BEAM_W / 2, z + P.BEAM_W / 2) for z in (-B * 0.25, -B * 0.75)]
+    purlin = u(B / 2 - P.PURLIN_W / 2, B / 2 + P.PURLIN_W / 2, -P.BEAM_D, -P.BEAM_D + P.PURLIN_D, -B, 0)
+    ob = part('Kit_Ceiling_Beams_4x4', join(*beams, purlin), M_FRAME, smooth=None)
+    expect(ob, size=(B, B, P.BEAM_D))
 
 
 def pier(x0, x1):
@@ -501,6 +581,8 @@ def partition_glass(width):
     rails = join(u(0, width, 0, P.PART_RAIL, -P.PART_T, 0),
                  u(0, width, P.PART_H - P.PART_RAIL, P.PART_H, -P.PART_T, 0))
     # WHY navy: the approved White Trays concept draws slender navy tracks, matching the window rails.
+    # Mullions every metre since 2026-11-14 (AEROSET reference): the same grid as the curtain walls.
+    rails = join(rails, *mullion_grid(0, width, P.PART_RAIL, P.PART_H - P.PART_RAIL, zc, P.PART_T))
     frame = part(f'Kit_Partition_Glass_{width:g}m_Frame', rails, M_RAIL, smooth=None)
     pane = part(f'Kit_Partition_Glass_{width:g}m_Glass',
                 u(0, width, P.PART_RAIL, P.PART_H - P.PART_RAIL, zc - P.GLASS_T * 0.5, zc + P.GLASS_T * 0.5),
@@ -826,6 +908,7 @@ def partition_frost(width):
     g0, g1 = zc - P.GLASS_T * 0.5, zc + P.GLASS_T * 0.5
     rails = join(u(0, width, 0, P.PART_RAIL, -P.PART_T, 0),
                  u(0, width, P.PART_H - P.PART_RAIL, P.PART_H, -P.PART_T, 0))
+    rails = join(rails, *mullion_grid(0, width, P.PART_RAIL, P.PART_H - P.PART_RAIL, zc, P.PART_T))   # 2026-11-14 grid
     frame = part(f'Kit_Partition_Frost_{width:g}m_Frame', rails, M_RAIL, smooth=None)
     clear = part(f'Kit_Partition_Frost_{width:g}m_Glass', u(0, width, P.FROST_LOW, P.FROST_HIGH, g0, g1),
                  M_GLASS, smooth=None)
@@ -1260,6 +1343,8 @@ def partition_header(width):
     frame = join(paint(u(0, width, 0, P.PART_RAIL, -P.PART_T, 0), 1),
                  paint(u(0, width, P.PART_H - P.PART_RAIL, P.PART_H, -P.PART_T, 0), 1),
                  paint(u(0, width, P.PART_H, CLEAR_H, -P.PART_T, 0), 0))
+    # The grid stops under the header band, so no mullion face lies on the band's faces (2026-11-14).
+    frame = join(frame, paint(join(*mullion_grid(0, width, P.PART_RAIL, P.PART_H - P.PART_RAIL, zc, P.PART_T)), 1))
     fr = part(f'Kit_Partition_Header_{width:g}m_Frame', frame, [M_WALL, M_RAIL], smooth=None)
     glass = part(f'Kit_Partition_Header_{width:g}m_Glass',
                  u(0, width, P.PART_RAIL, P.PART_H - P.PART_RAIL, zc - P.GLASS_T / 2, zc + P.GLASS_T / 2), M_GLASS, smooth=None)
@@ -1707,6 +1792,9 @@ PIECES = {
     'Lift_Shaft_Wall_4m': lift_shaft_wall,
     'Lift_Car': lift_car,
     'Pool_Raised_8x4': pool_raised,
+    # Glass and structure (AEROSET reference, 2026-11-14)
+    'Wall_Curtain_4m': lambda: wall_curtain(P.BAY),
+    'Ceiling_Beams_4x4': ceiling_beams,
 }
 
 if P.PIECE not in PIECES:

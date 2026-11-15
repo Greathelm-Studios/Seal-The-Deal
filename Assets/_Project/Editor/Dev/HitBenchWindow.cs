@@ -6,7 +6,8 @@
 //              powers of weapons (bullets bombs explosions props, etc)"
 //  Modified  : Claude Opus 5.5, 2026-11-14 — says whether the dummy can be hit and
 //              what each hit did (Alex: "nothing happens"; the cause was a code reload
-//              during Play, which the bench could not show)
+//              during Play, which the bench could not show); with its Dummy slot empty it
+//              hits the dummy nearest the camera (Alex: the dummy had moved to the roof)
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : An Editor window that hits the test dummy with a chosen kind and strength of
 //              hit at a chosen body part and direction, so reactions can be judged before the
@@ -89,7 +90,7 @@ namespace CloseTheDeal.Editor.Dev
 
         void OnGUI()
         {
-            _dummy = (HitDummy)EditorGUILayout.ObjectField(new GUIContent("Dummy", "The dummy to hit. Left empty, the first one in the scene is used."), _dummy, typeof(HitDummy), true);
+            _dummy = (HitDummy)EditorGUILayout.ObjectField(new GUIContent("Dummy", "The dummy to hit. Left empty, the one nearest your camera is used, so the bench hits the dummy you are looking at wherever it stands."), _dummy, typeof(HitDummy), true);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Presets", EditorStyles.boldLabel);
@@ -141,15 +142,36 @@ namespace CloseTheDeal.Editor.Dev
                 Repaint();
         }
 
-        /// <summary>The chosen dummy, or the first one in the scene. Null when there is none.</summary>
+        /// <summary>
+        /// The dummy set in the window's Dummy slot, or else the one nearest the game camera
+        /// (the Scene view's outside Play Mode). Null when there is none.
+        /// </summary>
+        /// <remarks>
+        /// WHY nearest and not remembered: dummies move (the roof range, one placed in front of
+        /// you while playing), and the bench used to keep hitting whichever it found first,
+        /// which could be on another floor. It is worked out afresh on every call; an Editor
+        /// window, so the scene search costs nothing in the game.
+        /// </remarks>
         HitDummy FindDummy()
         {
-            if (_dummy == null)
+            if (_dummy != null)
+                return _dummy;
+            Camera camera = Application.isPlaying ? Camera.main : null;
+            if (camera == null && SceneView.lastActiveSceneView != null)
+                camera = SceneView.lastActiveSceneView.camera;
+            Vector3 eye = camera != null ? camera.transform.position : Vector3.zero;
+            HitDummy nearest = null;
+            float best = float.MaxValue;
+            foreach (HitDummy dummy in FindObjectsByType<HitDummy>(FindObjectsInactive.Exclude))
             {
-                HitDummy[] found = FindObjectsByType<HitDummy>(FindObjectsInactive.Exclude);
-                _dummy = found.Length > 0 ? found[0] : null;
+                float distance = (dummy.transform.position - eye).sqrMagnitude;
+                if (distance < best)
+                {
+                    best = distance;
+                    nearest = dummy;
+                }
             }
-            return _dummy;
+            return nearest;
         }
 
         /// <summary>One line on whether the dummy can take a hit right now, and if not, why not and what to do.</summary>
@@ -196,7 +218,7 @@ namespace CloseTheDeal.Editor.Dev
                 return;
             }
 
-            Transform body = _dummy.transform;
+            Transform body = dummy.transform;
             // The way the hit travels: from the chosen side, toward the body.
             Vector3 direction = _from switch
             {
@@ -220,11 +242,11 @@ namespace CloseTheDeal.Editor.Dev
                 hit.Point = body.TransformPoint(new Vector3(offset.x, offset.y, 0f));
             }
             bool wasDown = ragdoll.Down;
-            _dummy.Hit(hit);
+            dummy.Hit(hit);
             string where = _type == HitType.Blast ? _blastDistance.ToString("F1") + " m away" : "on the " + Spots[_spot].ToLowerInvariant();
             string outcome = !wasDown && ragdoll.Down ? "knocked down" : wasDown ? "already down, pushed" : "flinched";
             _lastResult = _type + ", " + _impulse.ToString("F0") + " N·s, from the " + _from.ToString().ToLowerInvariant() + ", " + where + ": " + outcome + ".";
-            Debug.Log("[HitBench] " + _dummy.name + ": " + _lastResult, _dummy);
+            Debug.Log("[HitBench] " + dummy.name + ": " + _lastResult, dummy);
         }
     }
 }
