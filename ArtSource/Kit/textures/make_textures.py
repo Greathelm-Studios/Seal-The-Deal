@@ -5,6 +5,7 @@
 #  Prompt    : Alex approved the "White Trays + Cobalt Portal" office concepts; make the kit to them
 #  Modified  : Claude Opus 5.5, 2026-11-13 — adds Carpet_Dark (the reference plates' dark work-area
 #              carpet) and Ceiling_Grid (the tile grid, now a separate material over work areas).
+#  Modified  : Claude Opus 5.5, 2026-11-15 — Floor_Carpet.png is now big white floor tiles with thin joints (PANLINE).
 #  Reviewed  : NOT YET REVIEWED BY A HUMAN
 #  Summary   : Draws the two tiling textures the approved concepts lean on: the cheap ceiling-tile grid
 #              and quarter-turned carpet tiles. They are drawn by script, not painted, so the tile size
@@ -34,6 +35,10 @@ CARPET_STRIPE = 0.035   # stripe contrast, fraction of the base value. WHY: the 
 CARPET_STRIPE_PX = 10   # stripe pitch, pixels (20 mm): a fine loop-pile line at walking distance
 CARPET_TILE_SHIFT = 0.02   # per-tile brightness shift, fraction. WHY: quarter-turned tiles catch light differently
 SEED = 7                # fixed so a rebuild draws the same texture
+FLOOR = (0xDC, 0xE8, 0xEC)          # Floor_Carpet's colour (kit_pieces M_FLOOR): the floor stays white (Alex, 2026-11-14)
+FLOOR_JOINT = (0xC2, 0xD0, 0xD8)    # tile joint: a cool grey just dark enough to read in the mirror-gloss floor
+FLOOR_TILE = 1.0        # floor tile, metres. WHY 1 m: big tiles, as in the PANLINE reference (Alex, 2026-11-15)
+FLOOR_JOINT_PX = 3      # joint width, pixels (6 mm): thin, so the floor reads as one glossy surface
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SIZE = PX_PER_M
@@ -75,9 +80,24 @@ def carpet(colour=CARPET, name='Floor_Carpet.png'):
     im.save(os.path.join(HERE, name))
 
 
+def floor_tile(name='Floor_Carpet.png'):
+    """Big white floor tiles with thin joints (PANLINE reference): the polished floor's colour, unchanged, with a
+    joint on each tile edge, half on each side so it wraps whole when the texture repeats."""
+    im = Image.new('RGB', (SIZE, SIZE), FLOOR)
+    d = ImageDraw.Draw(im)
+    n = round(1.0 / FLOOR_TILE)
+    t = SIZE // n
+    h = FLOOR_JOINT_PX // 2
+    for k in range(n + 1):
+        q = k * t
+        d.rectangle([q - h, 0, q + h, SIZE], fill=FLOOR_JOINT)
+        d.rectangle([0, q - h, SIZE, q + h], fill=FLOOR_JOINT)
+    im.save(os.path.join(HERE, name))
+
+
 if __name__ == '__main__':
     ceiling()
     ceiling('Ceiling_Grid.png')   # the same grid under the name of the work-area ceiling material
-    carpet()
+    floor_tile()   # Floor_Carpet.png is the white tile floor since 2026-11-15; the old carpet() stays for reference
     carpet(CARPET_DARK, 'Carpet_Dark.png')
     print('wrote the ceiling, ceiling grid, carpet and dark carpet textures to', HERE)

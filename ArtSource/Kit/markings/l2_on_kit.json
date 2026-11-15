@@ -1,0 +1,71 @@
+{
+  "_about": "AI-GENERATED (Claude Opus 5.5, 2026-11-15), NOT YET REVIEWED BY A HUMAN. The L2 plan (concepts/Layout/L2/layouts.json) as built on the kit's 2 m grid: the wall runs KitOfficeScene.cs places and make_markings.py marks, so the marks stop exactly at the built doorways. Plan metres, x east and y south from the NW corner. 'half' is firm A's half; the builder also places it turned 180 degrees about (20, 16) for firm B. A run's thickness lies on the right of its direction of travel as the plan is drawn (east -> south side). doors: 'at' is the door's centre on the run's axis; 'room' names the room behind it (rooms below) and 'face' points from the wall to the corridor side its plate faces; a door without a room gets no plate. Snaps from layouts.json: doors move to odd metres (2 m door pieces); the back office's ring door moves from y 24 to 21 and its north door from x 2 to 1; the feature flight's top moves from x 16.4 to 16.",
+  "half": [
+    {"kind": "solid", "a": [8, 6], "b": [14, 6], "doors": []},
+    {"kind": "solid", "a": [8, 14], "b": [8, 6], "doors": []},
+    {"kind": "solid", "a": [14, 6], "b": [14, 14], "doors": []},
+    {"kind": "solid", "a": [8, 18], "b": [8, 14], "doors": [{"at": 15, "room": "print", "face": [-1, 0]}]},
+    {"kind": "glass", "a": [14, 14], "b": [14, 18], "doors": [{"at": 17, "room": "print", "face": [1, 0]}]},
+    {"kind": "solid", "a": [8, 18], "b": [14, 18], "doors": []},
+    {"kind": "solid", "a": [8, 22], "b": [8, 18], "doors": [{"at": 20, "room": "kitchen", "face": [-1, 0]}]},
+    {"kind": "glass", "a": [14, 18], "b": [14, 22], "doors": [{"at": 21, "room": "kitchen", "face": [1, 0]}]},
+    {"kind": "solid", "a": [8, 22], "b": [14, 22], "doors": [{"at": 11, "room": "", "face": [0, 0]}]},
+    {"kind": "frost", "a": [8, 24], "b": [8, 22], "doors": [{"at": 23, "room": "wc", "face": [-1, 0]}]},
+    {"kind": "solid", "a": [14, 24], "b": [8, 24], "doors": []},
+    {"kind": "solid", "a": [12, 22], "b": [12, 24], "doors": []},
+    {"kind": "solid", "a": [14, 22], "b": [14, 24], "doors": []},
+    {"kind": "solid", "a": [0, 8], "b": [4, 8], "doors": []},
+    {"kind": "solid", "a": [4, 16], "b": [0, 16], "doors": []},
+    {"kind": "glass", "a": [4, 8], "b": [4, 16], "doors": [{"at": 9, "room": "conference", "face": [1, 0]}, {"at": 15, "room": "conference", "face": [1, 0]}]},
+    {"kind": "frost", "a": [0, 20], "b": [4, 20], "doors": [{"at": 1, "room": "office", "face": [0, -1]}]},
+    {"kind": "solid", "a": [4, 20], "b": [4, 28], "doors": [{"at": 21, "room": "office", "face": [1, 0]}]},
+    {"kind": "glass", "a": [4, 28], "b": [0, 28], "doors": []},
+    {"kind": "solid", "a": [0, 19], "b": [2, 19], "doors": []},
+    {"kind": "solid", "a": [4, 0], "b": [4, 2], "doors": []},
+    {"kind": "solid", "a": [15, 10], "b": [15, 12], "doors": []}
+  ],
+  "once": [
+    {"kind": "solid", "a": [20, 28], "b": [20, 32], "doors": []}
+  ],
+  "groundHalf": [
+    {"kind": "solid", "a": [14, 14], "b": [10, 14], "doors": []}
+  ],
+  "upperHalf": [
+    {"kind": "guard", "a": [12, 10], "b": [12, 14], "doors": []},
+    {"kind": "guard", "a": [14, 10], "b": [12, 10], "doors": []}
+  ],
+  "rooms": {
+    "print": {"number": 1, "en": "PRINT / COPY", "ja": "複合機室", "enB": "SERVER / ARCHIVE", "jaB": "サーバー・書庫"},
+    "kitchen": {"number": 2, "en": "KITCHEN", "ja": "給湯室", "enB": "COFFEE KITCHEN", "jaB": "喫茶コーナー"},
+    "wc": {"number": 3, "en": "WASHROOM", "ja": "化粧室", "enB": "WASHROOM", "jaB": "化粧室"},
+    "conference": {"number": 4, "en": "L  LEGAL CONFERENCE", "ja": "法務会議室", "enB": "R  REVIEW CONFERENCE", "jaB": "審査会議室"},
+    "office": {"number": 5, "en": "A  BACK OFFICE", "ja": "事務室", "enB": "C  BACK OFFICE", "jaB": "事務室"}
+  },
+  "districts": {
+    "_about": "Firm A's half; turned for firm B (L -> R, A -> C). H is the shared court strip between the cores. Bounded by walls: x 14 is E1's east wall line, y 16 the legal conference's south wall line.",
+    "L": [0, 0, 14, 16],
+    "A": [0, 16, 14, 32],
+    "H": [14, 0, 26, 32]
+  },
+  "thresholds": [
+    {"a": [4, 16], "b": [8, 16], "from": "L", "to": "A"},
+    {"a": [14, 0.2], "b": [14, 6], "from": "L", "to": "H"},
+    {"a": [14, 24], "b": [14, 31.8], "from": "A", "to": "H"}
+  ],
+  "built": {
+    "_about": "Where the build departs from layouts.json's geometry: the upper slab's void and holes on the 2 m grid, the feature flight, the lift door.",
+    "void": [16, 12, 24, 20],
+    "stairHole": [12, 10, 14, 14],
+    "featureArrival": {"a": [16, 12], "b": [16, 14]},
+    "e1Arrival": {"a": [8, 14], "b": [14, 14]},
+    "liftDoor": [20, 4],
+    "southBaffle": [20, 28]
+  },
+  "decals": {
+    "_about": "Wall decals, firm A's half, both floors unless 'floor' says. at: plan point on the wall face; face: the direction the decal faces; y: centre height, metres.",
+    "evac": [
+      {"id": "E1", "at": [8.2, 16.9], "face": [1, 0], "y": 1.5},
+      {"id": "Lobby", "at": [15, 11], "face": [1, 0], "y": 1.5}
+    ]
+  }
+}

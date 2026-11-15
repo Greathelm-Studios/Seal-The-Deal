@@ -183,6 +183,151 @@ In `KitOffice.unity` every outer bay with nothing hung on or stood against it is
 
 Interior, the same day: `Partition_Glass_*`, `Partition_Frost_*` and `Partition_Header_*` carry navy mullions every metre (stopping under the header band); plain `Wall_Solid_*` walls carry thin navy joint lines on the same grid on both faces (verticals every metre, lines at 2.6 and 3.45 m, 2-3 mm proud), so walls kept solid for cover still read as part of the grid. The cobalt, portal-head, door and niche walls are unchanged. The A/R boundary wall at x 20, z -20 to -24 is now a curtain wall. Unsaved scene state before that rebuild: `KitOffice_PreInteriorGlass.unity`.
 
+### Sign system as textures, 2026-11-15 (Alex: signs "look blockouty ... fonts are basic too ... dont have it modelled, either textured or a decal")
+
+Typefaces, picked by Alex: **Michroma** (wide geometric Latin) and **M PLUS 1** (Japanese, variable weight), both SIL Open Font License, in [fonts/](fonts/) with their licence files. [signs/make_signs.py](signs/make_signs.py) draws every zone sign from one layout spec to a transparent PNG (3.2 x 4.0 m at 320 px/m, supersampled): a 2.05 m Michroma zone letter in a cobalt gradient, a glossy aqua band with the English name and floor code in white, a cobalt hairline, the Japanese name in M PLUS 1 weight 800, and a microtype line. All layers are in one image, so nothing z-fights. The spec sheet is `signs/review/sign_spec.png`.
+
+`Assets/_Project/Editor/Art/KitSigns.cs` imports the textures to `Assets/_Project/Art/Signs/`, makes one transparent URP Lit material each (smoothness 0.85, like the walls) and places each sign as a quad 6 mm off its wall, using the kit's wall-hung pivot. `KitOfficeScene` places the five through it; the modelled `Sign_Zone_*` pieces stay in the kit but are no longer placed, and the mesh-text path (`text_mesh`) is on its way out. Then every other label too (Alex: "convert the rest"): the column wayfinding plates (floor number, arrow pictograms, zone-letter tiles, department names), the company name on the reception desk and the AONAGI wall logo (the ring stays modelled: it is a shape, not text), dot-matrix LED labels for the reception sign and the lift indicators (sampled onto a 6.5 mm LED grid, emissive), and the vending machine, slipper cabinet and water server labels. `make_signs.py` writes them as `Label_*.png` (review sheet `signs/review/label_sheet.png`); `KitSigns.Decorate` adds each piece's quads wherever the builder places it (the `Labels` table, in piece-local metres). `kit_pieces.py` no longer models any text (`MESH_TEXT = False`). Sign and label materials have specular and reflections off: on a transparent quad those showed the clear area as a pale box; the wall's own gloss shows through instead. Unsaved scene state before the label rebuild: `KitOffice_PreLabels.unity`. Unsaved scene state before this rebuild: `KitOffice_PreSignTextures.unity`.
+
+### Ribbons and lightboxes, 2026-11-15 (Alex: PANLINE reference, "matches the visuals we want, but less realistic")
+
+Lessons only, simplified to clean colour plus gloss; the palette, white floor, sky and gentle bloom stay.
+
+| Piece | What | Collider |
+|---|---|---|
+| `Ribbon_Floor_16m` | A glossy cobalt ribbon 0.5 m wide inlaid 3 mm proud in the floor, with a thin aqua line beside it, swinging 0.8 m either side of a 4 m corridor's middle over one slow 16 m cosine, so pieces chain without a seam. Pivot at its NW corner on the floor | None |
+| `Ribbon_Ceiling_16m` | Its partner overhead: a 40 mm lacquered cobalt band 0.2 m under the soffit (below the beams), following the same swing, with a glowing strip along each edge. Pivot at the soffit | None |
+| `Lightbox_Wall_Wave`, `Lightbox_Wall_Logo` | A 3.6 x 3.0 m backlit lightbox, rounded silver frame round a recessed diffuser, 80 mm deep. The graphic is a glowing texture (`make_signs.py`: `Lightbox_Wave`, `Lightbox_Logo`, emission 1.1), never modelled | Box |
+
+`KitOffice.unity`: ribbons run the window corridor on both floors (floor and ceiling, two pieces each); the logo lightbox replaces `Logo_Aonagi` and `Sign_LED_Reception` on the reception wall (it carries the ring, the hanko dot, both names and the reception line); wave lightboxes hang on zone R's side of the cobalt wall and in meeting room C. A first try with a full swing every 4 m read as tight loops in perspective, hence 16 m pieces. Unsaved scene state before these rebuilds: `KitOffice_PreRibbons.unity`, `KitOffice_PreRibbons16.unity`.
+
+Then the floor and ceiling, the same day: `Floor_Carpet` now carries a texture (`textures/make_textures.py` `floor_tile`), 1 m white tiles in the floor's own colour with 6 mm cool-grey joints, still at smoothness 0.96; `Ceiling_Panel_4x4` is a floating rounded white panel (3.6 m, 0.35 m corners, 0.16-0.22 m under the soffit) with a glowing cove ring on the soffit that shows in the 0.4 m gap to the next panel. In `KitOffice.unity` the panels replace the beams in every beam cell off the window corridor (39 cells); the corridor keeps its beams under the ceiling ribbon. Unsaved scene state before that rebuild: `KitOffice_PreFloorCeiling.unity`.
+
+### The L2 floor plan, 2026-11-15 (Alex: "this works", then "yes, send it")
+
+`KitOffice.unity` is now the approved **L2 twin-core court** ([decision](concepts/Layout/DECISION_L2.md), [plan](concepts/Layout/L2/plan.png)). It replaces the labyrinth, which Alex found "too confusing" with things "randomly placed" ([diagnosis](concepts/Layout/CURRENT_DIAGNOSIS.md)). The plate is 40 × 32 m on two storeys and has:
+- a double-height court in the middle (x 16-24, y 10-22) with the feature flight rising west along its north side, a bridge strip north and a canopy strip south on the upper floor, and glass guards round the void;
+- the lift on the north façade (x 18-22), its doors facing south through the lobby onto the court;
+- two cores, the east one the west one turned 180°. Each has an enclosed return stair (E1, E2), print and copy (or server and archive), a kitchen (or coffee kitchen), a washroom and a sealed riser, and every room has two doors;
+- a continuous ring round both cores, with the cobalt ribbons running down its west and east sides;
+- office wings at both ends (legal conference and back office; review conference and claims back office), each room with two doors, firm receptions with logo lightboxes in opposite corners, and window halls with desks north and south.
+
+`KitOfficeScene.cs` writes the plan in the drawings' own coordinates (x east, y south; Unity Z = −y) and builds one firm's half, then turns it for the other. Walls are tiled from 4 m and 2 m pieces, and every door sits on the 2 m grid. That is why three new pieces exist: `Wall_Door_2m` (a 1.2 m doorway between 0.4 m jambs), `Partition_Glass_Door_2m` (the same in the glass partition, with navy jambs and a head rail) and `Stair_Straight_Half_2m` (12 risers over 3.6 m). Two half flights and a scaled slab landing make each enclosed return stair.
+
+The walls repeat on both storeys; the fit-out does not:
+- **Ground floor:** the rooms hold counters, pod chairs, the vending machine and the reception desks.
+- **Upper floor:** the wing rooms are open-plan work rooms with benches, and reception is a lounge.
+
+**Ceilings, per 4 m cell:**
+- The carpeted rooms and desk areas get the tile grid and pendants.
+- The ring's ribbon cells get beams.
+- A cell a wall cuts through gets the flush tile grid, because a hanging panel would clip the wall.
+- Everywhere else gets the floating panels.
+
+`KitOfficeRoof.cs`, `BounceLight.cs` and `FloorReflections.cs` now use the 40 × 32 m plate:
+- The roof's dummy pad, arsenal bay and props moved with the south-east corner.
+- The lift call spot is now in front of the south-facing doors.
+- The DevMirror now runs along the upper floor's south wall.
+
+The scene's unsaved state before the rebuild is kept as `KitOffice_PreL2.unity`.
+
+**Not in the L2 drawings' form yet:**
+- The plan has three storeys; KitOffice has two, because the roof range and the lift's travel are built for a 9 m roof.
+- The upper bridge is a solid slab strip, not a glass deck.
+- There are no stair cages or floor gates (G1, G2, GF).
+- The feature flight sits 0.4 m off the drawn line, and some doors moved to the 2 m grid. The back office's ring door moved from y 24 to y 21 so its wall can carry the zone sign.
+- The print and server baffles and the lift-lobby stub are left out; the stub would block the lift doors.
+
+**Still open:**
+- Screens at the court corners for the long diagonals.
+- One building or two towers (Alex and Adam).
+
+The rebuild also resets the scene's NetworkObject IDs, as every rebuild does. Captures (L1-L7 plus two top-down plans, `unity_office_plan_ground.png` and `unity_office_plan_upper.png`) are in `review/unity_office/`. Nothing has been walked in Play Mode.
+
+### Markings system, 2026-11-15 (Alex: "looks good but bland and boring ... follow the structure with purpose and intent")
+
+The L2 build now has the marking system from [MARKINGS.md](concepts/Layout/MARKINGS.md). Every mark has one job. [markings/make_markings.py](markings/make_markings.py) draws them all as textures from `concepts/Layout/L2/layouts.json` (ring, nodes, case, gates, district colours) and [markings/l2_on_kit.json](markings/l2_on_kit.json). That second file records the L2 walls and doors as built on the kit grid. `KitOfficeScene.cs` now reads its walls from it too, so every band stops at a real doorway. Firm names and colours come from the `FirmDefinition` assets: Ashcombe & Pryce (tower 0, the north-west firm) and Halloran Voss.
+
+**Floor:** one 40 m inlay sheet per storey, alpha-clipped with the floor's 0.96 gloss.
+- The ring is one unbroken 300 mm navy band with silver edges, with named node pads. N1 in the lift lobby carries the floor number.
+- District colours run along each wall's base and stop at every doorway.
+- Threshold strips run wall to wall where routes cross into a district: L | A on the west ring, L | H and A | H at x 14, and their turned twins.
+- The tenancy line runs down the court's axis from the lift door to the south baffle, in each firm's colour, with "DEMISE LINE ... NO CROSSING WITHOUT APPOINTMENT" microtype.
+- The closing-table plinth (concentric rings and a tick scale) marks the case start.
+- Upstairs, red gate bands with chevrons mark each stair arrival (E1, E2, the feature flight), and navy and silver edge strips run along the void and the stair holes.
+
+**Ceiling:**
+- District bands on the soffit along every solid wall.
+- An emissive light cove directly above the ring.
+- Floating panels only over rooms and desk areas. Circulation keeps the bare soffit, whose slab light lines run wall to wall.
+- The beams, pendants and the 16 m ribbons are gone.
+
+**Walls:**
+- A room plate at every door (number, English and Japanese).
+- "You are here" evacuation plans of the built floor, turned so the reader's forward is up, at each stair door and in the lobby.
+- Floor numbers on every stair landing and arrival.
+- One cobalt band along the feature stair's stringer.
+- Each firm's wordmark lightbox at its reception. AONAGI's logo lightbox (the landlord) moves to E1 and E2's ring faces.
+- Glazing manifestation dots on breakable partition glass only. Curtain walls, windows, guards and the lift shaft stay clear.
+
+`KitSigns.cs` gained a public `Decal` (printed, inlay and light finishes) and `LightboxGraphic`.
+
+**Floor reflections:** the probes are baked with the marks hidden. With them in the bake, the probes gave every shadowed floor and pane a strong cyan cast (Alex: "get rid of that weird cyan stuff").
+
+**Not done from MARKINGS.md:**
+- The cobalt band runs on the one feature flight only, because there is no third floor.
+- The lift doors keep their LED floor indicators rather than big painted numbers.
+- No ribbon landmark per firm entry: a ribbon from the reception wall would cross the ring band, so the ring replaced it.
+- The plinth's "CLOSING TABLE" type is small and only readable up close.
+
+**Proposals Alex hasn't seen yet:** the tenancy line and the gate band. Captures: `review/unity_office/unity_office_M1`-`M5*.png` and `unity_office_marks_plan_*.png`. Unsaved scene state before these rebuilds is in `KitOffice_PreMarkings.unity`.
+
+### Networking after a rebuild, 2026-11-15 (Alex: the lift disappears in Play)
+
+`KitOfficeScene.BuildAndSave` now finishes by doing what Harvey's 58c9b4e did by hand:
+- It gives every NetworkObject its FishNet scene ID, the same step as Tools > Fish-Networking > Reserialize NetworkObjects.
+- It sets the NetworkManager's spawnable prefabs to `Assets/DefaultPrefabObjects.asset`.
+
+Without the IDs, FishNet switches the lift and the roof props off in Play. Without the prefab list, the NetworkManager never initialises at all. Every rebuild used to undo both.
+
+Checked 2026-11-15: after a rebuild, Play hosted a local game, and the lift and all 8 roof props were active and spawned. Riding the lift was not tried.
+
+## Aero office props on the trim sheet (2026-11-15)
+
+Alex: the props looked "bland and roblox like and blockouty". The office furniture, computers and doors are remodelled to the approved concepts ([sheets and spec](concepts/Props_Aero/README.md), [computers, doors and lift](concepts/Props_Aero/README_part2.md); Alex picked the pearl CRT monitor).
+They are built by [props_aero.py](props_aero.py), under the same piece names, pivots, envelopes and collider kinds, onto the Painter trim sheet in [trim/](trim/README.md). `build_all.sh` builds them last, through `trim/build_props.sh`.
+New piece: `PC_Tower` (0.19 x 0.42 x 0.40, a loose prop with a box collider, front +Z), which sits on the floor beside a pedestal.
+`Monitor_Flat` is now the 0.55 x 0.36 x 0.46 CRT (deeper than the old flat panel). Its pivot is still under the foot.
+Second pass (Alex: "it doesnt match the references still"): stronger aqua frost on the props (`Plastic_Aqua_Frost`, not the walls' `Glass_Frosted`), softer forms (domed CRT screen, curved chair back with tube arms, bucket pod chair, crowned desk and cabinet tops), and the AONAGI ring, the copier display and printed cans from the trim sheet's Print band.
+Third pass, **approved by Alex 2026-11-15**: moulded squircle bodies on every prop (`moulded()` in props_aero.py), the task chair remodelled, the copier rebuilt from its drawing on a matching paper deck (still 1.05 m tall; Alex chose this), and the props' `Trim_Aero` material on the new **Aero Plastic** shader (`Assets/_Project/Art/Plastic/AeroPlastic.shader`: URP Lit plus a lacquer clearcoat, a top-to-underside gradient and a rim; its sliders are on the material). The CRT monitor stays at the second pass, as Alex preferred.
+
+### Lighting for the Aero props, 2026-11-15 (Alex handed the lighting over: props "still don't match the concept sheets")
+
+The props' pearl white (albedo F4F8F8) rendered flat grey-blue with grainy dark halos at every base, and gloss showed no highlights. Three changes:
+- **Fill and grade** (`OfficeLook.cs` and the volume profile):
+  - Ambient near neutral (F3F4F6 / F2F3F5 / EAECEF), at 0.65 (was 0.5). This was a second step the same day: shaded pearl still read cool-grey after the first.
+  - Colour filter FAFBFD (was F7FAFF).
+  - Exposure 1.25 (was 1.1); the sky is compensated.
+  - White balance −2/−1 (was −6/−3).
+  - Shadow tone and lift almost neutral (shadows 0.99/1/1.01; lift 1/1/1.01).
+  - Film grain halved, to 0.08.
+- **SSAO** (`Assets/Settings/PC_Renderer.asset`, project-wide): intensity 0.45 (was 0.9), radius 0.3 (was 0.45).
+- **Reflections:** new `ZoneReflections.cs` bakes 40 box-projected probes on 8 m zones, at eye height, on both floors. KitOffice's build runs it after the floor probes.
+
+Captures: `review/unity_office/unity_office_look_*.png`. Unsaved scene state before the rebuild: `KitOffice_PreLookNeutral.unity`.
+
+### Exposure and light contrast, 2026-11-15 evening (Alex: "overly bright and too evenly lit, hurts my eyes")
+
+Changes, keeping the near-neutral colours so the white props stay white:
+- Exposure 1.0 (was 1.25).
+- Fill 0.5 (was 0.65).
+- Contrast 18 (was 12).
+- Bloom threshold 1.5 and intensity 0.2 (were 1.2 and 0.3), so the glossy floor's sun reflections no longer glare.
+- Bounce lights 2.5 (was 4).
+- `KitOfficeScene` now adds light pools: shadowless warm-white spots under every room and desk-area ceiling panel, wall-washers on the firm and AONAGI lightboxes, and a spot from the roof onto the closing-table plinth. The corridors get none, so they read as the gaps.
+
+A first try at exposure 0.85 and fill 0.42 read dull grey and was backed off. Before and after captures from the same views: `review/unity_office/look_before_after/compare_0.png` and `compare_1.png`. Unsaved scene state before the rebuilds: `KitOffice_PreContrast.unity`.
+
 ## Checks run
 
 - Every piece passes `mdl.mjs check` with no errors (2026-11-12, 26 pieces). The warnings are long thin faces: on thin boxes (rails, panes, slab edges), and where the shadow-gap cuts slice the flat-shaded walls. They are flat faces, so they shade correctly; they would only matter for automatic LODs, which the kit doesn't use. The locked door's lock plates touch its faces without a boolean union (a "faces cut through each other" warning).

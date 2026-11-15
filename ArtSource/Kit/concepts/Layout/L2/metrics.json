@@ -1,0 +1,245 @@
+{
+  "id": "L2",
+  "gross": 1280,
+  "core": 120,
+  "coreWithinShell": 119.2,
+  "stairBay": 96,
+  "void": 56,
+  "planningNia": 1076.16,
+  "primaryCirculation": 224,
+  "circulationPercent": 20.814748736247395,
+  "primaryGrossPercent": 17.5,
+  "rooms": 10,
+  "twoExitRooms": 10,
+  "straightCrossSeconds": 4.444444444444445,
+  "longestSurveyedSightline": 35.1,
+  "looseProps": 12,
+  "featureFlight3D": 8.490583018850943,
+  "escapeStair3D": 16.090583018850943,
+  "sightlines": [
+    {
+      "id": "S1",
+      "a": [
+        0.5499999999999999,
+        5.5
+      ],
+      "b": [
+        35.65,
+        5.5
+      ],
+      "length": 35.1
+    },
+    {
+      "id": "S2",
+      "a": [
+        4.35,
+        26.5
+      ],
+      "b": [
+        39.45,
+        26.5
+      ],
+      "length": 35.1
+    },
+    {
+      "id": "S3",
+      "a": [
+        35.67110758272493,
+        10.255736815897782
+      ],
+      "b": [
+        4.328892417275071,
+        21.663370212088296
+      ],
+      "length": 33.35368871922919
+    },
+    {
+      "id": "S4",
+      "a": [
+        4.442351660256832,
+        1.8500767821081405
+      ],
+      "b": [
+        35.85589200756174,
+        8.527230908213784
+      ],
+      "length": 32.1153375254803
+    },
+    {
+      "id": "S5",
+      "a": [
+        4.144107992438254,
+        23.472769091786216
+      ],
+      "b": [
+        35.55764833974317,
+        30.14992321789186
+      ],
+      "length": 32.1153375254803
+    }
+  ],
+  "lanes": [
+    {
+      "name": "1 / Window Hall",
+      "metres": 60,
+      "secondsAt9": 6.666666666666667
+    },
+    {
+      "name": "2 / Court",
+      "metres": 49.88854381999832,
+      "secondsAt9": 5.543171535555369
+    },
+    {
+      "name": "3 / Copy + Archive",
+      "metres": 71.6,
+      "secondsAt9": 7.955555555555555
+    }
+  ],
+  "caseApproaches": [
+    {
+      "name": "Firm A to case",
+      "metres": 24.94427190999916,
+      "secondsAt9": 2.7715857677776845
+    },
+    {
+      "name": "Firm B to case",
+      "metres": 24.94427190999916,
+      "secondsAt9": 2.7715857677776845
+    }
+  ],
+  "rotations": [
+    {
+      "name": "Print to archive via court",
+      "metres": 13.600000000000001,
+      "secondsAt9": 1.5111111111111113
+    },
+    {
+      "name": "Enclosed stair entries",
+      "metres": 28.800000000000004,
+      "secondsAt9": 3.2000000000000006
+    },
+    {
+      "name": "Court entry A to entry B",
+      "metres": 17.88854381999832,
+      "secondsAt9": 1.9876159799998132
+    }
+  ],
+  "carrier": [
+    {
+      "name": "F / exposed feature",
+      "color": "#244FB9",
+      "p": [
+        [
+          20,
+          16
+        ],
+        [
+          24.6,
+          16
+        ],
+        [
+          24.6,
+          13.4
+        ],
+        [
+          23.6,
+          13.4
+        ]
+      ],
+      "up": "F",
+      "approachMetres": 8.200000000000001,
+      "totalPathMetres": 16.690583018850944,
+      "secondsAt9": 1.8545092243167716
+    },
+    {
+      "name": "E1 / print flank",
+      "color": "#167D77",
+      "p": [
+        [
+          20,
+          16
+        ],
+        [
+          15,
+          16
+        ],
+        [
+          15,
+          16.8
+        ],
+        [
+          14,
+          16.8
+        ],
+        [
+          9.2,
+          16.8
+        ],
+        [
+          9.2,
+          14
+        ]
+      ],
+      "up": "E1",
+      "approachMetres": 14.400000000000002,
+      "totalPathMetres": 30.490583018850945,
+      "secondsAt9": 3.387842557650105
+    },
+    {
+      "name": "E2 / archive flank",
+      "color": "#167D77",
+      "p": [
+        [
+          20,
+          16
+        ],
+        [
+          25,
+          16
+        ],
+        [
+          25,
+          15.2
+        ],
+        [
+          26,
+          15.2
+        ],
+        [
+          30.8,
+          15.2
+        ],
+        [
+          30.8,
+          18
+        ]
+      ],
+      "up": "E2",
+      "approachMetres": 14.400000000000002,
+      "totalPathMetres": 30.490583018850945,
+      "secondsAt9": 3.387842557650105
+    },
+    {
+      "name": "L / shaft reservation only",
+      "color": "#725E9D",
+      "p": [
+        [
+          20,
+          16
+        ],
+        [
+          20,
+          6
+        ],
+        [
+          20,
+          4
+        ]
+      ],
+      "up": "LIFT",
+      "approachMetres": 12,
+      "totalPathMetres": 12,
+      "secondsAt9": null
+    }
+  ]
+}

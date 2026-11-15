@@ -3,6 +3,7 @@
 //  Generator : Claude Opus 5.5 (Claude Code)
 //  Generated : 2026-11-12
 //  Prompt    : Alex: "no carpet, i want a shiny floor, i want to try get rid of the 'unity look'"
+//  Modified  : Claude Opus 5.5, 2026-11-15 — the L2 floor plan's 40 × 32 m plate (KitOfficeScene).
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Gives each office floor of the open scene a box-projected reflection probe and
 //              bakes it, so the polished floor mirrors the room (windows, frames, the cobalt wall,
@@ -44,10 +45,10 @@ namespace CloseTheDeal.Editor.Art
         const string GroupName = "Reflection Probes";
         const string KitRootName = "Kit Office";
 
-        /// <summary>Floor plate width, metres across x (KitOfficeScene's labyrinth since 2026-11-13; was 28).</summary>
-        const float RoomWidth = 32f;
-        /// <summary>Floor plate depth, metres along z (KitOfficeScene.Depth; was 18).</summary>
-        const float RoomDepth = 24f;
+        /// <summary>Floor plate width, metres across x (KitOfficeScene's L2 plan since 2026-11-15; was 32).</summary>
+        const float RoomWidth = 40f;
+        /// <summary>Floor plate depth, metres along z (KitOfficeScene.Depth; was 24).</summary>
+        const float RoomDepth = 32f;
         /// <summary>Floor to ceiling, metres (KitOfficeScene.ClearHeight).</summary>
         const float ClearHeight = 4.3f;
 

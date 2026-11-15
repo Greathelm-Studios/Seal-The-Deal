@@ -7,6 +7,8 @@
 //              "tell the elevator chat to start building the roof"
 //  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-14 — the HitDummy and its roof mirror move up only
 //              once the lift is in the scene, so a rebuild cannot strand the dummy on an unreachable roof.
+//  Modified  : Claude Opus 5.5, 2026-11-15 — the L2 floor plan: a 40 × 32 m plate, the pad, bay and props moved
+//              with the south-east corner, the call spot in front of the lift's south-facing doors.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Dresses KitOffice's roof as the open-air test range and wires the lift's script. Its own
 //              file, not a method in KitOfficeScene, because another session holds that file while it
@@ -50,8 +52,8 @@ namespace CloseTheDeal.Editor.Art
         // ---- The plate, as KitOfficeScene lays it out (metres; x east from 0, z south from 0).
         /// <summary>Bay size of the kit grid (ArtSource/Kit/README.md).</summary>
         const float Cell = 4f;
-        /// <summary>Floor plate, as KitOfficeScene: 8 × 6 cells.</summary>
-        const int Cols = 8, Rows = 6;
+        /// <summary>Floor plate, as KitOfficeScene: 10 × 8 cells, the L2 plan's 40 × 32 m (2026-11-15).</summary>
+        const int Cols = 10, Rows = 8;
         const float Width = Cols * Cell, Depth = Rows * Cell;
         /// <summary>Top of the roof slab: two storeys of 4.5 m (KitOfficeScene.FloorHeight × Levels).</summary>
         const float RoofHeight = 9f;
@@ -62,12 +64,14 @@ namespace CloseTheDeal.Editor.Art
         /// clear floor and the walls within 6 m that the hit-reaction session asked for (a blasted body must not
         /// clear a 1.1 m rail and drop off the roof).
         /// </summary>
-        static readonly Vector3 DummySpot = new Vector3(27f, 0f, -19f);
+        /// <remarks>Moved with the roof's south-east corner when the plate grew to 40 × 32 m (L2, 2026-11-15): the pad,
+        /// the bay and the props keep their distances from that corner.</remarks>
+        static readonly Vector3 DummySpot = new Vector3(35f, 0f, -27f);
         /// <summary>The dummy faces west (-X), toward the arsenal bay's firing line.</summary>
         const float DummyYaw = -90f;
         /// <summary>The pad's full-height screens replace the rails from here to the corner: east edge south of
         /// this z, south edge east of this x.</summary>
-        const float PadNorthZ = -12f, PadWestX = 20f;
+        const float PadNorthZ = -20f, PadWestX = 28f;
         /// <summary>Mirror centre above the roof, metres: as the office's DevMirror stands above its floor (6.34 − 4.5).</summary>
         const float MirrorCentreHeight = 1.84f;
         /// <summary>Mirror size, metres: the office mirror's height, 8 m long behind the dummy.</summary>
@@ -79,7 +83,7 @@ namespace CloseTheDeal.Editor.Art
 
         // ---- Arsenal bay: reserved for the weapons session.
         /// <summary>Bay's north-west corner, roof-local metres. 8 × 6 m, its east edge 12 m from the dummy.</summary>
-        static readonly Vector3 BayCorner = new Vector3(7f, 0f, -16f);
+        static readonly Vector3 BayCorner = new Vector3(15f, 0f, -24f);
         /// <summary>Bay size, metres, as the weapons session asked.</summary>
         const float BayWidth = 8f, BayDepth = 6f;
 
@@ -117,9 +121,9 @@ namespace CloseTheDeal.Editor.Art
         /// </summary>
         static readonly (string prefab, float x, float z)[] Props =
         {
-            ("Monitor", 20.5f, -16.5f), ("Monitor", 20.5f, -18f), ("Monitor", 20.5f, -19.5f),
-            ("Chair", 19f, -17f), ("Chair", 19f, -19f), ("Chair", 19f, -21f),
-            ("Cabinet", 21f, -21.5f), ("Cabinet", 21f, -14.5f),
+            ("Monitor", 28.5f, -24.5f), ("Monitor", 28.5f, -26f), ("Monitor", 28.5f, -27.5f),
+            ("Chair", 27f, -25f), ("Chair", 27f, -27f), ("Chair", 27f, -29f),
+            ("Cabinet", 29f, -29.5f), ("Cabinet", 29f, -22.5f),
         };
         /// <summary>Props are placed this far above the roof, metres, and settle: their pivots are not all at the base.</summary>
         const float PropDrop = 0.05f;
@@ -131,8 +135,9 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>Each leaf slides its own width along its local +X to open, metres (Lift_Door_Panel is 0.75 wide,
         /// per the kit owner, 2026-11-13: the leaves overlap the 1.4 m opening by 0.05 m at each jamb).</summary>
         const float DoorSlide = 0.75f;
-        /// <summary>Where a player waits to call the car: 1 m west of the doors (x 20), centred on them (z −6).</summary>
-        static readonly Vector3 CallSpot = new Vector3(19f, 0f, -6f);
+        /// <summary>Where a player waits to call the car: 1 m south of the doors (z −4), centred on them (x 20). The L2
+        /// plan puts the shaft on the north façade with its doors facing the lobby (2026-11-15).</summary>
+        static readonly Vector3 CallSpot = new Vector3(20f, 0f, -5f);
         /// <summary>The rider check is this much smaller than the car all round, metres, so someone outside the doors does not count.</summary>
         const float CabinMargin = 0.35f;
 

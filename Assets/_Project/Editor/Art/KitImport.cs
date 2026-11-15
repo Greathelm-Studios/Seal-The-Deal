@@ -23,9 +23,15 @@
 //  Modified  : Claude Opus 5.5, 2026-11-13 — Japanese corporate mix: palette, Accent_Aqua/Mist/Seal, Water_Wall,
 //              nine Japanese office props.
 //  Modified  : Claude Opus 5.5, 2026-11-13 — Water_Wall uses the Aero Water Pane shader (animated liquid).
+//  Modified  : Claude Opus 5.5, 2026-11-15 — ribbons and lightboxes, the tiled floor texture and the ceiling panel
+//              (PANLINE reference).
 //  Modified  : Claude Opus 5.5, 2026-11-14 — AEROSET reference: curtain wall, ceiling beams, glossier floor and walls.
 //  Modified  : Claude Opus 5.5, 2026-11-13 — loose monitor/keyboard, phone and tray get colliders, the lift pieces,
 //              the rooftop pool and its Pool_Water material.
+//  Modified  : Claude Opus 5.5, 2026-11-15 — L2 layout pieces: Wall_Door_2m, Partition_Glass_Door_2m,
+//              Stair_Straight_Half_2m.
+//  Modified  : Claude Opus 5.5, 2026-11-15 — Aero props on the Painter trim sheet: the Trim_Aero material (albedo,
+//              metallic/smoothness, normal and emission from ArtSource/Kit/trim/build/export) and the PC_Tower piece.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 // -----------------------------------------------------------------------------
 using System.Collections.Generic;
@@ -59,6 +65,17 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>Tile textures drawn by ArtSource/Kit/textures/make_textures.py, relative to the repo root.</summary>
         const string TextureSource = "ArtSource/Kit/textures";
         const string TextureFolder = "Assets/_Project/Art/Kit/Textures";
+        /// <summary>The trim sheet's material: every prop surface on the sheet is merged into it (ArtSource/Kit/trim).</summary>
+        const string TrimMaterialName = "Trim_Aero";
+        /// <summary>Painter's URP export of the trim sheet, relative to the repo root (trim/painter/tp_export.py writes it).</summary>
+        const string TrimSource = "ArtSource/Kit/trim/build/export";
+        /// <summary>File-name stem Painter gives the sheet's maps: mesh name, then texture set name.</summary>
+        const string TrimStem = "TrimBoard_TrimBoard_Low_ID_Pearl_";
+        /// <summary>Trim sheet LED emission, HDR multiplier. WHY 1.5, under Light_Strip's 2: the LEDs are small dots
+        /// and rings that should read as lit, not bloom into halos; tune by eye in KitOffice.</summary>
+        const float TrimEmission = 1.5f;
+        /// <summary>The props' plastic shader (Assets/_Project/Art/Plastic/AeroPlastic.shader).</summary>
+        const string AeroPlasticShaderName = "Close the Deal/Aero Plastic";
         /// <summary>Light_Strip emission, HDR multiplier on white. WHY: bright enough to bloom slightly under the
         /// office look's exposure without blowing the ceiling out; tune by eye in KitTest.</summary>
         const float LightStripEmission = 2f;
@@ -113,6 +130,12 @@ namespace CloseTheDeal.Editor.Art
             "Lift_Shaft_Wall_4m", "Lift_Car", "Pool_Raised_8x4",
             // Glass and structure, AEROSET reference (Alex, 2026-11-14)
             "Wall_Curtain_4m", "Ceiling_Beams_4x4",
+            // Ribbons and lightboxes, PANLINE reference (Alex, 2026-11-15)
+            "Ribbon_Floor_16m", "Ribbon_Ceiling_16m", "Lightbox_Wall_Wave", "Lightbox_Wall_Logo", "Ceiling_Panel_4x4",
+            // L2 layout (Alex approved the twin-core court, 2026-11-15): doors on the 2 m grid, enclosed return stairs
+            "Wall_Door_2m", "Partition_Glass_Door_2m", "Stair_Straight_Half_2m",
+            // Aero props on the trim sheet (ArtSource/Kit/props_aero.py, 2026-11-15): the new loose PC tower
+            "PC_Tower",
         };
 
         /// <summary>Pieces that are seen but never touched, so they have no collider (kit README).</summary>
@@ -120,7 +143,8 @@ namespace CloseTheDeal.Editor.Art
         {
             "Stair_Steps", "Ceiling_LightStrip", "Sign_Zone_L", "Sign_Zone_R", "Sign_Zone_C", "Sign_Zone_H", "Sign_Zone_A",
             "Light_Pendant_Linear", "Carpet_Overlay_4x4", "Ceiling_Grid_4x4",
-            "Logo_Aonagi", "Sign_LED_Reception", "Ceiling_Beams_4x4",
+            "Logo_Aonagi", "Sign_LED_Reception", "Ceiling_Beams_4x4", "Ribbon_Floor_16m", "Ribbon_Ceiling_16m",
+            "Ceiling_Panel_4x4",
         };
 
         /// <summary>Pieces whose mesh is only a collider: the stair ramp is walked on, Stair_Steps is what is seen.</summary>
@@ -133,7 +157,9 @@ namespace CloseTheDeal.Editor.Art
         // not a tile grid. The texture stays in ArtSource/Kit/textures if a room set wants it back.
         // Carpet_Dark and Ceiling_Grid (2026-11-13): the reference plates' work-area carpet and tile grid, as
         // separate materials on overlay pieces, so the polished floor and flat ceiling stay elsewhere.
-        static readonly HashSet<string> Textured = new HashSet<string> { "Carpet_Dark", "Ceiling_Grid" };
+        // Floor_Carpet again since 2026-11-15, as big white tiles with thin joints (PANLINE reference): the same white,
+        // the same mirror gloss, now with a joint grid that reads in the reflections.
+        static readonly HashSet<string> Textured = new HashSet<string> { "Carpet_Dark", "Ceiling_Grid", "Floor_Carpet" };
 
         /// <summary>Pieces with no collider mesh whose render mesh is the collider, not convex (kit README).</summary>
         static readonly HashSet<string> RenderMeshColliders = new HashSet<string> { "Slab_Stairwell", "Stair_Flight" };
@@ -168,7 +194,19 @@ namespace CloseTheDeal.Editor.Art
             ("Accent_Seal", "C7473E", 0f, 0.35f, false),
             ("Water_Wall", "7ADAD8", 0f, 0.9f, false),
             ("Pool_Water", "7ADAD8", 0f, 0.9f, false),
+            // The Aero props' one opaque material. WHY white and 1/1: the sheet's maps carry the colour, metal and
+            // gloss; these only multiply them (URP Lit scales the map's smoothness by _Smoothness).
+            (TrimMaterialName, "FFFFFF", 1f, 1f, false),
+            // The props' frosted aqua acrylic (divider, bottle, reception band, trays): more aqua and more opaque than
+            // the walls' Glass_Frosted, which read as grey glass on the props (Alex, 2026-11-15).
+            (PropFrostName, "8FDCE0", 0f, 0.8f, false),
         };
+
+        /// <summary>The Aero props' frosted acrylic material (ArtSource/Kit/props_aero.py M_FROST).</summary>
+        const string PropFrostName = "Plastic_Aqua_Frost";
+        /// <summary>Its opacity. WHY 0.82, above Glass_Frosted's 0.65: the concepts paint it as solid-looking aqua
+        /// acrylic with only a soft glow through it; at 0.65 the room behind washed it out to grey.</summary>
+        const float PropFrostAlpha = 0.82f;
 
         /// <summary>Glass_Frosted opacity. WHY 0.65 (was 0.8): the mix's aqua pearl frost (Japanese_Aero/DECISION.md)
         /// should glow with the light behind it; it still reads as "can't see through" next to the 5 % clear glass.</summary>
@@ -282,11 +320,20 @@ namespace CloseTheDeal.Editor.Art
                     c.a = FrostAlpha;
                     MakeTransparent(mat);
                 }
+                if (m.name == PropFrostName)
+                {
+                    c.a = PropFrostAlpha;
+                    MakeTransparent(mat);
+                }
                 if (Textured.Contains(m.name))
                 {
                     // WHY white: the texture already holds the final colour; a tint would darken it twice.
                     mat.SetTexture("_BaseMap", ImportTexture(m.name));
                     c = Color.white;
+                }
+                else if (m.name == TrimMaterialName)
+                {
+                    ApplyTrimSheet(mat);
                 }
                 else if (!m.glass)
                 {
@@ -319,6 +366,49 @@ namespace CloseTheDeal.Editor.Art
             var importer = (TextureImporter)AssetImporter.GetAtPath(dst);
             importer.wrapMode = TextureWrapMode.Repeat;
             importer.sRGBTexture = true;
+            importer.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(dst);
+        }
+
+        /// <summary>Gives <paramref name="mat"/> the trim sheet's four maps from <see cref="TrimSource"/>.</summary>
+        /// <remarks>
+        /// URP Lit reads smoothness from the metallic map's alpha by default, which is how Painter's URP preset packs it.
+        /// Emission is lit only where the sheet has LEDs (its emission map is black elsewhere).
+        /// </remarks>
+        static void ApplyTrimSheet(Material mat)
+        {
+            // The props' moulded-plastic look (Art/Plastic/AeroPlastic.shader): Lit plus lacquer, gradient and rim.
+            // Its lacquer, rim and gradient values are left as they are on an existing material, so tuning survives.
+            Shader aero = Shader.Find(AeroPlasticShaderName);
+            if (aero != null && mat.shader != aero)
+                mat.shader = aero;
+            else if (aero == null)
+                Debug.LogWarning($"[Kit Import] Shader '{AeroPlasticShaderName}' not found; {mat.name} stays on URP Lit.");
+            mat.SetTexture("_BaseMap", ImportTrimMap("AlbedoTransparency", true, false));
+            mat.SetTexture("_MetallicGlossMap", ImportTrimMap("MetallicSmoothness", false, false));
+            mat.EnableKeyword("_METALLICSPECGLOSSMAP");
+            mat.SetTexture("_BumpMap", ImportTrimMap("Normal", false, true));
+            mat.SetFloat("_BumpScale", 1f);
+            mat.EnableKeyword("_NORMALMAP");
+            mat.SetTexture("_EmissionMap", ImportTrimMap("Emission", true, false));
+            mat.SetColor("_EmissionColor", Color.white * TrimEmission);
+            mat.EnableKeyword("_EMISSION");
+            mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+        }
+
+        /// <summary>Copies one trim sheet map in as <c>Trim_Aero_&lt;map&gt;.png</c> with the right import type.</summary>
+        static Texture2D ImportTrimMap(string map, bool srgb, bool normal)
+        {
+            Directory.CreateDirectory(TextureFolder);
+            string dst = $"{TextureFolder}/{TrimMaterialName}_{map}.png";
+            File.Copy(Path.Combine(TrimSource, TrimStem + map + ".png"), dst, true);
+            AssetDatabase.ImportAsset(dst, ImportAssetOptions.ForceUpdate);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(dst);
+            importer.textureType = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
+            importer.sRGBTexture = srgb;
+            // WHY repeat: trim strips run past 1 in U (the sheet tiles along U); V stays inside each band.
+            importer.wrapMode = TextureWrapMode.Repeat;
+            importer.maxTextureSize = 2048;
             importer.SaveAndReimport();
             return AssetDatabase.LoadAssetAtPath<Texture2D>(dst);
         }

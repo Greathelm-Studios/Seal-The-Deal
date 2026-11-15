@@ -12,6 +12,11 @@
 #              Ceiling_Beams_4x4, glossier walls and floor.
 #  Modified  : Claude Opus 5.5, 2026-11-14 — interior: mullions on the glass partitions, navy joint lines on the
 #              plain solid walls.
+#  Modified  : Claude Opus 5.5, 2026-11-15 — modelled text retired (MESH_TEXT); labels are textures now.
+#  Modified  : Claude Opus 5.5, 2026-11-15 — PANLINE reference: floor and ceiling ribbons, the wall lightbox, the
+#              floating ceiling panel.
+#  Modified  : Claude Opus 5.5, 2026-11-15 — L2 layout pieces: Wall_Door_2m, Partition_Glass_Door_2m,
+#              Stair_Straight_Half_2m.
 #  Reviewed  : NOT YET REVIEWED BY A HUMAN
 #  Summary   : Every piece of the minimum office snap kit, one piece per build, chosen with
 #              --set PIECE=<name>. One script so the grid, heights, thicknesses and materials
@@ -220,6 +225,23 @@ P = params(
     TRANSOMS=(2.6, 3.45),  # transom heights, metres. WHY above 2.1: no bars across a standing figure (kept rules)
     BEAM_W=0.08, BEAM_D=0.16,          # exposed ceiling beams along X, metres
     PURLIN_W=0.05, PURLIN_D=0.09,      # the lighter cross beam along Z, metres
+    # ---- Ribbons and lightboxes (Alex 2026-11-15, PANLINE reference: glossy colour ribbons, backlit lightbox walls)
+    RIBBON_W=0.5,          # cobalt ribbon width, metres
+    RIBBON_MID=2.0,        # its centreline's mean distance in from the piece's z = 0 edge, metres (a 4 m corridor's middle)
+    RIBBON_SWAY=0.8,       # how far the centreline swings either side, metres; one cosine over the piece, so pieces chain seamlessly
+    RIBBON_LEN=16.0,       # ribbon piece length, metres. WHY 16, not one 4 m cell: a swing every 4 m read as tight loops
+                           # in perspective (KitOffice capture, 2026-11-15); PANLINE's bands sweep long
+    RIBBON_LINE_W=0.06, RIBBON_LINE_GAP=0.12,   # the thin aqua companion line and its gap from the ribbon, metres
+    RIBBON_INLAY=0.003,    # floor inlay height above the floor, metres: a glossy skin, not a step
+    RIBBON_DROP=0.2,       # ceiling ribbon's underside below the soffit, metres: under the 0.16 m beams
+    RIBBON_T=0.04,         # ceiling ribbon thickness, metres
+    RIBBON_SEGMENTS=128,   # samples along each piece
+    LIGHTBOX_W=3.6, LIGHTBOX_Y=(0.6, 3.6), LIGHTBOX_D=0.08,   # wall lightbox: width, bottom and top, depth, metres
+    LIGHTBOX_FRAME=0.06,   # its silver frame width, metres
+    PANEL_SIZE=3.6,        # floating ceiling panel, metres: leaves a 0.4 m lit gap to the next cell's panel
+    PANEL_R=0.35,          # its rounded corners, metres
+    PANEL_DROP=(0.22, 0.16),   # its underside and top below the soffit, metres: level with where the beams hung
+    PANEL_COVE_W=0.18,     # the glowing cove ring on the soffit round each panel, metres
     LED_W=1.2, LED_H=0.18, LED_T=0.06, LED_Y=2.65,   # reception dot-matrix sign and its bottom height, metres
     WATER_W=1.8, WATER_T=0.08, WATER_H=2.7,          # contained water-wall cassette, metres
 )
@@ -431,29 +453,31 @@ def wall_solid(width, finish=''):
     collider(ob, 'box')
 
 
-def wall_door(finish=''):
-    """4 m wall with a centred doorway. Three parts so each gets an exact box collider and the gap stays open.
+def wall_door(finish='', width=None):
+    """Wall with a centred doorway: 4 m by default, or 2 m (Wall_Door_2m, 0.4 m jambs) for the L2 layout's doors on
+    the 2 m grid (Alex approved L2, 2026-11-15). Three parts so each gets an exact box collider and the gap stays open.
 
     A shadow reveal frames the opening on both faces, outside the clear 1.2 x 2.4 m the leaf fills.
     """
-    x0 = (P.BAY - P.DOOR_W) * 0.5
+    width = width or P.BAY
+    x0 = (width - P.DOOR_W) * 0.5
     x1 = x0 + P.DOOR_W
     cuts = lambda a, b: wall_cuts(a, b, door=(x0, x1, P.DOOR_H), portal=finish == '_PortalHead')
     parts = []
     for name, box_ in (('Left', u(0, x0, 0, CLEAR_H, -P.WALL, 0)),
-                       ('Right', u(x1, P.BAY, 0, CLEAR_H, -P.WALL, 0)),
+                       ('Right', u(x1, width, 0, CLEAR_H, -P.WALL, 0)),
                        ('Head', u(x0, x1, P.DOOR_H, CLEAR_H, -P.WALL, 0))):
-        bm = recessed(box_, cuts(0, P.BAY))
+        bm = recessed(box_, cuts(0, width))
         if name != 'Head':   # the outer ends of the left and right parts are the wall's snap ends
-            bm = boolean(bm, paint(end_chamfers(0, P.BAY), 0))
+            bm = boolean(bm, paint(end_chamfers(0, width), 0))
         bm = finish_face(bm, finish)
-        parts.append(part(f'Kit_Wall_Door_4m{finish}_{name}', bm, wall_mats(finish), smooth=None))
+        parts.append(part(f'Kit_Wall_Door_{width:g}m{finish}_{name}', bm, wall_mats(finish), smooth=None))
     left, right, head = parts
     for ob in parts:
         collider(ob, 'box')
     expect(left, size=(x0, P.WALL, CLEAR_H))
     expect(head, size=(P.DOOR_W, P.WALL, CLEAR_H - P.DOOR_H))
-    group(f'Kit_Wall_Door_4m{finish}', left, right, head)
+    group(f'Kit_Wall_Door_{width:g}m{finish}', left, right, head)
 
 
 def door_leaf():
@@ -590,6 +614,35 @@ def partition_glass(width):
     collider(frame, 'box')   # the rails' box spans the full wall, so it blocks the pane too
     expect(frame, size=(width, P.PART_T, P.PART_H))
     group(f'Kit_Partition_Glass_{width:g}m', frame, pane)
+
+
+def partition_glass_door(width):
+    """Glass partition with a centred 1.2 x 2.4 m doorway: the meeting-room glass of Partition_Glass with navy jamb
+    posts and the top rail carried over the opening as its head. For the L2 layout's room doors in glass walls
+    (Alex approved L2, 2026-11-15). Three box colliders (left, right, head) so the doorway stays open."""
+    zc = -P.PART_T * 0.5
+    x0 = (width - P.DOOR_W) * 0.5
+    x1 = x0 + P.DOOR_W
+    w = P.MULLION_W
+    frames, colliders_ = [], []
+    for name, a, b in (('Left', 0.0, x0), ('Right', x1, width)):
+        rails = join(u(a, b, 0, P.PART_RAIL, -P.PART_T, 0),
+                     u(a, b, P.PART_H - P.PART_RAIL, P.PART_H, -P.PART_T, 0),
+                     # the jamb post on the opening side and the end post on the snap end
+                     u(x0 - w if name == 'Left' else x1, x0 if name == 'Left' else x1 + w, 0, P.PART_H, -P.PART_T, 0),
+                     u(0 if name == 'Left' else width - w / 2, w / 2 if name == 'Left' else width,
+                       0, P.PART_H, zc - P.PART_T * 0.25, zc + P.PART_T * 0.25))
+        ob = part(f'Kit_Partition_Glass_Door_{width:g}m_{name}', rails, M_RAIL, smooth=None)
+        collider(ob, 'box')
+        frames.append(ob)
+    head = part(f'Kit_Partition_Glass_Door_{width:g}m_Head', u(x0, x1, P.DOOR_H, P.PART_H, -P.PART_T, 0), M_RAIL,
+                smooth=None)
+    collider(head, 'box')
+    panes = join(u(0, x0 - w, P.PART_RAIL, P.PART_H - P.PART_RAIL, zc - P.GLASS_T * 0.5, zc + P.GLASS_T * 0.5),
+                 u(x1 + w, width, P.PART_RAIL, P.PART_H - P.PART_RAIL, zc - P.GLASS_T * 0.5, zc + P.GLASS_T * 0.5))
+    glass = part(f'Kit_Partition_Glass_Door_{width:g}m_Glass', panes, M_GLASS, smooth=None)
+    expect(head, size=(P.DOOR_W, P.PART_T, P.PART_H - P.DOOR_H))
+    group(f'Kit_Partition_Glass_Door_{width:g}m', *frames, head, glass)
 
 
 def stair_flight():
@@ -920,8 +973,10 @@ def partition_frost(width):
     group(f'Kit_Partition_Frost_{width:g}m', frame, clear, frost)
 
 
-def stair_straight():
+def stair_straight(rise=None):
     """2 m-wide straight stair rising one storey toward -Z, with frameless glass guards (README_r5 atrium B).
+    rise=FLOOR_H/2 makes Stair_Straight_Half_2m: 12 risers over 3.6 m, two of which with a landing between make the
+    L2 layout's enclosed return stairs E1 and E2 (Alex approved L2, 2026-11-15).
 
     Pivot: the front-left corner of the bottom step, at floor level. 24 risers x 0.1875 m, 0.3 m goings, 7.2 m run;
     the top tread lands at 4.5 m, flush with the deck above. Hull collider: its top runs along the nosings, so the
@@ -930,13 +985,16 @@ def stair_straight():
     Built as two folded white stringers with separate white treads between them, each with a silver nosing, open
     underneath and between treads, as in the concept (2026-11-13 fix list: "the stair is one solid wedge").
     """
-    r, g, n, w = P.FLOOR_H / P.STAIR_RISERS, P.STAIR_GOING, P.STAIR_RISERS, P.STAIR_W
+    rise = rise or P.FLOOR_H
+    r, g, w = P.FLOOR_H / P.STAIR_RISERS, P.STAIR_GOING, P.STAIR_W
+    n = round(P.STAIR_RISERS * rise / P.FLOOR_H)
+    name = 'Kit_Stair_Straight_2m' if n == P.STAIR_RISERS else 'Kit_Stair_Straight_Half_2m'
     run = n * g
     under = 0.35   # depth of each stringer under the nosing line, metres
     prof = [(0.0, 0.0)]
     for k in range(n):
         prof += [(-k * g, (k + 1) * r), (-(k + 1) * g, (k + 1) * r)]
-    prof += [(-run, P.FLOOR_H - under), (-run + (P.FLOOR_H - under) * g / r, 0.0)]   # underside parallel to the pitch
+    prof += [(-run, rise - under), (-run + (rise - under) * g / r, 0.0)]   # underside parallel to the pitch
     prof = list(reversed(prof))
     st = P.STRINGER_T
     pieces = [paint(prism_zy(prof, 0, st), 0), paint(prism_zy(prof, w - st, w), 0)]
@@ -945,17 +1003,17 @@ def stair_straight():
         z_front, z_back = -k * g, -(k + 1) * g
         pieces.append(paint(u(st, w - st, top - P.TREAD_T2, top, z_back, z_front - P.NOSING_D), 0))
         pieces.append(paint(u(st, w - st, top - P.TREAD_T2, top, z_front - P.NOSING_D, z_front), 1))
-    body = part('Kit_Stair_Straight_2m', join(*pieces), [M_WALL, M_FRAME], smooth=None)
-    expect(body, size=(w, run, P.FLOOR_H))
+    body = part(name, join(*pieces), [M_WALL, M_FRAME], smooth=None)
+    expect(body, size=(w, run, rise))
     collider(body, 'hull')
     guards = []
     for side, x0 in (('L', 0.0), ('R', w - P.GUARD_T)):
-        q = [(0.0, r), (-run, P.FLOOR_H), (-run, P.FLOOR_H + P.GUARD_H), (0.0, r + P.GUARD_H)]
+        q = [(0.0, r), (-run, rise), (-run, rise + P.GUARD_H), (0.0, r + P.GUARD_H)]
         gb = prism_zy(list(reversed(q)), x0, x0 + P.GUARD_T)
-        ob = part(f'Kit_Stair_Straight_2m_Guard{side}', gb, M_GLASS, smooth=None)
+        ob = part(f'{name}_Guard{side}', gb, M_GLASS, smooth=None)
         collider(ob, 'hull')
         guards.append(ob)
-    group('Kit_Stair_Straight_2m_Group', body, *guards)
+    group(f'{name}_Group', body, *guards)
 
 
 def ramp():
@@ -1070,6 +1128,12 @@ def text_mesh(body, height, depth, weight=0.0, slant=0.0):
     return bm
 
 
+# Modelled text is retired (Alex, 2026-11-15: signage "dont have it modelled, either textured or a decal"). Every label
+# is now a texture from ArtSource/Kit/signs/make_signs.py placed by Assets/_Project/Editor/Art/KitSigns.cs, so
+# placed_text draws nothing. True brings the old mesh text back for comparison only.
+MESH_TEXT = False
+
+
 def placed_text(body, height, x_right, y_base, z_face, weight=0.0, slant=0.0, max_width=None):
     """Text standing on a wall-facing panel: reads left to right for someone facing the panel from +Z.
 
@@ -1078,6 +1142,8 @@ def placed_text(body, height, x_right, y_base, z_face, weight=0.0, slant=0.0, ma
     `max_width` (metres) condenses a line that would run longer, keeping its height: a squeezed line still reads,
     one that runs off its panel does not.
     """
+    if not MESH_TEXT:
+        return bmesh.new()   # retired: the label is a texture now (ArtSource/Kit/signs, KitSigns.cs)
     bm = text_mesh(body, height, P.INK_T, weight, slant)
     if max_width and bm.verts:
         xs = [v.co.x for v in bm.verts]
@@ -1708,6 +1774,96 @@ def pool_raised():
     group('Kit_Pool_Raised_8x4', *parts, basin, water)
 
 
+def ribbon_centre(x):
+    """Ribbon centreline at x (0 to RIBBON_LEN along the piece), as Unity z (negative, into the corridor)."""
+    return -(P.RIBBON_MID - P.RIBBON_SWAY * math.cos(2 * math.pi * x / P.RIBBON_LEN))
+
+
+def band_xz(z_of_x, z0, z1, y0, y1):
+    """A solid band along X from 0 to RIBBON_LEN, between z_of_x(x) + z0 and z_of_x(x) + z1, from height y0 to y1, built
+    from quads segment by segment (a single ngon cap would be concave)."""
+    bm = bmesh.new()
+    n = P.RIBBON_SEGMENTS
+    rows = []
+    for i in range(n + 1):
+        x = P.RIBBON_LEN * i / n
+        zc = z_of_x(x)
+        rows.append([bm.verts.new((-x, -(zc + z), y)) for z, y in ((z0, y0), (z1, y0), (z1, y1), (z0, y1))])
+    for a, b in zip(rows, rows[1:]):
+        for k in range(4):
+            bm.faces.new((a[k], a[(k + 1) % 4], b[(k + 1) % 4], b[k]))
+    bm.faces.new(rows[0])
+    bm.faces.new(list(reversed(rows[-1])))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return bm
+
+
+def ribbon_floor():
+    """A glossy cobalt ribbon inlaid in the floor, swinging slowly across a 4 m corridor over 16 m, with a thin aqua line
+    beside it. Pivot at the cell's NW corner on the floor, like a slab; runs +X, the corridor is -Z. Pieces chain
+    end to end without a seam. Visual only. PANLINE lesson (Alex, 2026-11-15): colour bands as architecture."""
+    w, t = P.RIBBON_W, P.RIBBON_INLAY
+    band = band_xz(ribbon_centre, -w / 2, w / 2, 0, t)
+    g, lw = P.RIBBON_LINE_GAP, P.RIBBON_LINE_W
+    line = band_xz(ribbon_centre, w / 2 + g, w / 2 + g + lw, 0, t)
+    ob = part('Kit_Ribbon_Floor_16m', join(paint(band, 0), paint(line, 1)), [M_COBALT, M_AQUA], smooth=None)
+    expect(ob, size=(P.RIBBON_LEN, 2 * P.RIBBON_SWAY + w + g + lw, t), tol=0.01)
+
+
+def ribbon_ceiling():
+    """The floor ribbon's partner overhead: a lacquered cobalt band floating under the soffit (below the beams),
+    following the same swing, with a glowing strip along each edge. Pivot at the cell's NW corner at the soffit,
+    like the beams; hangs below y 0. Visual only."""
+    w, d, t = P.RIBBON_W, P.RIBBON_DROP, P.RIBBON_T
+    band = band_xz(ribbon_centre, -w / 2, w / 2, -d, -d + t)
+    glow = join(band_xz(ribbon_centre, -w / 2, -w / 2 + 0.03, -d - 0.006, -d),
+                band_xz(ribbon_centre, w / 2 - 0.03, w / 2, -d - 0.006, -d))
+    ob = part('Kit_Ribbon_Ceiling_16m', join(paint(band, 0), paint(glow, 1)), [M_COBALT, M_LIGHT], smooth=None)
+    expect(ob, size=(P.RIBBON_LEN, 2 * P.RIBBON_SWAY + w, t + 0.006), tol=0.01)
+
+
+def lightbox_wall():
+    """A backlit lightbox for a wall: a rounded silver frame round a recessed diffuser, 3.6 x 3.0 m, 80 mm deep. The
+    glowing graphic is a texture on the diffuser (KitSigns: Lightbox_Wave or Lightbox_Logo), never modelled. Hangs on
+    a wall face like a sign: pivot at floor level at its low-X edge, proud toward +Z. Box collider.
+    PANLINE lesson (Alex, 2026-11-15): signage as lit graphic surfaces."""
+    W, D, f = P.LIGHTBOX_W, P.LIGHTBOX_D, P.LIGHTBOX_FRAME
+    y0, y1 = P.LIGHTBOX_Y
+    outer = u(0, W, y0, y1, 0, D)
+    bevel(outer, 0.02, segments=3, angle=45)
+    body = recessed(outer, u(f, W - f, y0 + f, y1 - f, D - 0.02, D + 0.01))
+    ob = part('Kit_' + P.PIECE, body, [M_FRAME, M_WALL], smooth=30)
+    expect(ob, size=(W, D, y1 - y0))
+    collider(ob, 'box')
+
+
+def rounded_rect(x0, x1, z0, z1, r, segs=6):
+    """Outline of a rounded rectangle in Unity (x, z), counter-clockwise, for prism_xz."""
+    pts = []
+    for cx, cz, a0 in ((x1 - r, z1 - r, 0), (x0 + r, z1 - r, 90), (x0 + r, z0 + r, 180), (x1 - r, z0 + r, 270)):
+        for k in range(segs + 1):
+            a = math.radians(a0 + 90 * k / segs)
+            pts.append((cx + r * math.cos(a), cz + r * math.sin(a)))
+    return pts
+
+
+def ceiling_panel():
+    """A floating rounded white ceiling panel under a 4 x 4 m soffit, with a glowing cove ring on the soffit round it
+    that shows in the gap to the next panel. Pivot at the cell's NW corner at the soffit; everything hangs below
+    y 0. Visual only. PANLINE lesson (Alex, 2026-11-15): soft floating panels with light between them."""
+    B, S, r = P.BAY, P.PANEL_SIZE, P.PANEL_R
+    m = (B - S) / 2
+    d0, d1 = P.PANEL_DROP
+    panel = prism_xz(rounded_rect(m, B - m, -B + m, -m, r), -d0, -d1)
+    bevel(panel, 0.02, segments=2, angle=45)
+    c = P.PANEL_COVE_W
+    ring_out = rounded_rect(m - c / 2, B - m + c / 2, -B + m - c / 2, -m + c / 2, r + c / 2)
+    ring_in = rounded_rect(m + c / 2, B - m - c / 2, -B + m + c / 2, -m - c / 2, max(r - c / 2, 0.05))
+    cove = boolean(prism_xz(ring_out, -0.006, -0.001), prism_xz(ring_in, -0.01, 0.01))
+    ob = part('Kit_Ceiling_Panel_4x4', join(paint(panel, 0), paint(cove, 1)), [M_CEIL, M_LIGHT], smooth=30)
+    expect(ob, size=(S + c, S + c, d0 - 0.001), tol=0.01)
+
+
 PIECES = {
     'Slab_4x4': lambda: slab(P.BAY, P.BAY),
     'Slab_2x4': lambda: slab(P.INFILL, P.BAY),
@@ -1720,6 +1876,7 @@ PIECES = {
     'Wall_Solid_2m_Cobalt': lambda: wall_solid(P.INFILL, '_Cobalt'),
     'Wall_Solid_4m_PortalHead': lambda: wall_solid(P.BAY, '_PortalHead'),
     'Wall_Door_4m': wall_door,
+    'Wall_Door_2m': lambda: wall_door(width=P.INFILL),
     'Wall_Door_4m_PortalHead': lambda: wall_door('_PortalHead'),
     'Door_Leaf': door_leaf,
     'Window_4m': lambda: window_bay(P.BAY),
@@ -1729,6 +1886,7 @@ PIECES = {
     'Column_CornerR': lambda: column_corner('R'),
     'Partition_Glass_4m': lambda: partition_glass(P.BAY),
     'Partition_Glass_2m': lambda: partition_glass(P.INFILL),
+    'Partition_Glass_Door_2m': lambda: partition_glass_door(P.INFILL),
     'Stair_Flight': stair_flight,
     'Stair_Column': stair_column,
     'Stair_CagePanel': stair_cage_panel,
@@ -1744,6 +1902,7 @@ PIECES = {
     'Partition_Frost_4m': lambda: partition_frost(P.BAY),
     'Partition_Frost_2m': lambda: partition_frost(P.INFILL),
     'Stair_Straight_2m': stair_straight,
+    'Stair_Straight_Half_2m': lambda: stair_straight(P.FLOOR_H / 2),
     'Ramp_2x4': ramp,
     'Guard_Glass_4m': lambda: guard_glass(P.BAY),
     'Guard_Glass_2m': lambda: guard_glass(P.INFILL),
@@ -1795,6 +1954,12 @@ PIECES = {
     # Glass and structure (AEROSET reference, 2026-11-14)
     'Wall_Curtain_4m': lambda: wall_curtain(P.BAY),
     'Ceiling_Beams_4x4': ceiling_beams,
+    # Ribbons and lightboxes (PANLINE reference, 2026-11-15)
+    'Ribbon_Floor_16m': ribbon_floor,
+    'Ribbon_Ceiling_16m': ribbon_ceiling,
+    'Lightbox_Wall_Wave': lightbox_wall,
+    'Lightbox_Wall_Logo': lightbox_wall,
+    'Ceiling_Panel_4x4': ceiling_panel,
 }
 
 if P.PIECE not in PIECES:

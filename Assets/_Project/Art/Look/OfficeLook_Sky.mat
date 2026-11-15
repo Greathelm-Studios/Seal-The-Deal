@@ -36,7 +36,7 @@ Material:
     - _CloudSize: 1
     - _CloudTop: 0.5
     - _DitherPixel: 3
-    - _ExposureComp: 0.70710677
+    - _ExposureComp: 0.7578583
     - _GridSize: 2.5
     - _GridStrength: 0.3
     - _HorizonHeight: 0.14
@@ -49,7 +49,7 @@ Material:
     - _SeaMatch: 0.5
     - _SeaRim: 0.1
     - _SeaSize: 1
-    - _SkyDither: 0.85
+    - _SkyDither: 0
     - _SkySteps: 6
     - _SunGlare: 0.7
     - _SunGlow: 0.45

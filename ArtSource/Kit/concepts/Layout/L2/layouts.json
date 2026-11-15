@@ -1,0 +1,2842 @@
+{
+  "units": "metres",
+  "origin": "NW; x east, y south = Unity -Z",
+  "ppm": 40,
+  "models": [
+    {
+      "id": "L2",
+      "title": "TWIN-CORE COURT",
+      "w": 40,
+      "h": 32,
+      "rooms": [
+        {
+          "name": "PRINT / COPY",
+          "r": [
+            8,
+            14,
+            6,
+            4
+          ],
+          "exits": [
+            {
+              "side": 3,
+              "at": 15.2
+            },
+            {
+              "side": 1,
+              "at": 16.8
+            }
+          ],
+          "kind": "room"
+        },
+        {
+          "name": "KITCHEN",
+          "r": [
+            8,
+            18,
+            6,
+            4
+          ],
+          "exits": [
+            {
+              "side": 3,
+              "at": 20
+            },
+            {
+              "side": 1,
+              "at": 20
+            },
+            {
+              "side": 2,
+              "at": 10
+            }
+          ],
+          "kind": "room"
+        },
+        {
+          "name": "WASHROOM",
+          "r": [
+            8,
+            22,
+            4,
+            2
+          ],
+          "exits": [
+            {
+              "side": 3,
+              "at": 23
+            },
+            {
+              "side": 0,
+              "at": 10
+            }
+          ],
+          "kind": "room"
+        },
+        {
+          "name": "SERVER / ARCHIVE",
+          "r": [
+            26,
+            14,
+            6,
+            4
+          ],
+          "exits": [
+            {
+              "side": 3,
+              "at": 15.2
+            },
+            {
+              "side": 1,
+              "at": 16.8
+            }
+          ],
+          "kind": "room"
+        },
+        {
+          "name": "COFFEE KITCHEN",
+          "r": [
+            26,
+            10,
+            6,
+            4
+          ],
+          "exits": [
+            {
+              "side": 3,
+              "at": 12
+            },
+            {
+              "side": 1,
+              "at": 12
+            },
+            {
+              "side": 0,
+              "at": 30
+            }
+          ],
+          "kind": "room"
+        },
+        {
+          "name": "WASHROOM",
+          "r": [
+            28,
+            8,
+            4,
+            2
+          ],
+          "exits": [
+            {
+              "side": 1,
+              "at": 9
+            },
+            {
+              "side": 2,
+              "at": 30
+            }
+          ],
+          "kind": "room"
+        },
+        {
+          "name": "L / LEGAL\nCONFERENCE",
+          "r": [
+            0,
+            8,
+            4,
+            8
+          ],
+          "exits": [
+            {
+              "side": 1,
+              "at": 10
+            },
+            {
+              "side": 1,
+              "at": 14
+            }
+          ],
+          "kind": "room"
+        },
+        {
+          "name": "A / BACK\nOFFICE",
+          "r": [
+            0,
+            20,
+            4,
+            8
+          ],
+          "exits": [
+            {
+              "side": 0,
+              "at": 2
+            },
+            {
+              "side": 1,
+              "at": 24
+            }
+          ],
+          "kind": "room"
+        },
+        {
+          "name": "R / REVIEW\nCONFERENCE",
+          "r": [
+            36,
+            16,
+            4,
+            8
+          ],
+          "exits": [
+            {
+              "side": 3,
+              "at": 18
+            },
+            {
+              "side": 3,
+              "at": 22
+            }
+          ],
+          "kind": "room"
+        },
+        {
+          "name": "C / BACK\nOFFICE",
+          "r": [
+            36,
+            4,
+            4,
+            8
+          ],
+          "exits": [
+            {
+              "side": 3,
+              "at": 8
+            },
+            {
+              "side": 2,
+              "at": 38
+            }
+          ],
+          "kind": "room"
+        }
+      ],
+      "services": [
+        {
+          "name": "E1",
+          "r": [
+            8,
+            6,
+            6,
+            8
+          ],
+          "exits": [],
+          "kind": "stair"
+        },
+        {
+          "name": "E2",
+          "r": [
+            26,
+            18,
+            6,
+            8
+          ],
+          "exits": [],
+          "kind": "stair"
+        },
+        {
+          "name": "LIFT",
+          "r": [
+            18,
+            0,
+            4,
+            4
+          ],
+          "exits": [
+            {
+              "side": 2,
+              "at": 20,
+              "width": 1.4,
+              "kind": "lift"
+            }
+          ],
+          "kind": "lift"
+        },
+        {
+          "name": "RISER",
+          "r": [
+            12,
+            22,
+            2,
+            2
+          ],
+          "exits": [],
+          "kind": "sealed"
+        },
+        {
+          "name": "RISER",
+          "r": [
+            26,
+            8,
+            2,
+            2
+          ],
+          "exits": [],
+          "kind": "sealed"
+        }
+      ],
+      "coreBands": [
+        [
+          8,
+          6,
+          6,
+          18
+        ],
+        [
+          26,
+          8,
+          6,
+          18
+        ]
+      ],
+      "walls": [
+        {
+          "a": [
+            8,
+            6.1
+          ],
+          "b": [
+            14,
+            6.1
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            13.9,
+            6
+          ],
+          "b": [
+            13.9,
+            14
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            8.1,
+            6
+          ],
+          "b": [
+            8.1,
+            14
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            31.9,
+            18
+          ],
+          "b": [
+            31.9,
+            26
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            26,
+            25.9
+          ],
+          "b": [
+            32,
+            25.9
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            26.1,
+            18
+          ],
+          "b": [
+            26.1,
+            26
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            18,
+            0.1
+          ],
+          "b": [
+            22,
+            0.1
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            21.9,
+            0
+          ],
+          "b": [
+            21.9,
+            4
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            18,
+            3.9
+          ],
+          "b": [
+            19.3,
+            3.9
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            20.7,
+            3.9
+          ],
+          "b": [
+            22,
+            3.9
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            18.1,
+            0
+          ],
+          "b": [
+            18.1,
+            4
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            12,
+            22.1
+          ],
+          "b": [
+            14,
+            22.1
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            13.9,
+            22
+          ],
+          "b": [
+            13.9,
+            24
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            12,
+            23.9
+          ],
+          "b": [
+            14,
+            23.9
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            12.1,
+            22
+          ],
+          "b": [
+            12.1,
+            24
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            26,
+            8.1
+          ],
+          "b": [
+            28,
+            8.1
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            27.9,
+            8
+          ],
+          "b": [
+            27.9,
+            10
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            26,
+            9.9
+          ],
+          "b": [
+            28,
+            9.9
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            26.1,
+            8
+          ],
+          "b": [
+            26.1,
+            10
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            13.95,
+            14
+          ],
+          "b": [
+            13.95,
+            16.2
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            13.95,
+            17.400000000000002
+          ],
+          "b": [
+            13.95,
+            18
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            8,
+            17.9
+          ],
+          "b": [
+            14,
+            17.9
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            8.1,
+            14
+          ],
+          "b": [
+            8.1,
+            14.6
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            8.1,
+            15.799999999999999
+          ],
+          "b": [
+            8.1,
+            18
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            13.95,
+            18
+          ],
+          "b": [
+            13.95,
+            19.4
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            13.95,
+            20.6
+          ],
+          "b": [
+            13.95,
+            22
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            8,
+            21.9
+          ],
+          "b": [
+            9.4,
+            21.9
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            10.6,
+            21.9
+          ],
+          "b": [
+            14,
+            21.9
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            8.1,
+            18
+          ],
+          "b": [
+            8.1,
+            19.4
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            8.1,
+            20.6
+          ],
+          "b": [
+            8.1,
+            22
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            8,
+            22.1
+          ],
+          "b": [
+            9.4,
+            22.1
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            10.6,
+            22.1
+          ],
+          "b": [
+            12,
+            22.1
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            11.9,
+            22
+          ],
+          "b": [
+            11.9,
+            24
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            8,
+            23.9
+          ],
+          "b": [
+            12,
+            23.9
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            8.05,
+            22
+          ],
+          "b": [
+            8.05,
+            22.4
+          ],
+          "type": "frost",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            8.05,
+            23.6
+          ],
+          "b": [
+            8.05,
+            24
+          ],
+          "type": "frost",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            26,
+            14.1
+          ],
+          "b": [
+            32,
+            14.1
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            31.9,
+            14
+          ],
+          "b": [
+            31.9,
+            16.2
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            31.9,
+            17.400000000000002
+          ],
+          "b": [
+            31.9,
+            18
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            26.05,
+            14
+          ],
+          "b": [
+            26.05,
+            14.6
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            26.05,
+            15.799999999999999
+          ],
+          "b": [
+            26.05,
+            18
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            26,
+            10.1
+          ],
+          "b": [
+            29.4,
+            10.1
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            30.6,
+            10.1
+          ],
+          "b": [
+            32,
+            10.1
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            31.9,
+            10
+          ],
+          "b": [
+            31.9,
+            11.4
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            31.9,
+            12.6
+          ],
+          "b": [
+            31.9,
+            14
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            26.05,
+            10
+          ],
+          "b": [
+            26.05,
+            11.4
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            26.05,
+            12.6
+          ],
+          "b": [
+            26.05,
+            14
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            28,
+            8.1
+          ],
+          "b": [
+            32,
+            8.1
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            31.95,
+            8
+          ],
+          "b": [
+            31.95,
+            8.4
+          ],
+          "type": "frost",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            31.95,
+            9.6
+          ],
+          "b": [
+            31.95,
+            10
+          ],
+          "type": "frost",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            28,
+            9.9
+          ],
+          "b": [
+            29.4,
+            9.9
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            30.6,
+            9.9
+          ],
+          "b": [
+            32,
+            9.9
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            28.1,
+            8
+          ],
+          "b": [
+            28.1,
+            10
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            0,
+            8.1
+          ],
+          "b": [
+            4,
+            8.1
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            3.95,
+            8
+          ],
+          "b": [
+            3.95,
+            9.4
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            3.95,
+            10.6
+          ],
+          "b": [
+            3.95,
+            13.4
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            3.95,
+            14.6
+          ],
+          "b": [
+            3.95,
+            16
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            0,
+            15.9
+          ],
+          "b": [
+            4,
+            15.9
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            0,
+            20.05
+          ],
+          "b": [
+            1.4,
+            20.05
+          ],
+          "type": "frost",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            2.6,
+            20.05
+          ],
+          "b": [
+            4,
+            20.05
+          ],
+          "type": "frost",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            3.9,
+            20
+          ],
+          "b": [
+            3.9,
+            23.4
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            3.9,
+            24.6
+          ],
+          "b": [
+            3.9,
+            28
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            0,
+            27.95
+          ],
+          "b": [
+            4,
+            27.95
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            36,
+            16.1
+          ],
+          "b": [
+            40,
+            16.1
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            36,
+            23.9
+          ],
+          "b": [
+            40,
+            23.9
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            36.05,
+            16
+          ],
+          "b": [
+            36.05,
+            17.4
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            36.05,
+            18.6
+          ],
+          "b": [
+            36.05,
+            21.4
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            36.05,
+            22.6
+          ],
+          "b": [
+            36.05,
+            24
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            36,
+            4.05
+          ],
+          "b": [
+            40,
+            4.05
+          ],
+          "type": "glass",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            36,
+            11.95
+          ],
+          "b": [
+            37.4,
+            11.95
+          ],
+          "type": "frost",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            38.6,
+            11.95
+          ],
+          "b": [
+            40,
+            11.95
+          ],
+          "type": "frost",
+          "thickness": 0.1
+        },
+        {
+          "a": [
+            36.1,
+            4
+          ],
+          "b": [
+            36.1,
+            7.4
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            36.1,
+            8.6
+          ],
+          "b": [
+            36.1,
+            12
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            20,
+            4
+          ],
+          "b": [
+            20,
+            5
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            20,
+            27
+          ],
+          "b": [
+            20,
+            32
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            4,
+            0
+          ],
+          "b": [
+            4,
+            2
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            36,
+            30
+          ],
+          "b": [
+            36,
+            32
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            0,
+            19
+          ],
+          "b": [
+            2,
+            19
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            38,
+            13
+          ],
+          "b": [
+            40,
+            13
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            15,
+            10
+          ],
+          "b": [
+            15,
+            12
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            25,
+            20
+          ],
+          "b": [
+            25,
+            22
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            11,
+            14.4
+          ],
+          "b": [
+            11,
+            15.6
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        },
+        {
+          "a": [
+            29,
+            16.4
+          ],
+          "b": [
+            29,
+            17.6
+          ],
+          "type": "solid",
+          "thickness": 0.2
+        }
+      ],
+      "doors": [
+        {
+          "p": [
+            20,
+            4
+          ],
+          "side": 2,
+          "width": 1.4,
+          "name": "LIFT",
+          "kind": "lift"
+        },
+        {
+          "p": [
+            14,
+            16.8
+          ],
+          "side": 1,
+          "width": 1.2,
+          "name": "PRINT / COPY",
+          "kind": "door"
+        },
+        {
+          "p": [
+            8,
+            15.2
+          ],
+          "side": 3,
+          "width": 1.2,
+          "name": "PRINT / COPY",
+          "kind": "door"
+        },
+        {
+          "p": [
+            14,
+            20
+          ],
+          "side": 1,
+          "width": 1.2,
+          "name": "KITCHEN",
+          "kind": "door"
+        },
+        {
+          "p": [
+            10,
+            22
+          ],
+          "side": 2,
+          "width": 1.2,
+          "name": "KITCHEN",
+          "kind": "door"
+        },
+        {
+          "p": [
+            8,
+            20
+          ],
+          "side": 3,
+          "width": 1.2,
+          "name": "KITCHEN",
+          "kind": "door"
+        },
+        {
+          "p": [
+            10,
+            22
+          ],
+          "side": 0,
+          "width": 1.2,
+          "name": "WASHROOM",
+          "kind": "door"
+        },
+        {
+          "p": [
+            8,
+            23
+          ],
+          "side": 3,
+          "width": 1.2,
+          "name": "WASHROOM",
+          "kind": "door"
+        },
+        {
+          "p": [
+            32,
+            16.8
+          ],
+          "side": 1,
+          "width": 1.2,
+          "name": "SERVER / ARCHIVE",
+          "kind": "door"
+        },
+        {
+          "p": [
+            26,
+            15.2
+          ],
+          "side": 3,
+          "width": 1.2,
+          "name": "SERVER / ARCHIVE",
+          "kind": "door"
+        },
+        {
+          "p": [
+            30,
+            10
+          ],
+          "side": 0,
+          "width": 1.2,
+          "name": "COFFEE KITCHEN",
+          "kind": "door"
+        },
+        {
+          "p": [
+            32,
+            12
+          ],
+          "side": 1,
+          "width": 1.2,
+          "name": "COFFEE KITCHEN",
+          "kind": "door"
+        },
+        {
+          "p": [
+            26,
+            12
+          ],
+          "side": 3,
+          "width": 1.2,
+          "name": "COFFEE KITCHEN",
+          "kind": "door"
+        },
+        {
+          "p": [
+            32,
+            9
+          ],
+          "side": 1,
+          "width": 1.2,
+          "name": "WASHROOM",
+          "kind": "door"
+        },
+        {
+          "p": [
+            30,
+            10
+          ],
+          "side": 2,
+          "width": 1.2,
+          "name": "WASHROOM",
+          "kind": "door"
+        },
+        {
+          "p": [
+            4,
+            10
+          ],
+          "side": 1,
+          "width": 1.2,
+          "name": "L / LEGAL\nCONFERENCE",
+          "kind": "door"
+        },
+        {
+          "p": [
+            4,
+            14
+          ],
+          "side": 1,
+          "width": 1.2,
+          "name": "L / LEGAL\nCONFERENCE",
+          "kind": "door"
+        },
+        {
+          "p": [
+            2,
+            20
+          ],
+          "side": 0,
+          "width": 1.2,
+          "name": "A / BACK\nOFFICE",
+          "kind": "door"
+        },
+        {
+          "p": [
+            4,
+            24
+          ],
+          "side": 1,
+          "width": 1.2,
+          "name": "A / BACK\nOFFICE",
+          "kind": "door"
+        },
+        {
+          "p": [
+            36,
+            18
+          ],
+          "side": 3,
+          "width": 1.2,
+          "name": "R / REVIEW\nCONFERENCE",
+          "kind": "door"
+        },
+        {
+          "p": [
+            36,
+            22
+          ],
+          "side": 3,
+          "width": 1.2,
+          "name": "R / REVIEW\nCONFERENCE",
+          "kind": "door"
+        },
+        {
+          "p": [
+            38,
+            12
+          ],
+          "side": 2,
+          "width": 1.2,
+          "name": "C / BACK\nOFFICE",
+          "kind": "door"
+        },
+        {
+          "p": [
+            36,
+            8
+          ],
+          "side": 3,
+          "width": 1.2,
+          "name": "C / BACK\nOFFICE",
+          "kind": "door"
+        }
+      ],
+      "covers": [
+        {
+          "r": [
+            1,
+            11.5,
+            2,
+            1
+          ],
+          "height": 1.1,
+          "kind": "counter"
+        },
+        {
+          "r": [
+            37,
+            19.5,
+            2,
+            1
+          ],
+          "height": 1.1,
+          "kind": "counter"
+        },
+        {
+          "r": [
+            1,
+            23.5,
+            2,
+            1
+          ],
+          "height": 1.1,
+          "kind": "counter"
+        },
+        {
+          "r": [
+            37,
+            7.5,
+            2,
+            1
+          ],
+          "height": 1.1,
+          "kind": "counter"
+        },
+        {
+          "r": [
+            29,
+            13.7,
+            2,
+            1
+          ],
+          "height": 1.1,
+          "kind": "counter"
+        },
+        {
+          "r": [
+            10.5,
+            20.7,
+            3,
+            1
+          ],
+          "height": 1.1,
+          "kind": "counter"
+        },
+        {
+          "r": [
+            26.5,
+            10.3,
+            3,
+            1
+          ],
+          "height": 1.1,
+          "kind": "counter"
+        },
+        {
+          "r": [
+            16.5,
+            16,
+            1,
+            2
+          ],
+          "height": 1.1,
+          "kind": "counter"
+        },
+        {
+          "r": [
+            22,
+            17,
+            1,
+            2
+          ],
+          "height": 1.1,
+          "kind": "counter"
+        },
+        {
+          "r": [
+            2,
+            5.3,
+            2,
+            1
+          ],
+          "height": 1.1,
+          "kind": "counter"
+        },
+        {
+          "r": [
+            36,
+            25.7,
+            2,
+            1
+          ],
+          "height": 1.1,
+          "kind": "counter"
+        }
+      ],
+      "benches": [
+        {
+          "r": [
+            8.8,
+            1.2,
+            2.4,
+            1.6
+          ],
+          "height": 1.15
+        },
+        {
+          "r": [
+            12.8,
+            1.2,
+            2.4,
+            1.6
+          ],
+          "height": 1.15
+        },
+        {
+          "r": [
+            24.8,
+            29.2,
+            2.4,
+            1.6
+          ],
+          "height": 1.15
+        },
+        {
+          "r": [
+            28.8,
+            29.2,
+            2.4,
+            1.6
+          ],
+          "height": 1.15
+        },
+        {
+          "r": [
+            0.8,
+            1.2,
+            2.4,
+            1.6
+          ],
+          "height": 1.15
+        },
+        {
+          "r": [
+            36.8,
+            29.2,
+            2.4,
+            1.6
+          ],
+          "height": 1.15
+        }
+      ],
+      "labels": [
+        {
+          "p": [
+            11,
+            15.4
+          ],
+          "text": "PRINT / COPY",
+          "size": 19
+        },
+        {
+          "p": [
+            11,
+            19.4
+          ],
+          "text": "KITCHEN",
+          "size": 19
+        },
+        {
+          "p": [
+            29,
+            15.4
+          ],
+          "text": "SERVER / ARCHIVE",
+          "size": 19
+        },
+        {
+          "p": [
+            29,
+            11.4
+          ],
+          "text": "COFFEE KITCHEN",
+          "size": 19
+        },
+        {
+          "p": [
+            2,
+            9.4
+          ],
+          "text": "L / LEGAL\nCONFERENCE",
+          "size": 19
+        },
+        {
+          "p": [
+            2,
+            21.4
+          ],
+          "text": "A / BACK\nOFFICE",
+          "size": 19
+        },
+        {
+          "p": [
+            38,
+            17.4
+          ],
+          "text": "R / REVIEW\nCONFERENCE",
+          "size": 19
+        },
+        {
+          "p": [
+            38,
+            5.4
+          ],
+          "text": "C / BACK\nOFFICE",
+          "size": 19
+        },
+        {
+          "p": [
+            10,
+            23
+          ],
+          "text": "WC",
+          "size": 14
+        },
+        {
+          "p": [
+            30,
+            9
+          ],
+          "text": "WC",
+          "size": 14
+        },
+        {
+          "p": [
+            20,
+            8
+          ],
+          "text": "LIFT LOBBY > COURT",
+          "size": 16
+        },
+        {
+          "p": [
+            20,
+            23
+          ],
+          "text": "SOUTH CANOPY / 4.3m clear",
+          "size": 13
+        },
+        {
+          "p": [
+            6,
+            30
+          ],
+          "text": "WINDOW HALL",
+          "size": 14
+        },
+        {
+          "p": [
+            34,
+            2
+          ],
+          "text": "WINDOW HALL",
+          "size": 14
+        }
+      ],
+      "districts": [
+        {
+          "p": [
+            7,
+            1
+          ],
+          "letter": "L",
+          "name": "LEGAL / WORK",
+          "color": "#244FB9"
+        },
+        {
+          "p": [
+            33,
+            31
+          ],
+          "letter": "R",
+          "name": "REVIEW / WORK",
+          "color": "#2879EF"
+        },
+        {
+          "p": [
+            2,
+            29.5
+          ],
+          "letter": "A",
+          "name": "ARCHIVE",
+          "color": "#167D77"
+        },
+        {
+          "p": [
+            38,
+            2
+          ],
+          "letter": "C",
+          "name": "CLAIMS",
+          "color": "#725E9D"
+        },
+        {
+          "p": [
+            17,
+            18
+          ],
+          "letter": "H",
+          "name": "COURT",
+          "color": "#244FB9"
+        }
+      ],
+      "circulation": [
+        [
+          5,
+          3,
+          13,
+          2
+        ],
+        [
+          22,
+          3,
+          13,
+          2
+        ],
+        [
+          16,
+          5,
+          2,
+          2
+        ],
+        [
+          16,
+          5,
+          8,
+          2
+        ],
+        [
+          22,
+          5,
+          2,
+          2
+        ],
+        [
+          5,
+          5,
+          2,
+          22
+        ],
+        [
+          33,
+          5,
+          2,
+          22
+        ],
+        [
+          5,
+          27,
+          13,
+          2
+        ],
+        [
+          22,
+          27,
+          13,
+          2
+        ],
+        [
+          16,
+          25,
+          2,
+          2
+        ],
+        [
+          16,
+          25,
+          8,
+          2
+        ],
+        [
+          22,
+          25,
+          2,
+          2
+        ]
+      ],
+      "circulationHoles": [],
+      "lanes": [
+        {
+          "name": "1 / Window Hall",
+          "color": "#2879EF",
+          "p": [
+            [
+              4,
+              4
+            ],
+            [
+              6,
+              4
+            ],
+            [
+              17,
+              4
+            ],
+            [
+              17,
+              6
+            ],
+            [
+              23,
+              6
+            ],
+            [
+              23,
+              4
+            ],
+            [
+              34,
+              4
+            ],
+            [
+              34,
+              28
+            ],
+            [
+              36,
+              28
+            ]
+          ]
+        },
+        {
+          "name": "2 / Court",
+          "color": "#725E9D",
+          "p": [
+            [
+              4,
+              4
+            ],
+            [
+              16,
+              4
+            ],
+            [
+              16,
+              8
+            ],
+            [
+              20,
+              16
+            ],
+            [
+              24,
+              24
+            ],
+            [
+              24,
+              28
+            ],
+            [
+              36,
+              28
+            ]
+          ]
+        },
+        {
+          "name": "3 / Copy + Archive",
+          "color": "#167D77",
+          "p": [
+            [
+              4,
+              4
+            ],
+            [
+              6,
+              4
+            ],
+            [
+              6,
+              15.2
+            ],
+            [
+              8,
+              15.2
+            ],
+            [
+              9.5,
+              15.2
+            ],
+            [
+              9.5,
+              16.8
+            ],
+            [
+              14,
+              16.8
+            ],
+            [
+              16,
+              16.8
+            ],
+            [
+              16,
+              23
+            ],
+            [
+              24,
+              23
+            ],
+            [
+              24,
+              15.2
+            ],
+            [
+              26,
+              15.2
+            ],
+            [
+              30.5,
+              15.2
+            ],
+            [
+              30.5,
+              16.8
+            ],
+            [
+              32,
+              16.8
+            ],
+            [
+              34,
+              16.8
+            ],
+            [
+              34,
+              28
+            ],
+            [
+              36,
+              28
+            ]
+          ]
+        }
+      ],
+      "loops": [
+        [
+          [
+            6,
+            4
+          ],
+          [
+            17,
+            4
+          ],
+          [
+            17,
+            6
+          ],
+          [
+            23,
+            6
+          ],
+          [
+            23,
+            4
+          ],
+          [
+            34,
+            4
+          ],
+          [
+            34,
+            28
+          ],
+          [
+            23,
+            28
+          ],
+          [
+            23,
+            26
+          ],
+          [
+            17,
+            26
+          ],
+          [
+            17,
+            28
+          ],
+          [
+            6,
+            28
+          ],
+          [
+            6,
+            4
+          ]
+        ]
+      ],
+      "nodes": [
+        {
+          "p": [
+            20,
+            6
+          ],
+          "id": "N1",
+          "name": "Lift Lobby"
+        },
+        {
+          "p": [
+            20,
+            16
+          ],
+          "id": "N2",
+          "name": "Court / Case"
+        },
+        {
+          "p": [
+            6,
+            20
+          ],
+          "id": "N3",
+          "name": "Kitchen"
+        },
+        {
+          "p": [
+            34,
+            12
+          ],
+          "id": "N4",
+          "name": "Coffee"
+        },
+        {
+          "p": [
+            16,
+            8
+          ],
+          "id": "N5",
+          "name": "Legal Entry"
+        },
+        {
+          "p": [
+            24,
+            24
+          ],
+          "id": "N6",
+          "name": "Review Entry"
+        }
+      ],
+      "landmarks": [
+        {
+          "p": [
+            15,
+            6
+          ],
+          "id": "K1",
+          "name": "Lift lightbox"
+        },
+        {
+          "p": [
+            20,
+            13.4
+          ],
+          "id": "K2",
+          "name": "Feature + glass bridge"
+        },
+        {
+          "p": [
+            3,
+            6
+          ],
+          "id": "K3",
+          "name": "Legal reception"
+        },
+        {
+          "p": [
+            37,
+            26
+          ],
+          "id": "K4",
+          "name": "Review reception"
+        }
+      ],
+      "carrier": [
+        {
+          "name": "F / exposed feature",
+          "color": "#244FB9",
+          "p": [
+            [
+              20,
+              16
+            ],
+            [
+              24.6,
+              16
+            ],
+            [
+              24.6,
+              13.4
+            ],
+            [
+              23.6,
+              13.4
+            ]
+          ],
+          "up": "F",
+          "approachMetres": 8.200000000000001
+        },
+        {
+          "name": "E1 / print flank",
+          "color": "#167D77",
+          "p": [
+            [
+              20,
+              16
+            ],
+            [
+              15,
+              16
+            ],
+            [
+              15,
+              16.8
+            ],
+            [
+              14,
+              16.8
+            ],
+            [
+              9.2,
+              16.8
+            ],
+            [
+              9.2,
+              14
+            ]
+          ],
+          "up": "E1",
+          "approachMetres": 14.400000000000002
+        },
+        {
+          "name": "E2 / archive flank",
+          "color": "#167D77",
+          "p": [
+            [
+              20,
+              16
+            ],
+            [
+              25,
+              16
+            ],
+            [
+              25,
+              15.2
+            ],
+            [
+              26,
+              15.2
+            ],
+            [
+              30.8,
+              15.2
+            ],
+            [
+              30.8,
+              18
+            ]
+          ],
+          "up": "E2",
+          "approachMetres": 14.400000000000002
+        },
+        {
+          "name": "L / shaft reservation only",
+          "color": "#725E9D",
+          "p": [
+            [
+              20,
+              16
+            ],
+            [
+              20,
+              6
+            ],
+            [
+              20,
+              4
+            ]
+          ],
+          "up": "LIFT",
+          "approachMetres": 12
+        }
+      ],
+      "baffles": [
+        {
+          "a": [
+            20,
+            4
+          ],
+          "b": [
+            20,
+            5
+          ]
+        },
+        {
+          "a": [
+            20,
+            27
+          ],
+          "b": [
+            20,
+            32
+          ]
+        },
+        {
+          "a": [
+            4,
+            0
+          ],
+          "b": [
+            4,
+            2
+          ]
+        },
+        {
+          "a": [
+            36,
+            30
+          ],
+          "b": [
+            36,
+            32
+          ]
+        },
+        {
+          "a": [
+            0,
+            19
+          ],
+          "b": [
+            2,
+            19
+          ]
+        },
+        {
+          "a": [
+            38,
+            13
+          ],
+          "b": [
+            40,
+            13
+          ]
+        },
+        {
+          "a": [
+            15,
+            10
+          ],
+          "b": [
+            15,
+            12
+          ]
+        },
+        {
+          "a": [
+            25,
+            20
+          ],
+          "b": [
+            25,
+            22
+          ]
+        },
+        {
+          "a": [
+            11,
+            14.4
+          ],
+          "b": [
+            11,
+            15.6
+          ]
+        },
+        {
+          "a": [
+            29,
+            16.4
+          ],
+          "b": [
+            29,
+            17.6
+          ]
+        }
+      ],
+      "tagline": "A dependable ring; a visible court; two inhabited cores; three routes through the office.",
+      "atrium": [
+        16,
+        10,
+        8,
+        12
+      ],
+      "feature": {
+        "x": 16.4,
+        "y": 12.4,
+        "w": 7.2,
+        "run": 2,
+        "foot": [
+          23.6,
+          13.4
+        ],
+        "top": [
+          16.4,
+          13.4
+        ],
+        "orientation": "east-west; west end up"
+      },
+      "bridgePort": [
+        40,
+        14.8
+      ],
+      "rotatedBridgePort": [
+        0,
+        17.2
+      ],
+      "spawnA": [
+        4,
+        4
+      ],
+      "spawnB": [
+        36,
+        28
+      ],
+      "entryA": [
+        16,
+        8
+      ],
+      "entryB": [
+        24,
+        24
+      ],
+      "case": [
+        20,
+        16
+      ],
+      "caseApproaches": [
+        {
+          "name": "Firm A to case",
+          "p": [
+            [
+              4,
+              4
+            ],
+            [
+              16,
+              4
+            ],
+            [
+              16,
+              8
+            ],
+            [
+              20,
+              16
+            ]
+          ]
+        },
+        {
+          "name": "Firm B to case",
+          "p": [
+            [
+              36,
+              28
+            ],
+            [
+              24,
+              28
+            ],
+            [
+              24,
+              24
+            ],
+            [
+              20,
+              16
+            ]
+          ]
+        }
+      ],
+      "rotations": [
+        {
+          "name": "Print to archive via court",
+          "p": [
+            [
+              14,
+              16.8
+            ],
+            [
+              15,
+              16.8
+            ],
+            [
+              15,
+              16
+            ],
+            [
+              25,
+              16
+            ],
+            [
+              25,
+              15.2
+            ],
+            [
+              26,
+              15.2
+            ]
+          ]
+        },
+        {
+          "name": "Enclosed stair entries",
+          "p": [
+            [
+              9.2,
+              14
+            ],
+            [
+              9.2,
+              16.8
+            ],
+            [
+              14,
+              16.8
+            ],
+            [
+              15,
+              16.8
+            ],
+            [
+              15,
+              16
+            ],
+            [
+              25,
+              16
+            ],
+            [
+              25,
+              15.2
+            ],
+            [
+              26,
+              15.2
+            ],
+            [
+              30.8,
+              15.2
+            ],
+            [
+              30.8,
+              18
+            ]
+          ]
+        },
+        {
+          "name": "Court entry A to entry B",
+          "p": [
+            [
+              16,
+              8
+            ],
+            [
+              20,
+              16
+            ],
+            [
+              24,
+              24
+            ]
+          ]
+        }
+      ],
+      "gates": [
+        {
+          "id": "G1",
+          "a": [
+            8,
+            14
+          ],
+          "b": [
+            14,
+            14
+          ],
+          "name": "E1 south arrival"
+        },
+        {
+          "id": "G2",
+          "a": [
+            26,
+            18
+          ],
+          "b": [
+            32,
+            18
+          ],
+          "name": "E2 north arrival"
+        },
+        {
+          "id": "GF",
+          "a": [
+            16.4,
+            12.4
+          ],
+          "b": [
+            16.4,
+            14.4
+          ],
+          "name": "Feature west arrival"
+        }
+      ],
+      "bridge": [
+        16,
+        10,
+        8,
+        2.4
+      ],
+      "canopy": [
+        18,
+        20,
+        4,
+        2
+      ],
+      "props": [
+        [
+          11,
+          3
+        ],
+        [
+          15,
+          3
+        ],
+        [
+          25,
+          29
+        ],
+        [
+          29,
+          29
+        ],
+        [
+          1,
+          6
+        ],
+        [
+          39,
+          26
+        ],
+        [
+          3,
+          17
+        ],
+        [
+          37,
+          15
+        ],
+        [
+          11,
+          19
+        ],
+        [
+          29,
+          13
+        ],
+        [
+          2,
+          26
+        ],
+        [
+          38,
+          6
+        ]
+      ],
+      "void": [
+        16,
+        12.4,
+        8,
+        7.2
+      ],
+      "landings": [
+        [
+          16,
+          10,
+          8,
+          2.4
+        ],
+        [
+          16,
+          19.6,
+          8,
+          2.4
+        ],
+        [
+          14.4,
+          12.4,
+          2,
+          2
+        ],
+        [
+          23.6,
+          12.4,
+          2,
+          2
+        ]
+      ],
+      "sightlines": [
+        {
+          "id": "S1",
+          "a": [
+            0.5499999999999999,
+            5.5
+          ],
+          "b": [
+            35.65,
+            5.5
+          ],
+          "length": 35.1
+        },
+        {
+          "id": "S2",
+          "a": [
+            4.35,
+            26.5
+          ],
+          "b": [
+            39.45,
+            26.5
+          ],
+          "length": 35.1
+        },
+        {
+          "id": "S3",
+          "a": [
+            35.67110758272493,
+            10.255736815897782
+          ],
+          "b": [
+            4.328892417275071,
+            21.663370212088296
+          ],
+          "length": 33.35368871922919
+        },
+        {
+          "id": "S4",
+          "a": [
+            4.442351660256832,
+            1.8500767821081405
+          ],
+          "b": [
+            35.85589200756174,
+            8.527230908213784
+          ],
+          "length": 32.1153375254803
+        },
+        {
+          "id": "S5",
+          "a": [
+            4.144107992438254,
+            23.472769091786216
+          ],
+          "b": [
+            35.55764833974317,
+            30.14992321789186
+          ],
+          "length": 32.1153375254803
+        }
+      ],
+      "stats": {
+        "gross": 1280,
+        "core": 120,
+        "coreWithinShell": 119.2,
+        "stairBay": 96,
+        "void": 56,
+        "planningNia": 1076.16,
+        "primaryCirculation": 224,
+        "circulationPercent": 20.814748736247395,
+        "primaryGrossPercent": 17.5,
+        "rooms": 10,
+        "twoExitRooms": 10,
+        "straightCrossSeconds": 4.444444444444445,
+        "longestSurveyedSightline": 35.1,
+        "looseProps": 12,
+        "featureFlight3D": 8.490583018850943,
+        "escapeStair3D": 16.090583018850943
+      }
+    }
+  ]
+}

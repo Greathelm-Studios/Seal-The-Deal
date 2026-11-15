@@ -3,6 +3,7 @@
 //  Generator : Claude Opus 5.5 (Claude Code)
 //  Generated : 2026-11-12
 //  Prompt    : Alex: "yes, try it" (fake bounce light, the biggest remaining "Unity look" tell)
+//  Modified  : Claude Opus 5.5, 2026-11-15 — the L2 floor plan's 40 × 32 m plate (KitOfficeScene).
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Fakes the light that sun patches throw back into the room. Real time lighting in
 //              URP has no bounce, so a bright patch on the floor leaves the ceiling and walls
@@ -39,12 +40,12 @@ namespace CloseTheDeal.Editor.Art
         const string GroupName = "Bounce Lights";
         const string KitRootName = "Kit Office";
 
-        /// <summary>Façade bays across the floor (KitOfficeScene: 8 × 4 m since the labyrinth, 2026-11-13).</summary>
-        const int Bays = 8;
+        /// <summary>Façade bays across the floor (KitOfficeScene: 10 × 4 m since the L2 plan, 2026-11-15).</summary>
+        const int Bays = 10;
         /// <summary>Bay width along the façade, metres (KitOfficeScene.Bay).</summary>
         const float Bay = 4f;
-        /// <summary>Room size, metres (KitOfficeScene's labyrinth: 32 m wide, 24 m deep, since 2026-11-13).</summary>
-        const float RoomWidth = 32f, RoomDepth = 24f;
+        /// <summary>Room size, metres (KitOfficeScene's L2 plan: 40 m wide, 32 m deep, since 2026-11-15).</summary>
+        const float RoomWidth = 40f, RoomDepth = 32f;
         /// <summary>Top of the window sill, metres above the floor (GreyboxTowerSetup.SillHeight, 0.6 since 2026-11-12).</summary>
         const float SillHeight = 0.6f;
         /// <summary>Floor to ceiling, metres: the window glass runs from the sill to here (KitOfficeScene.ClearHeight).</summary>
@@ -58,7 +59,7 @@ namespace CloseTheDeal.Editor.Art
         /// (OfficeLook.AmbientLevel), 4 gives the ceiling a clear lift over the sun patches that
         /// fades toward the back of the room. Chosen by Alex from a sweep of 2.4 to 5, 2026-11-12.
         /// </summary>
-        const float Intensity = 4f;
+        const float Intensity = 2.5f;   // was 4: the bounce lifted every ceiling evenly (2026-11-15 evening, Alex: "too evenly lit")
         /// <summary>How far each light reaches, metres: the ceiling above it and the walls of its bay.</summary>
         const float Range = 7f;
         /// <summary>Cone, degrees. Nearly a hemisphere, so it reads as light thrown up off a surface.</summary>

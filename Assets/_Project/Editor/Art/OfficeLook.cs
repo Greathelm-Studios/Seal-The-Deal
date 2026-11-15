@@ -18,6 +18,11 @@
 //              blows out and glows; the post-processing profile is now updated in place.
 //  Modified  : Claude Opus 5.5 (Claude Code), 2026-11-14 — AEROSET reference (Alex): stronger sun, less and less blue
 //              ambient, whiter filter, more saturation and bloom. Sky untouched.
+//  Modified  : Claude Opus 5.5 (Claude Code), 2026-11-15 — softer bloom (threshold 1.2, intensity 0.3): Alex found it harsh.
+//  Modified  : Claude Opus 5.5, 2026-11-15 — near-neutral fill, more exposure, less blue in the grade, half the
+//              grain: pearl props read white as in the concept sheets (Alex handed the lighting over).
+//  Modified  : Claude Opus 5.5, 2026-11-15 evening — exposure 1.0, fill 0.5, contrast 18, bloom threshold 1.5:
+//              less glare, more light and dark (Alex: "overly bright and too evenly lit").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Gives any open scene the art bible's lighting in one menu step: blue procedural
 //              sky, sun raking along the street, bright cool ambient so white ceilings stay
@@ -106,14 +111,15 @@ namespace CloseTheDeal.Editor.Art
 
         /// <summary>Ambient from above: the open sky's blue, lighting floors and anything facing up.</summary>
         // 2026-11-14 (AEROSET reference: "less blue ambient fill"): each term moved a third of the way to neutral.
-        static readonly Color AmbientSky = Hex(0xDAE4F2);
+        // 2026-11-15 (props concept sheets vs KitOffice: pearl white read flat grey-blue; Alex handed the lighting over): near neutral, a breath of cool, so pearl white reads white with a soft top-down gradient (was DAE4F2).
+        static readonly Color AmbientSky = Hex(0xF3F4F6);   // second step, same day: was EEF1F6 (shaded pearl still read cool-grey)
         /// <summary>Ambient from the horizon: lights walls. A little paler than the sky term so walls stay the lightest shade.</summary>
-        static readonly Color AmbientEquator = Hex(0xDCE5F2);
+        static readonly Color AmbientEquator = Hex(0xF2F3F5);   // was DCE5F2, then EDF0F4 (2026-11-15, see AmbientSky)
         /// <summary>
         /// Ambient from below: this is what lights ceilings. Kept bright, because there are still no
         /// ceiling lights and a dark ceiling was the Greybox review's main complaint, but blue.
         /// </summary>
-        static readonly Color AmbientGround = Hex(0xD2DCEA);
+        static readonly Color AmbientGround = Hex(0xEAECEF);   // was D2DCEA, then E4E8EE; darker than the sky term: the top-down gradient
         /// <summary>
         /// How strong the ambient light is, 0–1, applied to all three colours above. WHY 0.6: at
         /// full strength the ambient lit every surface the same, so the room read flat (a "Unity
@@ -122,7 +128,10 @@ namespace CloseTheDeal.Editor.Art
         /// from a sweep, 2026-11-12, together with BounceLight's strength of 4. 0.5 since 2026-11-14 so the stronger
         /// sun, not the fill, lights the room (AEROSET reference).
         /// </summary>
-        const float AmbientLevel = 0.5f;
+        /// <remarks>0.6 since 2026-11-15: the neutral fill carries the shade side of pearl props (was 0.5).</remarks>
+        // 0.42 since 2026-11-15 evening (Alex: "overly bright and too evenly lit, hurts my eyes"): the neutral fill flattened the room. The colours stay neutral so white props stay white;
+        // only the amount drops, so shade reads as shade and the light pools carry the rhythm.
+        const float AmbientLevel = 0.5f;   // 0.42 read dull grey in shade; 0.5 keeps it Aero
 
         // ---- Haze -------------------------------------------------------------------------
 
@@ -151,7 +160,10 @@ namespace CloseTheDeal.Editor.Art
         /// found the interior wants about 1.3, but past about 0.8 the outdoor sky washes out, so
         /// 1.1 is taken and the sky is cancelled back out (see <see cref="SkyExposureComp"/>).
         /// </summary>
-        const float PostExposure = 1.1f;
+        /// <remarks>1.25 since 2026-11-15: a little more on whites, as the concept sheets (was 1.1). The sky keeps
+        /// its look through <see cref="SkyExposureComp"/>.</remarks>
+        /// <remarks>1.0 after a first try at 0.85 read dull grey; first lowered 2026-11-15 evening (Alex: "overly bright and too evenly lit, hurts my eyes"): pearl and white surfaces were clipping. Was 1.25.</remarks>
+        const float PostExposure = 1.0f;
         /// <summary>
         /// The exposure the sky is shown at, stops: the sky is scaled so it looks as it would at
         /// this exposure, whatever <see cref="PostExposure"/> is. WHY 0.6: the sky was designed at
@@ -166,7 +178,7 @@ namespace CloseTheDeal.Editor.Art
         /// </summary>
         static readonly float SkyExposureComp = Mathf.Pow(2f, -(PostExposure - SkyShownExposure));
         /// <summary>Contrast, -100..100. Up from 10 so hard shadow edges and dark suits bite.</summary>
-        const float Contrast = 12f;
+        const float Contrast = 18f;   // was 12: light and dark separate again at the lower fill (2026-11-15 evening)
         /// <summary>
         /// Saturation, -100..100. WHY only 6: the cast already comes from four places (ambient, filter,
         /// white balance, shadow tone). At 14 they stacked into a solid blue wash: royal-blue carpet
@@ -176,34 +188,37 @@ namespace CloseTheDeal.Editor.Art
         /// </summary>
         const float Saturation = 16f;
         /// <summary>A pale cyan-blue multiplied over the whole frame: the references' overall cast.</summary>
-        static readonly Color ColourFilter = Hex(0xF7FAFF);   // whiter since 2026-11-14 (see Saturation)
+        static readonly Color ColourFilter = Hex(0xFAFBFD);   // nearer white 2026-11-15 (was F7FAFF);   // whiter since 2026-11-14 (see Saturation)
         /// <summary>White balance temperature, -100..100. Negative = cooler.</summary>
-        const float Temperature = -6f;
+        const float Temperature = -2f;   // was -6: the cool cast now comes only from the faint filter (2026-11-15)
         /// <summary>White balance tint, -100..100. Slightly negative pulls the blue toward cyan, as in the references.</summary>
-        const float Tint = -3f;
+        const float Tint = -1f;   // was -3 (2026-11-15)
         /// <summary>
         /// Shadows, midtones, highlights: a colour multiplier each (x,y,z = red, green, blue; w is
         /// an offset, unused). Shade is pushed blue-cyan, highlights left just warm of neutral, so
         /// sunlit white stays white instead of going blue with everything else.
         /// </summary>
-        static readonly Vector4 ShadowsTone = new Vector4(0.92f, 0.99f, 1.08f, 0f);
+        // 2026-11-15: shade a third as blue as before (was 0.92, 0.99, 1.08), so a white prop's shaded side stays pearl.
+        static readonly Vector4 ShadowsTone = new Vector4(0.99f, 1.00f, 1.01f, 0f);   // second step: was 0.97, 1, 1.03
         static readonly Vector4 MidtonesTone = new Vector4(0.98f, 1.00f, 1.02f, 0f);
         static readonly Vector4 HighlightsTone = new Vector4(1.02f, 1.00f, 0.99f, 0f);
         /// <summary>
         /// Lift: raises the darkest values and tints them blue (x,y,z = tint, w = how much to
         /// raise). WHY: nothing in the references is black; their deepest shade is a milky blue.
         /// </summary>
-        static readonly Vector4 Lift = new Vector4(0.97f, 1.00f, 1.05f, 0.012f);
-        /// <summary>Bloom brightness threshold (gamma space). Below 1 so every sunlit white surface glows, as in the references.</summary>
-        const float BloomThreshold = 0.95f;
+        static readonly Vector4 Lift = new Vector4(1.00f, 1.00f, 1.01f, 0.012f);   // was 0.97, 1, 1.05 (2026-11-15)
+        /// <summary>Bloom brightness threshold (gamma space). 1.2 since 2026-11-15 (Alex: "the bloom effect is too
+        /// harsh"): above white, so the white walls and floor no longer glow; only real highlights do (sun on glass,
+        /// light strips, the brightest sun patches). It was 0.95, which made every sunlit white surface bloom.</summary>
+        const float BloomThreshold = 1.5f;   // 1.5 since 2026-11-15 evening: no glare off the glossy floor's sun reflections
         /// <summary>Bloom strength. Strong: the glow off the sun patches is the references' signature.</summary>
-        const float BloomIntensity = 0.75f;   // 0.55 until 2026-11-14; AEROSET's glints and hot sun patches
+        const float BloomIntensity = 0.2f;   // 0.75 on 2026-11-14 read harsh (Alex, 2026-11-15); glints only now
         /// <summary>Bloom spread, 0..1. Wide and soft.</summary>
         const float BloomScatter = 0.78f;
         /// <summary>Bloom tint: faintly blue, so the glow belongs to the cast.</summary>
         static readonly Color BloomTint = Hex(0xE3EFFF);
         /// <summary>Film grain strength, 0..1. Faint: the references have a fine photographic grain.</summary>
-        const float GrainIntensity = 0.16f;
+        const float GrainIntensity = 0.08f;   // halved 2026-11-15: it pooled as dark noise at prop bases with the SSAO
         /// <summary>Film grain response, 0..1. High = grain mostly in the shade, little in the blown highlights.</summary>
         const float GrainResponse = 0.8f;
 
