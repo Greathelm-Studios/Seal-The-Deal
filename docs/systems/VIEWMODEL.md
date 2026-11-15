@@ -139,7 +139,7 @@ What keeps it comfortable: the view's direction still comes from the mouse alone
 The head itself is shrunk to almost nothing on the owner's screen ([BodyViewHead.cs](../../Assets/_Project/Scripts/Player/Viewmodel/BodyViewHead.cs)), because the character's meshes are split by material and there is no head mesh to hide.
 Drops of blood that would start within half a metre of the eye are left out, so being hit does not fill the screen with red squares.
 
-Tuning, on the viewmodel profile under "Body view": **Head follow** (the share of quick head movement the eye takes; 0 = a gliding eye), **Smoothing** (seconds to settle onto where the head has moved to), **Forward** (how far in front of the head bone the eye sits) and **Max offset** (the most quick movement the eye may take).
+Tuning, on the viewmodel profile under "Body view": **Head follow** (the share of quick head movement the eye takes; 0 = a gliding eye), **Smoothing** (seconds to settle onto where the head has moved to), **Forward** (how far in front of the head bone the eye sits) and **Max offset** (the most quick movement the eye may take), and **Gun shift** (where the gun is held, measured from the usual view's framing: right, up, further out).
 
 Checked on 2026-11-15 by driving the player with scripted keys as host and reading six frames of each move: walk, sprint, strafe left and right, backward, a running jump, a 300 degrees a second spin, looking down while walking, looking up while sprinting, sprint-strafing while spinning, a melee hit, a shot, a reload and a two-handed walk. Looked at closely: sprint, backward, spin, looking down, the wild one and the melee hit. What the first pass showed and what was done:
 
@@ -149,8 +149,9 @@ Checked on 2026-11-15 by driving the player with scripted keys as host and readi
 | The view filled with the inside of the suit while spinning and strafing | The eye followed only a third of the head's movement, so the body leaned up to 38 cm away from it (45 cm on a melee hit) | The eye follows the settled head in full, slowly; measured afterwards 20 cm in a sprint and 33 cm at worst, at the start of a backward run and on a melee hit |
 | Red squares across the screen when hit | Drops spawned 20 cm from the eye | Drops near the eye are left out |
 | A lean would have moved the eye twice | The real head already leans with the body | The camera's own sideways slide is off in the body view; the tilt stays |
+| The gun slid down and out of the bottom of the view when walking or backing up (Harvey: "The arm definitely needs to come out more") | The body's gun was placed from the steady eye point, but the eye in this view rides on the real head, which leans away from that point | For the owner in the body view the gun is placed from the eye that is looking and along its look, lifted 7 cm, 4 cm toward the middle and 4 cm further out, and the eye sits 7 cm in front of the head bone instead of 10. Seen afterwards standing, sprinting, backing up, strafing, spinning, and looking 35 degrees down and 30 up: the arm and gun stay in the lower right of the frame in all of them |
 
-Still rough, and for a person to judge: the gun hangs low in the body's carry and drops out of the bottom of the view when walking or backing up; looking straight down shows the chest, shirt and tie but not the legs; a melee hit throws the sleeve across the view; the owner's own shadow has no head; the body's gun has no kick, reload move or sway; nothing was judged in motion by a person or seen from a client.
+Still rough, and for a person to judge: looking straight down shows the chest, shirt and tie but not the legs; a melee hit throws the sleeve across the view; the owner's own shadow has no head; the body's gun has no kick, reload move or sway; nothing was judged in motion by a person or seen from a client.
 
 ## Known limitations
 

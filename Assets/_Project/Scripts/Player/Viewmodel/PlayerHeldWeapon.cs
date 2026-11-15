@@ -8,6 +8,9 @@
 //              two handed system").
 //  Modified  : Claude Fable 5.2, 2026-11-14 — the weapon in the hand can be swapped while playing,
 //              for weapon code to drive (Harvey: "Take the best option and get it ready").
+//  Modified  : Claude Fable 5.2, 2026-11-15 — in the body view the owner's gun is placed from the
+//              eye that is looking, lifted and brought in (Harvey: "The arm definitely needs
+//              to come out more").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Added to the player's smoothed visual when the player spawns. Makes the body
 //              everyone else sees (and the player's own shadow and mirror image) hold the
@@ -284,8 +287,23 @@ namespace CloseTheDeal.Player
                 aim = transform.forward;
             Quaternion look = Quaternion.LookRotation(aim, up);
 
+            // In the body view the owner looks out of this body, and the eye there rides on the
+            // real head, which leans into a run and back out of one. Placing the gun from the
+            // steady point left it sliding down and out of the bottom of that view (seen in
+            // play: gone when backing up). So for the owner in that view the gun is placed from
+            // the eye that is actually looking, and along its look rather than the ticked aim,
+            // which steps at the tick rate and would make the gun judder against a smooth view.
+            PlayerCamera bodyEye = PlayerMotor.Local == _motor && PlayerViewmodel.BodyView ? PlayerCamera.Instance : null;
+            Vector3 rest = _view.RestPosition;
+            if (bodyEye != null)
+            {
+                eye = bodyEye.transform.position;
+                look = Quaternion.LookRotation(bodyEye.transform.forward, up);
+                rest += _profile.BodyViewGunShift;
+            }
+
             Quaternion gunRotation = look * _view.RestTurn;
-            Vector3 gunPosition = eye + look * _view.RestPosition;
+            Vector3 gunPosition = eye + look * rest;
 
             Vector3 wrist = gunPosition + gunRotation * _gripPosition;
 

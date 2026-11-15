@@ -192,9 +192,12 @@ namespace CloseTheDeal.Player
         [Range(0.01f, 0.5f)] public float BodyViewSmoothing = 0.12f;
 
         [Tooltip("How far in front of the head bone the eye sits in the body view, in metres: where the face is. Raise it if you can see inside your own collar or shoulders; lower it if your arms look too short.")]
-        [Range(0f, 0.3f)] public float BodyViewForward = 0.10f;
+        [Range(0f, 0.3f)] public float BodyViewForward = 0.07f;
 
         [Tooltip("The most quick head movement the eye may take in the body view, in metres, before the share above is applied. A cap so a hard hit cannot throw the view about.")]
         [Range(0f, 0.5f)] public float BodyViewMaxOffset = 0.15f;
+
+        [Tooltip("Where the gun is held in the body view, measured from where the usual view frames it, in metres: X right (negative = toward the middle of the screen), Y up, Z further out. Raise Y to bring the arm up into view; the arm cannot reach further than its own length, so a large Z only straightens it.")]
+        public Vector3 BodyViewGunShift = new Vector3(-0.04f, 0.07f, 0.04f);
     }
 }
