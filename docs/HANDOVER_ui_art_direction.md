@@ -65,6 +65,14 @@ All code is on the **local branch `buffer`** (worktree `.claude/worktrees/buffer
 - No AI co-author lines in commit messages (`AGENTS.md` §9).
 - AgentHub channel `Greathelm-Studios/Seal-The-Deal`. Alex's agents are `kr0meee-…`, Harvey's `sixnationn-…`.
 
+## Since this was written (2026-11-15, afternoon)
+
+- **Everything is in `main` on GitHub** (fast-forwarded to `buffer`): Adam's lanes, Harvey's `harvey-netcode` and Alex's `Alex_Env`.
+- **Movement now belongs to Harvey.** Don't change movement or the motor; UI that reads movement (crosshair feed, controls card) stays UI work.
+- **Tool fix, waiting to land:** branch `tool-guards` (local, 8 commits, compiles, not pushed) makes every editor tool keep hand-edited work; see `docs/TOOLS_RESPECT_EDITS.md` on that branch. **Hold it until Alex commits his new floor layout** (L2): his uncommitted edits touch the same kit tools, mainly `KitImport.cs`. After it lands, Adam runs the five "Close the Deal > Tools > Mark … as Tool-Made" menus once.
+- **Unfinished, saved on local branches only:** `claude/lane-ui` (in-game menu follow-up) and `claude/lane-gunhold-e2156d` (gun held at the hip), each one WIP commit made with hooks skipped. Not reviewed or compiled; don't merge as is.
+- **F5 body view** needs Harvey's `PlayerViewmodel` on the player (`Close the Deal > Greybox > Rebuild Viewmodel`, add-only).
+
 ## Open questions for Adam
 
 - Merge `buffer` into `main`? (It is pushed as `origin/buffer`.)
