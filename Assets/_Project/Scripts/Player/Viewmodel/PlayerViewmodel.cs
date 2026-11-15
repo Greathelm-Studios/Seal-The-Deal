@@ -331,14 +331,13 @@ namespace CloseTheDeal.Player
         /// <summary>What the body view was the last time this player applied it; null before the first time.</summary>
         bool? _appliedBodyView;
         Transform _head;
-        Vector3 _headScale;
+        BodyViewHead _headHider;
 
         /// <summary>Applies the body view, or undoes it, for the player this machine controls.</summary>
         /// <remarks>
-        /// WHY the head is shrunk to nothing rather than hidden: the character is seven meshes
-        /// split by material, not by body part, so there is no head mesh to switch off, and the
-        /// eye is inside it. A head bone at zero size folds the face, hair and eye cards into a
-        /// point behind the eye. Known cost: the owner's own shadow has no head.
+        /// The head is shrunk to nothing by <see cref="BodyViewHead"/>, which folds the face,
+        /// hair and eye cards into a point behind the eye. Known cost: the owner's own shadow
+        /// has no head.
         /// </remarks>
         void ApplyBodyView(bool on)
         {
@@ -347,13 +346,20 @@ namespace CloseTheDeal.Player
 
             if (_head == null)
             {
-                var avatar = GetComponentInChildren<Animator>(true);
-                _head = avatar != null && avatar.isHuman ? avatar.GetBoneTransform(HumanBodyBones.Head) : null;
-                if (_head != null)
-                    _headScale = _head.localScale;
+                var animator = GetComponentInChildren<PlayerAnimator>(true);
+                _head = animator != null ? animator.HeadBone : null;
+                if (_head == null && on)
+                    _appliedBodyView = null; // The skeleton is not found yet: try again next frame.
             }
             if (_head != null)
-                _head.localScale = on ? Vector3.zero : _headScale;
+            {
+                if (_headHider == null)
+                    _headHider = gameObject.AddComponent<BodyViewHead>();
+                if (on)
+                    _headHider.Hide(_head);
+                else
+                    _headHider.Release();
+            }
 
             PlayerCamera eye = PlayerCamera.Instance;
             if (eye == null)

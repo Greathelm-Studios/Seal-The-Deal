@@ -75,15 +75,17 @@ namespace CloseTheDeal.Player
         /// on a fixed point, so the player looks out of their own body.
         /// </summary>
         /// <param name="headBone">The character's head bone.</param>
-        /// <param name="follow">Share of the head's movement the eye takes, 0 to 1. 0 = the eye stays on the steady point.</param>
-        /// <param name="smoothSeconds">How long the eye takes to catch the head up, seconds. Higher = smoother and laggier.</param>
-        /// <param name="forward">How far in front of the steady point the eye sits, metres, so the collar and shoulders are behind it.</param>
-        /// <param name="maxOffset">The furthest the head may pull the eye from the steady point, metres.</param>
+        /// <param name="follow">Share of the head's quick movement (step bob, a hit's jolt) the eye takes, 0 to 1. 0 = none of it.</param>
+        /// <param name="smoothSeconds">How long the eye takes to settle onto where the head has moved to, seconds. Higher = steadier and laggier.</param>
+        /// <param name="forward">How far in front of the head bone the eye sits, metres: the face, so the collar and shoulders are behind it.</param>
+        /// <param name="maxOffset">The most quick movement the eye may take, metres, before the share is applied.</param>
         /// <remarks>
         /// WHY the eye is not simply parented to the head bone: the head bobs with every step,
         /// leads turns and is thrown about by hits, and a camera that does all of that makes
-        /// people feel sick. The view's direction always comes from the mouse alone; only the
-        /// eye's position takes a damped, capped share of the head's movement.
+        /// people feel sick. The view's direction always comes from the mouse alone. The eye's
+        /// position follows the head fully but slowly, and only a capped share of anything
+        /// quick. The first version followed a third of everything; in a sprint the body then
+        /// leaned 30 cm ahead of the eye and the player saw the back of their own head.
         /// </remarks>
         public void SetBodyView(Transform headBone, float follow, float smoothSeconds, float forward, float maxOffset)
         {
@@ -158,15 +160,21 @@ namespace CloseTheDeal.Player
             Vector3 head = _target.position + Vector3.up * _motor.EyeHeight;
             if (_headBone != null)
             {
-                // Where the real eyes are, measured from the steady point; the eye takes a
-                // damped, capped share of that, and sits a little forward of the neck.
-                Vector3 real = _headBone.position + _headBone.up * HeadBoneToEyes - head;
-                real = Vector3.ClampMagnitude(real, _headMaxOffset);
+                // Where the real eyes are, measured from the steady point: on the front of the
+                // real head, which tips forward with a run and down with a look at the floor.
+                Vector3 real = _headBone.position + _headBone.up * HeadBoneToEyes + _headBone.forward * _headForward - head;
+
+                // The eye goes all the way to where the head has settled (so it never ends up
+                // behind or inside the body), but takes its time getting there; of the quick
+                // movement on top (step bob, a hit's jolt) it takes only a capped share.
                 _headOffset = Vector3.Lerp(_headOffset, real, 1f - Mathf.Exp(-Time.deltaTime / _headSmoothSeconds));
-                head += _headOffset * _headFollow + Quaternion.Euler(0f, _yaw, 0f) * Vector3.forward * _headForward;
+                Vector3 quick = Vector3.ClampMagnitude(real - _headOffset, _headMaxOffset);
+                head += _headOffset + quick * _headFollow;
             }
             Vector3 side = Quaternion.Euler(0f, _yaw, 0f) * Vector3.right;
-            float reach = profile.LeanDistance * Mathf.Abs(_shownLean);
+            // In the body view the real head has already leaned with the body; sliding the eye
+            // as well would lean it twice. The tilt below still applies.
+            float reach = _headBone != null ? 0f : profile.LeanDistance * Mathf.Abs(_shownLean);
             Vector3 direction = side * Mathf.Sign(_shownLean);
 
             if (reach > 0.001f && Physics.SphereCast(head, _wallClearance, direction, out RaycastHit wall, reach, _wallMask, QueryTriggerInteraction.Ignore))

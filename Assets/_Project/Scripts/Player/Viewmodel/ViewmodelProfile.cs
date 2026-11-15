@@ -185,16 +185,16 @@ namespace CloseTheDeal.Player
         [Range(0f, 90f)] public float ReloadRoll = 25f;
 
         [Header("Body view (looking out of the real body)")]
-        [Tooltip("How much of the real head's movement the eye follows in the body view. 0 = a perfectly steady eye (most comfortable); 1 = the eye is the head, bobbing with every step and thrown by every hit (most likely to make people feel sick).")]
-        [Range(0f, 1f)] public float BodyViewHeadFollow = 0.35f;
+        [Tooltip("How much of the head QUICK movement the eye takes in the body view: the bob of each step and the jolt of a hit. 0 = none, a gliding eye (most comfortable); 1 = all of it (most likely to make people feel sick). Slow movement, like leaning into a run or looking at the floor, is always followed in full.")]
+        [Range(0f, 1f)] public float BodyViewHeadFollow = 0.2f;
 
-        [Tooltip("How long the eye takes to catch the head up in the body view, in seconds. Higher = smoother and floatier; lower = snappier and shakier.")]
-        [Range(0.01f, 0.5f)] public float BodyViewSmoothing = 0.08f;
+        [Tooltip("How long the eye takes to settle onto where the head has moved to in the body view, in seconds. Higher = steadier and floatier, but the body can get ahead of the eye when you start to sprint; lower = tighter and shakier.")]
+        [Range(0.01f, 0.5f)] public float BodyViewSmoothing = 0.12f;
 
-        [Tooltip("How far in front of the neck the eye sits in the body view, in metres. Raise it if you can see inside your own collar or shoulders; lower it if your arms look too short.")]
+        [Tooltip("How far in front of the head bone the eye sits in the body view, in metres: where the face is. Raise it if you can see inside your own collar or shoulders; lower it if your arms look too short.")]
         [Range(0f, 0.3f)] public float BodyViewForward = 0.10f;
 
-        [Tooltip("The furthest the head may pull the eye from its steady point in the body view, in metres. A cap so a hard hit cannot throw the view across the room.")]
-        [Range(0f, 0.5f)] public float BodyViewMaxOffset = 0.2f;
+        [Tooltip("The most quick head movement the eye may take in the body view, in metres, before the share above is applied. A cap so a hard hit cannot throw the view about.")]
+        [Range(0f, 0.5f)] public float BodyViewMaxOffset = 0.15f;
     }
 }

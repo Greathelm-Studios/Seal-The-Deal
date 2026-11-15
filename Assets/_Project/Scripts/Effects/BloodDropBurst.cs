@@ -53,6 +53,9 @@ namespace CloseTheDeal.Effects
         /// <summary>How much of a drop's length comes from its speed, seconds. At 5 m/s a drop is drawn about 12 cm longer than it is wide.</summary>
         const float StretchPerSpeed = 0.025f;
 
+        /// <summary>Drops that would start closer to this machine's eye than this, metres, are left out. WHY: in the body view the eye is in the struck body, and a 5 cm drop 20 cm from the lens fills a quarter of the screen.</summary>
+        const float NearEye = 0.5f;
+
         static BloodDropBurst instance;
         static readonly int CutColorId = Shader.PropertyToID("_CutColor");
 
@@ -215,6 +218,10 @@ namespace CloseTheDeal.Effects
 
         void Emit(ref ParticleSystem.EmitParams drop, Vector3 position, Vector3 velocity, BloodProfile p)
         {
+            PlayerCamera eye = PlayerCamera.Instance;
+            if (eye != null && (eye.transform.position - position).sqrMagnitude < NearEye * NearEye)
+                return;
+
             drop.position = position;
             drop.velocity = velocity;
             drop.startSize = p.DropSize * Random.Range(0.5f, 1.3f);

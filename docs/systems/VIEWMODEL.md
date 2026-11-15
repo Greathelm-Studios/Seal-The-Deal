@@ -135,12 +135,22 @@ Press **F5** while playing (Editor and development builds) to switch between the
 In the body view the separate first-person arms are not drawn. The player looks out of their real body instead: the same arms, gun and legs everyone else sees, including the flinch when hit.
 It was asked for by Harvey on 2026-11-15 as something to try ("true POV"), and nothing has been decided.
 
-What keeps it comfortable: the view's direction still comes from the mouse alone, never from the head. Only the eye's position follows the real head, and only by a damped, capped share, so step bob, the head leading a turn and a hit's jolt reach the eye softened.
-The head itself is shrunk to nothing on the owner's screen, because the character's meshes are split by material and there is no head mesh to hide.
+What keeps it comfortable: the view's direction still comes from the mouse alone, never from the head. The eye's position goes all the way to where the real head has settled (so the eye is never left behind or inside the body), but takes about a tenth of a second to get there; of the quick movement on top, the bob of each step and the jolt of a hit, it takes only a capped share.
+The head itself is shrunk to almost nothing on the owner's screen ([BodyViewHead.cs](../../Assets/_Project/Scripts/Player/Viewmodel/BodyViewHead.cs)), because the character's meshes are split by material and there is no head mesh to hide.
+Drops of blood that would start within half a metre of the eye are left out, so being hit does not fill the screen with red squares.
 
-Tuning, on the viewmodel profile under "Body view": **Head follow** (0 = a perfectly steady eye, 1 = the eye is the head), **Smoothing** (seconds to catch the head up), **Forward** (how far in front of the neck the eye sits) and **Max offset** (the furthest the head may pull the eye).
+Tuning, on the viewmodel profile under "Body view": **Head follow** (the share of quick head movement the eye takes; 0 = a gliding eye), **Smoothing** (seconds to settle onto where the head has moved to), **Forward** (how far in front of the head bone the eye sits) and **Max offset** (the most quick movement the eye may take).
 
-Not judged yet: seen only in stills as host, standing (level, 35 and 70 degrees down, 30 up). Moving, sprinting, leaning, reloading, being hit and the two-handed hold are unseen. Known rough edges: looking straight down shows the collar from above; the owner's own shadow has no head; the body's gun sits further out than the view's and has no kick, reload move or sway (see the limitations below); nothing here is networked.
+Checked on 2026-11-15 by driving the player with scripted keys as host and reading six frames of each move: walk, sprint, strafe left and right, backward, a running jump, a 300 degrees a second spin, looking down while walking, looking up while sprinting, sprint-strafing while spinning, a melee hit, a shot, a reload and a two-handed walk. Looked at closely: sprint, backward, spin, looking down, the wild one and the melee hit. What the first pass showed and what was done:
+
+| Seen | Cause | Fix |
+|---|---|---|
+| The player's own hair and face in view when sprinting, looking down and spinning | The head was never hidden: the bone lookup failed at run time (the Animator has no avatar once PlayerAnimator takes over), and the ragdoll puts every bone's size back each frame | The head bone now comes from PlayerAnimator, and is shrunk every frame after the ragdoll |
+| The view filled with the inside of the suit while spinning and strafing | The eye followed only a third of the head's movement, so the body leaned up to 38 cm away from it (45 cm on a melee hit) | The eye follows the settled head in full, slowly; measured afterwards 20 cm in a sprint and 33 cm at worst, at the start of a backward run and on a melee hit |
+| Red squares across the screen when hit | Drops spawned 20 cm from the eye | Drops near the eye are left out |
+| A lean would have moved the eye twice | The real head already leans with the body | The camera's own sideways slide is off in the body view; the tilt stays |
+
+Still rough, and for a person to judge: the gun hangs low in the body's carry and drops out of the bottom of the view when walking or backing up; looking straight down shows the chest, shirt and tie but not the legs; a melee hit throws the sleeve across the view; the owner's own shadow has no head; the body's gun has no kick, reload move or sway; nothing was judged in motion by a person or seen from a client.
 
 ## Known limitations
 

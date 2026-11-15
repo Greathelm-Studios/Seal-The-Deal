@@ -350,6 +350,14 @@ namespace CloseTheDeal.Player
 
         Transform _model;
         Bone _hips, _spine, _chest, _upperChest, _neck, _head;
+
+        /// <summary>
+        /// The character's head bone, or null before <c>Start</c> has found the skeleton. For
+        /// the body view's eye (PlayerViewmodel.BodyView). WHY from here and not from the
+        /// Animator: the Animator's avatar is gone once this has taken over the skeleton, so
+        /// a bone lookup on it fails while playing.
+        /// </summary>
+        public Transform HeadBone => _head.T;
         /// <summary>The collar bones, which lift with each breath. Optional in a humanoid rig; null transforms if this one has none.</summary>
         Bone _leftShoulder, _rightShoulder;
         Bone _leftUpperArm, _leftLowerArm, _rightUpperArm, _rightLowerArm;
