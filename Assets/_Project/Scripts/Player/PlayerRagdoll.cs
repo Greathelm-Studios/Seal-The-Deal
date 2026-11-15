@@ -15,6 +15,9 @@
 //              it falls and lies as a free ragdoll, then is drawn back up into its pose
 //              (Alex: "a ragdoll system when explosion systems or heavy or big props get
 //              thrown"). Only bodies with a hit profile, so only the test dummy today.
+//              Claude Opus 5.5, 2026-11-14 — stops with one clear error when a code reload
+//              during Play has taken its bodies (it threw every frame), and frees the two
+//              surface materials it makes.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Gives the player a body made of real rigidbodies and joints that is driven
 //              toward the pose PlayerAnimator writes, and shows that body instead of the pose.
@@ -215,6 +218,15 @@ namespace CloseTheDeal.Player
         /// <summary>Where the ragdoll is, world space; <see cref="RagdollWorld"/> keeps level geometry near it. The body itself while it is knocked down or getting up, since it may lie metres from where it stood.</summary>
         public Vector3 Centre => _hold < 1f ? _parts[Hips].Body.position : _parts[Hips].TargetPosition;
 
+        /// <summary>
+        /// True while the ragdoll exists and is being stepped. False before its first frame, when
+        /// it could not be built, or after a script reload during Play took its bodies away.
+        /// </summary>
+        public bool Running => enabled && _built && _parts[Hips].Body != null;
+
+        /// <summary>Whether this body reacts to hits at all: it needs a hit profile. The player's own ragdoll has none today.</summary>
+        public bool TakesHits => _hitProfile != null;
+
         /// <summary>True while the body is knocked down: falling or lying, before it starts to get up.</summary>
         /// <remarks>Whatever owns the body's place in the world (the test dummy's root; later the player's capsule) decides where it gets up; while this is true the pose it will rise into should be kept at the body.</remarks>
         public bool Down => _down;
@@ -241,6 +253,12 @@ namespace CloseTheDeal.Player
             RagdollWorld.Remove(this);
             if (_root != null)
                 Destroy(_root);
+            // WHY: made by this component at spawn and owned by nothing else; left alone, every
+            // player spawned on every machine leaves two behind for the rest of the session.
+            if (_slippery != null)
+                Destroy(_slippery);
+            if (_grippy != null)
+                Destroy(_grippy);
         }
 
         /// <summary>Makes the eleven bodies and ten joints from the model's T-pose and moves them into the ragdoll world.</summary>
@@ -471,6 +489,17 @@ namespace CloseTheDeal.Player
         {
             if (!_built || dt <= 0f)
                 return;
+            if (!Running)
+            {
+                // WHY one error and a stop instead of carrying on: a script reload during Play
+                // (another change to the code while the game runs) keeps this component but
+                // loses its bodies, which are not kept across a reload. Every frame after would
+                // throw. The real cure is the Editor preference below, not code here.
+                Debug.LogError("[PlayerRagdoll] Lost its body because the code was reloaded during Play; this character stays in its plain pose until Play is restarted. "
+                    + "To stop it happening, set Edit > Preferences > General > Script Changes While Playing to Recompile After Finished Playing.", this);
+                enabled = false;
+                return;
+            }
 
             ReadPose(dt, out Quaternion leftFootPose, out Quaternion rightFootPose);
             // The bodies are built in the T-pose; the first frame puts them on the real pose so the
@@ -621,7 +650,7 @@ namespace CloseTheDeal.Player
         /// </example>
         public void Hit(in HitInfo hit)
         {
-            if (!_built || !_posed || _hitProfile == null || hit.Impulse <= 0f)
+            if (!Running || !_posed || _hitProfile == null || hit.Impulse <= 0f)
                 return;
 
             if (!_down && _hitProfile.KnockDownImpulse > 0f && hit.Impulse >= _hitProfile.KnockDownImpulse

@@ -16,6 +16,8 @@
 //  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-12 — regraded to Alex's references: the
 //              sun crosses the street and casts hard shadows, shade is pale blue, sunlit white
 //              blows out and glows; the post-processing profile is now updated in place.
+//  Modified  : Claude Opus 5.5 (Claude Code), 2026-11-14 — AEROSET reference (Alex): stronger sun, less and less blue
+//              ambient, whiter filter, more saturation and bloom. Sky untouched.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Gives any open scene the art bible's lighting in one menu step: blue procedural
 //              sky, sun raking along the street, bright cool ambient so white ceilings stay
@@ -91,9 +93,10 @@ namespace CloseTheDeal.Editor.Art
         /// Sun intensity (URP units, Unity default 1). WHY 3.2: the references are white rooms
         /// where anything the sun touches blows out to pure white and glows, while the shade
         /// beside it stays a readable pale blue. That needs the sun several times brighter than
-        /// the ambient light, not the gentle 1.6 the first look pass used.
+        /// the ambient light, not the gentle 1.6 the first look pass used. 4.2 since 2026-11-14 (AEROSET reference:
+        /// "bright sun, not ambient", a visible hotspot on the white floor).
         /// </summary>
-        const float SunIntensity = 3.2f;
+        const float SunIntensity = 4.2f;
 
         // ---- Ambient ----------------------------------------------------------------------
         // WHY blue, when the first look pass kept these near white: in the references a white wall
@@ -102,22 +105,24 @@ namespace CloseTheDeal.Editor.Art
         // read as a faint stain. Blue shade against white sun is the whole look.
 
         /// <summary>Ambient from above: the open sky's blue, lighting floors and anything facing up.</summary>
-        static readonly Color AmbientSky = Hex(0xD0E0F7);
+        // 2026-11-14 (AEROSET reference: "less blue ambient fill"): each term moved a third of the way to neutral.
+        static readonly Color AmbientSky = Hex(0xDAE4F2);
         /// <summary>Ambient from the horizon: lights walls. A little paler than the sky term so walls stay the lightest shade.</summary>
-        static readonly Color AmbientEquator = Hex(0xD4E2F6);
+        static readonly Color AmbientEquator = Hex(0xDCE5F2);
         /// <summary>
         /// Ambient from below: this is what lights ceilings. Kept bright, because there are still no
         /// ceiling lights and a dark ceiling was the Greybox review's main complaint, but blue.
         /// </summary>
-        static readonly Color AmbientGround = Hex(0xC8D6EE);
+        static readonly Color AmbientGround = Hex(0xD2DCEA);
         /// <summary>
         /// How strong the ambient light is, 0–1, applied to all three colours above. WHY 0.6: at
         /// full strength the ambient lit every surface the same, so the room read flat (a "Unity
         /// look" tell) and the fake bounce from the sun patches could not show. At 0.6 the ceiling
         /// is bright over the sun patches and falls to grey-blue deeper in the room. Chosen by Alex
-        /// from a sweep, 2026-11-12, together with BounceLight's strength of 4.
+        /// from a sweep, 2026-11-12, together with BounceLight's strength of 4. 0.5 since 2026-11-14 so the stronger
+        /// sun, not the fill, lights the room (AEROSET reference).
         /// </summary>
-        const float AmbientLevel = 0.6f;
+        const float AmbientLevel = 0.5f;
 
         // ---- Haze -------------------------------------------------------------------------
 
@@ -165,11 +170,13 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>
         /// Saturation, -100..100. WHY only 6: the cast already comes from four places (ambient, filter,
         /// white balance, shadow tone). At 14 they stacked into a solid blue wash: royal-blue carpet
-        /// and blue suits. Keep this low and let the cast do the colouring.
+        /// and blue suits. 16 since 2026-11-14 (AEROSET: "a more saturated grade"), with the blue cast cut at its
+        /// source instead (ambient a third nearer neutral, a whiter filter), so the saturation lands on the cobalt
+        /// and aqua accents and not on a wash.
         /// </summary>
-        const float Saturation = 6f;
+        const float Saturation = 16f;
         /// <summary>A pale cyan-blue multiplied over the whole frame: the references' overall cast.</summary>
-        static readonly Color ColourFilter = Hex(0xF0F7FF);
+        static readonly Color ColourFilter = Hex(0xF7FAFF);   // whiter since 2026-11-14 (see Saturation)
         /// <summary>White balance temperature, -100..100. Negative = cooler.</summary>
         const float Temperature = -6f;
         /// <summary>White balance tint, -100..100. Slightly negative pulls the blue toward cyan, as in the references.</summary>
@@ -190,7 +197,7 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>Bloom brightness threshold (gamma space). Below 1 so every sunlit white surface glows, as in the references.</summary>
         const float BloomThreshold = 0.95f;
         /// <summary>Bloom strength. Strong: the glow off the sun patches is the references' signature.</summary>
-        const float BloomIntensity = 0.55f;
+        const float BloomIntensity = 0.75f;   // 0.55 until 2026-11-14; AEROSET's glints and hot sun patches
         /// <summary>Bloom spread, 0..1. Wide and soft.</summary>
         const float BloomScatter = 0.78f;
         /// <summary>Bloom tint: faintly blue, so the glow belongs to the cast.</summary>

@@ -27,8 +27,17 @@ The body it runs on is the active ragdoll described in [CHARACTER_ANIMATION.md](
 1. `Close the Deal > Dev > Place Hit Dummy` puts one on the floor 3 m in front of the Scene view (or in front of your camera while playing), facing you. The scene is not saved.
 2. Press Play.
 3. `Close the Deal > Dev > Hit Bench`: pick a preset (pistol shot, thrown chair, thrown desk, blast near, blast far) or set the values, then press **Hit**.
+   With its Dummy slot left empty the bench hits the dummy nearest your camera, so a dummy placed in front of you is the one hit even while another stands on the roof. The window says whether the dummy can be hit right now, and under the button what the last hit did (flinched, knocked down). It also writes each hit to the Console as `[HitBench]`.
+
+**If nothing happens:** read the bench's status line. The usual cause is the code being reloaded during Play (another change to a script while the game runs): every character's ragdoll loses its body and stops, with one `[PlayerRagdoll] Lost its body` error. Stop and press Play again. Setting `Edit > Preferences > General > Script Changes While Playing` to **Recompile After Finished Playing** stops it happening; in a shared Editor with several sessions writing code, that setting matters.
 
 `Close the Deal > Dev > Build Hit Dummy Prefab` rebuilds the prefab; like the greybox prefabs it is left alone once a person has edited it.
+
+## Shooting and throwing at it
+
+- **Shooting:** the pistol's left click sends a stand-in bullet (20 N·s) down the crosshair; a dummy it strikes flinches where it was hit. That code is the weapons work's `PlayerViewmodel`, not this system's. The old greybox test blast still goes off on the same click and throws anyone within 3 m of where you aim, you included.
+- **Picking up and throwing (stand-in):** F picks up the loose object under the crosshair within 3 m and up to 60 kg, or puts down the one held; G throws it. A throw that strikes the dummy hits it with the object's weight times its speed: a monitor (4 kg) flinches it, a chair (8 kg) or a cabinet (30 kg) knocks it down. Host only (on a client F and G do nothing); Editor and development builds only.
+  [DevCarry.cs](../../Assets/_Project/Scripts/Player/DevCarry.cs) and [ThrownHitTracker.cs](../../Assets/_Project/Scripts/Player/ThrownHitTracker.cs) are **throwaway**: Adam's pickup lane owns the real pick-up and throw (its ItemCarrier, not yet on this branch). Delete both files when that arrives, and have its throw report a `HitInfo` of type ThrownProp the same way.
 
 ## Who owns what (AGENTS.md §3)
 
@@ -77,7 +86,7 @@ All in `DefaultHitReaction.asset`. Every default is a first guess from frame str
 | Flinch limp share | How strong a fully slack joint still is. 0 = hangs loose. |
 | Flinch recover | Seconds for a slack joint to get its strength back. |
 | Knock down impulse | A hit at least this hard (N·s) floors the body. 0 = never. **Placeholder rule.** |
-| Bullets knock down | Off = shots only ever flinch. **Placeholder rule.** |
+| Bullets knock down | Off = shots only ever flinch. Off, as Alex chose on 2026-11-14 for the dummy ("only flinch"); for real players it is still Adam's rule. |
 | Down limp share | How strong the joints still are while down. 0 = a limp rag. |
 | Down friction | How much the floor grips a fallen body. Lower = longer slides. |
 | Down min time / Down max time | The shortest and longest it lies there, seconds. **Placeholder rule.** |
@@ -106,6 +115,7 @@ Wiring it to real players changes netcode authority (the host decides the trigge
 
 ## Known limitations
 
+- **A code reload during Play stops every ragdoll** (players' too) until Play is restarted. The animator has the same weakness and still throws every frame after one; it belongs to the animation work.
 - **Not judged in play.** Checked in frame strips of a hidden copy of the dummy; nobody has yet tried the bench in Play Mode.
 - **The get-up has no animation.** The body is hoisted by its hips in about a quarter of a second, arms flung, rather than climbing to its feet. A get-up clip is the natural next step.
 - **A near blast throws the dummy about 7 m** in the preview (Max kick speed 8 m/s, low ragdoll gravity). Lower Max kick speed for shorter flights.
@@ -114,4 +124,5 @@ Wiring it to real players changes netcode authority (the host decides the trigge
 - **Hits do nothing to players.** Deliberate until the knock-down design is agreed.
 - **A hit lands on the part nearest the point**, so a point far from the body still hits something; the caller is trusted to have struck the body.
 - **The bench's body-part positions are estimates** for the standing idle; mid-fidget an arm may not be where the bench aims.
+- **The stand-in pick-up has no hand, outline or prompt**, and a held object can be pushed through thin geometry if you walk into a wall. F reads the F key directly, so rebinding does not reach it.
 - **Thrown props never touch the ragdoll physically** (moving colliders are not copied into the ragdoll scene), so a prop hit only exists if something reports it as a `HitInfo`.

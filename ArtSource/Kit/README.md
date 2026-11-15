@@ -151,6 +151,38 @@ The office is now AONAGI (青凪総合サービス), a Japanese firm. The mix of
 
 Existing pieces picked up the palette (pearl walls, paler carpet, aqua frost, aqua/mist column skins with 1F/2F wayfinding, bilingual zone signs). CJK text uses Blender's bundled Noto Sans CJK (OFL). `KitImport.cs` gives `Water_Wall` the water shader and leaves its colours alone on re-import, so Inspector tuning survives.
 
+### Lift, rooftop pool and loose props, 2026-11-13
+
+Agreed with the elevator session (spec: side-session notes, `elevator-rooftop-spec.md`); Alex: "rooftop, elevator beside reception", "make sure its an open roof", "added a pool".
+
+| Piece | What | Collider |
+|---|---|---|
+| `Lift_Door_Frame_4m_1F`, `_RF` | 4 m pearl landing wall, slab line to soffit, centred 1.4 x 2.2 m opening with a silver portal, a dark indicator ("1F" / "RF 屋上") in aqua, a call panel with up/down arrows | Boxes on left, right, head |
+| `Lift_Door_Panel` | One 0.75 x 2.25 m silver leaf; pivot at the bottom of the meeting edge; opens by sliding 0.75 m along its +X. Sits 0.225 m behind the frame face, inside the shaft | Box |
+| `Lift_Shaft_Wall_4m` | Full-storey glass shaft wall (slab line to soffit) with a silver base band, head rail and end posts | Box on the frame |
+| `Lift_Car` | 3.7 x 3.55 x 2.6 m capsule car, open front (+Z), polished floor with its top at the pivot, pearl sides, glass back with a 1.0 m handrail, light-panel ceiling, header over the opening at 2.2 m | Boxes: floor, sides, back, ceiling, header |
+| `Pool_Raised_8x4` | Raised 8 x 4 m basin: 0.5 m pearl rim 0.4 m wide with silver coping, two steps on the front long side, aqua floor, water 0.4 m up (`Pool_Water`, the Aero Water Pane shader's top-down mode) | Boxes on rim and steps; none on the water |
+| `Monitor_Flat`, `Keyboard` | The bench's monitors and keyboards as their own pieces | Box |
+
+`KitOffice.unity`: the shaft is the cell x 20-24, z -4 to -8, with doors west into the atrium, stops at 1F and the roof (y 9), and glass on all four sides on the upper floor. The level-1 and roof slabs, the carpet and the ceiling are left out of that cell, the reception desk moved 1 m west and the upstairs planter moved out. `KitOfficeScene.Lift()` places the car and leaves as `Lift/Lift_Car`, `Door_1F_A/B`, `Door_RF_A/B`; the elevator session's `KitOfficeRoof.AddTo` (called at the end of the build) wires them and builds the roof range, its guard rails and the pool.
+
+**Loose (pick up and throw; convex box or hull colliders):** `Monitor_Flat`, `Keyboard`, `Phone_Desk`, `Doc_Tray`, `Chair_Task`, `Chair_Pod`. **Fixed:** everything else, including the bench, `Planter_Box`, `Copier`, `Vending_Machine`, `Storage_Low`, `Water_Server`, the lift pieces (the car and leaves are moved by code, not carried) and the pool. KitOffice places 115 loose kit props: 28 monitors, 28 keyboards, 14 phones, 14 trays, 28 task chairs, 3 pod chairs (the roof range adds its own). That is far over the 16-per-floor netcode cap in docs/systems/PROPS.md: which of them become host-simulated props is the props lane's call.
+
+### Glass and structure, 2026-11-14 (Alex: the AEROSET look, Persona 3's graphic identity "to an extent")
+
+Lessons taken, not assets: glass crossed by thin dense lines, exposed structure, a near-mirror white floor, a stronger sun. Alex's calls: the floor stays white, the sky is unchanged, no bubbles or ivy.
+
+| Piece / change | What | Collider |
+|---|---|---|
+| `Wall_Curtain_4m` | Floor-to-soffit clear glass on a navy grid: base and head rails, mullions every 1 m, transoms at 2.6 and 3.45 m (nothing across a standing figure). Same footprint as `Wall_Solid_4m` | Box on the frame |
+| `Ceiling_Beams_4x4` | Two silver beams along X either side of the slab's light line and a lighter cross beam, hung under a soffit | None |
+| `Window_4m`, `_2m` | Navy mullions every metre and the same two transoms | Unchanged |
+| Materials | `Floor_Carpet` smoothness 0.85 → 0.96 (still white), `Wall_PaperWhite` 0.70 → 0.85 | |
+
+In `KitOffice.unity` every outer bay with nothing hung on or stood against it is now a curtain wall (26 bays); bays carrying signs, the copier, vending machine, slipper cabinet, storage or the DevMirror stay solid white (`KitOfficeScene.OuterWall`). Beams hang under every soffit outside the tiled work areas, the shaft and the atrium's open middle (55 cells). `OfficeLook.cs`: sun 3.2 → 4.2, ambient 0.6 → 0.5 and a third nearer neutral, a whiter colour filter, saturation 6 → 16, bloom 0.55 → 0.75; the sky is untouched. The scene's unsaved state before this rebuild is kept as `KitOffice_PreAeroset.unity`.
+
+Interior, the same day: `Partition_Glass_*`, `Partition_Frost_*` and `Partition_Header_*` carry navy mullions every metre (stopping under the header band); plain `Wall_Solid_*` walls carry thin navy joint lines on the same grid on both faces (verticals every metre, lines at 2.6 and 3.45 m, 2-3 mm proud), so walls kept solid for cover still read as part of the grid. The cobalt, portal-head, door and niche walls are unchanged. The A/R boundary wall at x 20, z -20 to -24 is now a curtain wall. Unsaved scene state before that rebuild: `KitOffice_PreInteriorGlass.unity`.
+
 ## Checks run
 
 - Every piece passes `mdl.mjs check` with no errors (2026-11-12, 26 pieces). The warnings are long thin faces: on thin boxes (rails, panes, slab edges), and where the shadow-gap cuts slice the flat-shaded walls. They are flat faces, so they shade correctly; they would only matter for automatic LODs, which the kit doesn't use. The locked door's lock plates touch its faces without a boolean union (a "faces cut through each other" warning).
