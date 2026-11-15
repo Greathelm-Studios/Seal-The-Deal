@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b2ffe635ff027045941ffe6e7ab296a, type: 3}
+  m_Name: PlayerHitReaction
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Player.HitReactionProfile
+  ImpulseShare: 4
+  NeighbourShare: 0.35
+  MaxKickSpeed: 14
+  FlinchFullImpulse: 15
+  FlinchLimpShare: 0.04
+  FlinchRecover: 0.35
+  MeleeBodyShare: 0.7
+  MeleeRecover: 0.9
+  KnockDownImpulse: 0
+  BulletsKnockDown: 0
+  DownLimpShare: 0.05
+  DownFriction: 0.8
+  DownMinTime: 0.6
+  DownMaxTime: 1.5
+  SettleSpeed: 0.5
+  GetUpTime: 0.6

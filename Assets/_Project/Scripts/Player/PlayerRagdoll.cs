@@ -18,6 +18,10 @@
 //              Claude Opus 5.5, 2026-11-14 — stops with one clear error when a code reload
 //              during Play has taken its bodies (it threw every frame), and frees the two
 //              surface materials it makes.
+//              Claude Opus 5.5, 2026-11-15 — a melee hit throws the whole upper body and
+//              recovers more slowly than a shot (Harvey: "add hit reactions when hit by
+//              guns/melee weapons for the players ... there should be an exaggeration of it").
+//              A shot's reaction is unchanged.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Gives the player a body made of real rigidbodies and joints that is driven
 //              toward the pose PlayerAnimator writes, and shows that body instead of the pose.
@@ -206,6 +210,8 @@ namespace CloseTheDeal.Player
         bool _posed;
         /// <summary>True while any part's joint is still slack from a hit.</summary>
         bool _flinching;
+        /// <summary>Seconds a fully slack joint takes to recover from the hits now being felt: the profile's shot or melee recovery, the longer one while both are.</summary>
+        float _recover;
         /// <summary>The parts' usual low-friction surface, and the grippier one they wear while knocked down.</summary>
         PhysicsMaterial _slippery, _grippy;
         /// <summary>True from a knock-down until the body has lain long enough; then it starts getting up.</summary>
@@ -224,8 +230,11 @@ namespace CloseTheDeal.Player
         /// </summary>
         public bool Running => enabled && _built && _parts[Hips].Body != null;
 
-        /// <summary>Whether this body reacts to hits at all: it needs a hit profile. The player's own ragdoll has none today.</summary>
+        /// <summary>Whether this body reacts to hits at all: it needs a hit profile. The player's gets <c>PlayerHitReaction.asset</c> from <c>Close the Deal &gt; Greybox &gt; Add Hit Reactions to Player</c>.</summary>
         public bool TakesHits => _hitProfile != null;
+
+        /// <summary>Whether a hard enough hit can knock this body down: its hit profile's knock-down strength is above 0.</summary>
+        public bool KnocksDown => _hitProfile != null && _hitProfile.KnockDownImpulse > 0f;
 
         /// <summary>True while the body is knocked down: falling or lying, before it starts to get up.</summary>
         /// <remarks>Whatever owns the body's place in the world (the test dummy's root; later the player's capsule) decides where it gets up; while this is true the pose it will rise into should be kept at the body.</remarks>
@@ -620,8 +629,9 @@ namespace CloseTheDeal.Player
 
         /// <summary>
         /// Makes the body react to a hit: the struck part and the parts joined to it are pushed,
-        /// and their joints go slack for a fraction of a second, more for a harder hit. A blast
-        /// (a hit with a radius) pushes every part in reach away from its centre.
+        /// and their joints go slack for a fraction of a second, more for a harder hit. A melee
+        /// hit also throws the whole upper body and recovers more slowly. A blast (a hit with a
+        /// radius) pushes every part in reach away from its centre.
         /// </summary>
         /// <param name="hit">Where, which way, how hard (newton-seconds) and what kind.</param>
         /// <remarks>
@@ -660,6 +670,10 @@ namespace CloseTheDeal.Player
             float impulse = hit.Impulse * _hitProfile.ImpulseShare;
             float weak = Mathf.Clamp01(hit.Impulse / _hitProfile.FlinchFullImpulse);
             Vector3 along = hit.Direction.normalized;
+            // Read before any kick, which marks the body as flinching. A shot landing during a
+            // melee hit's recovery does not cut that recovery short.
+            float recover = hit.Type == HitType.Melee ? _hitProfile.MeleeRecover : _hitProfile.FlinchRecover;
+            _recover = _flinching ? Mathf.Max(_recover, recover) : recover;
 
             if (hit.Radius > 0f)
             {
@@ -682,6 +696,20 @@ namespace CloseTheDeal.Player
                     Kick(i, (distance > MinBlastDistance ? away / distance : along) * (impulse * share / shares), centre, weak);
                 }
                 return;
+            }
+
+            if (hit.Type == HitType.Melee && _hitProfile.MeleeBodyShare > 0f)
+            {
+                // A swing shoves as much as it strikes: part of its push is shared over the
+                // whole upper body by weight, so chest, head and arms are thrown together and the
+                // body folds at the waist, where a shot only jerks the part it struck.
+                float shove = impulse * _hitProfile.MeleeBodyShare;
+                impulse -= shove;
+                float upperMass = 0f;
+                for (int i = Chest; i <= RightLowerArm; i++)
+                    upperMass += _parts[i].Body.mass;
+                for (int i = Chest; i <= RightLowerArm; i++)
+                    Kick(i, along * (shove * _parts[i].Body.mass / upperMass), _parts[i].Body.worldCenterOfMass, weak);
             }
 
             int struck = NearestPart(hit.Point);
@@ -791,7 +819,7 @@ namespace CloseTheDeal.Player
         /// <param name="dt">Frame time, seconds.</param>
         void RecoverFromHits(float dt)
         {
-            float fade = dt / Mathf.Max(_hitProfile.FlinchRecover, HitReactionProfile.MinFlinchRecover);
+            float fade = dt / Mathf.Max(_recover, HitReactionProfile.MinFlinchRecover);
             _flinching = false;
             for (int i = 0; i < PartCount; i++)
             {

@@ -19,6 +19,10 @@
 //              is one (Adam's review lane).
 //  Modified  : Claude Fable 5.2, 2026-11-14 — the stand-in shot also sends a local ray that
 //              hits the test dummy (Alex: "i want it so when i actuall shoot him with my gun").
+//  Modified  : Claude Opus 5.5, 2026-11-15 — the stand-in shot also hits other players
+//              through the host, and V swings a stand-in melee hit (Harvey: "add hit
+//              reactions when hit by guns/melee weapons for the players so that when a shooter
+//              hits another player, they see a visible reaction in the person").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Sits on the player prefab. For the player this client controls, and nobody
 //              else, it hangs the first-person arms on the camera, draws them with a camera
@@ -98,14 +102,20 @@ namespace CloseTheDeal.Player
         /// <summary>Input action for reload, in the actions asset's Player map. Missing on some branches; the R key is read then.</summary>
         const string ReloadAction = "Player/Reload";
 
-        /// <summary>How far the stand-in bullet reaches, in metres. Longer than any room in the test scenes.</summary>
-        const float StandInBulletRange = 100f;
+        /// <summary>How far the stand-in bullet reaches, in metres. Longer than any room in the test scenes. The host's check (<see cref="PlayerHits"/>) uses the same.</summary>
+        internal const float StandInBulletRange = 100f;
 
         /// <summary>
         /// Push a stand-in pistol bullet gives what it hits, in newton-seconds. The figure
         /// agreed with the hit-reaction work for a pistol round on the 49 kg ragdoll.
         /// </summary>
-        const float StandInBulletImpulse = 20f;
+        internal const float StandInBulletImpulse = 20f;
+
+        /// <summary>How far the stand-in melee swing reaches from the eye, in metres. WHY 2: an arm and a short club past the front of the 0.35 m capsule.</summary>
+        internal const float StandInMeleeReach = 2f;
+
+        /// <summary>Push the stand-in melee swing gives what it hits, in newton-seconds. WHY 60: three pistol shots, so a swing clearly outweighs a shot; a placeholder until a real melee weapon reports its own.</summary>
+        internal const float StandInMeleeImpulse = 60f;
 
         /// <summary>Below this planar speed, in metres per second, the player counts as standing still and the bob fades out. Well above the jitter of a resting body.</summary>
         const float MovingSpeed = 0.2f;
@@ -164,6 +174,8 @@ namespace CloseTheDeal.Player
         /// <summary>How long the current reload move lasts, in seconds.</summary>
         float _reloadSeconds;
         PlayerHeldWeapon _body;
+        /// <summary>This player's hit taker, which the stand-in shot and swing ask the host through. Null on a player prefab without one.</summary>
+        PlayerHits _hits;
         /// <summary>What weapon code last asked the hands to hold; used again when the arms are rebuilt.</summary>
         WeaponHold _hold;
         bool _hasHold;
@@ -239,8 +251,8 @@ namespace CloseTheDeal.Player
 
         /// <summary>
         /// Set true by weapon code that calls <see cref="Fire"/> and <see cref="Reload"/> itself.
-        /// The stand-in input (<see cref="ReadTestInput"/>: attack, reload and the T hand
-        /// switch) then does nothing, so one shot cannot kick the gun twice.
+        /// The stand-in input (<see cref="ReadTestInput"/>: attack, reload, the T hand switch
+        /// and the V swing) then does nothing, so one shot cannot kick the gun twice.
         /// </summary>
         /// <remarks>Local to this machine and not serialized: whatever drives the arms sets it when it starts, typically once at spawn.</remarks>
         public bool Driven { get; set; }
@@ -282,6 +294,7 @@ namespace CloseTheDeal.Player
                 _attack = _actions.FindAction(AttackAction, false);
                 _reload = _actions.FindAction(ReloadAction, false);
             }
+            _hits = GetComponent<PlayerHits>();
 
             // Every player's body, not only the local one: this is what the others see.
             var body = GetComponentInChildren<PlayerAnimator>(true);
@@ -318,7 +331,8 @@ namespace CloseTheDeal.Player
 
         /// <summary>
         /// Stand-in trigger until slice 2's weapon code calls <see cref="Fire"/> and
-        /// <see cref="Reload"/>: the attack button kicks, R reloads, T switches between one hand and both.
+        /// <see cref="Reload"/>: the attack button kicks and shoots, R reloads, T switches between
+        /// one hand and both, V swings a melee hit at whatever is within 2 m.
         /// </summary>
         /// <remarks>
         /// Skipped once weapon code sets <see cref="Driven"/>. Remove this method when every
@@ -337,7 +351,7 @@ namespace CloseTheDeal.Player
             if (_attack != null && _attack.WasPressedThisFrame() && !IsReloading)
             {
                 Fire();
-                FireStandInBullet();
+                StandInStrike(StandInBulletRange, StandInBulletImpulse, HitType.Bullet);
             }
 
             Keyboard keyboard = Keyboard.current;
@@ -350,39 +364,54 @@ namespace CloseTheDeal.Player
             // and both. Only this machine sees the switch; remove with the rest of this method.
             if (keyboard != null && keyboard.tKey.wasPressedThisFrame)
                 TwoHanded = !TwoHanded;
+            // Stand-in until a melee weapon exists: V swings at whatever is just in front.
+            // Not during a reload, like the shot. Remove with the rest of this method.
+            if (keyboard != null && keyboard.vKey.wasPressedThisFrame && !IsReloading)
+                StandInStrike(StandInMeleeReach, StandInMeleeImpulse, HitType.Melee);
         }
 
         /// <summary>
-        /// Stand-in shot, so the test dummy can be shot with the gun in the view: one ray from
-        /// the eye along the look, and a pistol hit on the dummy if it lands on one.
+        /// Stand-in shot or swing, so the test dummy and other players can be hit before the
+        /// weapons exist: one ray from the eye along the look. The dummy it lands on is hit
+        /// here; another player it lands on is reported to the host, which checks the ray
+        /// again and hits that player on every machine.
         /// </summary>
+        /// <param name="reach">How far the ray goes, metres.</param>
+        /// <param name="impulse">Push given to the dummy, newton-seconds. The host picks its own for a player.</param>
+        /// <param name="kind">Bullet for the attack button, Melee for V.</param>
         /// <remarks>
-        /// Local and visual only, like the dummy: nothing is sent and no player is hurt. It is
-        /// not the game's shooting, which is host-decided (AGENTS.md §3) and lives with the
-        /// weapon code; that code sets <see cref="Driven"/> and this never runs. Remove with
-        /// <see cref="ReadTestInput"/>.
+        /// The dummy part is local and visual only, like the dummy. The player part sends only
+        /// where the eye was and which way it looked (<see cref="PlayerHits.RequestStandInHit"/>);
+        /// the host decides the hit (AGENTS.md §3). It is not the game's shooting, which lives
+        /// with the weapon code; that code sets <see cref="Driven"/> and this never runs.
+        /// THROWAWAY: remove with <see cref="ReadTestInput"/>.
         /// WHY from the eye and not the muzzle: the crosshair is the eye's line, and a shot
         /// from the gun's off-centre muzzle would miss what is under it at close range.
         /// The ray starts inside the player's own capsule, which a ray does not report.
         /// </remarks>
-        void FireStandInBullet()
+        void StandInStrike(float reach, float impulse, HitType kind)
         {
             Transform eye = _baseCamera.transform;
-            if (!Physics.Raycast(eye.position, eye.forward, out RaycastHit hit, StandInBulletRange, _standInBulletMask, QueryTriggerInteraction.Ignore))
+            if (!Physics.Raycast(eye.position, eye.forward, out RaycastHit hit, reach, _standInBulletMask, QueryTriggerInteraction.Ignore))
                 return;
 
-            // Only on a hit, and only once per press, so the lookup is not a per-frame cost.
+            // Only on a hit, and only once per press, so the lookups are not a per-frame cost.
             var dummy = hit.collider.GetComponentInParent<HitDummy>();
-            if (dummy == null)
-                return;
-
-            dummy.Hit(new HitInfo
+            if (dummy != null)
             {
-                Point = hit.point,
-                Direction = eye.forward,
-                Impulse = StandInBulletImpulse,
-                Type = HitType.Bullet
-            });
+                dummy.Hit(new HitInfo
+                {
+                    Point = hit.point,
+                    Direction = eye.forward,
+                    Impulse = impulse,
+                    Type = kind
+                });
+                return;
+            }
+
+            var victim = hit.collider.GetComponentInParent<PlayerHits>();
+            if (victim != null && victim != _hits && _hits != null)
+                _hits.RequestStandInHit(eye.position, eye.forward, kind);
         }
 
         void Show()

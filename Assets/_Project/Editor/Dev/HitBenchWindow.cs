@@ -8,6 +8,8 @@
 //              what each hit did (Alex: "nothing happens"; the cause was a code reload
 //              during Play, which the bench could not show); with its Dummy slot empty it
 //              hits the dummy nearest the camera (Alex: the dummy had moved to the roof)
+//              2026-11-15 — a Melee hit preset (Harvey: "add hit reactions when hit by
+//              guns/melee weapons for the players")
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : An Editor window that hits the test dummy with a chosen kind and strength of
 //              hit at a chosen body part and direction, so reactions can be judged before the
@@ -68,9 +70,9 @@ namespace CloseTheDeal.Editor.Dev
         /// own. A chair of 8 kg at 10 m/s; a desk of 40 kg at 8 m/s; a blast throwing the 49 kg
         /// ragdoll at the test blast's 12 m/s in the middle and 40% of that at its edge; a
         /// pistol shot is far above a real bullet's 3 or so, so that it shows. The 3 m reach is
-        /// the test blast's radius.
+        /// the test blast's radius. A melee hit is the stand-in V swing's 60, three pistol shots.
         /// </summary>
-        const float PistolImpulse = 20f, ChairImpulse = 80f, DeskImpulse = 320f,
+        const float PistolImpulse = 20f, MeleeImpulse = 60f, ChairImpulse = 80f, DeskImpulse = 320f,
             NearBlastImpulse = 590f, FarBlastImpulse = 235f,
             NearBlastDistance = 1f, FarBlastDistance = 2.7f, BlastReach = 3f;
 
@@ -97,6 +99,7 @@ namespace CloseTheDeal.Editor.Dev
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (GUILayout.Button("Pistol shot")) Preset(HitType.Bullet, PistolImpulse);
+                if (GUILayout.Button("Melee hit")) Preset(HitType.Melee, MeleeImpulse);
                 if (GUILayout.Button("Thrown chair")) Preset(HitType.ThrownProp, ChairImpulse);
                 if (GUILayout.Button("Thrown desk")) Preset(HitType.ThrownProp, DeskImpulse);
             }

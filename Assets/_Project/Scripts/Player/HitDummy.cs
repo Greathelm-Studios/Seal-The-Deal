@@ -4,6 +4,9 @@
 //  Generated : 2026-11-13
 //  Prompt    : Alex: "a test dummy in the scene to test animations of being hit by certain
 //              powers of weapons (bullets bombs explosions props, etc)"
+//  Modified  : Claude Opus 5.5, 2026-11-15 — every hit is told to HitFeed so effects such as
+//              blood follow it (Harvey: "add hit reactions when hit by guns/melee weapons for
+//              the players")
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Marks an object as the hit-test dummy and gives weapons and the test bench one
 //              place to hit it. Its own component so a shot's raycast can find "something that
@@ -68,7 +71,7 @@ namespace CloseTheDeal.Player
         /// Hits the dummy.
         /// </summary>
         /// <param name="hit">Where, which way, how hard (newton-seconds) and what kind.</param>
-        /// <remarks>Main thread; allocates nothing. Does nothing outside Play Mode, where the ragdoll does not exist.</remarks>
+        /// <remarks>Main thread; allocates nothing. Does nothing to the body outside Play Mode, where the ragdoll does not exist. Tells <see cref="HitFeed"/> after the body has started reacting, so effects follow the hit.</remarks>
         /// <example>
         /// From a weapon's raycast:
         /// <code>
@@ -80,6 +83,7 @@ namespace CloseTheDeal.Player
         {
             if (_ragdoll != null)
                 _ragdoll.Hit(hit);
+            HitFeed.Raise(hit, transform);
         }
     }
 }

@@ -4,6 +4,8 @@
 //  Generated : 2026-11-11
 //  Prompt    : Alex: "do what you recommend, as long as it fits the art direction and that
 //              2000s corporate future aesthetic" (recommendation: soft building, graphic people)
+//  Modified  : Claude Fable 5.2, 2026-11-15 — the base and contour passes mark stencil bit 8 so
+//              blood splats skip characters (Harvey: "Exclude them too").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : The character half of the art bible's lighting formula, "soft world light + hard
 //              character value breaks" (bible §04, §05). Characters need a different lighting
@@ -93,6 +95,10 @@ Shader "Close the Deal/Character Toon"
         {
             Name "ForwardLit"
             Tags { "LightMode" = "UniversalForward" }
+            // Marks every pixel a character covers, so the blood splat shader can skip them
+            // (BloodSplat.shader tests the same bit). Bit 8 is one of the four URP leaves to
+            // projects; nothing else in the game uses it.
+            Stencil { Ref 8 WriteMask 8 Comp Always Pass Replace }
 
             HLSLPROGRAM
             #pragma vertex Vert
@@ -247,6 +253,8 @@ Shader "Close the Deal/Character Toon"
             // WHY this tag: URP's opaque pass draws SRPDefaultUnlit alongside UniversalForward,
             // which gives a second pass with no renderer feature.
             Tags { "LightMode" = "SRPDefaultUnlit" }
+            // Same mark as the base pass, so the contour's rim is not painted either.
+            Stencil { Ref 8 WriteMask 8 Comp Always Pass Replace }
             Cull Front
 
             HLSLPROGRAM

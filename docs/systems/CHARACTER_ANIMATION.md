@@ -29,7 +29,7 @@ It is not limp. Animation clips say what the body should be doing every frame (s
 - **Stopping:** the legs keep their stride for a fifth of a second after the speed drops (so a flip of direction is not mistaken for a stop), then ease into the stance in about a quarter of a second; the arms come out for a moment.
 - **Jumping:** a held air pose with the arms out and the legs staggered, braced harder than on the floor.
 - **Landing:** a crouch whose depth grows with how fast the body came down, then it stands up into whatever it is doing next.
-- **Hits and knock-back:** running into something, or being blasted, weakens every joint for a moment, so the body goes properly limp. Reactions to weapon hits (so far only on a test dummy) are in [HIT_REACTIONS.md](HIT_REACTIONS.md).
+- **Hits and knock-back:** running into something, or being blasted, weakens every joint for a moment, so the body goes properly limp. Reactions to weapon hits (a flinch on players and on a test dummy; knock-down on the dummy only) are in [HIT_REACTIONS.md](HIT_REACTIONS.md).
 - **Collisions:** every part bumps into the level and into other players' ragdolls.
 
 It hangs from its hips, which a spring drags along after the player. **It does not balance on its feet and cannot fall over**; the player capsule still decides where you are.

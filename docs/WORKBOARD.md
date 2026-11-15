@@ -16,3 +16,4 @@ Anything that threatens 7 Oct or 29 Oct, scope creep, or a change to netcode aut
 | Who (human / tool) | Task | Branch | Claimed scenes and prefabs | Since |
 |---|---|---|---|---|
 | Alex / Codex | Animated STDMC eye cards | Alex_Env | STDMC_Toon.prefab | 2026-11-12 |
+| Harvey / Claude Code | Player hit flinch (PlayerHits) and blood splats | harvey-netcode | Player.prefab (one added component, one assigned profile) | 2026-11-15 |
