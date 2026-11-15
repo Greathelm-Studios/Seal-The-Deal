@@ -46,6 +46,7 @@ A splat has no collider and nothing reads it back: it cannot affect gameplay.
 - Runtime: [BloodSplatSystem.cs](../../Assets/_Project/Scripts/Effects/BloodSplatSystem.cs) and [BloodProfile.cs](../../Assets/_Project/Scripts/Effects/BloodProfile.cs), namespace `CloseTheDeal.Effects`.
 - Tool: `Close the Deal > Art > Build Blood Assets` ([BloodAssets.cs](../../Assets/_Project/Editor/Art/BloodAssets.cs)) writes `Assets/_Project/Art/Blood/Resources/BloodSplat.mat` and `BloodProfile.asset` if missing. It never overwrites an edited material, and never rebuilds the profile once it exists. Run it once before making a build, because the build needs the material in a Resources folder. In the Editor the blood works without it, using the profile defaults.
 - Test: `Close the Deal > Art > Spawn Test Blood (Play Mode)` ([BloodTestSplats.cs](../../Assets/_Project/Editor/Art/BloodTestSplats.cs)) fires a pistol-strength, a melee and a very hard hit at the surface the camera faces.
+- Drops in the air: [BloodDropBurst.cs](../../Assets/_Project/Scripts/Effects/BloodDropBurst.cs) and [BloodDrop.shader](../../Assets/_Project/Art/Blood/BloodDrop.shader) (`Close the Deal/Blood Drop`), with `Resources/BloodDrop.mat` written by the same Build Blood Assets tool.
 - Feed it listens to: [HitFeed.cs](../../Assets/_Project/Scripts/Player/HitFeed.cs); see [HIT_REACTIONS.md](HIT_REACTIONS.md).
 
 ## Tuning
@@ -65,6 +66,21 @@ Edit `Assets/_Project/Art/Blood/Resources/BloodProfile.asset`; each value has a 
 | Lifetime, Shrink time | Seconds at full size, then seconds shrinking away. |
 | Pop time, Pop overshoot | The quick swell when a splat appears. |
 | Max live splats | The cap for the whole scene; the oldest is reused when full. |
+| Drops from wound, Drops from body | How many drops fly off the spot that was hit and off the rest of the body, for a pistol-strength hit. Harder hits throw more. |
+| Melee drops boost | How many times more drops a melee hit throws. |
+| Max drops per hit | The most one hit may throw. |
+| Drop speed, Drop spread | How fast they leave the wound (m/s) and how wide they fan (degrees; melee fans twice as wide). |
+| Back spray | The share thrown back toward the attacker instead of onward. |
+| Drop size, Drop life | Metres across, and seconds before a drop has shrunk away. |
+| Drop gravity | How hard they fall, as a multiple of normal gravity. Read when the game starts. |
+
+## Drops in the air
+
+When a body is hit by a shot or a blow, blood also flies off it for about half a second: most from the spot that was hit, fanned along the way the hit was travelling with a share sprayed back at the attacker, and a few shaken off the rest of the body between knee and shoulder.
+Each drop is one flat square of the blood colour, stretched along its flight, so it reads as a chunky pixel streak beside the pixel-stepped splats; it takes the colder cut tone while it flies through shade.
+The drops fall, shrink and vanish. They do not collide with anything and leave no mark themselves: the splats on the surfaces are placed separately, by rays, at the moment of the hit.
+Local and cosmetic like the splats: nothing is synced, and one shared particle system draws every drop in the scene.
+Seen in play as host on 2026-11-15, on the host's own body, for a shot and a melee hit.
 
 The shader's own Inspector values (**Pixel size** in metres, 0 for smooth edges; an optional thin rim, off by default; how sideways a surface may be and still get blood) are on `BloodSplat.mat`.
 How often each kind of splat appears is fixed in the shader (`Shape` in `BloodSplat.shader`), not on an asset.

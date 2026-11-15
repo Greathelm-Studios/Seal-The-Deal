@@ -4,6 +4,8 @@
 //  Generated : 2026-11-15
 //  Prompt    : Harvey: "create a blood splatter shader that fits in within the games artstyle
 //              that paints around objects and ontop of them when hit by these attacks."
+//  Modified  : Claude Fable 5.2, 2026-11-15 — also writes the material for the drops in the
+//              air (Harvey: "Add a particle effect where blood splatters off of a player").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Writes the blood material and the blood tuning profile into a Resources folder,
 //              where the runtime finds them. Menu-only, and never overwrites one a person edited.
@@ -34,6 +36,11 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>Where the material is written.</summary>
         public const string MaterialPath = ResourcesFolder + "/BloodSplat.mat";
 
+        /// <summary>The drop material, loaded at run time by name ("BloodDrop") from Resources.</summary>
+        public const string DropMaterialPath = ResourcesFolder + "/BloodDrop.mat";
+
+        const string DropShaderName = "Close the Deal/Blood Drop";
+
         /// <summary>Where the profile is written.</summary>
         public const string ProfilePath = ResourcesFolder + "/BloodProfile.asset";
 
@@ -57,9 +64,35 @@ namespace CloseTheDeal.Editor.Art
 
             string material = WriteMaterial(shader);
             string profile = WriteProfile();
-            string report = $"[Blood] Material: {material}. Profile: {profile}.";
+            string drop = WriteDropMaterial();
+            string report = $"[Blood] Material: {material}. Drop material: {drop}. Profile: {profile}.";
             Debug.Log(report);
             return report;
+        }
+
+        /// <summary>The material for the drops that fly through the air, beside the splat material.</summary>
+        static string WriteDropMaterial()
+        {
+            Shader shader = Shader.Find(DropShaderName);
+            if (shader == null)
+                return "shader not found";
+            if (!GeneratedAssetGuard.MayOverwrite(DropMaterialPath))
+                return "left alone (edited by hand)";
+
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(DropMaterialPath);
+            Material material = existing != null ? existing : new Material(shader) { name = "BloodDrop" };
+            material.shader = shader;
+
+            var defaults = ScriptableObject.CreateInstance<BloodProfile>();
+            material.SetColor("_CutColor", defaults.CutColor);
+            Object.DestroyImmediate(defaults);
+
+            if (existing == null)
+                AssetDatabase.CreateAsset(material, DropMaterialPath);
+            else
+                EditorUtility.SetDirty(material);
+            GeneratedAssetGuard.MarkGenerated(material);
+            return existing == null ? "written" : "refreshed";
         }
 
         static string WriteMaterial(Shader shader)

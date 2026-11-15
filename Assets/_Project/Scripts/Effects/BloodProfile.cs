@@ -101,5 +101,36 @@ namespace CloseTheDeal.Effects
 
         [Tooltip("The most splats alive at once, in the whole scene. When full, the oldest is reused for the next one. Lower = cheaper, and old blood disappears sooner.")]
         [Min(4)] public int MaxLiveSplats = 48;
+
+        [Header("Drops in the air")]
+        [Tooltip("How many drops fly off the spot that was hit, for a pistol-strength hit. Harder hits throw more. 0 = none.")]
+        [Min(0)] public int DropsFromWound = 14;
+
+        [Tooltip("How many drops are shaken off the rest of the body, for a pistol-strength hit. 0 = only the spot that was hit bleeds.")]
+        [Min(0)] public int DropsFromBody = 6;
+
+        [Tooltip("How many times more drops a melee hit throws than a shot of the same strength. 1 = the same.")]
+        [Range(0.5f, 4f)] public float MeleeDropsBoost = 1.5f;
+
+        [Tooltip("The most drops one hit may throw, however hard it was.")]
+        [Min(1)] public int MaxDropsPerHit = 60;
+
+        [Tooltip("How fast the drops leave the spot that was hit, in metres per second. Higher = they fly further before falling.")]
+        [Min(0.1f)] public float DropSpeed = 5f;
+
+        [Tooltip("How wide the drops fan out around the way the hit was travelling, in degrees. A melee hit fans twice as wide.")]
+        [Range(0f, 85f)] public float DropSpread = 30f;
+
+        [Tooltip("The share of the drops that spray back toward the attacker instead of onward. 0 = all fly onward, 0.5 = half each way.")]
+        [Range(0f, 1f)] public float BackSpray = 0.35f;
+
+        [Tooltip("How big a drop is, in metres across. Each one varies a little around this.")]
+        [Min(0.005f)] public float DropSize = 0.05f;
+
+        [Tooltip("How long a drop lasts, in seconds, shrinking as it goes.")]
+        [Min(0.05f)] public float DropLife = 0.55f;
+
+        [Tooltip("How hard the drops fall, as a multiple of normal gravity. Higher = a tighter, heavier arc. Read when the game starts.")]
+        [Min(0f)] public float DropGravity = 1.5f;
     }
 }
