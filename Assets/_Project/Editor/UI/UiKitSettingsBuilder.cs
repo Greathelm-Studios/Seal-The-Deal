@@ -22,10 +22,13 @@ namespace CloseTheDeal.Editor.UI
         const float RightX = 1296f;
         const string ActionsPath = "Assets/InputSystem_Actions.inputactions";
 
+        // Interact (F) and Drop / Throw (G) are left out: the pickups, firm and lobby code read those keys directly, so a
+        // row would rebind nothing (review #563). Being unlisted, their keys are refused to other actions, as for moving.
+        // UI_KIT.md "Settings" says what has to change in those lanes for the rows to work.
         static readonly (string action, string part)[] Bindings =
         {
-            ("Jump", null), ("Sprint", null), ("Crouch", null), ("Interact", null), ("Attack", null),
-            ("AltFire", null), ("Reload", null), ("Throw", null), ("Lean", "negative"), ("Lean", "positive"),
+            ("Jump", null), ("Sprint", null), ("Crouch", null), ("Attack", null),
+            ("AltFire", null), ("Reload", null), ("Lean", "negative"), ("Lean", "positive"),
         };
 
         internal static GameObject Build()
@@ -83,9 +86,9 @@ namespace CloseTheDeal.Editor.UI
             RectTransform changes = Fill(changesLine, "Block"); // its own group: the reveal drives the line's
             changes.gameObject.AddComponent<CanvasGroup>();
             Box(changes, "ChangesBullet", 96f, 676f, 8f, 8f, t.Black);
-            TextMeshProUGUI changesHeading = Label(changes, "ChangesHeading", 112f, 668f, 700f, 24f, "\u00a7 CHANGED ON THIS TAB \u00b7 0", t.Caption, t.Navy);
-            Box(changes, "ChangesRule", 96f, 696f, 1120f, 1f, t.Hair);
-            TextMeshProUGUI changesBody = Label(changes, "ChangesBody", 112f, 712f, 1088f, 200f,
+            TextMeshProUGUI changesHeading = Label(changes, "ChangesHeading", 112f, 708f, 700f, 24f, "\u00a7 CHANGED ON THIS TAB \u00b7 0", t.Caption, t.Navy);
+            Box(changes, "ChangesRule", 96f, 736f, 1120f, 1f, t.Hair); // below six rows (300 + 6 x 64)
+            TextMeshProUGUI changesBody = Label(changes, "ChangesBody", 112f, 752f, 1088f, 180f,
                 "Nothing on this tab differs from how the game shipped.", t.Body, t.Ink2, TextAlignmentOptions.TopLeft, true);
             changesBody.lineSpacing = 18f;
 
@@ -119,7 +122,7 @@ namespace CloseTheDeal.Editor.UI
             string[] about =
             {
                 "Look and the keys. Pad buttons are named as on the pad you last used.",
-                "Display mode, resolution, vertical sync, frame rate and quality.",
+                "Display mode, resolution, vertical sync, frame rate, menu glass and quality.",
                 "Volume for each part of the game's sound.",
                 "Motion, the crosshair and the network readout.",
             };
@@ -334,16 +337,19 @@ namespace CloseTheDeal.Editor.UI
                 "Matches frames to the monitor so the picture never tears. Adds a little delay to the mouse.");
             UiStepper cap = Row<UiStepper>(pageRoot, UiKitComponents.Stepper, "FrameCap", "Frame rate limit", ref y,
                 "The most frames per second the game draws, with vertical sync off.");
+            UiStepper glass = Row<UiStepper>(pageRoot, UiKitComponents.Stepper, "UiGlass", "Menu glass", ref y,
+                "Blur softens the game behind menu panes; Auto blurs where this PC's renderer can. No blur shows it sharp under a denser tint, and costs nothing.");
             UiStepper quality = Row<UiStepper>(pageRoot, UiKitComponents.Stepper, "Quality", "Graphics quality", ref y,
-                "Lower draws faster on older PCs.");
+                "Lower draws faster on older PCs."); // last: hidden where the platform has one level, leaving no gap
 
             var page = pageRoot.gameObject.AddComponent<VideoPage>();
-            Wire(page, "Video", new Selectable[] { mode, resolution, vsync, cap, quality });
+            Wire(page, "Video", new Selectable[] { mode, resolution, vsync, cap, glass, quality });
             Set(page, "_mode", mode);
             Set(page, "_resolution", resolution);
             Set(page, "_vsync", vsync);
             Set(page, "_frameCap", cap);
             Set(page, "_quality", quality);
+            Set(page, "_glass", glass);
 
             PreviewCaption(page, pageRoot, "THIS SCREEN NOW");
             Box(pageRoot, "ReadoutFrame", RightX, 480f, 528f, 120f, t.Navy, UiKitArt.Outline1);

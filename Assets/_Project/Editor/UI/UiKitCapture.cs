@@ -275,6 +275,39 @@ namespace CloseTheDeal.Editor.UI
             yield return MenuRule(lobby, Object.FindAnyObjectByType<GameMenu>());
         }
 
+        // ---- The player's Music volume, borrowed by a check ------------------------------------------------
+
+        static float _heldMusic = -1f;
+
+        /// <summary>
+        /// Notes the player's Music volume before a check changes it. It comes back with ReleaseMusic, and also if the
+        /// run is stopped first (Play Mode ends, or the Editor quits), so a killed capture never leaves it changed.
+        /// </summary>
+        static void HoldMusic()
+        {
+            if (_heldMusic >= 0f)
+                return;
+            _heldMusic = UiAudio.Get(AudioBus.Music);
+            EditorApplication.playModeStateChanged += ReleaseOnExit;
+            Application.quitting += ReleaseMusic;
+        }
+
+        static void ReleaseOnExit(PlayModeStateChange change)
+        {
+            if (change == PlayModeStateChange.ExitingPlayMode)
+                ReleaseMusic();
+        }
+
+        static void ReleaseMusic()
+        {
+            EditorApplication.playModeStateChanged -= ReleaseOnExit;
+            Application.quitting -= ReleaseMusic;
+            if (_heldMusic < 0f)
+                return;
+            UiAudio.SetVolume(AudioBus.Music, _heldMusic);
+            _heldMusic = -1f;
+        }
+
         static string Status(TitleScreen title) => Find<UiStatusLine>(title, "StatusLine")?.Text;
 
         static T Find<T>(Component under, string name) where T : Component
@@ -694,14 +727,14 @@ namespace CloseTheDeal.Editor.UI
             Tabs().Select(2, true);
             yield return 0.4f;
             UiSlider music = Find<UiSlider>(Settings(), "Volume1");
-            float before = UiAudio.Get(AudioBus.Music);
+            HoldMusic();
             EventSystem.current.SetSelectedGameObject(music.gameObject);
             Move(MoveDirection.Left);
             yield return null;
             UiStatusLine settingsStatus = Find<UiStatusLine>(Settings(), "StatusLine");
             Check("after closing and reopening Settings, a change still reports 'Saved' and Reset turns on",
                 settingsStatus.Text == "Saved on this PC." && Find<UiButton>(Settings(), "ResetToDefaults").interactable, settingsStatus.Text);
-            UiAudio.SetVolume(AudioBus.Music, before);
+            ReleaseMusic();
 
             _root.Stack.Pop();
             yield return 0.6f;

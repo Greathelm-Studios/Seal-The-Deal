@@ -6,7 +6,8 @@ namespace CloseTheDeal.UI
 {
     /// <summary>
     /// Settings › Video: display mode, resolution (a new one asks to be kept and goes back by itself after 10 seconds),
-    /// vertical sync, frame rate limit (only with vertical sync off) and graphics quality. Values live in UiVideo.
+    /// vertical sync, frame rate limit (only with vertical sync off), graphics quality and menu glass (lane 7's blur
+    /// or its plain no-blur tint, UiGlassSettings). Values live in UiVideo and UiGlassSettings.
     /// The right column says what the screen is doing now.
     /// </summary>
     [AddComponentMenu("Close the Deal/UI/Settings Page - Video")]
@@ -17,6 +18,8 @@ namespace CloseTheDeal.UI
         [SerializeField] UiToggle _vsync;
         [SerializeField] UiStepper _frameCap;
         [SerializeField] UiStepper _quality;
+        [Tooltip("Menu glass: Blur (the default) or No blur.")]
+        [SerializeField] UiStepper _glass;
         [Tooltip("The live readout in the right column: the size and refresh the screen is running at.")]
         [SerializeField] TMP_Text _readout;
         [Tooltip("The yes / no dialog the resolution check uses.")]
@@ -39,6 +42,8 @@ namespace CloseTheDeal.UI
             _vsync.Changed += OnVSync;
             _frameCap.Changed += OnCap;
             _quality.Changed += OnQuality;
+            if (_glass != null)
+                _glass.Changed += OnGlass;
         }
 
         void OnDisable()
@@ -48,6 +53,8 @@ namespace CloseTheDeal.UI
             _vsync.Changed -= OnVSync;
             _frameCap.Changed -= OnCap;
             _quality.Changed -= OnQuality;
+            if (_glass != null)
+                _glass.Changed -= OnGlass;
         }
 
         public override void ShowSaved()
@@ -62,10 +69,23 @@ namespace CloseTheDeal.UI
             _frameCap.SetOptions(UiVideo.CapNames, UiVideo.FrameCap);
             _quality.SetOptions(QualitySettings.names, UiVideo.Quality);
             _quality.transform.parent.gameObject.SetActive(QualitySettings.names.Length > 1); // one level on this platform: nothing to choose
+            if (_glass != null)
+                _glass.SetOptions(GlassNames, GlassIndex);
             ShowCapUse();
         }
 
-        public override bool AtDefaults => UiVideo.AtDefaults;
+        // Lane 7's three values, in its order: Auto (blur where the renderer has it), Blur, No blur.
+        static readonly string[] GlassNames = { "Auto", "Blur", "No blur" };
+
+        static int GlassIndex => Mathf.Clamp((int)UiGlassSettings.Current, 0, GlassNames.Length - 1);
+
+        void OnGlass(int index)
+        {
+            UiGlassSettings.Current = (UiGlassSettings.Quality)index;
+            RaiseSaved();
+        }
+
+        public override bool AtDefaults => UiVideo.AtDefaults && GlassIndex == 0;
 
         public override void DescribeChanges(List<string> lines)
         {
@@ -80,11 +100,14 @@ namespace CloseTheDeal.UI
             string[] levels = QualitySettings.names;
             if (UiVideo.Quality != UiVideo.DefaultQuality && UiVideo.Quality < levels.Length && UiVideo.DefaultQuality < levels.Length)
                 lines.Add(ChangeLine("Graphics quality", levels[UiVideo.Quality], levels[UiVideo.DefaultQuality]));
+            if (GlassIndex != 0)
+                lines.Add(ChangeLine("Menu glass", GlassNames[GlassIndex], GlassNames[0]));
         }
 
         public override void ResetToDefaults()
         {
             UiVideo.ResetToDefaults();
+            UiGlassSettings.Current = UiGlassSettings.Quality.Auto;
             ShowSaved();
         }
 

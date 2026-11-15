@@ -4,11 +4,11 @@
 
 ## What happens in the game
 
-The game opens on the UI kit's title screen ([UI_KIT.md](UI_KIT.md)): **Host game**, **Join on this PC** (local test mode only), **Settings** and **Quit to desktop**, the Steam or local mode line and the status line. There are no lobby codes. In a scene without the kit, the playtest card shows instead. Hosting, joining, loading and every failure are the kit's (session and problem panels over the title, UI_KIT.md). In a game the playtest card shows the player count, **Invite with the Steam overlay** when the overlay exists, a note that friends can join from your name, **Back to game** and **Leave game**. The controls are listed at the bottom of the card.
+The game opens on the UI kit's title screen ([UI_KIT.md](UI_KIT.md)): **Host game**, **Join on this PC** (local test mode only), **Settings** and **Quit to desktop**, the Steam or local mode line and the status line. There are no lobby codes. In a scene without the kit, the playtest card shows instead. Hosting, joining, loading and every failure are the kit's (session and problem panels over the title, UI_KIT.md). In a game, Esc opens the kit's in-game menu, a glass pane over the running game (UI_KIT.md "What the player sees"): Back to game, Invite friends (Steam only), Settings and Leave game (asks first, host and client words differ), reception's seats while waiting, and the match lane's section. Only a scene without the kit still shows the old dark playtest card.
 
-In game the menu is gone: the crosshair in the centre (drawn from Settings › Accessibility: style, colour, size), **Esc · Menu** top-left and the network readout bottom-left. **Esc** opens the menu again. While the menu is open the mouse is free and your character stands still, so clicking never moves, jumps or fires.
+In game the menu is gone: the crosshair in the centre (drawn from Settings › Accessibility: style, colour, size), **Esc · Menu** top-left as the kit's key hint (Menu / Options on a pad) and the network readout bottom-left on a kit plate. **Esc** opens the menu again. While the menu is open the mouse is free and your character stands still, so clicking never moves, jumps or fires.
 
-In a scene with the briefcase match ([MATCH.md](MATCH.md)) the card also carries a match section above the in-game buttons: where the match stands, the result and how it was won, and the host's **Start the match** / **Rematch** (clients read "The host can start a rematch."). The match opens the menu when it ends. The HUD adds the clock (top centre), both firms' briefcase and checkpoint (top right, yours first, cyan and amber), the countdown, the F / G prompt under the crosshair and one-off lines at the bottom.
+In a scene with the briefcase match ([MATCH.md](MATCH.md)) the in-game menu also carries the match lane's section (in its match slot, `KitUI/InGameMenu/Content/MatchSlot`; Set Up UI moves an existing section there from the old card): where the match stands, the result and how it was won, and the host's **Start the match** / **Rematch** (clients read "The host can start a rematch."). The match opens the menu when it ends. The HUD adds the clock (top centre), both firms' briefcase and checkpoint (top right, yours first, cyan and amber), the countdown, the F / G prompt under the crosshair and one-off lines at the bottom.
 
 Greybox: this is a playtest tool, not the final lobby. The final one lives in the reception with the secretary (GDD).
 
@@ -38,6 +38,5 @@ Flat dark card, amber for the one primary action per state, white text with a mu
 ## Known limitations
 
 - Settings has Controls, Video, Audio and Accessibility ([UI_KIT.md](UI_KIT.md) "Settings"). Mouse sensitivity, invert and key rebinding show once the movement lane's camera and input reader read `InputPrefs`; field of view has no hook yet.
-- The in-game menu still uses the playtest card (dark, greybox look) until the next UI slice.
 - No player names over heads and no team indicator yet.
-- The playtest card fades in but has no other motion and no sounds.
+- The playtest card (scenes without the kit only) fades in but has no other motion and no sounds.

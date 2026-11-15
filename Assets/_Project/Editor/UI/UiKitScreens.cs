@@ -17,7 +17,7 @@ namespace CloseTheDeal.Editor.UI
     /// </summary>
     internal static class UiKitScreens
     {
-        internal static GameObject Title, Settings, Confirm, Session, Problem, Canvas;
+        internal static GameObject Title, Settings, Confirm, Session, Problem, GameMenu, Canvas;
 
         /// <summary>The title lane's band for the title lockup and menu starts at 64% of the frame; the sill sits above it.</summary>
         const float SillY = 664f;
@@ -35,6 +35,7 @@ namespace CloseTheDeal.Editor.UI
             Confirm = Ensure(ScreenFolder + "/ConfirmDialog.prefab", BuildConfirm, rebuild);
             Session = Ensure(ScreenFolder + "/SessionPanel.prefab", UiKitSessionBuilder.BuildSession, rebuild);
             Problem = Ensure(ScreenFolder + "/ProblemPanel.prefab", UiKitSessionBuilder.BuildProblem, rebuild);
+            GameMenu = Ensure(ScreenFolder + "/InGameMenu.prefab", UiKitGameMenuBuilder.Build, rebuild);
             Canvas = Ensure(ScreenFolder + "/KitCanvas.prefab", BuildCanvas, rebuild);
         }
 
@@ -67,8 +68,12 @@ namespace CloseTheDeal.Editor.UI
             var quit = Instance<UiConfirmDialog>(Confirm, go.transform, "QuitDialog");
             var session = Instance<SessionPanel>(Session, go.transform, "SessionPanel");
             var problem = Instance<ProblemPanel>(Problem, go.transform, "ProblemPanel");
+            var gameMenu = Instance<InGameMenuScreen>(GameMenu, go.transform, "InGameMenu");
             session.gameObject.SetActive(false);
             problem.gameObject.SetActive(false);
+            gameMenu.gameObject.SetActive(false);
+            Set(gameMenu, "_settingsScreen", settings);
+            Set(gameMenu, "_confirm", quit);
             Instance<UiFocusFrame>(UiKitComponents.FocusFrame, go.transform, "FocusFrame");
             title.gameObject.SetActive(false);
             settings.gameObject.SetActive(false);
@@ -84,6 +89,7 @@ namespace CloseTheDeal.Editor.UI
             Set(root, "_title", title);
             Set(root, "_session", session);
             Set(root, "_problem", problem);
+            Set(root, "_gameMenu", gameMenu);
             return go;
         }
 
