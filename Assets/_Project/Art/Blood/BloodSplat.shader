@@ -7,6 +7,9 @@
 //  Modified  : Claude Fable 5.2, 2026-11-15 — restyled to the art bible: spiked shape, cooler
 //              colours, lit and shaded tones from the main light, no rim (Harvey: "it looks
 //              very out of place versus the rest of the games art style").
+//  Modified  : Claude Fable 5.2, 2026-11-15 — four kinds of splat picked by the seed (splash,
+//              slash, spray, blot with drips) and a subtle world-size pixel grid (Harvey: "Add
+//              more splatter variety ... and make it a little more pixelated").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : A flat, cartoon blood splat drawn onto whatever geometry is inside a box. The
 //              box is a plain cube; each pixel of it looks up the scene depth behind it, works
@@ -42,6 +45,7 @@ Shader "Close the Deal/Blood Splat"
         _RimColor("Thin rim colour (alpha = strength, 0 = no rim)", Color) = (0.07, 0.11, 0.22, 0)
         _RimWidth("Rim width, fraction of the splat", Range(0, 0.1)) = 0.025
         _AngleCut("Surfaces turned away from the splat by more than this are skipped (0 = only edge-on, 1 = only square-on)", Range(0, 1)) = 0.3
+        _PixelSize("Pixel size in metres, the squares the splat is drawn on (0 = smooth)", Range(0, 0.05)) = 0.014
     }
 
     SubShader
@@ -88,6 +92,7 @@ Shader "Close the Deal/Blood Splat"
                 half4 _RimColor;
                 float _RimWidth;
                 float _AngleCut;
+                float _PixelSize;
             CBUFFER_END
 
             // Per splat, so every splat can differ while the boxes draw as one instanced batch.
@@ -99,9 +104,8 @@ Shader "Close the Deal/Blood Splat"
 
             /// Where the box is thinner than this (as a fraction of its depth) the splat fades, so a surface right at the back of the box does not cut off hard.
             #define DEPTH_FADE 0.12
-            /// How many small drops fly off, and how many sharp spikes fan out along the throw.
-            #define DROPS 4
-            #define SPIKES 6
+            /// The most spikes a splash can have; about a quarter are left out of each.
+            #define SPIKES 7
             /// Everything is drawn inside a circle of this radius in splat space; the box edge is at 1.
             #define SPLAT_SCALE 1.1
 
@@ -149,37 +153,40 @@ Shader "Close the Deal/Blood Splat"
                 return length(pa - ba * h) - lerp(ra, rb, h);
             }
 
-            /// The whole splat as a signed distance (negative inside), in splat space where +x is the way the blood was thrown.
-            float Shape(float2 q, float seed, float stretch, float life)
+            /// A lumpy disc: the body of most splats. Negative inside.
+            float Core(float2 q, float seed, float radius, float lump)
             {
                 float angle = atan2(q.y, q.x);
-
-                // Core: small and only slightly lumpy, pulled along the throw. Kept small on
-                // purpose: the spikes carry the shape (art bible: one memorable shape, not a
-                // cute blob with many details).
-                float2 m = float2((q.x + 0.05) / (1.0 + stretch * 0.6), q.y);
                 float wobble = 1.0
-                    + 0.10 * sin(3.0 * angle + Hash(seed + 1.0) * 6.283)
-                    + 0.06 * sin(5.0 * angle + Hash(seed + 2.0) * 6.283);
-                float d = length(m) - 0.22 * wobble;
+                    + lump * sin(3.0 * angle + Hash(seed + 1.0) * 6.283)
+                    + lump * 0.6 * sin(5.0 * angle + Hash(seed + 2.0) * 6.283);
+                return length(q) - radius * wobble;
+            }
 
-                // Spikes: sharp tapered strokes fanned along the throw, each ending in a point.
+            /// Kind 0, the splash: a small core with sharp spikes fanned along the throw and a few drops past them.
+            float Splash(float2 q, float seed, float stretch)
+            {
+                float2 m = float2((q.x + 0.05) / (1.0 + stretch * 0.6), q.y);
+                float d = Core(m, seed, lerp(0.17, 0.26, Hash(seed + 3.0)), 0.10);
+
                 // A hard hit from straight on (stretch 0) fans all the way round; a glancing
-                // one (stretch 1) throws them forward in a narrow fan.
+                // one (stretch 1) throws the spikes forward in a narrow fan.
                 float fan = lerp(3.14159, 0.9, stretch);
                 for (int s = 0; s < SPIKES; s++)
                 {
                     float fs = (float)s;
                     float t = (fs + Hash(seed + 40.0 + fs)) / (float)SPIKES * 2.0 - 1.0;
                     float a = t * fan;
-                    float len = lerp(0.45, 0.95, Hash(seed + 50.0 + fs)) * lerp(1.0, 0.55, abs(t) * stretch);
+                    float len = lerp(0.40, 0.95, Hash(seed + 50.0 + fs)) * lerp(1.0, 0.55, abs(t) * stretch);
+                    // About one spike in four is left out (length 0 hides it inside the
+                    // core), so the count differs from splat to splat.
+                    len *= step(Hash(seed + 90.0 + fs), 0.76);
                     float2 dir = float2(cos(a), sin(a));
-                    float root = 0.07 + 0.05 * Hash(seed + 70.0 + fs);
-                    d = SMin(d, Streak(q, dir * 0.08, dir * len, root, 0.0), 0.05);
+                    float root = 0.06 + 0.06 * Hash(seed + 70.0 + fs);
+                    d = SMin(d, Streak(q, dir * 0.08, dir * max(len, 0.09), root, 0.0), 0.05);
                 }
 
-                // A few small drops flung past the spikes.
-                for (int k = 0; k < DROPS; k++)
+                for (int k = 0; k < 4; k++)
                 {
                     float fk = (float)k;
                     float a = (Hash(seed + 100.0 + fk) * 2.0 - 1.0) * fan;
@@ -187,6 +194,92 @@ Shader "Close the Deal/Blood Splat"
                     float r = lerp(0.045, 0.018, (dist - 0.6) / 0.37);
                     d = min(d, length(q - float2(cos(a), sin(a)) * dist) - r);
                 }
+                return d;
+            }
+
+            /// Kind 1, the slash: two or three long thin strokes along the throw, pointed at both ends.
+            float Slash(float2 q, float seed)
+            {
+                float d = 10.0;
+                for (int s = 0; s < 3; s++)
+                {
+                    float fs = (float)s;
+                    float y = (Hash(seed + 40.0 + fs) * 2.0 - 1.0) * 0.22;
+                    float2 mid = float2((Hash(seed + 50.0 + fs) - 0.5) * 0.3, y);
+                    float2 tail = float2(-0.35 - 0.45 * Hash(seed + 60.0 + fs), y - (Hash(seed + 65.0 + fs) - 0.5) * 0.12);
+                    float2 tip = float2(0.45 + 0.5 * Hash(seed + 70.0 + fs), y + (Hash(seed + 75.0 + fs) - 0.5) * 0.18);
+                    float w = 0.035 + 0.045 * Hash(seed + 80.0 + fs);
+                    float stroke = min(Streak(q, mid, tail, w, 0.0), Streak(q, mid, tip, w, 0.0));
+                    stroke = min(stroke, length(q - (tip + float2(0.05, 0.02))) - 0.02);
+                    // The third stroke is there only half the time.
+                    float keep = (s < 2) ? 1.0 : step(Hash(seed + 95.0), 0.5);
+                    d = min(d, lerp(10.0, stroke, keep));
+                }
+                return d;
+            }
+
+            /// Kind 2, the spray: a small core at the back and a cone of dots thinning out along the throw.
+            float Spray(float2 q, float seed, float stretch)
+            {
+                float2 origin = float2(-0.45, 0.0);
+                float d = Core(q - origin, seed, 0.11, 0.12);
+                float fan = lerp(1.6, 0.55, stretch);
+                for (int k = 0; k < 14; k++)
+                {
+                    float fk = (float)k;
+                    float a = (Hash(seed + 100.0 + fk) * 2.0 - 1.0) * fan;
+                    float dist = pow(Hash(seed + 110.0 + fk), 0.7) * 1.35;
+                    float r = lerp(0.07, 0.016, saturate(dist / 1.35)) * (0.6 + 0.8 * Hash(seed + 120.0 + fk));
+                    d = min(d, length(q - (origin + float2(cos(a), sin(a)) * dist)) - r);
+                }
+                return d;
+            }
+
+            /// Kind 3, the blot: a fat lumpy patch. On a wall it runs: two or three drips hang from it.
+            float Blot(float2 q, float seed, float2 down)
+            {
+                float d = Core(q, seed, lerp(0.30, 0.40, Hash(seed + 3.0)), 0.13);
+                for (int i = 0; i < 3; i++)
+                {
+                    float fi = (float)i;
+                    float a = Hash(seed + 10.0 + fi) * 6.283;
+                    float2 c = float2(cos(a), sin(a)) * (0.24 + 0.12 * Hash(seed + 20.0 + fi));
+                    d = SMin(d, length(q - c) - (0.10 + 0.07 * Hash(seed + 30.0 + fi)), 0.10);
+                }
+
+                // Drips only on a wall: there `down` has length near 1, on a floor near 0.
+                float wall = step(0.5, length(down));
+                float2 dn = normalize(down + float2(1e-5, 0.0));
+                float2 side = float2(-dn.y, dn.x);
+                for (int r = 0; r < 3; r++)
+                {
+                    float fr = (float)r;
+                    float2 from = side * ((Hash(seed + 200.0 + fr) * 2.0 - 1.0) * 0.22);
+                    float2 to = from + dn * (0.35 + 0.55 * Hash(seed + 210.0 + fr));
+                    float w = 0.030 + 0.020 * Hash(seed + 220.0 + fr);
+                    float drip = min(Streak(q, from, to, w, w * 0.7), length(q - to) - w * 1.5);
+                    float keep = wall * ((r < 2) ? 1.0 : step(Hash(seed + 96.0), 0.5));
+                    d = min(d, lerp(10.0, drip, keep));
+                }
+                return d;
+            }
+
+            /// The whole splat as a signed distance (negative inside), in splat space where +x is
+            /// the way the blood was thrown. The seed picks one of four kinds, so a wall of hits
+            /// is not the same stamp repeated. `down` is the way to the floor in splat space:
+            /// length 1 on a wall, 0 on a floor or ceiling.
+            float Shape(float2 q, float seed, float stretch, float life, float2 down)
+            {
+                float kind = Hash(seed + 7.0);
+                float d;
+                if (kind < 0.40)
+                    d = Splash(q, seed, stretch);
+                else if (kind < 0.60)
+                    d = Slash(q, seed);
+                else if (kind < 0.80)
+                    d = Spray(q, seed, stretch);
+                else
+                    d = Blot(q, seed, down);
 
                 // Life runs 1 to 0: the whole splat shrinks away rather than fading to a ghost.
                 return d + (1.0 - life) * 0.6;
@@ -218,6 +311,18 @@ Shader "Close the Deal/Blood Splat"
                 // Taken here with the other derivatives, before any discard.
                 float aa = max((fwidth(p.x) + fwidth(p.y)) * 0.7, 1e-4);
 
+                // The box's own axes in the world, for the pixel grid and for which way is down.
+                float3 axisX = float3(UNITY_MATRIX_M._m00, UNITY_MATRIX_M._m10, UNITY_MATRIX_M._m20);
+                float3 axisY = float3(UNITY_MATRIX_M._m01, UNITY_MATRIX_M._m11, UNITY_MATRIX_M._m21);
+                float boxWidth = max(length(axisX), 1e-4);
+
+                // Pixel grid: snap to squares of a fixed size in the world, so big and small
+                // splats share one pixel size, like the pixelled clouds in the sky. Skipped once
+                // a square is smaller than a screen pixel or two, where it would only shimmer.
+                float cell = _PixelSize * 2.0 * SPLAT_SCALE / boxWidth;
+                if (cell > aa * 1.5)
+                    p = (floor(p / cell) + 0.5) * cell;
+
                 // Nothing drawn here (sky): nothing to paint on.
                 #if UNITY_REVERSED_Z
                     bool isSky = depth < 0.000001;
@@ -237,7 +342,11 @@ Shader "Close the Deal/Blood Splat"
                 float sn = sin(sp.y);
                 float2 q = float2(cs * p.x + sn * p.y, -sn * p.x + cs * p.y);
 
-                float d = Shape(q, seed, sp.z, sp.w);
+                // Which way the floor is, in the same turned space; near zero on a floor.
+                float2 downP = float2(-axisX.y / boxWidth, -axisY.y / max(length(axisY), 1e-4));
+                float2 downQ = float2(cs * downP.x + sn * downP.y, -sn * downP.x + cs * downP.y);
+
+                float d = Shape(q, seed, sp.z, sp.w, downQ);
 
                 float coverage = saturate(0.5 - d / aa);
                 if (coverage <= 0.0) discard;

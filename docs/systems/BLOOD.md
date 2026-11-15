@@ -13,7 +13,8 @@
 **Status:** Current (seen in play as host on one machine; restyled to the art bible on 2026-11-15, not yet answered by Alex's art sessions) · **Last updated:** 2026-11-15
 
 When a bullet or a melee blow lands on a player or the test dummy, flat cartoon blood splats onto the walls, desks and props behind them and one splat lands on the floor under them.
-Each splat is one sharp graphic shape: a small core with pointed spikes fanned the way the hit was travelling and a few small drops beyond them.
+Each splat is one sharp graphic shape, and there are four kinds so a row of hits is not one stamp repeated: a **splash** (a small core with pointed spikes fanned the way the hit was travelling, about four in ten), a **slash** (two or three long thin strokes), a **spray** (a cone of dots thinning out along the throw) and a **blot** (a fat lumpy patch, which hangs two or three drips when it lands on a wall), about two in ten each.
+Splats are drawn on a grid of small squares, 1.4 cm across in the world whatever the splat's size, so up close their edges step like the pixelled clouds in the sky; from across a room the grid is too fine to see.
 It is a deep, cool crimson where the main light reaches the surface and a colder, darker plum where the surface is in shade, with a hard edge between the two and no outline: the same "base colour, one hard cut shadow" rule as the characters ([art bible](../../ArtSource/Kit/concepts/Office/refs/art_bible.txt) §03, §05, §17, §20).
 Splats shrink away after about ten seconds, because the bible wants effects to be crisp and brief and the building to return to clean.
 The first version (bright red blobs with a dark rim and many droplets, lasting 25 seconds) was rejected by Harvey as out of place.
@@ -65,9 +66,12 @@ Edit `Assets/_Project/Art/Blood/Resources/BloodProfile.asset`; each value has a 
 | Pop time, Pop overshoot | The quick swell when a splat appears. |
 | Max live splats | The cap for the whole scene; the oldest is reused when full. |
 
-The shader's own Inspector values (an optional thin rim, off by default; how sideways a surface may be and still get blood) are on `BloodSplat.mat`.
+The shader's own Inspector values (**Pixel size** in metres, 0 for smooth edges; an optional thin rim, off by default; how sideways a surface may be and still get blood) are on `BloodSplat.mat`.
+How often each kind of splat appears is fixed in the shader (`Shape` in `BloodSplat.shader`), not on an asset.
 
 ## Known limitations
+
+- **Glass takes no blood.** Windows and glass walls are see-through materials that the splat cannot find, so a hit against a window paints only its frame and whatever is behind the glass within the splat's box. Seen in play on 2026-11-15.
 
 - **Characters are skipped, held items are not.** The character shader ([CharacterToon.shader](../../Assets/_Project/Art/Toon/CharacterToon.shader)) marks stencil bit 8 on every pixel a character covers and the splat shader does not draw there, so a body walking through a splat stays clean. Anything else that moves through a splat's box still wears it while inside: a held gun, a carried prop, the eye cards if they ever poke outside the head. Not yet seen in play.
 - **Splats do not move with what they landed on.** A splat on a prop stays in the air when the prop is thrown, and paints whatever then passes through it.
