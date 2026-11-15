@@ -7453,6 +7453,10 @@ PrefabInstance:
       value: Chair
       objectReference: {fileID: 0}
     - target: {fileID: 5766994529313306933, guid: 0d955b7778e5c53418832654d9be5008, type: 3}
+      propertyPath: SceneId
+      value: 987758591
+      objectReference: {fileID: 0}
+    - target: {fileID: 5766994529313306933, guid: 0d955b7778e5c53418832654d9be5008, type: 3}
       propertyPath: WasActiveDuringEdit
       value: 1
       objectReference: {fileID: 0}
@@ -9605,6 +9609,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6984957311658994990, guid: 6003eca1d348d9e4d8e8e3a30b4152b7, type: 3}
+      propertyPath: SceneId
+      value: 1067450287
+      objectReference: {fileID: 0}
+    - target: {fileID: 6984957311658994990, guid: 6003eca1d348d9e4d8e8e3a30b4152b7, type: 3}
       propertyPath: WasActiveDuringEdit
       value: 1
       objectReference: {fileID: 0}
@@ -9847,6 +9855,10 @@ PrefabInstance:
     - target: {fileID: 6479540263813474574, guid: 6003eca1d348d9e4d8e8e3a30b4152b7, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6984957311658994990, guid: 6003eca1d348d9e4d8e8e3a30b4152b7, type: 3}
+      propertyPath: SceneId
+      value: 3214897135
       objectReference: {fileID: 0}
     - target: {fileID: 6984957311658994990, guid: 6003eca1d348d9e4d8e8e3a30b4152b7, type: 3}
       propertyPath: WasActiveDuringEdit
@@ -12307,6 +12319,10 @@ PrefabInstance:
     - target: {fileID: 5419229872003622796, guid: 8b3cb556d9fd4664abb5c9d84b0b5916, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6408008661249199825, guid: 8b3cb556d9fd4664abb5c9d84b0b5916, type: 3}
+      propertyPath: SceneId
+      value: 1991245821
       objectReference: {fileID: 0}
     - target: {fileID: 6408008661249199825, guid: 8b3cb556d9fd4664abb5c9d84b0b5916, type: 3}
       propertyPath: WasActiveDuringEdit
@@ -15294,6 +15310,10 @@ PrefabInstance:
     - target: {fileID: 5419229872003622796, guid: 8b3cb556d9fd4664abb5c9d84b0b5916, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6408008661249199825, guid: 8b3cb556d9fd4664abb5c9d84b0b5916, type: 3}
+      propertyPath: SceneId
+      value: 922742767
       objectReference: {fileID: 0}
     - target: {fileID: 6408008661249199825, guid: 8b3cb556d9fd4664abb5c9d84b0b5916, type: 3}
       propertyPath: WasActiveDuringEdit
@@ -20630,6 +20650,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6984957311658994990, guid: 6003eca1d348d9e4d8e8e3a30b4152b7, type: 3}
+      propertyPath: SceneId
+      value: 4076830637
+      objectReference: {fileID: 0}
+    - target: {fileID: 6984957311658994990, guid: 6003eca1d348d9e4d8e8e3a30b4152b7, type: 3}
       propertyPath: WasActiveDuringEdit
       value: 1
       objectReference: {fileID: 0}
@@ -21235,7 +21259,7 @@ MonoBehaviour:
   <PrefabId>k__BackingField: 65535
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 0
-  SceneId: 0
+  SceneId: 4152885165
   SerializedTransformProperties:
     Position: {x: 0, y: 0, z: 0}
     Rotation: {x: 0, y: 0, z: 0, w: 0}
@@ -42095,6 +42119,10 @@ PrefabInstance:
       value: Chair
       objectReference: {fileID: 0}
     - target: {fileID: 5766994529313306933, guid: 0d955b7778e5c53418832654d9be5008, type: 3}
+      propertyPath: SceneId
+      value: 4276055999
+      objectReference: {fileID: 0}
+    - target: {fileID: 5766994529313306933, guid: 0d955b7778e5c53418832654d9be5008, type: 3}
       propertyPath: WasActiveDuringEdit
       value: 1
       objectReference: {fileID: 0}
@@ -45907,7 +45935,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Managing.NetworkManager
   _logging: {fileID: 0}
-  _spawnablePrefabs: {fileID: 0}
+  _spawnablePrefabs: {fileID: 11400000, guid: 435496ed4140bb54db702ef6270f49fa, type: 2}
   _refreshDefaultPrefabs: 0
   _runInBackground: 1
   _dontDestroyOnLoad: 1
@@ -49957,6 +49985,10 @@ PrefabInstance:
     - target: {fileID: 4095206852985197469, guid: 0d955b7778e5c53418832654d9be5008, type: 3}
       propertyPath: m_Name
       value: Chair
+      objectReference: {fileID: 0}
+    - target: {fileID: 5766994529313306933, guid: 0d955b7778e5c53418832654d9be5008, type: 3}
+      propertyPath: SceneId
+      value: 938962941
       objectReference: {fileID: 0}
     - target: {fileID: 5766994529313306933, guid: 0d955b7778e5c53418832654d9be5008, type: 3}
       propertyPath: WasActiveDuringEdit
