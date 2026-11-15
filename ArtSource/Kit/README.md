@@ -328,6 +328,16 @@ Changes, keeping the near-neutral colours so the white props stay white:
 
 A first try at exposure 0.85 and fill 0.42 read dull grey and was backed off. Before and after captures from the same views: `review/unity_office/look_before_after/compare_0.png` and `compare_1.png`. Unsaved scene state before the rebuilds: `KitOffice_PreContrast.unity`.
 
+### Clipping sweep, 2026-11-15 evening (Alex: "still some material and mesh clipping")
+
+A collider sweep of KitOffice found these, and close-ups confirmed them:
+- Interior walls ran 0.15-0.2 m into the glass curtain walls and window sills. They now stop at the glass: `trimA` and `trimB` in `markings/l2_on_kit.json` shorten the end piece.
+- E1 and E2's upper flight cut through the upper slab and the wall closing off the space under the stairs, and a guard ran into E1's wall. The stair opening now starts at x 11.8, filled with a scaled slab strip, the wall sits south of y 14, and the guards moved.
+- The south corners had two curtain walls overlapping. They now have corner columns.
+- The roof's guard rails ran through the lift head-house. They now stop at it.
+
+What the sweep still reports is designed contact: columns over glass, walls meeting at corners, partition ends inside solid walls, props on desks, and the lift's own parts, which the lift remodel will replace. Unsaved scene state before the rebuild: `KitOffice_PreClipFix.unity`.
+
 ## Checks run
 
 - Every piece passes `mdl.mjs check` with no errors (2026-11-12, 26 pieces). The warnings are long thin faces: on thin boxes (rails, panes, slab edges), and where the shadow-gap cuts slice the flat-shaded walls. They are flat faces, so they shade correctly; they would only matter for automatic LODs, which the kit doesn't use. The locked door's lock plates touch its faces without a boolean union (a "faces cut through each other" warning).

@@ -38,6 +38,8 @@
 //              after a rebuild (AgentHub #587, 58c9b4e).
 //  Modified  : Claude Opus 5.5, 2026-11-15 evening — light pools: spots over rooms and desk areas, wall-washers on
 //              the lightboxes, a spot on the court's plinth; corridors left darker (Alex: "too evenly lit").
+//  Modified  : Claude Opus 5.5, 2026-11-15 evening - clipping fixes: walls trimmed at the facade, the stair holes
+//              clear of the flights, south corner columns.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Lays out the office floor from the kit prefabs, so the approved kit and floor plan can be walked
 //              and lit in Unity as a space. Its own file because KitImport proves the pieces snap (a small
@@ -325,7 +327,9 @@ namespace CloseTheDeal.Editor.Art
         static readonly Rect2 Shaft = new Rect2(ShaftX0, 0f, ShaftX1, ShaftY1);
         static readonly Rect2 Void = new Rect2(CourtX0, VoidY0, CourtX1, VoidY1);
         /// <summary>E1's upper flight hole (x 12–14, y 10–14); E2's is the same turned.</summary>
-        static readonly Rect2 StairHole = new Rect2(12f, 10f, 14f, 14f);
+        // WHY from x 11.8, not the 2 m grid's 12: the 2 m flight runs x 11.8-13.8, and a hole edge at 12 put the slab through
+        // its west stringer (clipping sweep, 2026-11-15). The 0.2 m strip is a scaled 2 x 2 slab (see the slab fill).
+        static readonly Rect2 StairHole = new Rect2(11.8f, 10f, 14f, 14f);
         // ---- Light pools (2026-11-15 evening, Alex: "overly bright and too evenly lit, hurts my eyes"): real spot lights
         // over rooms, desk areas and feature walls, none in the corridors, so the floor reads as lit places with
         // darker gaps between them. Shadowless, so 40-odd of them stay cheap under Forward+.
@@ -362,7 +366,10 @@ namespace CloseTheDeal.Editor.Art
         static readonly Vector2 StringerFoot = new Vector2(FeatureFootX, 0.05f), StringerTop = new Vector2(CourtX0, 4.35f);
 
         [System.Serializable] sealed class KitDoor { public float at; public string room; public float[] face; }
-        [System.Serializable] sealed class KitRun { public string kind; public float[] a, b; public KitDoor[] doors; }
+        /// <remarks>trimA, trimB: metres cut off the run's start or end where it meets the facade, so the wall stops at the curtain
+        /// wall's or window sill's inner face instead of running into the glass (clipping sweep, 2026-11-15).</remarks>
+        [System.Serializable] sealed class KitRun { public string kind; public float[] a, b; public KitDoor[] doors; public float trimA, trimB; }
+        static readonly float[] NoDoors = new float[0];
         [System.Serializable] sealed class KitEvac { public string id; public float[] at, face; public float y; }
         [System.Serializable] sealed class KitDecals { public KitEvac[] evac; }
         /// <summary>markings/l2_on_kit.json as JsonUtility reads it (its "rooms" and "districts" maps are for make_markings.py).</summary>
@@ -444,7 +451,7 @@ namespace CloseTheDeal.Editor.Art
                 {
                     var doors = new float[r.doors.Length];
                     for (int k = 0; k < doors.Length; k++) doors[k] = r.doors[k].at;
-                    Run(t, level, ParseKind(r.kind), r.a[0], r.a[1], r.b[0], r.b[1], turned, doors);
+                    Run(t, level, ParseKind(r.kind), r.a[0], r.a[1], r.b[0], r.b[1], turned, doors, r.trimA, r.trimB);
                 }
             }
             // A straight wall run from (ax, ay) to (bx, by), plan metres, tiled from the kit's 4 m and 2 m pieces. The
@@ -452,7 +459,9 @@ namespace CloseTheDeal.Editor.Art
             // right of the direction of travel as the plan is drawn (east → south side): pick the direction to suit.
             // doors: centres of door openings along the run's axis. A centre 1 m into a 2 m step takes a 2 m door piece;
             // one 2 m into a 4 m step of solid wall takes Wall_Door_4m.
-            void Run(Transform t, int level, Kind kind, float ax, float ay, float bx, float by, bool turned, params float[] doors)
+            // trimA, trimB: metres off the first and last piece, which is shortened (scaled along its run) to fit.
+            void Run(Transform t, int level, Kind kind, float ax, float ay, float bx, float by, bool turned, float[] doors,
+                     float trimA = 0f, float trimB = 0f)
             {
                 float dx = bx - ax, dy = by - ay, len = Mathf.Abs(dx) + Mathf.Abs(dy);
                 if (dx != 0f && dy != 0f) throw new System.ArgumentException("Wall runs are axis-aligned.");
@@ -476,7 +485,12 @@ namespace CloseTheDeal.Editor.Art
                     else if (Mathf.Abs(near - Half) < eps && rest > Cell - eps && kind == Kind.Solid) { piece = "Wall_Door_4m"; step = Cell; }
                     else if (float.IsNaN(near) && rest > Cell - eps) { piece = PlainPiece(kind, 4); step = Cell; }
                     else { piece = PlainPiece(kind, 2); step = Half; }
-                    Put(t, piece, ax + ux * s, ay + uy * s, yaw, turned);
+                    bool first = s < eps, last = s + step > len - eps;
+                    float headCut = first ? trimA : 0f, cut = headCut + (last ? trimB : 0f);
+                    var go = Put(t, piece, ax + ux * (s + headCut), ay + uy * (s + headCut), yaw, turned);
+                    // WHY scaled, not a shorter kit piece: the trims are a few centimetres at the facade only; the
+                    // few-percent stretch of the joint lines there doesn't read, and the kit stays on its 2 m modules.
+                    if (cut > 0f) go.transform.localScale = new Vector3((step - cut) / step, 1f, 1f);
                     s += step;
                 }
                 if (kind == Kind.Guard) return;
@@ -505,8 +519,15 @@ namespace CloseTheDeal.Editor.Art
                         }
                         for (float x = bay.X0; x < bay.X1; x += Half)
                             for (float y = bay.Y0; y < bay.Y1; y += Half)
-                                if (!System.Array.Exists(holes, h => h.Overlaps(new Rect2(x, y, x + Half, y + Half))))
-                                    P(slabs, "Slab_2x2", x, -y);
+                            {
+                                var cell = new Rect2(x, y, x + Half, y + Half);
+                                int hit = System.Array.FindIndex(holes, h => h.Overlaps(cell));
+                                if (hit < 0) { P(slabs, "Slab_2x2", x, -y); continue; }
+                                // A hole edge off the 2 m grid (the stair holes) leaves a strip of this cell: a scaled 2 x 2 slab.
+                                foreach (var rest in Remainder(cell, holes[hit]))
+                                    P(slabs, "Slab_2x2", rest.X0, -rest.Y0).transform.localScale =
+                                        new Vector3((rest.X1 - rest.X0) / Half, 1f, (rest.Y1 - rest.Y0) / Half);
+                            }
                     }
             }
 
@@ -559,6 +580,10 @@ namespace CloseTheDeal.Editor.Art
                 }
                 P(t, "Column_CornerL", 0f, 0f);
                 P(t, "Column_CornerR", Width, 0f);
+                // The south corners too, each the opposite north column turned 180 degrees: without them the two curtain
+                // walls overlapped there with doubled mullions (clipping sweep, 2026-11-15).
+                P(t, "Column_CornerR", 0f, -Depth, 180f);
+                P(t, "Column_CornerL", Width, -Depth, 180f);
                 for (int j = 0; j < Rows; j++)
                 {
                     float z = -j * Cell;
@@ -666,10 +691,10 @@ namespace CloseTheDeal.Editor.Art
                 }
                 // The floor number where the feature flight arrives, on E1's east face straight ahead.
                 WallDecal(t, "FloorNo_Feature_2F", 14f, 13f, 2f, 1f, 0f, FloorNoSize, false);
-                Run(t, level, Kind.Guard, CourtX1, VoidY0, CourtX0, VoidY0, false);       // the bridge's edge
-                Run(t, level, Kind.Guard, CourtX0, VoidY0 + Half, CourtX0, VoidY1, false); // west, from the flight's arrival
-                Run(t, level, Kind.Guard, CourtX0, VoidY1, CourtX1, VoidY1, false);       // the canopy's edge
-                Run(t, level, Kind.Guard, CourtX1, VoidY1, CourtX1, VoidY0, false);       // east
+                Run(t, level, Kind.Guard, CourtX1, VoidY0, CourtX0, VoidY0, false, NoDoors);       // the bridge's edge
+                Run(t, level, Kind.Guard, CourtX0, VoidY0 + Half, CourtX0, VoidY1, false, NoDoors); // west, from the flight's arrival
+                Run(t, level, Kind.Guard, CourtX0, VoidY1, CourtX1, VoidY1, false, NoDoors);       // the canopy's edge
+                Run(t, level, Kind.Guard, CourtX1, VoidY1, CourtX1, VoidY0, false, NoDoors);       // east
             }
 
             // Furniture and the office's daily life. The walls repeat on both storeys; what is in the rooms changes, so
@@ -818,6 +843,25 @@ namespace CloseTheDeal.Editor.Art
                                    KitSigns.Facing(Vector3.down, Vector3.back), size, KitSigns.Finish.Light);
                 }
             }
+        }
+
+        /// <summary>What is left of <paramref name="cell"/> outside <paramref name="hole"/>, when the hole spans the cell in
+        /// one axis (a strip either side); empty when the hole covers it or cuts it in both axes.</summary>
+        static List<Rect2> Remainder(Rect2 cell, Rect2 hole)
+        {
+            const float eps = 0.01f;
+            var rest = new List<Rect2>();
+            if (hole.Y0 <= cell.Y0 + eps && hole.Y1 >= cell.Y1 - eps)
+            {
+                if (hole.X0 > cell.X0 + eps) rest.Add(new Rect2(cell.X0, cell.Y0, hole.X0, cell.Y1));
+                if (hole.X1 < cell.X1 - eps) rest.Add(new Rect2(hole.X1, cell.Y0, cell.X1, cell.Y1));
+            }
+            else if (hole.X0 <= cell.X0 + eps && hole.X1 >= cell.X1 - eps)
+            {
+                if (hole.Y0 > cell.Y0 + eps) rest.Add(new Rect2(cell.X0, cell.Y0, cell.X1, hole.Y0));
+                if (hole.Y1 < cell.Y1 - eps) rest.Add(new Rect2(cell.X0, hole.Y1, cell.X1, cell.Y1));
+            }
+            return rest;
         }
 
         static bool InAny(Rect2 cell, Rect2[] rects)

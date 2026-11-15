@@ -9,6 +9,8 @@
 //              once the lift is in the scene, so a rebuild cannot strand the dummy on an unreachable roof.
 //  Modified  : Claude Opus 5.5, 2026-11-15 — the L2 floor plan: a 40 × 32 m plate, the pad, bay and props moved
 //              with the south-east corner, the call spot in front of the lift's south-facing doors.
+//  Modified  : Claude Opus 5.5, 2026-11-15 evening - north-edge rails stop at the lift head-house instead of running
+//              through its glass.
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : Dresses KitOffice's roof as the open-air test range and wires the lift's script. Its own
 //              file, not a method in KitOfficeScene, because another session holds that file while it
@@ -57,6 +59,9 @@ namespace CloseTheDeal.Editor.Art
         const float Width = Cols * Cell, Depth = Rows * Cell;
         /// <summary>Top of the roof slab: two storeys of 4.5 m (KitOfficeScene.FloorHeight × Levels).</summary>
         const float RoofHeight = 9f;
+        /// <summary>The lift head-house on the roof's north edge, x metres (KitOfficeScene ShaftX0, ShaftX1), and the
+        /// half-bay rail that stops at it.</summary>
+        const float HeadHouseX0 = 18f, HeadHouseX1 = 22f, Half = 2f;
 
         // ---- Dummy pad: the roof's south-east corner.
         /// <summary>
@@ -196,7 +201,11 @@ namespace CloseTheDeal.Editor.Art
             // Same placement rule as KitOfficeScene's shell: run +X from the pivot, thickness toward the inside.
             for (int i = 0; i < Cols; i++)
             {
-                Kit(edges, "Guard_Rail_4m", i * Cell, 0f, 0f);
+                // The lift's head-house stands on the north edge at x 18-22 (KitOfficeScene's L2 shaft): its glass walls
+                // are the edge there, so the two bays it straddles get 2 m rails up to it instead of 4 m rails through it.
+                if (i * Cell == HeadHouseX0 - Half) Kit(edges, "Guard_Rail_2m", i * Cell, 0f, 0f);
+                else if (i * Cell == HeadHouseX1 - Half) Kit(edges, "Guard_Rail_2m", HeadHouseX1, 0f, 0f);
+                else Kit(edges, "Guard_Rail_4m", i * Cell, 0f, 0f);
                 bool pad = i * Cell >= PadWestX;
                 Kit(edges, pad ? "Partition_Header_4m" : "Guard_Rail_4m", (i + 1) * Cell, -Depth, 180f);
                 count += 2;
