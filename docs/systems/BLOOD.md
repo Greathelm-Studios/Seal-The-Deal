@@ -10,11 +10,13 @@
 -->
 # Blood
 
-**Status:** Current (written but not yet compiled or judged in play) · **Last updated:** 2026-11-15
+**Status:** Current (seen in play as host on one machine; restyled to the art bible on 2026-11-15, not yet answered by Alex's art sessions) · **Last updated:** 2026-11-15
 
 When a bullet or a melee blow lands on a player or the test dummy, flat cartoon blood splats onto the walls, desks and props behind them and one splat lands on the floor under them.
-Each splat is a blobby main shape with satellite drops and a few streaks thrown the way the hit was travelling, one red and one darker cut tone on the side facing the floor, with a thin dark rim.
-It is meant to be funny, so it is slightly oversized.
+Each splat is one sharp graphic shape: a small core with pointed spikes fanned the way the hit was travelling and a few small drops beyond them.
+It is a deep, cool crimson where the main light reaches the surface and a colder, darker plum where the surface is in shade, with a hard edge between the two and no outline: the same "base colour, one hard cut shadow" rule as the characters ([art bible](../../ArtSource/Kit/concepts/Office/refs/art_bible.txt) §03, §05, §17, §20).
+Splats shrink away after about ten seconds, because the bible wants effects to be crisp and brief and the building to return to clean.
+The first version (bright red blobs with a dark rim and many droplets, lasting 25 seconds) was rejected by Harvey as out of place.
 Splats pop in with a small overshoot, stay for a while, then shrink away.
 Thrown props and explosions do not make blood.
 
@@ -51,19 +53,19 @@ Edit `Assets/_Project/Art/Blood/Resources/BloodProfile.asset`; each value has a 
 
 | Value | What it does |
 |---|---|
-| Blood colour, Cut colour | The red and the one darker step. |
+| Blood colour, Cut colour | The colour in the main light, and the colder, darker one in shade. |
 | Base size, Reference impulse, Max size, Size variation | Splat width in metres. Size grows with the square root of the hit's strength, up to the maximum. |
 | Depth | Thickness of the projection box, metres. Thicker wraps further around props but can reach through thin geometry. |
 | Bullet / Melee splats, Extra splats per 100 impulse, Max splats per hit | How many splats a hit throws behind the victim. |
 | Bullet / Melee cone, Cone bonus per 100 impulse | Half-angle of the spray, degrees. |
 | Reach | How far behind the victim blood can land, metres. |
-| Bullet / Melee stretch | How long the streaks are, 0 to 1. |
+| Bullet / Melee stretch | 0 fans the spikes all the way round; 1 throws them forward in a narrow fan. |
 | Floor size, Floor reach | The splat under the victim; 0 turns it off. |
 | Lifetime, Shrink time | Seconds at full size, then seconds shrinking away. |
 | Pop time, Pop overshoot | The quick swell when a splat appears. |
 | Max live splats | The cap for the whole scene; the oldest is reused when full. |
 
-The shader's own Inspector values (rim width and strength, how far the cut tone reaches in, how sideways a surface may be and still get blood) are on `BloodSplat.mat`.
+The shader's own Inspector values (an optional thin rim, off by default; how sideways a surface may be and still get blood) are on `BloodSplat.mat`.
 
 ## Known limitations
 

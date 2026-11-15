@@ -4,6 +4,9 @@
 //  Generated : 2026-11-15
 //  Prompt    : Harvey: "create a blood splatter shader that fits in within the games artstyle
 //              that paints around objects and ontop of them when hit by these attacks."
+//  Modified  : Claude Fable 5.2, 2026-11-15 — restyled to the art bible: spiked shape, cooler
+//              colours, lit and shaded tones from the main light, no rim (Harvey: "it looks
+//              very out of place versus the rest of the games art style").
 //  Reviewed  : NOT YET REVIEWED BY A HUMAN
 //  Summary   : A flat, cartoon blood splat drawn onto whatever geometry is inside a box. The
 //              box is a plain cube; each pixel of it looks up the scene depth behind it, works
@@ -16,8 +19,10 @@
 // It needs the camera depth texture (on in PC_RPAsset).
 //
 // Look: the art bible's characters are one base colour plus one hard-edged cut colour, no
-// gradients. Blood follows: one red, one darker cut tone on the side facing away from the sky,
-// an optional thin dark rim, every edge a hard edge with one pixel of anti-aliasing.
+// gradients. Blood follows: one deep cool crimson where the main light reaches the surface, one
+// colder, darker cut tone where it is in shade, no outline (the rim is off by default), every
+// edge a hard edge with one pixel of anti-aliasing. The shape is one sharp spiked splash, not a
+// blob with many droplets (bible §20: one memorable shape; no thick outlines; cool palette).
 // The shape is generated here from a per-splat seed, so no two look alike and no texture exists.
 //
 // Known trade-offs (also in docs/systems/BLOOD.md): it paints on anything inside the box that
@@ -29,14 +34,13 @@ Shader "Close the Deal/Blood Splat"
     {
         // The spawner sets these three on each box; the material's values only show in the Inspector.
         [Header(Per splat)]
-        _Color("Blood colour", Color) = (0.80, 0.06, 0.09, 1)
-        _CutColor("Cut tone (the hard-edged darker side)", Color) = (0.50, 0.03, 0.07, 1)
+        _Color("Blood colour (where the main light reaches)", Color) = (0.66, 0.07, 0.15, 1)
+        _CutColor("Cut tone (in shade: colder and darker)", Color) = (0.33, 0.05, 0.17, 1)
         _Params("Seed, direction (radians), stretch, life (1 = fresh, 0 = gone)", Vector) = (1, 0, 0.5, 1)
 
         [Header(Look)]
-        _RimColor("Thin rim colour (alpha = strength, 0 = no rim)", Color) = (0.20, 0.01, 0.05, 0.9)
+        _RimColor("Thin rim colour (alpha = strength, 0 = no rim)", Color) = (0.07, 0.11, 0.22, 0)
         _RimWidth("Rim width, fraction of the splat", Range(0, 0.1)) = 0.025
-        _CutSize("How far the cut tone reaches in from the edge, fraction of the splat", Range(0, 0.3)) = 0.09
         _AngleCut("Surfaces turned away from the splat by more than this are skipped (0 = only edge-on, 1 = only square-on)", Range(0, 1)) = 0.3
     }
 
@@ -70,14 +74,19 @@ Shader "Close the Deal/Blood Splat"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile_instancing
+            // The main light's shadows, so blood in the building's shade takes the cut tone.
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            // Tells URP's shadow code this is drawn after the opaque pass, so it reads the
+            // shadow map itself instead of the screen-space shadow texture.
+            #define _SURFACE_TYPE_TRANSPARENT 1
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _RimColor;
                 float _RimWidth;
-                float _CutSize;
                 float _AngleCut;
             CBUFFER_END
 
@@ -90,9 +99,9 @@ Shader "Close the Deal/Blood Splat"
 
             /// Where the box is thinner than this (as a fraction of its depth) the splat fades, so a surface right at the back of the box does not cut off hard.
             #define DEPTH_FADE 0.12
-            /// How many small drops fly off, and how many streaks trail along the throw.
-            #define DROPS 9
-            #define STREAKS 3
+            /// How many small drops fly off, and how many sharp spikes fan out along the throw.
+            #define DROPS 4
+            #define SPIKES 6
             /// Everything is drawn inside a circle of this radius in splat space; the box edge is at 1.
             #define SPLAT_SCALE 1.1
 
@@ -145,48 +154,38 @@ Shader "Close the Deal/Blood Splat"
             {
                 float angle = atan2(q.y, q.x);
 
-                // Main blob: a circle whose edge wobbles, stretched a little along the throw.
-                float2 m = float2(q.x / (1.0 + stretch * 0.45), q.y);
+                // Core: small and only slightly lumpy, pulled along the throw. Kept small on
+                // purpose: the spikes carry the shape (art bible: one memorable shape, not a
+                // cute blob with many details).
+                float2 m = float2((q.x + 0.05) / (1.0 + stretch * 0.6), q.y);
                 float wobble = 1.0
-                    + 0.16 * sin(3.0 * angle + Hash(seed + 1.0) * 6.283)
-                    + 0.11 * sin(5.0 * angle + Hash(seed + 2.0) * 6.283)
-                    + 0.07 * sin(8.0 * angle + Hash(seed + 3.0) * 6.283);
-                float d = length(m) - 0.34 * wobble;
+                    + 0.10 * sin(3.0 * angle + Hash(seed + 1.0) * 6.283)
+                    + 0.06 * sin(5.0 * angle + Hash(seed + 2.0) * 6.283);
+                float d = length(m) - 0.22 * wobble;
 
-                // Lobes that bulge out of the blob and melt into it.
-                for (int i = 0; i < 4; i++)
-                {
-                    float fi = (float)i;
-                    float a = (Hash(seed + 10.0 + fi) * 2.0 - 1.0) * 3.14159 * lerp(1.0, 0.6, stretch);
-                    float r = 0.18 + 0.14 * Hash(seed + 20.0 + fi);
-                    float2 c = float2(cos(a), sin(a)) * r;
-                    float lobe = length(q - c) - (0.10 + 0.07 * Hash(seed + 30.0 + fi));
-                    d = SMin(d, lobe, 0.12);
-                }
-
-                // Streaks thrown along the direction of the hit: thick at the root, a drop at the tip.
-                for (int s = 0; s < STREAKS; s++)
+                // Spikes: sharp tapered strokes fanned along the throw, each ending in a point.
+                // A hard hit from straight on (stretch 0) fans all the way round; a glancing
+                // one (stretch 1) throws them forward in a narrow fan.
+                float fan = lerp(3.14159, 0.9, stretch);
+                for (int s = 0; s < SPIKES; s++)
                 {
                     float fs = (float)s;
-                    float y0 = (Hash(seed + 40.0 + fs) * 2.0 - 1.0) * 0.30;
-                    float len = (0.35 + 0.5 * Hash(seed + 50.0 + fs)) * (0.55 + stretch * 0.7);
-                    float y1 = y0 + (Hash(seed + 60.0 + fs) * 2.0 - 1.0) * 0.08;
-                    float x0 = 0.15;
-                    float x1 = min(x0 + len + 0.3, 0.95);
-                    float root = 0.055 + 0.03 * Hash(seed + 70.0 + fs);
-                    d = min(d, Streak(q, float2(x0, y0), float2(x1, y1), root, 0.012));
-                    d = min(d, length(q - float2(x1 + 0.03, y1)) - (0.02 + 0.025 * Hash(seed + 80.0 + fs)));
+                    float t = (fs + Hash(seed + 40.0 + fs)) / (float)SPIKES * 2.0 - 1.0;
+                    float a = t * fan;
+                    float len = lerp(0.45, 0.95, Hash(seed + 50.0 + fs)) * lerp(1.0, 0.55, abs(t) * stretch);
+                    float2 dir = float2(cos(a), sin(a));
+                    float root = 0.07 + 0.05 * Hash(seed + 70.0 + fs);
+                    d = SMin(d, Streak(q, dir * 0.08, dir * len, root, 0.0), 0.05);
                 }
 
-                // Satellite drops, mostly forward of the blob, shrinking with distance.
+                // A few small drops flung past the spikes.
                 for (int k = 0; k < DROPS; k++)
                 {
                     float fk = (float)k;
-                    float a = (Hash(seed + 100.0 + fk) * 2.0 - 1.0) * 3.14159 * lerp(1.0, 0.4, stretch);
-                    float dist = lerp(0.48, 0.92, Hash(seed + 110.0 + fk));
-                    float r = lerp(0.065, 0.02, (dist - 0.48) / 0.44) * (0.6 + 0.8 * Hash(seed + 120.0 + fk));
-                    float2 c = float2(cos(a), sin(a)) * dist;
-                    d = min(d, length(q - c) - r);
+                    float a = (Hash(seed + 100.0 + fk) * 2.0 - 1.0) * fan;
+                    float dist = lerp(0.6, 0.97, Hash(seed + 110.0 + fk));
+                    float r = lerp(0.045, 0.018, (dist - 0.6) / 0.37);
+                    d = min(d, length(q - float2(cos(a), sin(a)) * dist) - r);
                 }
 
                 // Life runs 1 to 0: the whole splat shrinks away rather than fading to a ghost.
@@ -238,20 +237,19 @@ Shader "Close the Deal/Blood Splat"
                 float sn = sin(sp.y);
                 float2 q = float2(cs * p.x + sn * p.y, -sn * p.x + cs * p.y);
 
-                float3 downOS = mul((float3x3)UNITY_MATRIX_I_M, float3(0, -1, 0));
-                float2 downXY = (length(downOS.xy) > 0.3) ? normalize(downOS.xy) : float2(0.7, -0.7);
-                float2 cutShift = float2(cs * downXY.x + sn * downXY.y, -sn * downXY.x + cs * downXY.y) * _CutSize;
-
                 float d = Shape(q, seed, sp.z, sp.w);
-                // The shape shifted away from the floor: where the original is no longer covered, the cut tone shows.
-                float dLit = Shape(q + cutShift, seed, sp.z, sp.w);
 
                 float coverage = saturate(0.5 - d / aa);
                 if (coverage <= 0.0) discard;
 
                 half4 baseCol = UNITY_ACCESS_INSTANCED_PROP(Props, _Color);
                 half4 cutCol = UNITY_ACCESS_INSTANCED_PROP(Props, _CutColor);
-                float litMask = saturate(0.5 - dLit / aa);
+                // Base colour where the main light reaches the surface, cut tone where it does
+                // not: the same "base, one hard cut shadow" rule the characters follow, so a
+                // splat sits in the room's light and shade instead of glowing in the dark.
+                Light sun = GetMainLight(TransformWorldToShadowCoord(positionWS));
+                float towardSun = dot(normalWS, sun.direction);
+                float litMask = smoothstep(0.45, 0.55, sun.shadowAttenuation) * smoothstep(0.0, 0.08, towardSun);
                 half3 col = lerp(cutCol.rgb, baseCol.rgb, litMask);
 
                 float rim = saturate(0.5 + (_RimWidth + d) / aa);

@@ -27,20 +27,20 @@ namespace CloseTheDeal.Effects
     {
         [Header("Look")]
         [Tooltip("The main blood colour: flat, saturated red. The splat has no gradient, so this is exactly what is seen on the lit side.")]
-        public Color BloodColor = new Color(0.80f, 0.06f, 0.09f, 1f);
+        public Color BloodColor = new Color(0.66f, 0.07f, 0.15f, 1f);
 
         [Tooltip("The darker tone cut into the side of each splat that faces the floor. One hard-edged step, not a gradient. Pick it by hand, deeper and slightly bluer than the main colour.")]
-        public Color CutColor = new Color(0.50f, 0.03f, 0.07f, 1f);
+        public Color CutColor = new Color(0.33f, 0.05f, 0.17f, 1f);
 
         [Header("Size")]
         [Tooltip("Width of the splat, in metres, for a pistol-strength hit (about 20 impulse). Raise it for bigger, sillier blood.")]
-        [Min(0.1f)] public float BaseSize = 1.0f;
+        [Min(0.1f)] public float BaseSize = 0.8f;
 
         [Tooltip("The impulse (the hit's strength, in newton-seconds) that gives exactly the base size. A pistol shot is about 20. Size grows with the square root of the strength, so a hit ten times harder is about three times wider.")]
         [Min(1f)] public float ReferenceImpulse = 20f;
 
         [Tooltip("The widest any splat can get, in metres, however hard the hit. Lower = big hits stop looking enormous.")]
-        [Min(0.2f)] public float MaxSize = 2.6f;
+        [Min(0.2f)] public float MaxSize = 2.0f;
 
         [Tooltip("How much each splat's size varies from splat to splat, as a fraction. 0 = all the same size; 0.3 = up to 30% bigger or smaller.")]
         [Range(0f, 0.8f)] public float SizeVariation = 0.25f;
@@ -53,7 +53,7 @@ namespace CloseTheDeal.Effects
         [Min(0)] public int BulletSplats = 2;
 
         [Tooltip("How many splats a melee hit throws.")]
-        [Min(0)] public int MeleeSplats = 5;
+        [Min(0)] public int MeleeSplats = 4;
 
         [Tooltip("Extra splats for every 100 impulse of hit strength. 1 = a 300 impulse hit adds 3 splats.")]
         [Min(0f)] public float ExtraSplatsPer100Impulse = 1f;
@@ -74,10 +74,10 @@ namespace CloseTheDeal.Effects
         [Min(0.5f)] public float Reach = 3.5f;
 
         [Tooltip("How much each splat is stretched along the direction the blood was thrown, from 0 (round) to 1 (long streaks). A bullet is cleaner, a melee swing smears.")]
-        [Range(0f, 1f)] public float BulletStretch = 0.6f;
+        [Range(0f, 1f)] public float BulletStretch = 0.85f;
 
         [Tooltip("Stretch for a melee hit; see the bullet one.")]
-        [Range(0f, 1f)] public float MeleeStretch = 0.4f;
+        [Range(0f, 1f)] public float MeleeStretch = 0.6f;
 
         [Header("Floor splat")]
         [Tooltip("Size of the one splat dropped on the floor under the victim, as a fraction of the normal splat size. 0 = no floor splat.")]
@@ -88,10 +88,10 @@ namespace CloseTheDeal.Effects
 
         [Header("Life")]
         [Tooltip("How long a splat stays at full size, in seconds, before it starts to shrink away. Lower = a cleaner level; higher = a messier fight.")]
-        [Min(1f)] public float Lifetime = 25f;
+        [Min(1f)] public float Lifetime = 10f;
 
         [Tooltip("How long the shrinking away takes, in seconds, at the end of its life.")]
-        [Min(0.1f)] public float ShrinkTime = 3f;
+        [Min(0.1f)] public float ShrinkTime = 1.5f;
 
         [Tooltip("How long the pop-in takes, in seconds: the splat grows from nothing to a little too big and settles. 0 = appears at once.")]
         [Min(0f)] public float PopTime = 0.14f;
