@@ -33,7 +33,7 @@ Read these, in this order, before drawing or building anything:
 
 ## Where it stands
 
-All code is on the **local branch `buffer`** (worktree `.claude/worktrees/buffer`), about 230 commits ahead of `origin/main`. **It has not been pushed.** It holds every lane plus `origin/harvey-netcode` (which includes `origin/main`). Last compile check: 0 errors. **Nobody has played any of it by hand.**
+All code is on the **local branch `buffer`** (worktree `.claude/worktrees/buffer`), pushed to GitHub as `origin/buffer` on 2026-11-15, about 250 commits ahead of `origin/main` and not merged into it. It holds every lane plus `origin/harvey-netcode` (which includes `origin/main`). Last compile check: 0 errors. **Nobody has played any of it by hand.**
 
 **Built in Unity, on the UI kit** (code docs: [UI_KIT.md](systems/UI_KIT.md), [UI_GLASS.md](systems/UI_GLASS.md), [UI_TITLE.md](systems/UI_TITLE.md), [UI_SOUND.md](systems/UI_SOUND.md), [MENU_AND_HUD.md](systems/MENU_AND_HUD.md)):
 
@@ -67,7 +67,7 @@ All code is on the **local branch `buffer`** (worktree `.claude/worktrees/buffer
 
 ## Open questions for Adam
 
-- Push `buffer`, and merge it into `main`?
+- Merge `buffer` into `main`? (It is pushed as `origin/buffer`.)
 - Download the target fonts?
 - Sound: which source (recordings, a text-to-sound model, or a person designing them)? Change the GDD's "no packs ship" line?
 - Firm names (currently proposals: "Ashcombe & Pryce" and others in the firm assets).
