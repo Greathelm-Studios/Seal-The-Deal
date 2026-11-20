@@ -86,7 +86,7 @@ namespace CloseTheDeal.Items
             // once and stay off, rather than throwing every frame.
             if (!Wired())
             {
-                Debug.LogError($"[Items] The item HUD on {name} is missing parts (an older scene). Run Close the Deal > Lanes > Add Item HUD To Open Scene.", this);
+                Debug.LogError($"[Items] The item HUD on {name} is missing parts (an older scene). Run Seal the Deal > Lanes > Add Item HUD To Open Scene.", this);
                 enabled = false;
                 return;
             }

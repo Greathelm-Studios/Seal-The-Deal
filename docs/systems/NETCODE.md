@@ -53,7 +53,7 @@ All under [Assets/_Project/Scripts/](../../Assets/_Project/Scripts/):
 - `UI/GameMenu.cs`: the menu and HUD; see [MENU_AND_HUD.md](MENU_AND_HUD.md).
 - `Player/`, `Combat/`: the predicted body and knockback; owned by [PLAYER_MOVEMENT.md](PLAYER_MOVEMENT.md).
 
-Scene wiring is built by the menu item **Close the Deal > Greybox > Set Up Scene** ([GreyboxSceneSetup.cs](../../Assets/_Project/Editor/Greybox/GreyboxSceneSetup.cs)). It only adds what is missing and never rebuilds anything already in the scene. **Rebuild Player Prefab** and **Rebuild Game UI** on the same menu are the deliberate overwrites.
+Scene wiring is built by the menu item **Seal the Deal > Greybox > Set Up Scene** ([GreyboxSceneSetup.cs](../../Assets/_Project/Editor/Greybox/GreyboxSceneSetup.cs)). It only adds what is missing and never rebuilds anything already in the scene. **Rebuild Player Prefab** and **Rebuild Game UI** on the same menu are the deliberate overwrites.
 
 ## Known limitations
 

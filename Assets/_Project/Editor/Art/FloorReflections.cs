@@ -22,7 +22,7 @@ namespace CloseTheDeal.Editor.Art
 {
     /// <summary>
     /// Adds and bakes one reflection probe per office floor. Menu:
-    /// <c>Close the Deal &gt; Art &gt; Bake Floor Reflections</c>.
+    /// <c>Seal the Deal &gt; Art &gt; Bake Floor Reflections</c>.
     /// </summary>
     /// <remarks>
     /// Looks for a root object named <c>Kit Office</c> with <c>Floor N</c> children (what
@@ -67,7 +67,7 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>Cubemap face size, pixels. 512 keeps window frames and door edges legible in a near-mirror floor.</summary>
         const int Resolution = 512;
 
-        [MenuItem("Close the Deal/Art/Bake Floor Reflections")]
+        [MenuItem("Seal the Deal/Art/Bake Floor Reflections")]
         static void BakeFromMenu() => Bake(askFirst: true);
 
         /// <summary>

@@ -18,7 +18,7 @@ using UnityEngine;
 namespace CloseTheDeal.Editor.Art
 {
     /// <summary>
-    /// Builds the blood assets. Menu: <c>Close the Deal &gt; Art &gt; Build Blood Assets</c>.
+    /// Builds the blood assets. Menu: <c>Seal the Deal &gt; Art &gt; Build Blood Assets</c>.
     /// </summary>
     /// <remarks>
     /// Both files go in <c>Assets/_Project/Art/Blood/Resources/</c> because the spawner loads
@@ -44,7 +44,7 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>Where the profile is written.</summary>
         public const string ProfilePath = ResourcesFolder + "/BloodProfile.asset";
 
-        [MenuItem("Close the Deal/Art/Build Blood Assets")]
+        [MenuItem("Seal the Deal/Art/Build Blood Assets")]
         static void BuildFromMenu() => Build();
 
         /// <summary>Writes the material and the profile if missing or untouched.</summary>

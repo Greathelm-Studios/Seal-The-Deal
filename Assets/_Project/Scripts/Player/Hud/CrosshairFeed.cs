@@ -11,7 +11,7 @@ namespace CloseTheDeal.Player.Hud
     /// landing, a hit and a kill pulse it. Shooting draws its own hit marker; this only moves the
     /// crosshair. Tuning: the Crosshair values on MovementProfile.
     /// </summary>
-    [AddComponentMenu("Close the Deal/Movement/Crosshair Feed")]
+    [AddComponentMenu("Seal the Deal/Movement/Crosshair Feed")]
     public sealed class CrosshairFeed : MonoBehaviour
     {
         [Tooltip("The HUD's crosshair.")]

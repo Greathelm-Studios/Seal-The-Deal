@@ -21,7 +21,7 @@ namespace CloseTheDeal.Editor.Art
 {
     /// <summary>
     /// Bakes zone reflection probes: a box-projected probe per <see cref="ZoneSize"/> square of each storey under the
-    /// "Kit Office" root. Menu: <c>Close the Deal &gt; Art &gt; Bake Zone Reflections</c>.
+    /// "Kit Office" root. Menu: <c>Seal the Deal &gt; Art &gt; Bake Zone Reflections</c>.
     /// </summary>
     /// <remarks>
     /// <para>Run after <see cref="FloorReflections.Bake"/>, which flags the building's renderers Reflection Probe
@@ -56,7 +56,7 @@ namespace CloseTheDeal.Editor.Art
         /// smoothness; 40 probes at 512 would cost four times the memory for little visible gain.</summary>
         const int Resolution = 256;
 
-        [MenuItem("Close the Deal/Art/Bake Zone Reflections")]
+        [MenuItem("Seal the Deal/Art/Bake Zone Reflections")]
         static void BakeFromMenu() => Bake(askFirst: true);
 
         /// <summary>Rebuilds and bakes the zone probes in the active scene.</summary>

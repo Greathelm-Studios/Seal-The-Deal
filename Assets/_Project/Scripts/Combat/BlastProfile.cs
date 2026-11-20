@@ -6,7 +6,7 @@ namespace CloseTheDeal.Combat
     /// Designer-owned tuning for a knockback blast. Runtime only reads it (AGENTS.md §4).
     /// Used by the greybox test blast now; real weapons will each carry one.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Blast Profile", fileName = "BlastProfile")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Blast Profile", fileName = "BlastProfile")]
     public sealed class BlastProfile : ScriptableObject
     {
         [Tooltip("How far ahead the blast reaches, in metres. It explodes where it first hits something, or at this distance.")]

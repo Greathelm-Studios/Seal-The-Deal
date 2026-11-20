@@ -5,9 +5,9 @@ namespace CloseTheDeal.Tower
     /// <summary>
     /// Designer-owned tower tuning. Runtime only reads it (AGENTS.md §4).
     /// The dimension fields are also what the greybox template builder uses, so after
-    /// changing them run Close the Deal > Greybox > Rebuild Floor Templates.
+    /// changing them run Seal the Deal > Greybox > Rebuild Floor Templates.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Tower Profile", fileName = "TowerProfile")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Tower Profile", fileName = "TowerProfile")]
     public sealed class TowerProfile : ScriptableObject
     {
         [Header("Stack")]

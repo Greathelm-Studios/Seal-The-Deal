@@ -26,7 +26,7 @@ namespace CloseTheDeal.UI
     /// bottom-left corner. Allocation-free per frame; the distance text is rebuilt only when the whole metre changes.
     /// Design: docs/systems/UI_KIT.md "Edge marker".
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Edge Marker")]
+    [AddComponentMenu("Seal the Deal/UI/Edge Marker")]
     [RequireComponent(typeof(CanvasGroup))]
     public sealed class UiEdgeMarker : MonoBehaviour, IUiAnimated
     {

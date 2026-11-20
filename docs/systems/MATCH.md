@@ -155,7 +155,7 @@ Outside the folder: `Tower/TeamSpawner.cs` (balanced teams, a spawn hook and ove
 
 ## Setup
 
-**Close the Deal > Lanes > Set Up GameMode** ([GameModeLaneSetup.cs](../../Assets/_Project/Editor/Lanes/GameModeLaneSetup.cs)) makes the firm and match assets, the briefcase prefab, adds `FirmMember` and a `CarryAnchor` to `Player.prefab`, and builds `Scenes/Lanes/Lane_GameMode.unity` with short towers (`Profiles/Match/LaneTower.asset`: reception, two floors, a checkpoint, the boardroom, the roof). **Add GameMode To Open Scene** adds the match (with its plaza and skybridges), HUD and menu section to any scene that already has the tower and game UI. Both only add what is missing and fill an empty slot; they never retune. **Rebuild GameMode Briefcase** rewrites the briefcase prefab while nobody has edited it.
+**Seal the Deal > Lanes > Set Up GameMode** ([GameModeLaneSetup.cs](../../Assets/_Project/Editor/Lanes/GameModeLaneSetup.cs)) makes the firm and match assets, the briefcase prefab, adds `FirmMember` and a `CarryAnchor` to `Player.prefab`, and builds `Scenes/Lanes/Lane_GameMode.unity` with short towers (`Profiles/Match/LaneTower.asset`: reception, two floors, a checkpoint, the boardroom, the roof). **Add GameMode To Open Scene** adds the match (with its plaza and skybridges), HUD and menu section to any scene that already has the tower and game UI. Both only add what is missing and fill an empty slot; they never retune. **Rebuild GameMode Briefcase** rewrites the briefcase prefab while nobody has edited it.
 
 ## Known limitations
 

@@ -23,7 +23,7 @@ namespace CloseTheDeal.Lobby
             LobbyInput.Enable();
             if (_panel == null)
             {
-                Debug.LogError($"[Lobby] {name}: no host player list in this scene, so Tab does nothing. Run Close the Deal > Lanes > Set Up Lobby (or Set Up Integration) to rebuild it.", this);
+                Debug.LogError($"[Lobby] {name}: no host player list in this scene, so Tab does nothing. Run Seal the Deal > Lanes > Set Up Lobby (or Set Up Integration) to rebuild it.", this);
                 enabled = false;
                 return;
             }

@@ -9,7 +9,7 @@ namespace CloseTheDeal.UI
     /// (paper at the frosted or plate alpha, with the hairline edge and soft shadow the builder adds).
     /// Assign the glass material here, or on the pane prefab, to switch every pane to real glass.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Glass Pane")]
+    [AddComponentMenu("Seal the Deal/UI/Glass Pane")]
     public sealed class UiGlassPane : MonoBehaviour
     {
         [Tooltip("The kit's tokens.")]

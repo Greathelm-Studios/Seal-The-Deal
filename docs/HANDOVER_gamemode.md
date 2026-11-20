@@ -97,7 +97,7 @@ GDD mismatches (the GDD is the authority on design; your 2026-11-12 words win fo
 - GDD: the secretary starts the run. Here the host's menu button does, or the lobby.
 - GDD: killed on a floor respawns there after 5 s. There is no health in this branch; only the window-exit-to-checkpoint rule is built.
 - The brief says checkpoints on floors 3, 6 and 9. The tower inserts a checkpoint floor after every 3 offices, so they are stack floors 4, 8 and 12 (named Checkpoint 1–3).
-- The game's name is now "Seal the Deal"; the greybox menu still says "CLOSE THE DEAL" (`GreyboxUiSetup.cs`, not this lane's).
+- The game's name is now "Seal the Deal"; the greybox menu still says "SEAL THE DEAL" (`GreyboxUiSetup.cs`, not this lane's).
 
 ## First 30 seconds for a stranger (UX slice, 2026-11-13)
 
@@ -170,8 +170,8 @@ This branch now contains `buffer` (merge "Merge the integration scene and the fo
 1. Merge this branch. Expect conflicts in:
    - `Player.prefab` and `Assets/DefaultPrefabObjects.asset`: take the other side.
    - `docs/systems/NETCODE.md` owner table and `docs/DECISIONS.md` top line: keep both lines.
-2. Open the merged project and run **Close the Deal > Lanes > Set Up GameMode**. It re-adds `FirmMember` and `CarryAnchor` to `Player.prefab` and rebuilds the lane scene if it is missing; FishNet re-adds the briefcase to its prefab list.
-3. To play the mode in another scene with the tower and game UI, open it and run **Close the Deal > Lanes > Add GameMode To Open Scene** (adds the match, plaza and skybridges, HUD and menu section).
+2. Open the merged project and run **Seal the Deal > Lanes > Set Up GameMode**. It re-adds `FirmMember` and `CarryAnchor` to `Player.prefab` and rebuilds the lane scene if it is missing; FishNet re-adds the briefcase to its prefab list.
+3. To play the mode in another scene with the tower and game UI, open it and run **Seal the Deal > Lanes > Add GameMode To Open Scene** (adds the match, plaza and skybridges, HUD and menu section).
 4. **Lobby lane:** call `MatchDirector.Instance.HostStartRun(firmByClientId)` from `RunStartRequested`: a client id → firm (0 = Building A, 1 = Building B) map. It moves those players and their `TeamSpawner` seats, then starts the run.
 5. Fold the lane-local inputs into the shared actions asset (movement lane):
    - Interact: F / pad North.

@@ -14,7 +14,7 @@ namespace CloseTheDeal.Editor.Build
     /// Builds the game to a standalone player that boots into the playable scene, and stamps it
     /// with a build number and commit (BuildInfo). Changes no project setting: the scene list is
     /// passed to this build only, and the version stays what Player Settings say (Steam lobbies
-    /// compare it). Menu: Close the Deal > Build. Shell:
+    /// compare it). Menu: Seal the Deal > Build. Shell:
     /// Unity -batchmode -quit -projectPath &lt;checkout&gt; -executeMethod CloseTheDeal.Editor.Build.StandaloneBuild.BuildFromCommandLine
     ///   -playerTarget mac|windows -buildOut &lt;folder&gt; [-buildNumber N]
     /// Exit code 0 = built; 2 = failed, with the reason in the log and in &lt;folder&gt;/build_report.txt.
@@ -27,10 +27,10 @@ namespace CloseTheDeal.Editor.Build
 
         const string GameFileName = "SealTheDeal";
 
-        [MenuItem("Close the Deal/Build/Standalone (macOS)")]
+        [MenuItem("Seal the Deal/Build/Standalone (macOS)")]
         static void BuildMacFromMenu() => Run(BuildTarget.StandaloneOSX, Path.Combine("Builds", "macOS"), 0);
 
-        [MenuItem("Close the Deal/Build/Standalone (Windows)")]
+        [MenuItem("Seal the Deal/Build/Standalone (Windows)")]
         static void BuildWindowsFromMenu() => Run(BuildTarget.StandaloneWindows64, Path.Combine("Builds", "Windows"), 0);
 
         public static void BuildFromCommandLine()

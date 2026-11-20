@@ -10,7 +10,7 @@ namespace CloseTheDeal.UI
     /// preview tiles are the same component. Sizes are whole pixels at 1920 x 1080. Movement and shooting open
     /// the arms through OpenPixels (speed, air time, spread) and flash it through Pulse.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Crosshair")]
+    [AddComponentMenu("Seal the Deal/UI/Crosshair")]
     public sealed class UiCrosshair : MonoBehaviour, IUiAnimated
     {
         [Tooltip("The kit's tokens (crosshair colours and outline).")]

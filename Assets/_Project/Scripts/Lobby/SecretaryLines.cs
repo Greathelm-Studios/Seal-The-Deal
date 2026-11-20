@@ -20,7 +20,7 @@ namespace CloseTheDeal.Lobby
     /// a row. {name} becomes the player's name, {firm} their firm. Designer content: read at
     /// runtime, never written. The shipped lines are proposals for the owner.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Lobby/Secretary Lines", fileName = "SecretaryLines")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Lobby/Secretary Lines", fileName = "SecretaryLines")]
     public sealed class SecretaryLines : ScriptableObject
     {
         [Tooltip("Someone walks into reception.")]

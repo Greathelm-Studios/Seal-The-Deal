@@ -35,7 +35,7 @@ namespace CloseTheDeal.Effects
     [DisallowMultipleComponent]
     public sealed class BloodDropBurst : MonoBehaviour
     {
-        /// <summary>The drop material, by name inside a Resources folder. Written by Close the Deal > Art > Build Blood Assets.</summary>
+        /// <summary>The drop material, by name inside a Resources folder. Written by Seal the Deal > Art > Build Blood Assets.</summary>
         const string MaterialResource = "BloodDrop";
 
         /// <summary>The tuning asset shared with the splats, by name inside a Resources folder.</summary>
@@ -121,7 +121,7 @@ namespace CloseTheDeal.Effects
             Shader shader = Shader.Find(ShaderName);
             if (shader == null)
             {
-                Debug.LogWarning($"[Blood] Neither the material '{MaterialResource}' in a Resources folder nor the shader '{ShaderName}' was found; no drops will fly. Run Close the Deal > Art > Build Blood Assets.");
+                Debug.LogWarning($"[Blood] Neither the material '{MaterialResource}' in a Resources folder nor the shader '{ShaderName}' was found; no drops will fly. Run Seal the Deal > Art > Build Blood Assets.");
                 return null;
             }
 

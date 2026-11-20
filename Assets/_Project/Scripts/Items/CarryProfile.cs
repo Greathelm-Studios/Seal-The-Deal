@@ -6,7 +6,7 @@ namespace CloseTheDeal.Items
     /// Designer-owned tuning for picking things up, carrying, throwing and what a thrown
     /// object does when it lands. Runtime only reads it (AGENTS.md §4).
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Items/Carry Profile", fileName = "CarryProfile")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Items/Carry Profile", fileName = "CarryProfile")]
     public sealed class CarryProfile : ScriptableObject
     {
         [Header("Reaching")]

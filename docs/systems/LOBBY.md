@@ -126,7 +126,7 @@ The board, prompt and subtitles are UI kit **Plates** with the kit's type roles 
 
 - Scripts: [Assets/_Project/Scripts/Lobby/](../../Assets/_Project/Scripts/Lobby/) (`LobbyRoster`, `LobbyInteractor`, `LobbyInteractable`, `ReceptionDesk`, `FirmSignIn`, `Secretary`, `LobbyHud`, `LobbyInput`, `LobbyRules`, `SecretaryLines`).
 - Tuning: `Assets/_Project/Profiles/Customisation/LobbyRules.asset`, `SecretaryLines.asset` (kept beside the outfit data because the lane owns that folder only; move to `Profiles/Lobby/` on merge if preferred).
-- Scene: `Assets/_Project/Scenes/Lanes/Lane_Lobby.unity`, built by **Close the Deal > Lanes > Set Up Lobby** ([LobbyLaneSetup.cs](../../Assets/_Project/Editor/Lanes/LobbyLaneSetup.cs)). Restyle the board and prompt in that tool; the scene is rebuilt from it.
+- Scene: `Assets/_Project/Scenes/Lanes/Lane_Lobby.unity`, built by **Seal the Deal > Lanes > Set Up Lobby** ([LobbyLaneSetup.cs](../../Assets/_Project/Editor/Lanes/LobbyLaneSetup.cs)). Restyle the board and prompt in that tool; the scene is rebuilt from it.
 
 ## Known limitations
 

@@ -113,7 +113,7 @@ namespace CloseTheDeal.Customisation
             _wallMask = player >= 0 ? ~(1 << player) : ~0;
             if (_screen == null || !_screen.IsWired)
             {
-                Debug.LogError($"[Lobby] {name}: the fitting room has no working form, so the mirror is closed. Run Close the Deal > Lanes > Set Up Lobby (or Set Up Integration) to rebuild it.", this);
+                Debug.LogError($"[Lobby] {name}: the fitting room has no working form, so the mirror is closed. Run Seal the Deal > Lanes > Set Up Lobby (or Set Up Integration) to rebuild it.", this);
                 _screen = null;
                 return;
             }

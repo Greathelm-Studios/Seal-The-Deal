@@ -16,7 +16,7 @@ Built (all under this lane's folders; design and ownership in [WEAPONS.md](syste
 - Breakable glass: `GlassPane`, the host-owned `GlassRegistry` with deterministic pane numbers, local pooled shards.
 - `Knockback` extended: optional blast damage, attacker id, glass breaking.
 - `DoorDamage`: bullets wear down the locked door.
-- Test scene `Assets/_Project/Scenes/Lanes/Lane_Shooting.unity`, built by **Close the Deal > Lanes > Set Up Shooting**.
+- Test scene `Assets/_Project/Scenes/Lanes/Lane_Shooting.unity`, built by **Seal the Deal > Lanes > Set Up Shooting**.
 
 Commits on `claude/lane-shooting-e0f93d`:
 
@@ -62,7 +62,7 @@ Captures for review (shared notes folder of this session group, `shooting-lane-c
 
 Not built: the owner said no more gameplay or mechanics work for now. Harvey's `PlayerViewmodel` (in `buffer` since the harvey-netcode merge) is not on `Player.prefab` yet. To hand it the gun, add-only:
 
-1. **Put it on the player:** run Harvey's `Close the Deal > Greybox > Rebuild Viewmodel` / the greybox tool's add-only path so `Player.prefab` gains `PlayerViewmodel` (it adds `PlayerHeldWeapon` to Graphics at spawn). Don't commit a prefab rewritten by any tool that drops other lanes' components.
+1. **Put it on the player:** run Harvey's `Seal the Deal > Greybox > Rebuild Viewmodel` / the greybox tool's add-only path so `Player.prefab` gains `PlayerViewmodel` (it adds `PlayerHeldWeapon` to Graphics at spawn). Don't commit a prefab rewritten by any tool that drops other lanes' components.
 2. **Turn this lane's gun models off:** on `Player.prefab`'s `WeaponView`, untick **Draw Held Gun** (first person). Harvey's layer also draws the body gun, so `WeaponView` needs a second switch, "Draw Body Gun", added (about 5 lines in `OnWeaponChanged`/`ShouldDraw`). Tracers, impacts and the view's kick, shake and FOV punch stay with `WeaponView`.
 3. **Wire the events (about 15 lines, a new `ViewmodelBridge` on the player root, every machine):** `PlayerViewmodel.Driven = true` once; `WeaponHolder.WeaponChanged` → `PlayerViewmodel.Equip(new WeaponHold(model, gripPos, gripRot, supportPos, supportRot, twoHanded))` then `WeaponView.SetExternalMuzzle(PlayerViewmodel.Muzzle)`; `Fired` with `Predicted` → `Fire()`; `ReloadStarted(seconds)` → `Reload(seconds)`; `ReloadCancelled` → `CancelReload()`.
 4. **Seats per gun:** add to `WeaponDefinition` `GripSeat`/`GripEuler`, `SupportSeat`/`SupportEuler`, `TwoHanded` (metres and degrees in the ViewPrefab's space; +Z where the fingers point). Pistol starting values are on Harvey's arms prefab (grip (0.03, 0.005, −0.055) turned (−6, −4, 0); support (−0.04, −0.02, −0.045) turned (−12, 28, 0)); the AR-15's need setting by eye.
@@ -95,8 +95,8 @@ Fire shares left mouse with the shared `Player/Attack` action (the test blast) a
 
 1. Merge the lane branch. Expect an add/add conflict on `Assets/_Project/Scripts/Core.meta` with the pickups lane (two folder guids); keep either. `IDamageable.cs` and its `.meta` are identical in both lanes.
 2. Open Unity and let it import.
-3. Run **Close the Deal > Lanes > Set Up Shooting**. It writes any missing lane assets (never over edited ones), adds `Health`, `WeaponHolder` and `WeaponView` to `Player.prefab`, and asks before rebuilding the test scene. Re-run it after any other lane's tool rewrites `Player.prefab`, and once `LockedDoor.prefab` exists (it adds `DoorDamage` then).
-4. In any other scene that should have guns and breaking glass (Greybox, KitOffice), run **Close the Deal > Lanes > Add Shooting To Open Scene**, review, save.
+3. Run **Seal the Deal > Lanes > Set Up Shooting**. It writes any missing lane assets (never over edited ones), adds `Health`, `WeaponHolder` and `WeaponView` to `Player.prefab`, and asks before rebuilding the test scene. Re-run it after any other lane's tool rewrites `Player.prefab`, and once `LockedDoor.prefab` exists (it adds `DoorDamage` then).
+4. In any other scene that should have guns and breaking glass (Greybox, KitOffice), run **Seal the Deal > Lanes > Add Shooting To Open Scene**, review, save.
 5. Pickups lane hooks (not compiled against here): on the host, subscribe to `ItemCarrier.ServerItemTaken(carrier, pickup)`; for `ItemKind.Gun` call `WeaponHolder.Equip(gun definition)` and `pickup.ServerUseUp()`. On `Health.Died` (host) call `ItemCarrier.ServerForceDrop()`. The pickups lane's `Item_Pistol` / `Item_AR15` need a reference to this lane's `Pistol.asset` / `AR15.asset`.
 6. Game-mode lane: `Health.OverrideNextRespawn(position)` for window exits to the checkpoint; `Health.AnyDied` carries the attacker.
 

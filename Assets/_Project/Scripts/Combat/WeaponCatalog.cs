@@ -6,7 +6,7 @@ namespace CloseTheDeal.Combat
     /// Every gun the game knows, in a fixed order. The network names a gun by its place in
     /// this list (one byte), so every copy of the game must ship the same catalog.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Weapon Catalog", fileName = "WeaponCatalog")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Weapon Catalog", fileName = "WeaponCatalog")]
     public sealed class WeaponCatalog : ScriptableObject
     {
         public const byte None = byte.MaxValue;

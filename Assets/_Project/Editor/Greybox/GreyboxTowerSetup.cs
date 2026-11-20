@@ -66,7 +66,7 @@ namespace CloseTheDeal.Editor.Greybox
         // "Windows" is left out on purpose: merging freezes a mesh, and a pane must vanish when it breaks.
         static readonly string[] StillGroups = { "Shell", "Stairs", "Contents" };
 
-        [MenuItem("Close the Deal/Greybox/Rebuild Floor Templates")]
+        [MenuItem("Seal the Deal/Greybox/Rebuild Floor Templates")]
         public static void RebuildFloorTemplates()
         {
             TowerProfile profile = EnsureProfile();
@@ -80,7 +80,7 @@ namespace CloseTheDeal.Editor.Greybox
         /// or saved. For lanes and integration branches that must not touch Greybox.unity.
         /// Templates a person has edited are skipped and listed in the log.
         /// </summary>
-        [MenuItem("Close the Deal/Greybox/Rebuild Floor Templates Only")]
+        [MenuItem("Seal the Deal/Greybox/Rebuild Floor Templates Only")]
         public static void RebuildFloorTemplatesOnly()
         {
             TowerProfile profile = EnsureProfile();

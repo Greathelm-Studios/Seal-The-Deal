@@ -1,6 +1,6 @@
 # Seal the Deal UI tools
 
-**The game is Seal the Deal (title SEAL THE DEAL); never 'Close the Deal'.** Use `ui.GAME_TITLE` / `ui.GAME_NAME`, never a literal.
+**The game is Seal the Deal (title SEAL THE DEAL); never 'Seal the Deal'.** Use `ui.GAME_TITLE` / `ui.GAME_NAME`, never a literal.
 
 `ctd_ui.py` is the shared SVG library for the VectorCraft UI mockups. `make_kit.py` builds the three-board UI kit from it.
 

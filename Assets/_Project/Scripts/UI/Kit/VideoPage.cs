@@ -10,7 +10,7 @@ namespace CloseTheDeal.UI
     /// or its plain no-blur tint, UiGlassSettings). Values live in UiVideo and UiGlassSettings.
     /// The right column says what the screen is doing now.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Settings Page - Video")]
+    [AddComponentMenu("Seal the Deal/UI/Settings Page - Video")]
     public sealed class VideoPage : UiSettingsPage
     {
         [SerializeField] UiStepper _mode;

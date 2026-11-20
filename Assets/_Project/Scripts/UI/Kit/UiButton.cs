@@ -10,7 +10,7 @@ namespace CloseTheDeal.UI
     /// the Select sound; letting go inside confirms with the Confirm sound and the cyan tick, then runs Clicked.
     /// Enter / the pad's A stamp and confirm at once. A greyed-out button refuses with its reason.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Button")]
+    [AddComponentMenu("Seal the Deal/UI/Button")]
     public sealed class UiButton : UiControl, IPointerClickHandler, ISubmitHandler
     {
         [Tooltip("What happens when the player confirms this button. Code usually subscribes to Clicked instead.")]

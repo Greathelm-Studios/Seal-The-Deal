@@ -31,7 +31,7 @@ While shown, the sky material is swapped for a copy that sends a plane every 18 
 
 ## The standalone set
 
-`Close the Deal > Lanes > Set Up Title Screen` (batch: `-executeMethod CloseTheDeal.Editor.Lanes.TitleLaneSetup.SetUpFromCommandLine`) builds `Lane_Title.unity`: three `Window_4m` bays with floor and ceiling `Slab_4x4`, two side walls, a camera pivot 9 m back and 0.55 m up looking 9 degrees up, a sun, then Office Look for the sky, ambient and grade.
+`Seal the Deal > Lanes > Set Up Title Screen` (batch: `-executeMethod CloseTheDeal.Editor.Lanes.TitleLaneSetup.SetUpFromCommandLine`) builds `Lane_Title.unity`: three `Window_4m` bays with floor and ceiling `Slab_4x4`, two side walls, a camera pivot 9 m back and 0.55 m up looking 9 degrees up, a sun, then Office Look for the sky, ambient and grade.
 It only replaces a scene whose root is named "Title backdrop" (its own); any other scene at that path is left alone.
 The rival tower is the sky's own foreground towers; there is no real geometry across the gap.
 Hard sun slabs on the floor come from the sun's shadows through the window mullions, not from painted shapes.

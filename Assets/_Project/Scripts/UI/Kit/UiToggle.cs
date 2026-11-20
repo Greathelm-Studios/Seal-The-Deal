@@ -7,7 +7,7 @@ using UnityEngine.UI;
 namespace CloseTheDeal.UI
 {
     /// <summary>An on / off switch: a square check box and the word On or Off. Click, Enter or the pad's A flips it.</summary>
-    [AddComponentMenu("Close the Deal/UI/Toggle")]
+    [AddComponentMenu("Seal the Deal/UI/Toggle")]
     public sealed class UiToggle : UiControl, IPointerClickHandler, ISubmitHandler
     {
         [Tooltip("The filled square inside the box, shown while on.")]

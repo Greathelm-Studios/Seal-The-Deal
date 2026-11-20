@@ -5,7 +5,7 @@ namespace CloseTheDeal.Player
     /// <summary>
     /// Designer-owned movement tuning. Runtime only reads it (AGENTS.md §4).
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Movement Profile", fileName = "MovementProfile")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Movement Profile", fileName = "MovementProfile")]
     public sealed class MovementProfile : ScriptableObject
     {
         [Header("Ground")]
@@ -235,7 +235,7 @@ namespace CloseTheDeal.Player
         public float CrosshairOpenSliding = 4f;
 
         [Header("Sound")]
-        [Tooltip("The movement sounds (footsteps, jump, landing, slide, climbs, wind). Empty = silent movement. Filled by Close the Deal > Lanes > Set Up Movement Sounds when empty.")]
+        [Tooltip("The movement sounds (footsteps, jump, landing, slide, climbs, wind). Empty = silent movement. Filled by Seal the Deal > Lanes > Set Up Movement Sounds when empty.")]
         public MovementSoundSet Sounds;
 
         [Header("Gamepad rumble")]

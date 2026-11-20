@@ -12,7 +12,7 @@ namespace CloseTheDeal.UI
     /// included). Set an action (or fixed keyboard / pad names) to make it live; with none it shows whatever its text says, as before. The cap
     /// widens to fit the label and the words move along with it. Changes only when the device or the keys change.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Key Hint")]
+    [AddComponentMenu("Seal the Deal/UI/Key Hint")]
     public sealed class UiKeyHint : MonoBehaviour
     {
         [Tooltip("The input actions to read. Leave empty for UI actions (Submit, Cancel, Navigate): those come from the scene's EventSystem.")]

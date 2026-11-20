@@ -9,7 +9,7 @@ namespace CloseTheDeal.Player
     /// made by the sound lane's generator as Assets/_Project/Audio/Movement/Move_*.wav; Close the
     /// Deal > Lanes > Set Up Movement Sounds fills empty slots from there. Names: PLAYER_MOVEMENT.md.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Movement/Movement Sound Set", fileName = "MovementSounds")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Movement/Movement Sound Set", fileName = "MovementSounds")]
     public sealed class MovementSoundSet : ScriptableObject
     {
         [Tooltip("The mixer bus movement sounds play through, so the settings' sound-effects volume applies: the game mixer's SFX group.")]

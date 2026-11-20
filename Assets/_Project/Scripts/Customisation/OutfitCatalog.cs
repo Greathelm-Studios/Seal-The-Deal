@@ -7,7 +7,7 @@ namespace CloseTheDeal.Customisation
     /// The host checks every outfit a player sends against this list, so host and clients
     /// must ship the same catalog. Designer content: read at runtime, never written.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Customisation/Outfit Catalog", fileName = "OutfitCatalog")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Customisation/Outfit Catalog", fileName = "OutfitCatalog")]
     public sealed class OutfitCatalog : ScriptableObject
     {
         [Tooltip("The categories, in the order the fitting room lists them. At most 8: an outfit is sent as one byte per category.")]

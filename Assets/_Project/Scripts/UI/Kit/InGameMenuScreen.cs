@@ -17,7 +17,7 @@ namespace CloseTheDeal.UI
     /// raises no event for them) and whether the lobby's roster has spawned, and re-lays out only when one changed.
     /// Design: docs/systems/UI_KIT.md "In-game menu".
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/In-Game Menu")]
+    [AddComponentMenu("Seal the Deal/UI/In-Game Menu")]
     public sealed class InGameMenuScreen : UiScreen
     {
         [Header("Menu")]

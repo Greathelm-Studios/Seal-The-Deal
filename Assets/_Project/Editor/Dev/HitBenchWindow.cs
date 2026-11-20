@@ -23,7 +23,7 @@ using UnityEngine;
 namespace CloseTheDeal.Editor.Dev
 {
     /// <summary>
-    /// The hit test bench: <c>Close the Deal &gt; Dev &gt; Hit Bench</c>. Pick a preset or set the
+    /// The hit test bench: <c>Seal the Deal &gt; Dev &gt; Hit Bench</c>. Pick a preset or set the
     /// values, press Hit while playing.
     /// </summary>
     /// <remarks>
@@ -87,7 +87,7 @@ namespace CloseTheDeal.Editor.Dev
         string _lastResult = "";
 
         /// <summary>Opens the bench.</summary>
-        [MenuItem("Close the Deal/Dev/Hit Bench")]
+        [MenuItem("Seal the Deal/Dev/Hit Bench")]
         public static void Open() => GetWindow<HitBenchWindow>("Hit Bench");
 
         void OnGUI()
@@ -181,12 +181,12 @@ namespace CloseTheDeal.Editor.Dev
         static string Status(HitDummy dummy)
         {
             if (dummy == null)
-                return "No dummy in this scene. Place one with Close the Deal > Dev > Place Hit Dummy.";
+                return "No dummy in this scene. Place one with Seal the Deal > Dev > Place Hit Dummy.";
             PlayerRagdoll body = dummy.GetComponentInChildren<PlayerRagdoll>();
             if (body == null)
-                return dummy.name + " has no ragdoll. Rebuild it with Close the Deal > Dev > Build Hit Dummy Prefab.";
+                return dummy.name + " has no ragdoll. Rebuild it with Seal the Deal > Dev > Build Hit Dummy Prefab.";
             if (!body.TakesHits)
-                return dummy.name + "'s ragdoll has no hit profile, so hits do nothing. Rebuild it with Close the Deal > Dev > Build Hit Dummy Prefab.";
+                return dummy.name + "'s ragdoll has no hit profile, so hits do nothing. Rebuild it with Seal the Deal > Dev > Build Hit Dummy Prefab.";
             if (!body.Running)
                 return dummy.name + "'s body is not running. If the code changed during this Play session, stop and press Play again "
                     + "(Edit > Preferences > General > Script Changes While Playing > Recompile After Finished Playing stops it happening). "

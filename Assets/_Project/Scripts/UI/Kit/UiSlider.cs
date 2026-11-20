@@ -10,7 +10,7 @@ namespace CloseTheDeal.UI
     /// A kit slider with a number field: uGUI's Slider (drag, click on the track, left / right steps) with the
     /// kit's look, focus answers and a tick per step whose pitch follows the value. Always whole steps.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Slider")]
+    [AddComponentMenu("Seal the Deal/UI/Slider")]
     public sealed class UiSlider : Slider
     {
         [Tooltip("The control's look and motion parts. Filled by the kit builder.")]

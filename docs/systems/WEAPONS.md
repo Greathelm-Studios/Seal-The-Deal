@@ -208,7 +208,7 @@ Under [Assets/_Project/Scripts/Combat/](../../Assets/_Project/Scripts/Combat/):
 
 The interface is [Assets/_Project/Scripts/Core/IDamageable.cs](../../Assets/_Project/Scripts/Core/IDamageable.cs).
 
-Set-up is one editor file, [ShootingLaneSetup.cs](../../Assets/_Project/Editor/Lanes/ShootingLaneSetup.cs): **Close the Deal > Lanes > Set Up Shooting** writes the assets (never over a person's edits), adds `Health`, `WeaponHolder` and `WeaponView` to `Player.prefab` and builds `Assets/_Project/Scenes/Lanes/Lane_Shooting.unity`. **Add Shooting To Open Scene** gives any other scene the glass registry and a starting loadout. **Run Shooting Self-Check** plays the test scene and checks the rules above.
+Set-up is one editor file, [ShootingLaneSetup.cs](../../Assets/_Project/Editor/Lanes/ShootingLaneSetup.cs): **Seal the Deal > Lanes > Set Up Shooting** writes the assets (never over a person's edits), adds `Health`, `WeaponHolder` and `WeaponView` to `Player.prefab` and builds `Assets/_Project/Scenes/Lanes/Lane_Shooting.unity`. **Add Shooting To Open Scene** gives any other scene the glass registry and a starting loadout. **Run Shooting Self-Check** plays the test scene and checks the rules above.
 
 ## Known limitations
 

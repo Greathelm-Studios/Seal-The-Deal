@@ -34,7 +34,7 @@ namespace CloseTheDeal.Editor.Lanes
     /// It calls each lane's own builder rather than copying it, and only adds: an asset that
     /// exists is never changed (AGENTS.md §4). Design: docs/systems/INTEGRATION.md.
     ///
-    /// Menu: Close the Deal > Lanes > Set Up Integration (asks before rebuilding the scene).
+    /// Menu: Seal the Deal > Lanes > Set Up Integration (asks before rebuilding the scene).
     /// Shell: -executeMethod CloseTheDeal.Editor.Lanes.IntegrationLaneSetup.SetUpFromCommandLine
     /// </summary>
     public static class IntegrationLaneSetup
@@ -69,7 +69,7 @@ namespace CloseTheDeal.Editor.Lanes
 
         // ---- Menu ----------------------------------------------------------------------------
 
-        [MenuItem("Close the Deal/Lanes/Set Up Integration")]
+        [MenuItem("Seal the Deal/Lanes/Set Up Integration")]
         public static void SetUpFromMenu()
         {
             if (File.Exists(ScenePath) && !EditorUtility.DisplayDialog("Set Up Integration",
@@ -395,7 +395,7 @@ namespace CloseTheDeal.Editor.Lanes
         static int _countdowns;
         static int _builds;
 
-        [MenuItem("Close the Deal/Lanes/Run Integration Check (solo)")]
+        [MenuItem("Seal the Deal/Lanes/Run Integration Check (solo)")]
         static void RunFromMenu() => Begin("solo", "Temp/IntegrationRun");
 
         public static void RunFromShell() => Begin(Arg("-integrationRole") ?? "solo", Arg("-integrationOut") ?? "Temp/IntegrationRun");

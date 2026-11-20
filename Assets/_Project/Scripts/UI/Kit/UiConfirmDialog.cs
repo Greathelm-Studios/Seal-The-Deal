@@ -9,7 +9,7 @@ namespace CloseTheDeal.UI
     /// has focus when it opens and is what Esc / the pad's B does; the other choice runs the caller's action.
     /// One prefab serves every confirm: Configure sets its words and action before Push.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Confirm Dialog")]
+    [AddComponentMenu("Seal the Deal/UI/Confirm Dialog")]
     public sealed class UiConfirmDialog : UiScreen
     {
         [Tooltip("The question, e.g. Quit to desktop?")]

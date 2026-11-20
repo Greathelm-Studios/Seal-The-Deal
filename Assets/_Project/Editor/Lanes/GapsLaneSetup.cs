@@ -31,7 +31,7 @@ namespace CloseTheDeal.Editor.Lanes
     /// installer that adds it at run time to every scene with a match, so no scene is edited.
     /// Also a scripted check in Lane_Integration.unity. Only creates what is missing; a prefab or
     /// asset a person edited is left alone (GeneratedAssetGuard).
-    /// Menu: Close the Deal > Lanes > Gaps. Design: docs/systems/RECORDS.md.
+    /// Menu: Seal the Deal > Lanes > Gaps. Design: docs/systems/RECORDS.md.
     /// </summary>
     public static class GapsLaneSetup
     {
@@ -40,7 +40,7 @@ namespace CloseTheDeal.Editor.Lanes
         internal const string InstallerPath = "Assets/_Project/Resources/Gaps/RecordsInstaller.asset";
         const string KitFolder = "Assets/_Project/UI/Kit";
 
-        [MenuItem("Close the Deal/Lanes/Gaps/Build Records Prefab")]
+        [MenuItem("Seal the Deal/Lanes/Gaps/Build Records Prefab")]
         static void BuildFromMenu()
         {
             string done = Build();
@@ -279,7 +279,7 @@ namespace CloseTheDeal.Editor.Lanes
         static readonly List<string> Hinted = new();
         static readonly List<DeathReport> Downs = new();
 
-        [MenuItem("Close the Deal/Lanes/Gaps/Run Records Check (solo)")]
+        [MenuItem("Seal the Deal/Lanes/Gaps/Run Records Check (solo)")]
         static void RunFromMenu()
         {
             // A menu run has no -profileSave: give it a throwaway profile so it never writes into the real one.

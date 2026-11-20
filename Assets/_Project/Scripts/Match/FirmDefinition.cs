@@ -7,7 +7,7 @@ namespace CloseTheDeal.MatchMode
     /// On a player's own screen their firm is drawn in the match profile's "own" colour and the
     /// rival in its "rival" colour, so the colour here is only for neutral displays.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Firm", fileName = "Firm")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Firm", fileName = "Firm")]
     public sealed class FirmDefinition : ScriptableObject
     {
         [Tooltip("The firm's name as players read it on the HUD and the results.")]

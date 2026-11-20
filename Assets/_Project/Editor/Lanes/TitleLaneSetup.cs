@@ -12,11 +12,11 @@ namespace CloseTheDeal.Editor.Lanes
 {
     /// <summary>
     /// The title lane's editor tools.
-    /// Close the Deal > Lanes > Set Up Title Screen builds Scenes/Lanes/Lane_Title.unity: a white window
+    /// Seal the Deal > Lanes > Set Up Title Screen builds Scenes/Lanes/Lane_Title.unity: a white window
     /// frame of kit pieces seen from inside and slightly below, dividing the game's own sky (Office Look)
     /// into panes, with the TitleBackdrop idle on it. It only replaces a scene this tool made (its root is
     /// named "Title backdrop"); a scene a person has made at that path is left alone.
-    /// Close the Deal > Lanes > Capture Title Screen writes stills (1080p, 720p, 21:9, with the safe areas
+    /// Seal the Deal > Lanes > Capture Title Screen writes stills (1080p, 720p, 21:9, with the safe areas
     /// drawn) and transition frame strips to ArtSource/UI/passes/c_sky/title/.
     /// Design: docs/systems/UI_TITLE.md.
     /// </summary>
@@ -28,7 +28,7 @@ namespace CloseTheDeal.Editor.Lanes
         const string CaptureFolder = "ArtSource/UI/passes/c_sky/title";
         const float Bay = 4f, FloorHeight = 4.5f;
 
-        [MenuItem("Close the Deal/Lanes/Set Up Title Screen")]
+        [MenuItem("Seal the Deal/Lanes/Set Up Title Screen")]
         public static void SetUpFromMenu()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
@@ -120,7 +120,7 @@ namespace CloseTheDeal.Editor.Lanes
         static GameObject Kit(Transform parent, string piece, float x, float y, float z, float yaw = 0f)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{KitPrefabs}/{piece}.prefab");
-            if (prefab == null) throw new FileNotFoundException($"No kit prefab {piece}; run Close the Deal > Art > Import Kit first.");
+            if (prefab == null) throw new FileNotFoundException($"No kit prefab {piece}; run Seal the Deal > Art > Import Kit first.");
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
             go.transform.SetLocalPositionAndRotation(new Vector3(x, y, z), Quaternion.Euler(0f, yaw, 0f));
             return go;
@@ -135,7 +135,7 @@ namespace CloseTheDeal.Editor.Lanes
 
         // ---- Capture ---------------------------------------------------------------------------
 
-        [MenuItem("Close the Deal/Lanes/Capture Title Screen")]
+        [MenuItem("Seal the Deal/Lanes/Capture Title Screen")]
         public static void CaptureFromMenu()
         {
             // Capture opens Lane_Title on its own: let the person save the scene they have open first.

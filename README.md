@@ -1,4 +1,4 @@
-# Close the Deal (working title)
+# Seal the Deal
 
 Two rival companies race up two skyscrapers side by side, shooting at each other
 through the windows. The first team to reach the roof wins.

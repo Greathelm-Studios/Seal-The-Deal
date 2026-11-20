@@ -16,7 +16,7 @@ namespace CloseTheDeal.UI
     /// A clickable part of a control that is not a focus stop of its own: a stepper arrow or one swatch.
     /// It passes the click to its control, so focus and navigation stay on the control itself.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Click Zone")]
+    [AddComponentMenu("Seal the Deal/UI/Click Zone")]
     public sealed class UiClickZone : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
     {
         [Tooltip("The control this zone belongs to.")]

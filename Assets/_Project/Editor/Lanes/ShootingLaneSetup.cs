@@ -70,7 +70,7 @@ namespace CloseTheDeal.Editor.Lanes
         const string WhiteSpritePath = "Assets/_Project/UI/Kit/Sprites/Kit_White.png";
 
         /// <summary>Replaces the open scene's combat HUD with a fresh one from the current builder, after asking. For a scene saved with an older HUD.</summary>
-        [MenuItem("Close the Deal/Lanes/Rebuild Combat HUD In Open Scene")]
+        [MenuItem("Seal the Deal/Lanes/Rebuild Combat HUD In Open Scene")]
         static void RebuildCombatHud()
         {
             GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
@@ -90,7 +90,7 @@ namespace CloseTheDeal.Editor.Lanes
         /// <summary>
         /// Adds the combat HUD under the game menu's Hud, built from the UI kit: kit plates, the
         /// tokens' type roles and colours, kit sprites. Only adds: a scene that already has one keeps it.
-        /// Needs the game menu (Set Up Scene) and the kit (Close the Deal > Lanes > Set Up UI).
+        /// Needs the game menu (Set Up Scene) and the kit (Seal the Deal > Lanes > Set Up UI).
         /// </summary>
         static void EnsureCombatHud()
         {
@@ -100,7 +100,7 @@ namespace CloseTheDeal.Editor.Lanes
             var plate = AssetDatabase.LoadAssetAtPath<GameObject>(PlatePrefabPath);
             if (hud == null || tokens == null || plate == null)
             {
-                Debug.LogWarning("[Shooting Lane] No combat HUD added: the scene needs the game menu (Set Up Scene) and the UI kit (Close the Deal > Lanes > Set Up UI).");
+                Debug.LogWarning("[Shooting Lane] No combat HUD added: the scene needs the game menu (Set Up Scene) and the UI kit (Seal the Deal > Lanes > Set Up UI).");
                 return;
             }
 
@@ -314,7 +314,7 @@ namespace CloseTheDeal.Editor.Lanes
         // Menu: set up
         // =======================================================================================
 
-        [MenuItem("Close the Deal/Lanes/Set Up Shooting")]
+        [MenuItem("Seal the Deal/Lanes/Set Up Shooting")]
         public static void SetUp()
         {
             LaneAssets assets = EnsureAssets();
@@ -326,7 +326,7 @@ namespace CloseTheDeal.Editor.Lanes
         }
 
         /// <summary>Gives the open scene what guns and glass need to work in it. Adds only what is missing; the scene is left unsaved for whoever ran it to review.</summary>
-        [MenuItem("Close the Deal/Lanes/Add Shooting To Open Scene")]
+        [MenuItem("Seal the Deal/Lanes/Add Shooting To Open Scene")]
         public static void AddToOpenScene()
         {
             EnsureAssets();
@@ -886,7 +886,7 @@ namespace CloseTheDeal.Editor.Lanes
         {
             if (AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath) == null)
             {
-                Debug.LogError("[Shooting Lane] No Player.prefab; run Close the Deal > Greybox > Set Up Scene first.");
+                Debug.LogError("[Shooting Lane] No Player.prefab; run Seal the Deal > Greybox > Set Up Scene first.");
                 return;
             }
 
@@ -1309,7 +1309,7 @@ namespace CloseTheDeal.Editor.Lanes
         static int _panesBroken, _deaths, _respawns;
         static float _lastHitDamage;
 
-        [MenuItem("Close the Deal/Lanes/Run Shooting Self-Check (host only)")]
+        [MenuItem("Seal the Deal/Lanes/Run Shooting Self-Check (host only)")]
         static void SelfCheckFromMenu()
         {
             StartSelfCheck("host", Path.Combine(Directory.GetCurrentDirectory(), "Temp", "ShootingSelfCheck"), false, false, ScenePath);

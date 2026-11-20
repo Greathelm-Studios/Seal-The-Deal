@@ -6,7 +6,7 @@ namespace CloseTheDeal.Glass
     /// Designer-owned tuning for breakable glass. Runtime only reads it (AGENTS.md §4).
     /// Design and ownership: docs/systems/GLASS.md.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Glass Profile", fileName = "GlassProfile")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Glass Profile", fileName = "GlassProfile")]
     public sealed class GlassProfile : ScriptableObject
     {
         [Header("What counts as glass")]

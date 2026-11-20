@@ -8,7 +8,7 @@ namespace CloseTheDeal.Combat
     /// Each gun's own shot and reload sounds are on its WeaponDefinition; this holds the rest.
     /// Runtime only reads it (AGENTS.md §4). Timings and events: docs/systems/WEAPONS.md.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Combat Sound Set", fileName = "CombatSounds")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Combat Sound Set", fileName = "CombatSounds")]
     public sealed class CombatSoundSet : ScriptableObject
     {
         [Tooltip("The mixer group every combat sound plays through: the game mixer's Master/SFX, so the SFX volume setting covers it.")]

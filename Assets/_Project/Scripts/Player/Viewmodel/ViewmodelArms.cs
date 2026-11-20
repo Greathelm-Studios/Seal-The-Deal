@@ -146,7 +146,7 @@ namespace CloseTheDeal.Player
 
             if (_animator == null || _idle == null)
             {
-                Debug.LogWarning("[Viewmodel] The arms prefab has no Animator or idle clip. Run Close the Deal > Greybox > Rebuild Viewmodel.", this);
+                Debug.LogWarning("[Viewmodel] The arms prefab has no Animator or idle clip. Run Seal the Deal > Greybox > Rebuild Viewmodel.", this);
                 return;
             }
 

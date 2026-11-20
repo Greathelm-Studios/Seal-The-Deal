@@ -1,5 +1,5 @@
 
-CLOSE THE DEAL
+SEAL THE DEAL
 
 ART DIRECTION HANDOVER BIBLE
 Working visual bible / master reference for production
@@ -7,7 +7,7 @@ VISUAL THESIS
 A clean corporate future imagined from the year 2001 — bright, graphic, immaculate and slightly artificial; inhabited by sharp, stylised lawyers rendered with restrained editorial cel shading.
 
 PROJECT
-Close the Deal
+Seal the Deal
 TAGLINE
 Terms and Conditions Apply.
 CORE DIRECTION
@@ -403,7 +403,7 @@ ITEM
 HANDOVER NOTE
 LOCKED
 Game title
-CLOSE THE DEAL should feel large, sharp and corporate rather than playful.
+SEAL THE DEAL should feel large, sharp and corporate rather than playful.
 LOCKED
 Subtitle
 “Terms and Conditions Apply.” should read like smaller legal fine print beneath or beside the main title.
@@ -625,7 +625,7 @@ Environment
 Graphics &amp; UI
 ■ Thin grids, hairlines, big blocks, tiny legal/technical copy.
 ■ Oversized floor codes and sparse corporate slogans.
-■ Title: CLOSE THE DEAL. Subtitle: Terms and Conditions Apply.
+■ Title: SEAL THE DEAL. Subtitle: Terms and Conditions Apply.
 ■ Straight-faced corporate presentation; no wink-at-camera comedy.
 Avoid
 ■ Vaporwave / pastel Y2K

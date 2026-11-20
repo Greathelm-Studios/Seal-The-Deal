@@ -7,7 +7,7 @@ namespace CloseTheDeal.Customisation
     /// Each slot recolours one or more material slots of the character's body mesh.
     /// Designer content: read at runtime, never written.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Customisation/Outfit Slot", fileName = "Slot_")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Customisation/Outfit Slot", fileName = "Slot_")]
     public sealed class OutfitSlot : ScriptableObject
     {
         [Tooltip("The category name the player reads, such as Suit or Shoes.")]

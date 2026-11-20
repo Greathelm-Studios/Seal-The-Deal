@@ -210,9 +210,9 @@ namespace CloseTheDeal.Net
             _multipass = _net != null ? _net.TransportManager.Transport as Multipass : null;
             if (_multipass == null)
             {
-                Debug.LogError("[Lobby] The NetworkManager needs a Multipass transport holding FishySteamworks and Tugboat. Run Close the Deal > Greybox > Set Up Scene.");
+                Debug.LogError("[Lobby] The NetworkManager needs a Multipass transport holding FishySteamworks and Tugboat. Run Seal the Deal > Greybox > Set Up Scene.");
                 SetProblem(LobbyProblem.NetworkBroken, "Multipass");
-                Status(BrokenNetworkLine("Network setup is out of date. Run Close the Deal > Greybox > Set Up Scene."));
+                Status(BrokenNetworkLine("Network setup is out of date. Run Seal the Deal > Greybox > Set Up Scene."));
                 return;
             }
 
@@ -406,9 +406,9 @@ namespace CloseTheDeal.Net
             if (transport == null)
             {
                 string missing = local ? "Tugboat" : "FishySteamworks";
-                Debug.LogError($"[Lobby] Multipass has no {missing}. Run Close the Deal > Greybox > Set Up Scene.");
+                Debug.LogError($"[Lobby] Multipass has no {missing}. Run Seal the Deal > Greybox > Set Up Scene.");
                 SetProblem(LobbyProblem.NetworkBroken, missing);
-                Status(BrokenNetworkLine($"Network setup is missing {missing}. Run Close the Deal > Greybox > Set Up Scene."));
+                Status(BrokenNetworkLine($"Network setup is missing {missing}. Run Seal the Deal > Greybox > Set Up Scene."));
                 return false;
             }
 

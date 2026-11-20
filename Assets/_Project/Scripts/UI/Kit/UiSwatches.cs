@@ -10,7 +10,7 @@ namespace CloseTheDeal.UI
     /// A row of colour swatches; the chosen one carries a navy ring and its name is written beside the row.
     /// Left / right picks the next swatch (no wrap: the end of the row bumps); clicking a swatch picks it.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Swatches")]
+    [AddComponentMenu("Seal the Deal/UI/Swatches")]
     public sealed class UiSwatches : UiControl, IUiStepTarget
     {
         [Tooltip("The swatch squares, left to right.")]

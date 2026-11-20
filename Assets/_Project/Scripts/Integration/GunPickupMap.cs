@@ -11,7 +11,7 @@ namespace CloseTheDeal.Integration
     /// Kept here so Items never needs to know about Combat. Read at runtime, never written
     /// (AGENTS.md §4). Design: docs/systems/INTEGRATION.md.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Integration/Gun Pickup Map", fileName = "GunPickupMap")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Integration/Gun Pickup Map", fileName = "GunPickupMap")]
     public sealed class GunPickupMap : ScriptableObject
     {
         [Serializable]

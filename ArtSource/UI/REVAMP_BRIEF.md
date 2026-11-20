@@ -8,7 +8,7 @@ Adam's words: "i would like a revamp on the UI and the UX ... get all the lanes 
 
 And, from Alex, on feel: "a good reference for ui in terms of sound, animation and feel, look at the wii and the ds ui feel and animation, not necessarily their style, more just how they animate and feel."
 
-The game is **Seal the Deal** (never "Close the Deal" in anything a player reads; the `CloseTheDeal.*` namespace and `Close the Deal >` menu root stay until a dedicated rename).
+The game is **Seal the Deal** (never "Seal the Deal" in anything a player reads; the `CloseTheDeal.*` namespace and `Seal the Deal >` menu root stay until a dedicated rename).
 
 ## Decisions (orchestrator defaults; Adam was asked and can overrule)
 

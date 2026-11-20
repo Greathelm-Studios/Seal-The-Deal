@@ -3,7 +3,7 @@ using UnityEngine;
 namespace CloseTheDeal.Items
 {
     /// <summary>Designer-owned tuning for the wet floor sign. Runtime only reads it (AGENTS.md §4).</summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Items/Wet Floor Profile", fileName = "WetFloor")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Items/Wet Floor Profile", fileName = "WetFloor")]
     public sealed class WetFloorProfile : ScriptableObject
     {
         [Header("Putting it down")]

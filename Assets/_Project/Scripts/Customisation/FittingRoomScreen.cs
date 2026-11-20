@@ -12,7 +12,7 @@ namespace CloseTheDeal.Customisation
     /// buttons, a line saying what the focused choice is and whether it is locked, and a status
     /// line. It is a kit screen, so it slides in and out with the kit's motion and its controls
     /// answer with the kit's sounds. It decides nothing: it tells the fitting room what the
-    /// player picked. Built by Close the Deal > Lanes > Set Up Lobby.
+    /// player picked. Built by Seal the Deal > Lanes > Set Up Lobby.
     /// </summary>
     public sealed class FittingRoomScreen : UiScreen
     {
@@ -56,7 +56,7 @@ namespace CloseTheDeal.Customisation
             if (!IsWired)
             {
                 // One clear error, then stand down: never throw, never block a spawn.
-                Debug.LogError($"[Lobby] {name}: the fitting-room form is from an older build and is missing its UI kit wiring, so the fitting room is closed. Run Close the Deal > Lanes > Set Up Lobby (or Set Up Integration) to rebuild it.", this);
+                Debug.LogError($"[Lobby] {name}: the fitting-room form is from an older build and is missing its UI kit wiring, so the fitting room is closed. Run Seal the Deal > Lanes > Set Up Lobby (or Set Up Integration) to rebuild it.", this);
                 gameObject.SetActive(false);
                 return;
             }

@@ -14,7 +14,7 @@ namespace CloseTheDeal.MatchMode
     /// </summary>
     static class MatchWiring
     {
-        internal const string FixMenu = "Close the Deal > Lanes > Add GameMode To Open Scene";
+        internal const string FixMenu = "Seal the Deal > Lanes > Add GameMode To Open Scene";
 
         /// <summary>
         /// True when every serialized object slot on <paramref name="component"/> is filled, apart from

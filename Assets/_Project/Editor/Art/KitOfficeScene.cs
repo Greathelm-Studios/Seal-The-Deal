@@ -64,7 +64,7 @@ namespace CloseTheDeal.Editor.Art
 {
     /// <summary>
     /// Builds <c>KitOffice.unity</c>: the L2 twin-core court office floor, two storeys and a roof, from the kit prefabs.
-    /// Menu: <c>Close the Deal &gt; Art &gt; Build Kit Office Scene</c>.
+    /// Menu: <c>Seal the Deal &gt; Art &gt; Build Kit Office Scene</c>.
     /// </summary>
     /// <remarks>
     /// <para>Run <see cref="KitImport"/> first; this only places its prefabs. Re-running overwrites KitOffice.unity.
@@ -167,7 +167,7 @@ namespace CloseTheDeal.Editor.Art
         const int CaptureWidth = 1600, CaptureHeight = 900;
         const float CaptureFov = 60f;
 
-        [MenuItem("Close the Deal/Art/Build Kit Office Scene")]
+        [MenuItem("Seal the Deal/Art/Build Kit Office Scene")]
         static void BuildFromMenu()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
@@ -273,7 +273,7 @@ namespace CloseTheDeal.Editor.Art
         /// Exists so a KitOffice.unity built before the rig was part of the build, or one with unsaved
         /// work in it, can be made playable without rebuilding the scene over that work.
         /// </remarks>
-        [MenuItem("Close the Deal/Art/Make Open Scene Playable")]
+        [MenuItem("Seal the Deal/Art/Make Open Scene Playable")]
         static void MakePlayableFromMenu()
         {
             // WHY one scene only: the rig is found by searching every loaded scene, so with Greybox

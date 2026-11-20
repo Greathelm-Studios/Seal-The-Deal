@@ -761,7 +761,7 @@ namespace CloseTheDeal.Player.Dev
         {
             CloseTheDeal.UI.UiSound.Played += e => Note("ui sound: " + e);
             var hud = FindAnyObjectByType<CloseTheDeal.Player.Hud.MovementHud>(FindObjectsInactive.Include);
-            Check("movement's HUD is in the scene", hud != null, "run Close the Deal > Lanes > Add Movement HUD To Open Scene, or pass -sessionAddHud");
+            Check("movement's HUD is in the scene", hud != null, "run Seal the Deal > Lanes > Add Movement HUD To Open Scene, or pass -sessionAddHud");
             if (hud == null)
                 yield break;
 
@@ -878,7 +878,7 @@ namespace CloseTheDeal.Player.Dev
         {
             GameObject found = GameObject.Find(name);
             if (found == null)
-                throw new InvalidOperationException("Lane scene has no '" + name + "'. Run Close the Deal > Lanes > Set Up Movement.");
+                throw new InvalidOperationException("Lane scene has no '" + name + "'. Run Seal the Deal > Lanes > Set Up Movement.");
 
             var bounds = new Bounds(found.transform.position, Vector3.zero);
             foreach (Collider collider in found.GetComponentsInChildren<Collider>())

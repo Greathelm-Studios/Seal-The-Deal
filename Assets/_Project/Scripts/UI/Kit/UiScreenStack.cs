@@ -14,7 +14,7 @@ namespace CloseTheDeal.UI
     /// it; the overlay's own sound answers it (Back still plays on a pop, the control's answer). While a covered change waits, the stack is Busy and ignores
     /// further changes (the root re-syncs when it lands). Design: docs/systems/UI_KIT.md "Screens".
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Screen Stack")]
+    [AddComponentMenu("Seal the Deal/UI/Screen Stack")]
     public sealed class UiScreenStack : MonoBehaviour
     {
         readonly List<UiScreen> _stack = new(8);

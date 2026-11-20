@@ -28,7 +28,7 @@ namespace CloseTheDeal.Player
     /// play. Which hits should only flinch and which should knock a body down is a design
     /// question that is still open; this asset holds only the flinch.
     /// </remarks>
-    [CreateAssetMenu(menuName = "Close the Deal/Hit Reaction Profile", fileName = "HitReactionProfile")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Hit Reaction Profile", fileName = "HitReactionProfile")]
     public sealed class HitReactionProfile : ScriptableObject
     {
         /// <summary>The shortest recovery the flinch allows, seconds; see <see cref="FlinchRecover"/>'s tooltip. WHY 0.05: six ragdoll physics steps, the least in which a joint can visibly give and come back.</summary>

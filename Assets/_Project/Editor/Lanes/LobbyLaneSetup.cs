@@ -20,7 +20,7 @@ using UnityEngine.UI;
 namespace CloseTheDeal.Editor.Lanes
 {
     /// <summary>
-    /// The lobby lane's one editor tool. Close the Deal > Lanes > Set Up Lobby:
+    /// The lobby lane's one editor tool. Seal the Deal > Lanes > Set Up Lobby:
     /// 1. writes the outfit catalog, lobby rules and secretary lines under Profiles/Customisation
     ///    (only those that don't exist yet; a designer's edits are never overwritten),
     /// 2. writes the outfit character prefab and puts it on Player.prefab with PlayerOutfit
@@ -59,7 +59,7 @@ namespace CloseTheDeal.Editor.Lanes
 
         // ---- Menu ----------------------------------------------------------------------------
 
-        [MenuItem("Close the Deal/Lanes/Set Up Lobby")]
+        [MenuItem("Seal the Deal/Lanes/Set Up Lobby")]
         public static void SetUpFromMenu()
         {
             if (File.Exists(ScenePath) && !EditorUtility.DisplayDialog("Set Up Lobby",
@@ -434,7 +434,7 @@ namespace CloseTheDeal.Editor.Lanes
         /// none, and points PlayerOutfit's View at it. Nothing else on the prefab is touched. It
         /// asks before acting and does nothing when there is nothing to fix.
         /// </summary>
-        [MenuItem("Close the Deal/Lanes/Migrations/Player: Outfit on the Real Model (once)")]
+        [MenuItem("Seal the Deal/Lanes/Migrations/Player: Outfit on the Real Model (once)")]
         static void MigrateOutfitToModelMenu()
         {
             if (!EditorUtility.DisplayDialog(MigrationTitle,
@@ -657,7 +657,7 @@ namespace CloseTheDeal.Editor.Lanes
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{KitPrefabs}/{piece}.prefab");
             if (prefab == null)
-                throw new FileNotFoundException($"No kit prefab {piece}; run Close the Deal > Art > Import Kit first.");
+                throw new FileNotFoundException($"No kit prefab {piece}; run Seal the Deal > Art > Import Kit first.");
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
             go.transform.SetLocalPositionAndRotation(new Vector3(x, y, z), Quaternion.Euler(0f, yaw, 0f));
             return go;

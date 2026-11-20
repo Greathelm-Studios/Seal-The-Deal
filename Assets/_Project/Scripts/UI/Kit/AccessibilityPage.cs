@@ -6,7 +6,7 @@ namespace CloseTheDeal.UI
     /// Settings › Accessibility: Reduce motion, the crosshair's style, colour and size (the right column shows it live
     /// over sun, sky and a dark room), and Show network stats. Values live in UiSettings.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Settings Page - Accessibility")]
+    [AddComponentMenu("Seal the Deal/UI/Settings Page - Accessibility")]
     public sealed class AccessibilityPage : UiSettingsPage
     {
         [SerializeField] UiToggle _reducedMotion;

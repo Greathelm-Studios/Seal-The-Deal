@@ -42,7 +42,7 @@ namespace CloseTheDeal.Editor.Lanes
         const float CageGap = 0.15f;
         const float StairBackClearance = 1.2f;
 
-        [MenuItem("Close the Deal/Lanes/Set Up Movement")]
+        [MenuItem("Seal the Deal/Lanes/Set Up Movement")]
         public static void SetUp()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -53,7 +53,7 @@ namespace CloseTheDeal.Editor.Lanes
             var tower = AssetDatabase.LoadAssetAtPath<TowerProfile>(TowerProfilePath);
             if (tower == null)
             {
-                Debug.LogError("[Movement lane] No tower profile at " + TowerProfilePath + "; run Close the Deal > Greybox > Set Up Scene once first.");
+                Debug.LogError("[Movement lane] No tower profile at " + TowerProfilePath + "; run Seal the Deal > Greybox > Set Up Scene once first.");
                 return;
             }
 
@@ -321,7 +321,7 @@ namespace CloseTheDeal.Editor.Lanes
             ("Close this card", "Help", "", ""),
         };
 
-        [MenuItem("Close the Deal/Lanes/Add Movement HUD To Open Scene")]
+        [MenuItem("Seal the Deal/Lanes/Add Movement HUD To Open Scene")]
         public static void AddMovementHudToOpenScene()
         {
             bool feed = EnsureCrosshairFeed();
@@ -433,7 +433,7 @@ namespace CloseTheDeal.Editor.Lanes
         /// Move_*.wav clips in Audio/Movement for slots that are empty, and links it from the
         /// movement profile when that link is empty. Never overwrites a filled slot (AGENTS.md §4).
         /// </summary>
-        [MenuItem("Close the Deal/Lanes/Set Up Movement Sounds")]
+        [MenuItem("Seal the Deal/Lanes/Set Up Movement Sounds")]
         public static void SetUpMovementSounds()
         {
             var set = AssetDatabase.LoadAssetAtPath<CloseTheDeal.Player.MovementSoundSet>(SoundSetPath);
@@ -508,7 +508,7 @@ namespace CloseTheDeal.Editor.Lanes
         /// <summary>
         /// Adds movement's HUD (the refusal line and the controls help card, from the UI kit's
         /// prefabs) under the game menu's HUD in the open scene. Only adds when missing; returns
-        /// whether it added. Needs the UI kit (Close the Deal > Lanes > Set Up UI) to have run.
+        /// whether it added. Needs the UI kit (Seal the Deal > Lanes > Set Up UI) to have run.
         /// </summary>
         public static bool EnsureMovementHud()
         {
@@ -529,7 +529,7 @@ namespace CloseTheDeal.Editor.Lanes
             var hintPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/KeyHint.prefab");
             if (statusPrefab == null || platePrefab == null || hintPrefab == null)
             {
-                Debug.LogWarning("[Movement lane] UI kit prefabs missing in " + KitFolder + "; run Close the Deal > Lanes > Set Up UI first.");
+                Debug.LogWarning("[Movement lane] UI kit prefabs missing in " + KitFolder + "; run Seal the Deal > Lanes > Set Up UI first.");
                 return false;
             }
 

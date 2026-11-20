@@ -19,10 +19,10 @@ namespace CloseTheDeal.Effects
     /// </summary>
     /// <remarks>
     /// Defaults are first guesses from the art direction (slightly oversized, flat cartoon blood),
-    /// not from play. Written by <c>Close the Deal &gt; Art &gt; Build Blood Assets</c> to
+    /// not from play. Written by <c>Seal the Deal &gt; Art &gt; Build Blood Assets</c> to
     /// <c>Assets/_Project/Art/Blood/Resources/BloodProfile.asset</c>.
     /// </remarks>
-    [CreateAssetMenu(menuName = "Close the Deal/Blood Profile", fileName = "BloodProfile")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Blood Profile", fileName = "BloodProfile")]
     public sealed class BloodProfile : ScriptableObject
     {
         [Header("Look")]

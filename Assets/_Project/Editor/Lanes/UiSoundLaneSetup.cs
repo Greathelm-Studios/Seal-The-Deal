@@ -30,7 +30,7 @@ namespace CloseTheDeal.Editor.Lanes
         static readonly string[] Buses = { "Music", "SFX", "Voice", "UI" };
         static readonly string[] Exposed = { "MasterVolume", "MusicVolume", "SfxVolume", "VoiceVolume", "UiVolume" };
 
-        [MenuItem("Close the Deal/UI/Set Up Sound")]
+        [MenuItem("Seal the Deal/UI/Set Up Sound")]
         public static void Run()
         {
             AssetDatabase.Refresh();

@@ -12,7 +12,7 @@ namespace CloseTheDeal.UI
     /// button: press it, press the new key (Esc cancels); a key another action uses asks before moving it there.
     /// Rebinds are kept as binding-override JSON in InputPrefs. The actions asset itself is never changed.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Settings Page - Controls")]
+    [AddComponentMenu("Seal the Deal/UI/Settings Page - Controls")]
     public sealed class ControlsPage : UiSettingsPage
     {
         [Serializable]

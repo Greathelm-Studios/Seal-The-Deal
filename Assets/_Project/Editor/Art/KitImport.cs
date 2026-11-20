@@ -48,7 +48,7 @@ namespace CloseTheDeal.Editor.Art
 {
     /// <summary>
     /// Imports the office snap kit, checks it and builds <c>KitTest.unity</c>. Menu:
-    /// <c>Close the Deal &gt; Art &gt; Import Kit and Build Test Scene</c>. Shell use (with graphics, so not -nographics):
+    /// <c>Seal the Deal &gt; Art &gt; Import Kit and Build Test Scene</c>. Shell use (with graphics, so not -nographics):
     ///   Unity.exe -batchmode -quit -projectPath &lt;repo&gt; -executeMethod CloseTheDeal.Editor.Art.KitImport.RunFromCommandLine -kitOut &lt;folder&gt;
     /// </summary>
     /// <remarks>
@@ -175,7 +175,7 @@ namespace CloseTheDeal.Editor.Art
         {
             // The name stays Floor_Carpet because the exported models are mapped to it by name;
             // it is a polished resin floor now (Alex, 2026-11-12). Reflections come from the scene's
-            // reflection probes (Close the Deal > Art > Bake Floor Reflections); without them it mirrors the sky.
+            // reflection probes (Seal the Deal > Art > Bake Floor Reflections); without them it mirrors the sky.
             // WHY mid-pale, not white: a white floor reflecting a white room shows no reflection at
             // all. A slightly darker, near-mirror floor lets the reflections carry it.
             ("Floor_Carpet", "DCE8EC", 0f, 0.96f, false),   // AEROSET (Alex 2026-11-14): white, but a near mirror
@@ -229,7 +229,7 @@ namespace CloseTheDeal.Editor.Art
         /// Alex 2026-11-13: "a glass pane with animated liquid inside ... a shader and not physical geometry".</summary>
         const string WaterShaderName = "Close the Deal/Aero Water Pane";
 
-        [MenuItem("Close the Deal/Art/Import Kit and Build Test Scene")]
+        [MenuItem("Seal the Deal/Art/Import Kit and Build Test Scene")]
         public static void RunFromMenu()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;

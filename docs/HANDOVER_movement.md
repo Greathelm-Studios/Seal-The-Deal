@@ -61,7 +61,7 @@ All by the scripted session (`Scripts/Player/Dev/PlayerMovementSession.cs`), whi
 ## Merge and re-run steps
 
 1. Merge the lane branch. `DefaultMovement.asset` and `InputSystem_Actions.inputactions` are edited in place (GUIDs unchanged). `Player.prefab` is not edited by this lane.
-2. Run `Close the Deal > Lanes > Set Up Movement` (lane scene and its HUD) and `Close the Deal > Lanes > Add Movement HUD To Open Scene` in any other scene that should show it (it only adds what is missing).
+2. Run `Seal the Deal > Lanes > Set Up Movement` (lane scene and its HUD) and `Seal the Deal > Lanes > Add Movement HUD To Open Scene` in any other scene that should show it (it only adds what is missing).
 3. Hand test in `Lane_Movement.unity`: Host; sprint, hold Space to hop, Ctrl at a run to slide, Space at the desk, sill, ledge and the 2.4 m wall (an amber line says why), F1 for the controls card, touch a pad and watch the labels switch, Settings > Controls to change sensitivity, invert and rebind Jump.
 
 ## One thing that still makes movement feel like a demo

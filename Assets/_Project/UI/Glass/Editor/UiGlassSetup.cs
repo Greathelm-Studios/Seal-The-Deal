@@ -18,7 +18,7 @@ namespace CloseTheDeal.Editor.UI
         const string Dir = "Assets/_Project/UI/Glass";
         const string ResDir = Dir + "/Resources/UiGlass";
 
-        [MenuItem("Close the Deal/UI/Build Glass Materials")]
+        [MenuItem("Seal the Deal/UI/Build Glass Materials")]
         public static void BuildMaterialsFromMenu() => BuildMaterials();
         public static void BuildMaterialsFromCommandLine() { BuildMaterials(); EditorApplication.Exit(0); }
 
@@ -106,7 +106,7 @@ namespace CloseTheDeal.Editor.UI
         /// Agreed with lane 5 (AgentHub #469, #542): this takes both prefabs over from lane 5's generator.</summary>
         const string KitPlate = "Assets/_Project/UI/Kit/Plate.prefab";
 
-        [MenuItem("Close the Deal/UI/Wire Kit Glass Pane")]
+        [MenuItem("Seal the Deal/UI/Wire Kit Glass Pane")]
         public static void WireKitPane()
         {
             Wire(KitPane, "GlassFrosted.mat", UiGlass.Preset.Frosted);   // menus, settings, confirm

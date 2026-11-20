@@ -62,7 +62,7 @@ namespace CloseTheDeal.Editor.Lanes
 
         // ---- Menu ----------------------------------------------------------------------------
 
-        [MenuItem("Close the Deal/Lanes/Set Up Pickups")]
+        [MenuItem("Seal the Deal/Lanes/Set Up Pickups")]
         public static void SetUp()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -73,7 +73,7 @@ namespace CloseTheDeal.Editor.Lanes
         }
 
         /// <summary>Profiles, prefabs and the components on existing prefabs, without touching any scene.</summary>
-        [MenuItem("Close the Deal/Lanes/Set Up Pickups (prefabs only)")]
+        [MenuItem("Seal the Deal/Lanes/Set Up Pickups (prefabs only)")]
         public static void SetUpPrefabsOnly()
         {
             EnsureAssets();
@@ -196,7 +196,7 @@ namespace CloseTheDeal.Editor.Lanes
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (prefab == null)
             {
-                Debug.LogWarning($"[Pickups] No prop prefab at {path}; run Close the Deal > Greybox > Rebuild Everything first.");
+                Debug.LogWarning($"[Pickups] No prop prefab at {path}; run Seal the Deal > Greybox > Rebuild Everything first.");
                 return null;
             }
 
@@ -218,7 +218,7 @@ namespace CloseTheDeal.Editor.Lanes
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
             if (prefab == null)
             {
-                Debug.LogWarning("[Pickups] No Player.prefab; run Close the Deal > Greybox > Set Up Scene first.");
+                Debug.LogWarning("[Pickups] No Player.prefab; run Seal the Deal > Greybox > Set Up Scene first.");
                 return;
             }
 
@@ -1083,7 +1083,7 @@ namespace CloseTheDeal.Editor.Lanes
             const float AboveNetworkStats = 120f; // the network-stats panel (on by default while netcode is tested) holds the corner below
             const float HintLabelWidth = 72f;
 
-            [MenuItem("Close the Deal/Lanes/Add Item HUD To Open Scene")]
+            [MenuItem("Seal the Deal/Lanes/Add Item HUD To Open Scene")]
             public static void AddToOpenScene()
             {
                 var tokens = AssetDatabase.LoadAssetAtPath<UiTokens>(TokensPath);
@@ -1091,7 +1091,7 @@ namespace CloseTheDeal.Editor.Lanes
                 var keyHint = AssetDatabase.LoadAssetAtPath<GameObject>(KeyHintPath);
                 if (tokens == null || plate == null || keyHint == null)
                 {
-                    Debug.LogError("[Pickups] The UI kit is missing (UiTokens, Plate, KeyHint). Run Close the Deal > Lanes > Set Up UI first.");
+                    Debug.LogError("[Pickups] The UI kit is missing (UiTokens, Plate, KeyHint). Run Seal the Deal > Lanes > Set Up UI first.");
                     return;
                 }
 
@@ -1346,7 +1346,7 @@ namespace CloseTheDeal.Editor.Lanes
                 }
             }
 
-            [MenuItem("Close the Deal/Items/Make Selected Prefabs Throwable")]
+            [MenuItem("Seal the Deal/Items/Make Selected Prefabs Throwable")]
             static void MakeSelectedThrowable()
             {
                 int made = 0;
@@ -1371,7 +1371,7 @@ namespace CloseTheDeal.Editor.Lanes
                 AssetDatabase.SaveAssets();
             }
 
-            [MenuItem("Close the Deal/Items/Make Selected Prefabs Throwable", true)]
+            [MenuItem("Seal the Deal/Items/Make Selected Prefabs Throwable", true)]
             static bool CanMakeSelectedThrowable() => Selection.objects.Length > 0;
 
             /// <summary>
@@ -1490,7 +1490,7 @@ namespace CloseTheDeal.Editor.Lanes
         static float _nextFrameAt;
         static int _frame;
 
-        [MenuItem("Close the Deal/Lanes/Run Pickups Check")]
+        [MenuItem("Seal the Deal/Lanes/Run Pickups Check")]
         static void RunFromMenu()
         {
             if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())

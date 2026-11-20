@@ -27,7 +27,7 @@ namespace CloseTheDeal.Player
     /// eye against frame strips of the reference video ("Full Procedural Animations System") and
     /// of this animator played back in the Editor; none has been tuned in a real play session.
     /// </remarks>
-    [CreateAssetMenu(menuName = "Close the Deal/Animation Profile", fileName = "AnimationProfile")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Animation Profile", fileName = "AnimationProfile")]
     public sealed class AnimationProfile : ScriptableObject
     {
         /// <summary>How many directions <see cref="RunClips"/> holds: one every 45 degrees.</summary>

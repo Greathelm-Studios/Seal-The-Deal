@@ -120,7 +120,7 @@ namespace CloseTheDeal.Editor.Greybox
         /// <summary>The project's Input System actions asset, the same one the greybox player build wires in.</summary>
         const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
 
-        [MenuItem("Close the Deal/Greybox/Rebuild Viewmodel")]
+        [MenuItem("Seal the Deal/Greybox/Rebuild Viewmodel")]
         public static void RebuildViewmodel()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -157,7 +157,7 @@ namespace CloseTheDeal.Editor.Greybox
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
             if (prefab == null)
             {
-                Debug.LogWarning("[Greybox] No player prefab at " + PlayerPrefabPath + "; build it with Close the Deal > Greybox > Rebuild Player Prefab, which adds the viewmodel itself.");
+                Debug.LogWarning("[Greybox] No player prefab at " + PlayerPrefabPath + "; build it with Seal the Deal > Greybox > Rebuild Player Prefab, which adds the viewmodel itself.");
                 return;
             }
 

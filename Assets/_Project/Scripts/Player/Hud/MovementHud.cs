@@ -11,7 +11,7 @@ namespace CloseTheDeal.Player.Hud
     /// the local player's events (never polled), moves through the kit's one motion driver on
     /// unscaled time, and sounds through the kit's UI sounds. Contract: docs/systems/PLAYER_MOVEMENT.md.
     /// </summary>
-    [AddComponentMenu("Close the Deal/Movement/Movement HUD")]
+    [AddComponentMenu("Seal the Deal/Movement/Movement HUD")]
     public sealed class MovementHud : MonoBehaviour, IUiAnimated
     {
         /// <summary>One line of the help card: the action it shows the key for, and what the line says.</summary>
@@ -62,7 +62,7 @@ namespace CloseTheDeal.Player.Hud
         [Tooltip("The small caption naming the device the keys are shown for.")]
         [SerializeField] TMP_Text _deviceCaption;
 
-        [Tooltip("The card's lines, top to bottom. Built by Close the Deal > Lanes > Add Movement HUD.")]
+        [Tooltip("The card's lines, top to bottom. Built by Seal the Deal > Lanes > Add Movement HUD.")]
         [SerializeField] HelpRow[] _rows = new HelpRow[0];
 
         const float KeyCapMinWidth = 48f;

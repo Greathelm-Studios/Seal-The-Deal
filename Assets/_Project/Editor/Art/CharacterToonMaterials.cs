@@ -17,7 +17,7 @@ using UnityEngine;
 namespace CloseTheDeal.Editor.Art
 {
     /// <summary>
-    /// Builds the starter character materials. Menu: <c>Close the Deal &gt; Art &gt; Build Character Toon Materials</c>.
+    /// Builds the starter character materials. Menu: <c>Seal the Deal &gt; Art &gt; Build Character Toon Materials</c>.
     /// </summary>
     /// <remarks>
     /// Each material is written with <see cref="GeneratedAssetGuard"/>: once someone edits one, the
@@ -83,7 +83,7 @@ namespace CloseTheDeal.Editor.Art
         /// </summary>
         static readonly Color SkinShadow = Hex(0xB8979A);
 
-        [MenuItem("Close the Deal/Art/Build Character Toon Materials")]
+        [MenuItem("Seal the Deal/Art/Build Character Toon Materials")]
         static void BuildFromMenu() => Build();
 
         /// <summary>

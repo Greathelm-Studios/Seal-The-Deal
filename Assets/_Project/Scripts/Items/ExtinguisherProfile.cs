@@ -3,7 +3,7 @@ using UnityEngine;
 namespace CloseTheDeal.Items
 {
     /// <summary>Designer-owned tuning for the fire extinguisher. Runtime only reads it (AGENTS.md §4).</summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Items/Extinguisher Profile", fileName = "Extinguisher")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Items/Extinguisher Profile", fileName = "Extinguisher")]
     public sealed class ExtinguisherProfile : ScriptableObject
     {
         [Tooltip("How long it pours smoke once the pin is pulled, in seconds. It cannot be stopped. Longer fills a bigger part of the floor.")]

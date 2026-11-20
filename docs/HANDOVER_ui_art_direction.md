@@ -27,7 +27,7 @@ Read these, in this order, before drawing or building anything:
 - **The title is a white window frame over the game's own live sky** (Lane 8's backdrop), not painted clouds. Adam on the frame: "the borders on the main screen are too thick, but they do work, they do look nice." The bars were thinned from about 54 px to 24 px at 1080p; he has not seen the result in play.
 - **Palette**: the bible's seven swatches (#F3F4F4, #C9CED3, #111B38, #244FB9, #2879EF, #20D4E6, #101116) plus **Amber #FF9E1B** for the rival firm and for threat. You are cyan ◆, the rival is amber ▲. Amber as a solid block reads too heavy (the old rival chip, the current "Unable to reach the host's game" box): use it as an edge or mark, not a fill.
 - **Feel**: build to the motion and sound tables in `feel_wii_ds.md`. Hover grows and settles, press squashes, focus brackets snap, screens slide or zoom rather than cut, idle screens are alive. User-started motion under 300 ms. A reduce-motion path for every animation.
-- **Name and voice**: the game is **Seal the Deal** (never "Close the Deal" in anything a player reads; the `CloseTheDeal` namespace and `Close the Deal >` menus stay until a dedicated rename). Tagline "Terms and Conditions Apply." Copy is corporate and legal, played straight. Interact is **F**, drop/throw **G**, lean **Q/E**.
+- **Name and voice**: the game is **Seal the Deal** (never "Seal the Deal" in anything a player reads; the `CloseTheDeal` namespace and `Seal the Deal >` menus stay until a dedicated rename). Tagline "Terms and Conditions Apply." Copy is corporate and legal, played straight. Interact is **F**, drop/throw **G**, lean **Q/E**.
 
 **Earlier explorations, kept for reference only**: four VectorCraft kit passes, A Survey, B Aero, C Sky, D Seven (Windows 7 glass). Side by side in [review/keyframes/00_compare_passes.png](../ArtSource/UI/review/keyframes/00_compare_passes.png); heroes `00a`–`00d` beside it. The generator that drew them is [ArtSource/UI/tools/](../ArtSource/UI/tools/) (`ctd_ui.py` and `make_*.py`).
 
@@ -53,7 +53,7 @@ All code is on the **local branch `buffer`** (worktree `.claude/worktrees/buffer
 2. **The in-game HUD looks unfinished next to the menus**: the old dark "Esc Menu" and network-readout chips still show in combat captures (Lane 5's in-game menu commit claims to replace them; unverified), and the gun is a grey box.
 3. **Amber error box** on the problem screens is a heavy solid fill.
 4. **Sound**: the 58 synthesised clips and a test batch on sampled instruments (FluidSynth + GeneralUser GS, kept in `ArtSource/Audio/synth_test/`, main checkout only) were both rejected by Adam as too artificial. Kenney's CC0 interface and impact packs were also rejected. Every sound slot can now take a recording (drop it in `ArtSource/Audio/recorded/…`, add a row to `ArtSource/Audio/LICENCES.md`); see `ArtSource/Audio/SOUND_SHOPPING_LIST.md`. **The GDD says no asset packs ship**, so library sounds need Adam to change that line. Text-to-sound models (MOSS-SoundEffect, Stable Audio Open) were found but not tried.
-5. **Two held-gun systems**: Lane 2's `WeaponView` and Harvey's `PlayerViewmodel`/`PlayerHeldWeapon`. In `buffer`, `PlayerViewmodel` is not on `Player.prefab` until "Close the Deal > Greybox > Rebuild Viewmodel" is run (now add-only). With both on, a body can draw two guns. Not UI, but it shows in every first-person capture.
+5. **Two held-gun systems**: Lane 2's `WeaponView` and Harvey's `PlayerViewmodel`/`PlayerHeldWeapon`. In `buffer`, `PlayerViewmodel` is not on `Player.prefab` until "Seal the Deal > Greybox > Rebuild Viewmodel" is run (now add-only). With both on, a body can draw two guns. Not UI, but it shows in every first-person capture.
 6. **Two pick-up systems run together**: Lane 3's `ItemCarrier` and Alex's stand-in `DevCarry` both use F and G in the editor. **Adam's decision: keep Alex's; build around it.** Lane 3's is also kept.
 
 ## Rules that bit the last sessions
@@ -69,9 +69,9 @@ All code is on the **local branch `buffer`** (worktree `.claude/worktrees/buffer
 
 - **Everything is in `main` on GitHub** (fast-forwarded to `buffer`): Adam's lanes, Harvey's `harvey-netcode` and Alex's `Alex_Env`.
 - **Movement now belongs to Harvey.** Don't change movement or the motor; UI that reads movement (crosshair feed, controls card) stays UI work.
-- **Tool fix, waiting to land:** branch `tool-guards` (local, 8 commits, compiles, not pushed) makes every editor tool keep hand-edited work; see `docs/TOOLS_RESPECT_EDITS.md` on that branch. **Hold it until Alex commits his new floor layout** (L2): his uncommitted edits touch the same kit tools, mainly `KitImport.cs`. After it lands, Adam runs the five "Close the Deal > Tools > Mark … as Tool-Made" menus once. When merging it over Alex's layout, keep his new `KitOfficeScene.GiveNetworkSceneIds(scene)` call after the bake and before the final save in both `BuildAndSave` and `BuildAdditive` (it stops the lift and roof props vanishing in Play; AgentHub #612).
+- **Tool fix, waiting to land:** branch `tool-guards` (local, 8 commits, compiles, not pushed) makes every editor tool keep hand-edited work; see `docs/TOOLS_RESPECT_EDITS.md` on that branch. **Hold it until Alex commits his new floor layout** (L2): his uncommitted edits touch the same kit tools, mainly `KitImport.cs`. After it lands, Adam runs the five "Seal the Deal > Tools > Mark … as Tool-Made" menus once. When merging it over Alex's layout, keep his new `KitOfficeScene.GiveNetworkSceneIds(scene)` call after the bake and before the final save in both `BuildAndSave` and `BuildAdditive` (it stops the lift and roof props vanishing in Play; AgentHub #612).
 - **Unfinished, saved on local branches only:** `claude/lane-ui` (in-game menu follow-up) and `claude/lane-gunhold-e2156d` (gun held at the hip), each one WIP commit made with hooks skipped. Not reviewed or compiled; don't merge as is.
-- **F5 body view** needs Harvey's `PlayerViewmodel` on the player (`Close the Deal > Greybox > Rebuild Viewmodel`, add-only).
+- **F5 body view** needs Harvey's `PlayerViewmodel` on the player (`Seal the Deal > Greybox > Rebuild Viewmodel`, add-only).
 
 ## Open questions for Adam
 
@@ -84,6 +84,6 @@ All code is on the **local branch `buffer`** (worktree `.claude/worktrees/buffer
 
 ## Next steps
 
-1. Open the `buffer` worktree in Unity, run "Close the Deal > Lanes > Set Up Integration", open `Assets/_Project/Scenes/Lanes/Lane_Integration.unity`, press Play, and capture the title, settings, the in-game menu (Esc) and the HUD as they are now. Compare against the keyframes.
+1. Open the `buffer` worktree in Unity, run "Seal the Deal > Lanes > Set Up Integration", open `Assets/_Project/Scenes/Lanes/Lane_Integration.unity`, press Play, and capture the title, settings, the in-game menu (Esc) and the HUD as they are now. Compare against the keyframes.
 2. Fix the look in this order: typeface (once Adam allows it), the in-game HUD chips and plates onto the kit and glass, the amber error box as an edge, then motion and sound polish against `feel_wii_ds.md`.
 3. Show Adam a capture or short clip per change and wait for his call before the next visible change.

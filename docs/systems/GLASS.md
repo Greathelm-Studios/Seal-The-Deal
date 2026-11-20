@@ -38,7 +38,7 @@ On a client, a pane disappears when the host's word arrives, so for a few tens o
 - Anything drawn with a material listed under **Glass Materials** on the glass profile. The registry gives these a `GlassPane` when the match starts, and a fitted box collider when they have none. This is how the greybox stair cages, glass-room walls and the kit's windows break without the floor templates being touched.
 
 Glass under a networked object (a spawned prop) is not supported: its number would differ between machines.
-A scene needs one `GlassRegistry` (**Close the Deal > Lanes > Add Shooting To Open Scene** adds it); without one nothing breaks and bullets stop at glass.
+A scene needs one `GlassRegistry` (**Seal the Deal > Lanes > Add Shooting To Open Scene** adds it); without one nothing breaks and bullets stop at glass.
 
 ## Breaking: tuning
 

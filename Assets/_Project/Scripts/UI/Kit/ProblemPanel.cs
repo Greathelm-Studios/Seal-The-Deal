@@ -12,7 +12,7 @@ namespace CloseTheDeal.UI
     /// every SteamLobby problem; the words follow ui_inventory §5.3. It refuses a fix that can't run now (Steam's
     /// overlay missing, the network not ready) with its reason, never a dead button.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Problem Panel")]
+    [AddComponentMenu("Seal the Deal/UI/Problem Panel")]
     public sealed class ProblemPanel : UiScreen
     {
         /// <summary>Opens and closes under lane 8's CloudWipe (docs/systems/UI_KIT.md "Screens").</summary>

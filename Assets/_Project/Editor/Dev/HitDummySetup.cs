@@ -65,7 +65,7 @@ namespace CloseTheDeal.Editor.Dev
         const float FloorSearchUp = 3f, FloorSearchDown = 10f;
 
         /// <summary>Writes the prefab from scratch, unless a person has edited it since the last build.</summary>
-        [MenuItem("Close the Deal/Dev/Build Hit Dummy Prefab")]
+        [MenuItem("Seal the Deal/Dev/Build Hit Dummy Prefab")]
         public static void BuildPrefab()
         {
             if (GeneratedAssetGuard.MayOverwrite(PrefabPath))
@@ -80,7 +80,7 @@ namespace CloseTheDeal.Editor.Dev
         /// Does not save the scene. Outside Play Mode the new object is an ordinary unsaved scene
         /// change that Undo removes; placed while playing, it goes when Play stops.
         /// </remarks>
-        [MenuItem("Close the Deal/Dev/Place Hit Dummy")]
+        [MenuItem("Seal the Deal/Dev/Place Hit Dummy")]
         public static void Place()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
@@ -88,7 +88,7 @@ namespace CloseTheDeal.Editor.Dev
             {
                 if (Application.isPlaying)
                 {
-                    Debug.LogError("[HitDummy] No prefab yet. Stop playing and run Close the Deal > Dev > Build Hit Dummy Prefab.");
+                    Debug.LogError("[HitDummy] No prefab yet. Stop playing and run Seal the Deal > Dev > Build Hit Dummy Prefab.");
                     return;
                 }
                 prefab = Build();

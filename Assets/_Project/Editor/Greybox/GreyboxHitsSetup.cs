@@ -40,7 +40,7 @@ namespace CloseTheDeal.Editor.Greybox
         /// <c>GreyboxViewmodelSetup.EnsureOnPlayerPrefab</c>, the same pattern). The ragdoll's hit
         /// profile is only filled in when it is empty, so a profile someone chose stays.
         /// </remarks>
-        [MenuItem("Close the Deal/Greybox/Add Hit Reactions to Player")]
+        [MenuItem("Seal the Deal/Greybox/Add Hit Reactions to Player")]
         public static void AddToPlayerPrefab()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -52,7 +52,7 @@ namespace CloseTheDeal.Editor.Greybox
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
             if (prefab == null)
             {
-                Debug.LogWarning("[Greybox] No player prefab at " + PlayerPrefabPath + "; build it with Close the Deal > Greybox > Rebuild Player Prefab, which adds the hit reactions itself.");
+                Debug.LogWarning("[Greybox] No player prefab at " + PlayerPrefabPath + "; build it with Seal the Deal > Greybox > Rebuild Player Prefab, which adds the hit reactions itself.");
                 return;
             }
 

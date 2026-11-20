@@ -10,7 +10,7 @@ namespace CloseTheDeal.Integration
     /// same spot, so neither firm finds more. Read at runtime, never written (AGENTS.md §4).
     /// Design: docs/systems/INTEGRATION.md.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Integration/Floor Loot Table", fileName = "FloorLootTable")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Integration/Floor Loot Table", fileName = "FloorLootTable")]
     public sealed class FloorLootTable : ScriptableObject
     {
         [Serializable]

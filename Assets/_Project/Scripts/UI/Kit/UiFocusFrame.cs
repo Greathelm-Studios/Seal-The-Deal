@@ -11,7 +11,7 @@ namespace CloseTheDeal.UI
     /// focus" while the mouse is in use), breathe after a few idle seconds, and nudge at the end of a list.
     /// Feel table §2.2 and §2.4. Lives on the kit canvas above every screen; there is one.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Focus Frame")]
+    [AddComponentMenu("Seal the Deal/UI/Focus Frame")]
     public sealed class UiFocusFrame : MonoBehaviour, IUiAnimated
     {
         static UiFocusFrame _instance;

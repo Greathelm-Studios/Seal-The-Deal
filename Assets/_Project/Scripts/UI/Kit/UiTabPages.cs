@@ -9,7 +9,7 @@ namespace CloseTheDeal.UI
     /// 12 px out and the new one in from the side it came from, and plays TabChange (feel table §2.2). Q / E and the
     /// pad's shoulder buttons switch tabs while the owning screen is on top. Reduce motion turns the slide into a fade.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Tab Pages")]
+    [AddComponentMenu("Seal the Deal/UI/Tab Pages")]
     public sealed class UiTabPages : MonoBehaviour, IUiAnimated
     {
         [Tooltip("The kit's tokens.")]

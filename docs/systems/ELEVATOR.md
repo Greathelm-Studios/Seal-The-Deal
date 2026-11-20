@@ -37,7 +37,7 @@ The rejected alternative is a closed-door ride where the host teleports the ride
 ## Code
 
 - [Elevator.cs](../../Assets/_Project/Scripts/Lift/Elevator.cs): the whole system. Tuning is on the component: travel (m), top speed (m/s), acceleration (m/s²), door time (s), dwell time (s), the cabin box and the call radius.
-- [KitOfficeRoof.cs](../../Assets/_Project/Editor/Art/KitOfficeRoof.cs): the roof's builder, menu `Close the Deal > Art > Add Kit Office Roof Range`. It rebuilds one "Roof range" group and, when the kit's "Lift" group is in the scene, adds the `Elevator`, its `NetworkObject`, the car's kinematic body and the call spots.
+- [KitOfficeRoof.cs](../../Assets/_Project/Editor/Art/KitOfficeRoof.cs): the roof's builder, menu `Seal the Deal > Art > Add Kit Office Roof Range`. It rebuilds one "Roof range" group and, when the kit's "Lift" group is in the scene, adds the `Elevator`, its `NetworkObject`, the car's kinematic body and the call spots.
 - [KitOfficeScene.cs](../../Assets/_Project/Editor/Art/KitOfficeScene.cs) places the kit's lift pieces (`Lift_Car`, four `Lift_Door_Panel` leaves, the landing frames, the glass shaft walls and the head-house) under a "Lift" group, then calls `KitOfficeRoof.AddTo` at the end of its build, so a rebuild of KitOffice keeps the roof and re-wires the lift.
 
 ## The rooftop range

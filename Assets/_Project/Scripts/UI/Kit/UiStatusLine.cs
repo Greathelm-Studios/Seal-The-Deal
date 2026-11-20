@@ -16,7 +16,7 @@ namespace CloseTheDeal.UI
     }
 
     /// <summary>One line of status text with its square mark. The text changes only when told to.</summary>
-    [AddComponentMenu("Close the Deal/UI/Status Line")]
+    [AddComponentMenu("Seal the Deal/UI/Status Line")]
     public sealed class UiStatusLine : MonoBehaviour
     {
         [Tooltip("The kit's tokens.")]

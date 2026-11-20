@@ -28,13 +28,13 @@ namespace CloseTheDeal.Editor.Greybox
             string label = FindLabel(asset);
             if (label == null)
             {
-                Debug.LogWarning($"[Greybox] Left {path} alone: it wasn't made by this tool. To let the tool rebuild it anyway, select it and run Close the Deal > Greybox > Let the Tool Rebuild Selected.");
+                Debug.LogWarning($"[Greybox] Left {path} alone: it wasn't made by this tool. To let the tool rebuild it anyway, select it and run Seal the Deal > Greybox > Let the Tool Rebuild Selected.");
                 return false;
             }
 
             if (label != LabelPrefix + Fingerprint(path))
             {
-                Debug.LogWarning($"[Greybox] Left {path} alone: it has been edited since the tool wrote it. To throw those edits away and rebuild it, select it and run Close the Deal > Greybox > Let the Tool Rebuild Selected.");
+                Debug.LogWarning($"[Greybox] Left {path} alone: it has been edited since the tool wrote it. To throw those edits away and rebuild it, select it and run Seal the Deal > Greybox > Let the Tool Rebuild Selected.");
                 return false;
             }
 
@@ -59,7 +59,7 @@ namespace CloseTheDeal.Editor.Greybox
             AssetDatabase.SetLabels(main, labels.ToArray());
         }
 
-        [MenuItem("Close the Deal/Greybox/Let the Tool Rebuild Selected")]
+        [MenuItem("Seal the Deal/Greybox/Let the Tool Rebuild Selected")]
         static void HandBackSelected()
         {
             foreach (Object asset in Selection.objects)

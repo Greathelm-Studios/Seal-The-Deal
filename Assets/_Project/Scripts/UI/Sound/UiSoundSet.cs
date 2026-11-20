@@ -7,9 +7,9 @@ namespace CloseTheDeal.UI
 {
     /// <summary>
     /// Maps every UiSoundEvent to its clip, volume and pitch variance, plus the voice-limiting rules.
-    /// One asset: Assets/_Project/Resources/UI/UiSoundSet.asset, built by Close the Deal > UI > Set Up Sound.
+    /// One asset: Assets/_Project/Resources/UI/UiSoundSet.asset, built by Seal the Deal > UI > Set Up Sound.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/UI Sound Set", fileName = "UiSoundSet")]
+    [CreateAssetMenu(menuName = "Seal the Deal/UI Sound Set", fileName = "UiSoundSet")]
     public sealed class UiSoundSet : ScriptableObject
     {
         [Serializable]

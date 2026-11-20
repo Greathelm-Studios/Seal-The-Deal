@@ -8,10 +8,10 @@ namespace CloseTheDeal.UI
     /// joining or playing), closes its screens when the game takes over, and in a game shows the in-game menu pane
     /// while the game menu is open; the game menu keeps owning the rule menu open = mouse free = player idle. Also
     /// reads the device the player is on each frame (before the EventSystem runs) and passes Esc / the pad's B to the
-    /// top screen (in a game, Start closes the whole menu). Built by Close the Deal > Lanes > Set Up UI.
+    /// top screen (in a game, Start closes the whole menu). Built by Seal the Deal > Lanes > Set Up UI.
     /// </summary>
     [DefaultExecutionOrder(-200)]
-    [AddComponentMenu("Close the Deal/UI/UI Root")]
+    [AddComponentMenu("Seal the Deal/UI/UI Root")]
     public sealed class UiRoot : MonoBehaviour
     {
         [Tooltip("The kit's tokens.")]
@@ -65,7 +65,7 @@ namespace CloseTheDeal.UI
         {
             if (_menu == null)
             {
-                Debug.LogError("[UI] The UI root has no game menu, so it can't tell when to show the title. Run Close the Deal > Lanes > Set Up UI.", this);
+                Debug.LogError("[UI] The UI root has no game menu, so it can't tell when to show the title. Run Seal the Deal > Lanes > Set Up UI.", this);
                 return;
             }
 

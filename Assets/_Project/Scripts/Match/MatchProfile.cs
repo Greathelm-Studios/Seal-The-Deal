@@ -7,7 +7,7 @@ namespace CloseTheDeal.MatchMode
     /// Designer-owned tuning for the briefcase game mode. Runtime only reads it (AGENTS.md §4).
     /// Design and ownership: docs/systems/MATCH.md.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Match Profile", fileName = "MatchProfile")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Match Profile", fileName = "MatchProfile")]
     public sealed class MatchProfile : ScriptableObject
     {
         [Header("Firms")]

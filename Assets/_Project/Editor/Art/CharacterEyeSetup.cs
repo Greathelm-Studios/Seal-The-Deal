@@ -18,7 +18,7 @@ namespace CloseTheDeal.Editor.Art
 {
     internal static class CharacterEyeSetup
     {
-        private const string Menu = "Close the Deal/Art/Add STDMC Eye Cards";
+        private const string Menu = "Seal the Deal/Art/Add STDMC Eye Cards";
         private const string Character = "Assets/_Project/Art/Characters/STDMC/STDMC_Toon.prefab";
         private const string Skin = "Assets/_Project/Art/Characters/STDMC/Materials/STDMC_lambert2_Toon.mat";
         private const string Assets = "Assets/_Project/Art/Characters/Eyes/";

@@ -76,7 +76,7 @@ The host's Esc menu still has **"Start now, skipping the desk"** (and "Rematch n
 
 ## Rebuilding the scene
 
-**Close the Deal > Lanes > Set Up Integration** rebuilds `Lane_Integration.unity` (asks first if it exists). From the shell:
+**Seal the Deal > Lanes > Set Up Integration** rebuilds `Lane_Integration.unity` (asks first if it exists). From the shell:
 
 ```
 Unity -batchmode -projectPath <checkout> -executeMethod CloseTheDeal.Editor.Lanes.IntegrationLaneSetup.SetUpFromCommandLine

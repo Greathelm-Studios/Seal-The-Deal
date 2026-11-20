@@ -40,7 +40,7 @@ using UnityEngine.Rendering.Universal;
 namespace CloseTheDeal.Editor.Art
 {
     /// <summary>
-    /// Applies the office look to the open scene. Menu: <c>Close the Deal &gt; Art &gt; Apply Office Look</c>.
+    /// Applies the office look to the open scene. Menu: <c>Seal the Deal &gt; Art &gt; Apply Office Look</c>.
     /// </summary>
     /// <remarks>
     /// Writes two assets under <see cref="LookFolder"/> (the post-processing profile and the sky
@@ -222,7 +222,7 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>Film grain response, 0..1. High = grain mostly in the shade, little in the blown highlights.</summary>
         const float GrainResponse = 0.8f;
 
-        [MenuItem("Close the Deal/Art/Apply Office Look")]
+        [MenuItem("Seal the Deal/Art/Apply Office Look")]
         static void ApplyFromMenu() => Apply(askFirst: true);
 
         /// <summary>

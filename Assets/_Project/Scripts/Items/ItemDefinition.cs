@@ -20,7 +20,7 @@ namespace CloseTheDeal.Items
     /// (AGENTS.md §4). One asset per item under Assets/_Project/Profiles/Items.
     /// Design: docs/systems/ITEMS.md.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Items/Item Definition", fileName = "Item")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Items/Item Definition", fileName = "Item")]
     public sealed class ItemDefinition : ScriptableObject
     {
         [Header("What it is")]

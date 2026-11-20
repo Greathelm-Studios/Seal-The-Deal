@@ -23,7 +23,7 @@ The three office weapons proposed were fire extinguisher, wet floor sign and des
 
 - `node ~/.claude/skills/compile-check/compile-check.mjs`: PASS, 0 errors, 0 warnings.
 - `lizard -l csharp Assets/_Project/Scripts/Items Assets/_Project/Scripts/Props`: highest CC 10 (`ItemCarrier.Update`, `Pickup.OnCollisionEnter`); nothing at 11+. Two functions at 11–12 were split.
-- Scripted play run, **host only** (one copy of the game hosting with its own player): **Close the Deal > Lanes > Run Pickups Check**, or headless `-executeMethod CloseTheDeal.Editor.Lanes.PickupsLaneRun.RunFromShell -pickupsRole solo -pickupsOut <folder>`. Results are filled in under "Run results" below.
+- Scripted play run, **host only** (one copy of the game hosting with its own player): **Seal the Deal > Lanes > Run Pickups Check**, or headless `-executeMethod CloseTheDeal.Editor.Lanes.PickupsLaneRun.RunFromShell -pickupsRole solo -pickupsOut <folder>`. Results are filled in under "Run results" below.
 - The script calls the same owner-side methods the buttons call (`LocalTake`, `LocalThrow`, `LocalDrop`, `LocalUse`), so every request goes through the host. **The F, left mouse, G and right mouse bindings themselves were not pressed by anything**; that needs Adam's hands. Sprinting onto the wet floor is faked by setting the body's speed.
 
 ### Run results
@@ -57,8 +57,8 @@ While the hands are full, `ItemCarrier` disables the shared `Player/Attack` acti
 
 1. Merge the lane commit. `Scripts/Core.meta` will conflict add/add with the shooting lane (different folder guid, same content otherwise); keep either. `IDamageable.cs` and its `.meta` are identical in both lanes.
 2. Drop the generated-prefabs commit if the prefabs conflict, never hand-merge their YAML. Let FishNet regenerate `DefaultPrefabObjects.asset`.
-3. Open Unity on the merged checkout and run **Close the Deal > Lanes > Set Up Pickups (prefabs only)**. It adds `Pickup` to the greybox props and `ItemCarrier` to `Player.prefab` if they are missing and changes nothing else. Re-run it after any **Greybox > Rebuild Everything**.
-4. To rebuild the test scene: **Close the Deal > Lanes > Set Up Pickups** (asks before rebuilding an existing `Lane_Pickups.unity`).
+3. Open Unity on the merged checkout and run **Seal the Deal > Lanes > Set Up Pickups (prefabs only)**. It adds `Pickup` to the greybox props and `ItemCarrier` to `Player.prefab` if they are missing and changes nothing else. Re-run it after any **Greybox > Rebuild Everything**.
+4. To rebuild the test scene: **Seal the Deal > Lanes > Set Up Pickups** (asks before rebuilding an existing `Lane_Pickups.unity`).
 5. One-line hookups other lanes own:
    - Shooting lane: subscribe to `ItemCarrier.ServerItemTaken`, grant guns where `pickup.Definition.Kind == ItemKind.Gun`, then `pickup.ServerUseUp()` (snippet in ITEMS.md).
    - Shooting lane: call `ItemCarrier.ServerForceDrop()` on the host when a player dies.
@@ -100,7 +100,7 @@ Open `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`, press Play, then **Host 
 ## Item HUD (2026-11-14)
 
 - Built from the UI kit only (`ItemHud`): prompt under the crosshair, too-heavy, refusals with the kit shake and `HandsFull` / `Error` sounds, and the hands slot at the bottom left, above the network-stats panel. Design table in [ITEMS.md](systems/ITEMS.md), "The item HUD (built)".
-- **Captured in `Lane_Integration.unity`** ([docs/handover/pickups/item_hud/](handover/pickups/item_hud/): 9/9 checks; prompt, too heavy, the hands slot sliding in over 250 ms, hands full with its shake, dropped) at 1920×1080 and 1280×720 by `-pickupsRole hud` (the HUD is added to the scene for that run only; the scene file is not saved). To put it in the saved scene: open `Lane_Integration.unity`, **Close the Deal > Lanes > Add Item HUD To Open Scene**, save. Until then that scene holds the deleted `ItemPromptLabel` as a missing script.
+- **Captured in `Lane_Integration.unity`** ([docs/handover/pickups/item_hud/](handover/pickups/item_hud/): 9/9 checks; prompt, too heavy, the hands slot sliding in over 250 ms, hands full with its shake, dropped) at 1920×1080 and 1280×720 by `-pickupsRole hud` (the HUD is added to the scene for that run only; the scene file is not saved). To put it in the saved scene: open `Lane_Integration.unity`, **Seal the Deal > Lanes > Add Item HUD To Open Scene**, save. Until then that scene holds the deleted `ItemPromptLabel` as a missing script.
 - **The pistol viewmodel stays drawn while the hands carry a chair** (seen in every capture): the viewmodel / shooting lane should hide or lower the gun while `ItemCarrier.Held` is not null (ItemCarrier already blocks firing then).
 - **Pad players** see pad buttons (Y / RT / DOWN / LT) once they use the pad; checked by script with a virtual pad (captures `hud_08`, `hud_09`). PlayStation symbols are not drawn (Xbox names on every pad): assumption while Adam is away.
 - **A client's own HUD** is captured in the two-machine run (`client_hud_hands_*`): its hands slot names the chair the host gave it.
@@ -135,7 +135,7 @@ Carried items float in front of the camera with no hands or arms, and the beep, 
 Ordered by how much each changes what a player sees.
 
 1. **Hands on carried items.** Harvey's posing layer (`Scripts/Player/Viewmodel/`, left and right hands, `PlayerViewmodel.TwoHanded`) is now in `buffer`. On `ItemCarrier.HeldChanged`, set `TwoHanded` from `Pickup.TryGetHandSeats(out main, out support, out twoHanded)` and seat the grips on those world poses each frame after order 100. Agreed with Harvey's agent (AgentHub #534): he converts the seat axes on his side (ours: +Z fingers, +Y palm; his HandGrip: +Y little finger to index, a 90° roll per hand) and moves his first-person solve to order 101. While anything is carried the gun is put away (full hands never shoot); no item is left-hand-only.
-2. **`Greybox.unity` (the build scene) has no item HUD.** Its owner opens it, runs **Close the Deal > Lanes > Add Item HUD To Open Scene**, saves.
+2. **`Greybox.unity` (the build scene) has no item HUD.** Its owner opens it, runs **Seal the Deal > Lanes > Add Item HUD To Open Scene**, saves.
 3. **Client-side release.** A dropped or thrown plain prop waits up to 0.4 s where it left the hands until the host's pose arrives, then eases onto it. A clean snap needs a NetBody call to reset a body's interpolation to a given pose (Switchboard, Harvey's); then `Pickup.ObserversReleased` sends the release pose and calls it.
 4. **Item sound loudness by distance.** The clips are at full scale (lane 9, AgentHub #520), so loudness in play is `ItemAudio`'s 3D settings (min 1.5 m, max 40 m, logarithmic) and `ItemSoundSet.Volume`. The explosion probably wants a bigger minimum distance (about 8 m). Nobody has listened yet.
 5. **PlayStation glyphs.** Pad prompts use Xbox names on every pad (`ItemCarrier.KeyName`); the stand-in font has no button symbols.

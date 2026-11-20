@@ -24,7 +24,7 @@ blender -b <work>/work.blend --python ArtSource/Characters/Viewmodel/unit_scale.
 node <skill>/scripts/ca.mjs export --blend <work>/work_unit.blend --engine unity --no-mesh --out <work>/export
 ```
 
-Copy `<work>/export/work_unit.fbx` over `STDMC_ViewmodelMoves.fbx`, then run `Close the Deal > Greybox > Rebuild Viewmodel` in Unity. The tool sets the import settings the first time (Generic, no avatar, Preserve Hierarchy, the rig's scale, Loop Time on `_Loop` clips).
+Copy `<work>/export/work_unit.fbx` over `STDMC_ViewmodelMoves.fbx`, then run `Seal the Deal > Greybox > Rebuild Viewmodel` in Unity. The tool sets the import settings the first time (Generic, no avatar, Preserve Hierarchy, the rig's scale, Loop Time on `_Loop` clips).
 
 The middle step is not optional: without [unit_scale.py](unit_scale.py) every bone imports 100 times out (see "The clips" in [CHARACTER_ANIMATION.md](../../../docs/systems/CHARACTER_ANIMATION.md)).
 

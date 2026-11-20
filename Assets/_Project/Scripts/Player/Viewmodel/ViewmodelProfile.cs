@@ -31,7 +31,7 @@ namespace CloseTheDeal.Player
     /// WHY one profile for every weapon: slice 1 has one pistol. When weapons carry their own
     /// kick and reload, those parts move to the weapon's data asset; the framing and sway stay.
     /// </remarks>
-    [CreateAssetMenu(menuName = "Close the Deal/Viewmodel Profile", fileName = "ViewmodelProfile")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Viewmodel Profile", fileName = "ViewmodelProfile")]
     public sealed class ViewmodelProfile : ScriptableObject
     {
         [Header("Lens")]

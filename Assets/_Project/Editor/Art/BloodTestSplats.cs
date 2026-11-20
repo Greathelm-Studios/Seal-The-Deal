@@ -16,7 +16,7 @@ using UnityEngine;
 namespace CloseTheDeal.Editor.Art
 {
     /// <summary>
-    /// Menu: <c>Close the Deal &gt; Art &gt; Spawn Test Blood (Play Mode)</c>. Fires a pistol shot,
+    /// Menu: <c>Seal the Deal &gt; Art &gt; Spawn Test Blood (Play Mode)</c>. Fires a pistol shot,
     /// a melee blow and a very hard blow at the surface the camera faces, spread left to right,
     /// each as if a victim stood a metre in front of it. Run it again for different shapes.
     /// </summary>
@@ -30,7 +30,7 @@ namespace CloseTheDeal.Editor.Art
 
         const float MaxRange = 15f;
 
-        [MenuItem("Close the Deal/Art/Spawn Test Blood (Play Mode)")]
+        [MenuItem("Seal the Deal/Art/Spawn Test Blood (Play Mode)")]
         static void Spawn()
         {
             Camera cam = Camera.main;
@@ -70,7 +70,7 @@ namespace CloseTheDeal.Editor.Art
             }
         }
 
-        [MenuItem("Close the Deal/Art/Spawn Test Blood (Play Mode)", true)]
+        [MenuItem("Seal the Deal/Art/Spawn Test Blood (Play Mode)", true)]
         static bool CanSpawn() => Application.isPlaying;
     }
 }

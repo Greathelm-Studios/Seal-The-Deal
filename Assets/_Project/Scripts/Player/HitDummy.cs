@@ -23,7 +23,7 @@ namespace CloseTheDeal.Player
     /// <remarks>
     /// Local and unsynced: a dummy placed in a networked game reacts only on the screen of the
     /// client that hit it (AGENTS.md §3). It is a development aid, not a gameplay object. Built
-    /// by <c>Close the Deal &gt; Dev &gt; Build Hit Dummy Prefab</c>.
+    /// by <c>Seal the Deal &gt; Dev &gt; Build Hit Dummy Prefab</c>.
     /// </remarks>
     public sealed class HitDummy : MonoBehaviour
     {

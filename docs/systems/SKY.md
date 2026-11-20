@@ -21,7 +21,7 @@ The dome and city follow art bible reference 04; the clouds and overlay follow t
 ## Files
 
 - Shader: [OfficeSky.shader](../../Assets/_Project/Art/Sky/OfficeSky.shader), in the material shader menu as `Close the Deal/Office Sky`. Everything is drawn in this one shader, city included.
-- Material: [OfficeLook_Sky.mat](../../Assets/_Project/Art/Look/OfficeLook_Sky.mat). `Close the Deal > Art > Apply Office Look` builds it from the shader's default values and never overwrites it once a person has edited it.
+- Material: [OfficeLook_Sky.mat](../../Assets/_Project/Art/Look/OfficeLook_Sky.mat). `Seal the Deal > Art > Apply Office Look` builds it from the shader's default values and never overwrites it once a person has edited it.
 - Review renders: [ArtSource/Sky/review/](../../ArtSource/Sky/review/).
 
 ## Tuning

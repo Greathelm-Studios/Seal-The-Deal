@@ -11,7 +11,7 @@ namespace CloseTheDeal.UI
     /// the screen closes; Reset to defaults puts the open tab back. Only rows whose game-side value exists are shown
     /// (docs/systems/UI_KIT.md "Settings").
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Settings Screen")]
+    [AddComponentMenu("Seal the Deal/UI/Settings Screen")]
     public sealed class SettingsScreen : UiScreen
     {
         /// <summary>Opens and closes under lane 8's PaneSlide (docs/systems/UI_KIT.md "Screens").</summary>

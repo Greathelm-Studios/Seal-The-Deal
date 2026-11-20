@@ -298,7 +298,7 @@ namespace CloseTheDeal.MatchMode
             base.OnStartNetwork();
             if (_profile == null)
             {
-                Debug.LogError("[Match] The Match object has no match profile. Run Close the Deal > Lanes > Set Up GameMode, or set Profile on it.");
+                Debug.LogError("[Match] The Match object has no match profile. Run Seal the Deal > Lanes > Set Up GameMode, or set Profile on it.");
                 enabled = false;
                 return;
             }

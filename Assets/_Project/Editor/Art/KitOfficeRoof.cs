@@ -29,7 +29,7 @@ namespace CloseTheDeal.Editor.Art
     /// <summary>
     /// Builds the rooftop range on top of the kit office: guard rails, the hit dummy's pad with its glass
     /// screens and mirror, the reserved arsenal bay, the pool, loose props, and the lift's script.
-    /// Menu: <c>Close the Deal &gt; Art &gt; Add Kit Office Roof Range</c>.
+    /// Menu: <c>Seal the Deal &gt; Art &gt; Add Kit Office Roof Range</c>.
     /// </summary>
     /// <remarks>
     /// <para>The roof has nothing overhead: Alex asked for an open roof so the sky box shows.</para>
@@ -146,7 +146,7 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>The rider check is this much smaller than the car all round, metres, so someone outside the doors does not count.</summary>
         const float CabinMargin = 0.35f;
 
-        [MenuItem("Close the Deal/Art/Add Kit Office Roof Range")]
+        [MenuItem("Seal the Deal/Art/Add Kit Office Roof Range")]
         static void AddFromMenu()
         {
             GameObject office = GameObject.Find(OfficeRootName);

@@ -1,0 +1,140 @@
+<!doctype html>
+<!--
+  AI-GENERATED SOURCE FILE
+  Generator : Claude Opus 5.5 (Claude Code)
+  Generated : 2026-11-20
+  Prompt    : Alex: "supply a moodboard in there with all the current images I sent for this project, make a proper plan for the art"
+  Reviewed  : NOT YET REVIEWED BY A HUMAN
+  Summary   : One page that shows every reference Alex sent, the art bible plates and the directions Alex picked,
+              side by side with where KitOffice is now. It points at the images where they already live instead of
+              copying them, so it never drifts from the folders. Open it in a browser from this folder; it is local only
+              because the references are other people's work (README.md here: reference only, do not redistribute).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seal the Deal moodboard</title>
+<style>
+  :root { --bg:#f4f8f8; --ink:#101820; --muted:#5a6b78; --line:#d5dee4; --card:#ffffff; --accent:#244fb9; --keep:#1f8a5b; --hold:#b7791f; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0d131a; --ink:#e8eef2; --muted:#93a4b2; --line:#24313d; --card:#151e27; --accent:#7aa2ff; --keep:#4cc38a; --hold:#e0a84a; } }
+  :root[data-theme="dark"] { --bg:#0d131a; --ink:#e8eef2; --muted:#93a4b2; --line:#24313d; --card:#151e27; --accent:#7aa2ff; --keep:#4cc38a; --hold:#e0a84a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui, "Segoe UI", sans-serif; }
+  header, section { max-width:1400px; margin:0 auto; padding:24px 16px; }
+  header h1 { margin:0 0 4px; font-size:28px; letter-spacing:.02em; }
+  header p { margin:4px 0; color:var(--muted); max-width:80ch; }
+  nav { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  nav a { color:var(--accent); text-decoration:none; border:1px solid var(--line); padding:4px 10px; border-radius:999px; font-size:13px; }
+  h2 { margin:0 0 4px; font-size:20px; border-top:1px solid var(--line); padding-top:20px; }
+  .why { color:var(--muted); margin:0 0 14px; max-width:90ch; }
+  .tag { display:inline-block; font-size:12px; padding:1px 8px; border-radius:999px; border:1px solid currentColor; margin-left:8px; vertical-align:middle; }
+  .tag.keep { color:var(--keep); } .tag.hold { color:var(--hold); } .tag.brief { color:var(--accent); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px; }
+  figure { margin:0; background:var(--card); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  figure a { display:block; }
+  figure img { width:100%; aspect-ratio:16/10; object-fit:cover; display:block; background:var(--line); }
+  figcaption { padding:8px 10px; font-size:13px; }
+  figcaption b { display:block; font-weight:600; }
+  figcaption span { color:var(--muted); }
+  .liked { outline:2px solid var(--keep); outline-offset:-2px; }
+  ul.missing { margin:0; padding-left:20px; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Seal the Deal · moodboard</h1>
+  <p>Everything Alex has sent as reference, the art bible plates, and the directions Alex picked, next to where KitOffice is today. Click any image for full size.</p>
+  <p><b>Reference only.</b> Most of these are other people's work: don't ship, trace or redistribute them (see README.md in this folder). Green outlines mark images Alex said he liked.</p>
+  <nav id="nav"></nav>
+</header>
+<main id="main"></main>
+<section id="missing">
+  <h2>Sent but not saved</h2>
+  <p class="why">Four sky references were pasted in chat on 12 Nov but never saved as files. Re-send them to add them here.</p>
+  <ul class="missing">
+    <li>Anime painting: someone sweeping a platform under steel X-bracing over a cloud sea.</li>
+    <li>Rounded glassy white-blue towers with glowing rings and a dot pattern in the sky.</li>
+    <li>A cloud city: white towers out of cloud, a ringed planet overhead.</li>
+    <li>Aerial view over a soft cloud sea, cirrus above, white glow at the horizon.</li>
+  </ul>
+</section>
+<script>
+// WHY: one data list drives the whole page, so adding a reference is one line, not a block of HTML.
+const groups = [
+  { id:"now", title:"Where it is now", tag:["keep","in engine"],
+    why:"KitOffice captures from ArtSource/Kit/review/unity_office. Compare every reference below against these.",
+    base:"../Kit/review/unity_office/", items:[
+      ["unity_office_r01_hall.png","Hall"],["unity_office_r02_reception.png","Reception"],["unity_office_r03_legal.png","Legal"],
+      ["unity_office_r06_kitchen.png","Kitchen"],["unity_office_r07_court.png","Court"],["unity_office_r09_up_work.png","Upstairs work area"],
+      ["unity_office_r11_up_lounge.png","Upstairs lounge"],["unity_office_r12_up_hall.png","Upstairs hall"] ] },
+  { id:"interiors", title:"Alex's interior references", tag:["keep","sent by Alex · 15 Nov"],
+    why:"Round 2 of the KitOffice mood was painted from these: colour as whole surfaces and light, fluted frosted glass, giant zone numbers, a slim waterfall. They led to Direction D.",
+    base:"../Kit/concepts/Mood/refs_alex/", items:[
+      ["01_lobby_tree_waterfall.png","Lobby, tree and waterfall"],["02_fluted_glass_blue_digits.png","Fluted glass, blue digits"],
+      ["03_green_division.png","Green division"],["04_dark_atrium_green.png","Dark atrium, green"],
+      ["05_white_corridor_green_art.png","White corridor, green art"],["06_blue_atrium.png","Blue atrium"],
+      ["07_white_orange_blocks.png","White and orange blocks"],["08_orange_service_stair.png","Orange service stair"],
+      ["09_white_orange_corridor.png","White and orange corridor"],["10_white_orange_curves.png","White and orange curves"],
+      ["11_blue_glass_store.png","Blue glass store"],["12_pillowed_blue_washroom.png","Pillowed blue washroom"],
+      ["13_dark_floor_lightboxes.png","Dark floor, lightboxes"],["14_night_blue_tech.png","Night blue tech"] ] },
+  { id:"sky", title:"Sky and clouds", tag:["keep","sent by Alex · 12 Nov"],
+    why:"What the Office Sky shader aims at: a saturated cyan dome, flat thresholded clouds, a grid and focus squares.",
+    base:"sky_and_clouds/", items:[
+      ["01_painted_soft_cumulus.png","Painted soft cumulus"],["02_big_cumulus_contrail.png","Cumulus and contrail"],
+      ["03_clouds_traced_by_squares_over_grid.webp","Clouds traced by squares","liked"],["04_thresholded_flat_cloud_cel.webp","Thresholded flat clouds","liked"],
+      ["05_wind_turbines_cumulus_deep_blue.png","Deep blue over cumulus"],["06_coastal_road_cumulus_glow.webp","Horizon glow"],
+      ["07_pixel_art_white_town_cyan_sky.png","Pixel white town, cyan sky","liked"],["08_towers_from_below_cloud_map_overlay.webp","Towers from below"] ] },
+  { id:"light", title:"Light and grade", tag:["keep","sent by Alex · 12 Nov"],
+    why:"\"The shadows should be harsher.\" Hard window-frame shadows, blown-out sun, shade lifted to blue rather than black.",
+    base:"light_and_grade/", items:[
+      ["01_stairwell_sun_blown_out_flat_shadows.webp","Blown-out stairwell sun"],["02_blue_cast_staircase_photo.webp","Blue-cast staircase"],
+      ["03_railing_stair_window_shadows.webp","Railing and window shadows"],["04_gallery_sun_slab_on_floor.png","One sun slab in a blue room"],
+      ["05_window_shadow_on_blue_wall.png","Window shadow on blue wall"] ] },
+  { id:"ui", title:"UI references", tag:["keep","sent by Alex"],
+    why:"White field first, sky only inside windows, hairline frames, corner brackets, vertical frosted strips. Notes per image in ui/README.md.",
+    base:"ui/", items:[
+      ["01_future_of_sky_flowers_halftone_hud_strip.png","Halftone HUD strip"],["02_white_field_sky_windows_black_strokes.png","White field, sky windows"],
+      ["03_shiver_white_ribbons_corner_brackets.png","Ribbons and corner brackets"],["04_indefinite_grid_glass_shapes_sky.png","Grid and glass shapes"],
+      ["05_moby_blue_field_hairlines_flare.png","Blue field, hairlines"],["06_cloud_sliced_into_glass_strips.png","Cloud in glass strips"],
+      ["07_supersonic_glass_blobs_chevrons.png","Glass blobs and chevrons (use with care)"],["08_window_frame_sky_theatre_poster_2006.png","Window frame poster"],
+      ["09_metalheart_pureskies_white_cutouts.png","White cut-outs over sky"] ] },
+  { id:"bible", title:"Art bible plates", tag:["brief","the original brief"],
+    why:"The art bible's own plates (art_bible.txt beside them): 2001 corporate futurism, dark suits against bright windows.",
+    base:"../Kit/concepts/Office/refs/", items:[
+      ["bible_ref_01.png","Bible plate 01"],["bible_ref_02.png","Bible plate 02"],["bible_ref_03.png","Bible plate 03"],["bible_ref_04.png","Bible plate 04"],
+      ["plate_law_firm_atrium.png","Law firm atrium"],["plate_law_office_floor.png","Law office floor"],["plate_office_cutaway.png","Office cutaway"],
+      ["floor_plan_sketch.png","Floor plan sketch"] ] },
+  { id:"picked", title:"Directions Alex picked", tag:["keep","decisions 11–15 Nov"],
+    why:"What the build follows. Mood D, but built in two blues rather than the orange and green painted here (Mood/DECISION.md), the Japanese corporate Aero mix (Japanese_Aero/DECISION.md), White Trays window bay with navy rails, and the prop and lift sheets.",
+    base:"../Kit/concepts/", items:[
+      ["Mood/D_L1_window_hall.png","Mood D · window hall","liked"],["Mood/D_L3_court_feature_stair.png","Mood D · court stair","liked"],
+      ["Mood/D_L4_west_ring_ribbon.png","Mood D · west ring","liked"],["Mood/D_look_bench.png","Mood D · desk bench","liked"],
+      ["Japanese_Aero/contact_sheet.png","Japanese corporate Aero · the mix"],["Window_Bay_R3/01_White_Trays/presentation.png","Window bay · White Trays"],
+      ["Window_Bay_R3/01_White_Trays/rival_A.png","White Trays · rival view at 12 m"],
+      ["Props_Aero/sheet_1_workstation.png","Props · workstation"],["Props_Aero/sheet_3_amenities.png","Props · amenities"],
+      ["Props_Aero/sheet_5_computers.png","Props · computers"],["Lift_Aero/sheet_1_landings.png","Lift · landings"],["Lift_Aero/sheet_2_car.png","Lift · car"] ] },
+  { id:"later", title:"Saved for another mode", tag:["hold","not built now"],
+    why:"Direction E, Night tech. Alex likes it and wants it for a different game mode.",
+    base:"../Kit/concepts/Mood/", items:[
+      ["E_L1_window_hall.png","Night tech · window hall"],["E_L3_court_feature_stair.png","Night tech · court stair"],
+      ["E_L4_west_ring_ribbon.png","Night tech · west ring"],["E_look_bench.png","Night tech · desk bench"] ] }
+];
+const main = document.getElementById("main"), nav = document.getElementById("nav");
+for (const g of groups) {
+  const s = document.createElement("section"); s.id = g.id;
+  s.innerHTML = `<h2>${g.title}<span class="tag ${g.tag[0]}">${g.tag[1]}</span></h2><p class="why">${g.why}</p><div class="grid"></div>`;
+  const grid = s.querySelector(".grid");
+  for (const [file, caption, mark] of g.items) {
+    const src = g.base + file, f = document.createElement("figure");
+    if (mark === "liked") f.className = "liked";
+    f.innerHTML = `<a href="${src}" target="_blank"><img loading="lazy" src="${src}" alt="${caption}"></a><figcaption><b>${caption}</b><span>${src}</span></figcaption>`;
+    grid.appendChild(f);
+  }
+  main.appendChild(s);
+  nav.insertAdjacentHTML("beforeend", `<a href="#${g.id}">${g.title} · ${g.items.length}</a>`);
+}
+nav.insertAdjacentHTML("beforeend", `<a href="#missing">Not saved · 4</a>`);
+</script>
+</body>
+</html>

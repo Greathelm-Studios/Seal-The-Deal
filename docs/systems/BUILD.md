@@ -8,7 +8,7 @@ A standalone game that boots straight into reception (`Lane_Integration.unity`, 
 
 ## Building
 
-Menu: **Close the Deal > Build > Standalone (macOS)** or **(Windows)**, into `Builds/<platform>/` (gitignored).
+Menu: **Seal the Deal > Build > Standalone (macOS)** or **(Windows)**, into `Builds/<platform>/` (gitignored).
 
 Shell, Unity closed on that checkout:
 

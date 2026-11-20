@@ -10,7 +10,7 @@ namespace CloseTheDeal.Items
     /// The clips are made by the UI sound lane's generator (ArtSource/Audio/ui/make_ui_sounds.py).
     /// Event list and timings: docs/systems/ITEMS.md, "Item sounds".
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Items/Item Sound Set", fileName = "ItemSounds")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Items/Item Sound Set", fileName = "ItemSounds")]
     public sealed class ItemSoundSet : ScriptableObject
     {
         [Tooltip("The mixer bus item sounds play through, so the settings' sound-effects volume applies: the game mixer's SFX group.")]

@@ -230,7 +230,7 @@ namespace CloseTheDeal.Player
         /// </summary>
         public bool Running => enabled && _built && _parts[Hips].Body != null;
 
-        /// <summary>Whether this body reacts to hits at all: it needs a hit profile. The player's gets <c>PlayerHitReaction.asset</c> from <c>Close the Deal &gt; Greybox &gt; Add Hit Reactions to Player</c>.</summary>
+        /// <summary>Whether this body reacts to hits at all: it needs a hit profile. The player's gets <c>PlayerHitReaction.asset</c> from <c>Seal the Deal &gt; Greybox &gt; Add Hit Reactions to Player</c>.</summary>
         public bool TakesHits => _hitProfile != null;
 
         /// <summary>Whether a hard enough hit can knock this body down: its hit profile's knock-down strength is above 0.</summary>

@@ -12,7 +12,7 @@ namespace CloseTheDeal.UI
     /// ready. Esc asks before quitting. The sky is a static fallback until the title lane's live backdrop goes
     /// into BackdropSlot (SetLiveBackdrop hides the fallback). Text changes only on lobby events.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Title Screen")]
+    [AddComponentMenu("Seal the Deal/UI/Title Screen")]
     public sealed class TitleScreen : UiScreen, IBackdropScreen
     {
         [Header("Backdrop")]

@@ -11,7 +11,7 @@ namespace CloseTheDeal.Lobby
     /// The reception overlay: the ready board (who is in which firm and who is ready), the
     /// prompt for whatever the player is looking at (with a fill while the host holds to
     /// start) and the secretary's subtitles. The board text is rebuilt only when the roster
-    /// changes; the prompt only when its line changes. Built by Close the Deal > Lanes > Set Up
+    /// changes; the prompt only when its line changes. Built by Seal the Deal > Lanes > Set Up
     /// Lobby; restyle it there. Hidden while the fitting room or the game menu is up.
     /// </summary>
     public sealed class LobbyHud : MonoBehaviour
@@ -56,7 +56,7 @@ namespace CloseTheDeal.Lobby
         string _readyHex;
         string _mutedHex;
 
-        const string RebuildHint = "Run Close the Deal > Lanes > Set Up Lobby (or Set Up Integration) to rebuild it.";
+        const string RebuildHint = "Run Seal the Deal > Lanes > Set Up Lobby (or Set Up Integration) to rebuild it.";
 
         void Awake()
         {

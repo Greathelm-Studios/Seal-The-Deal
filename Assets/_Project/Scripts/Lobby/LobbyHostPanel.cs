@@ -9,7 +9,7 @@ namespace CloseTheDeal.Lobby
     /// The host's player list in reception, built from the UI kit: one row per other player with
     /// their firm, and Remove behind a confirm dialog. The host opens it with Tab (pad: View) via
     /// LobbyHostControls. Removing asks the roster, which checks again that the asker is the
-    /// host. Built by Close the Deal > Lanes > Set Up Lobby.
+    /// host. Built by Seal the Deal > Lanes > Set Up Lobby.
     /// </summary>
     public sealed class LobbyHostPanel : UiScreen
     {

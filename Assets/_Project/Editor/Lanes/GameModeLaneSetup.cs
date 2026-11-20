@@ -59,7 +59,7 @@ namespace CloseTheDeal.Editor.Lanes
         const float TeleportBeyondMetres = 1.5f;
         const byte SendEveryNthTick = 2;
 
-        [MenuItem("Close the Deal/Lanes/Set Up GameMode")]
+        [MenuItem("Seal the Deal/Lanes/Set Up GameMode")]
         public static void SetUp()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -100,14 +100,14 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log("[GameMode] Lane scene set up and saved at " + ScenePath);
         }
 
-        [MenuItem("Close the Deal/Lanes/Add GameMode To Open Scene")]
+        [MenuItem("Seal the Deal/Lanes/Add GameMode To Open Scene")]
         public static void AddToOpenScene()
         {
             MatchProfile profile = EnsureAssets();
             EnsurePlayerPrefab();
             if (Object.FindAnyObjectByType<TowerBuilder>() == null)
             {
-                Debug.LogError("[GameMode] The open scene has no Tower. Run Close the Deal > Greybox > Set Up Scene first.");
+                Debug.LogError("[GameMode] The open scene has no Tower. Run Seal the Deal > Greybox > Set Up Scene first.");
                 return;
             }
 
@@ -181,7 +181,7 @@ namespace CloseTheDeal.Editor.Lanes
             var standard = AssetDatabase.LoadAssetAtPath<TowerProfile>(DefaultTowerPath);
             if (standard == null || standard.Lobby == null)
             {
-                Debug.LogError("[GameMode] No tower profile with floor templates at " + DefaultTowerPath + ". Run Close the Deal > Greybox > Set Up Scene once, then this again.");
+                Debug.LogError("[GameMode] No tower profile with floor templates at " + DefaultTowerPath + ". Run Seal the Deal > Greybox > Set Up Scene once, then this again.");
                 return null;
             }
 
@@ -196,7 +196,7 @@ namespace CloseTheDeal.Editor.Lanes
         // ---- Briefcase prefab ----------------------------------------------------------------
 
         /// <summary>Overwrites the briefcase prefab from the tool, only while the tool still owns it (GeneratedAssetGuard). Saving over the path keeps its GUID.</summary>
-        [MenuItem("Close the Deal/Lanes/Rebuild GameMode Briefcase")]
+        [MenuItem("Seal the Deal/Lanes/Rebuild GameMode Briefcase")]
         public static void RebuildBriefcase()
         {
             if (!GeneratedAssetGuard.MayOverwrite(BriefcasePath))
@@ -346,7 +346,7 @@ namespace CloseTheDeal.Editor.Lanes
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
             if (prefab == null)
             {
-                Debug.LogError("[GameMode] No Player.prefab. Run Close the Deal > Greybox > Set Up Scene first.");
+                Debug.LogError("[GameMode] No Player.prefab. Run Seal the Deal > Greybox > Set Up Scene first.");
                 return;
             }
 
@@ -464,7 +464,7 @@ namespace CloseTheDeal.Editor.Lanes
             GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
             if (menu == null)
             {
-                Debug.LogError("[GameMode] No game menu in the scene, so the match has no HUD or menu section. Run Close the Deal > Greybox > Set Up Scene first.");
+                Debug.LogError("[GameMode] No game menu in the scene, so the match has no HUD or menu section. Run Seal the Deal > Greybox > Set Up Scene first.");
                 return;
             }
 
@@ -477,7 +477,7 @@ namespace CloseTheDeal.Editor.Lanes
         const string KitFolder = "Assets/_Project/UI/Kit";
         const string KitTokensPath = "Assets/_Project/UI/Tokens/UiTokens.asset";
 
-        /// <summary>The kit's prefabs, sprites and tokens. Null when the UI kit isn't in this project yet (Close the Deal > Lanes > Set Up UI).</summary>
+        /// <summary>The kit's prefabs, sprites and tokens. Null when the UI kit isn't in this project yet (Seal the Deal > Lanes > Set Up UI).</summary>
         sealed class Kit
         {
             public UiTokens Tokens;
@@ -498,7 +498,7 @@ namespace CloseTheDeal.Editor.Lanes
                 };
                 bool complete = kit.Tokens != null && kit.Plate != null && kit.StatusLine != null && kit.KeyHint != null && kit.Primary != null && kit.White != null && kit.Outline != null;
                 if (!complete)
-                    Debug.LogError("[GameMode] The UI kit is missing pieces under " + KitFolder + ". Run Close the Deal > Lanes > Set Up UI first.");
+                    Debug.LogError("[GameMode] The UI kit is missing pieces under " + KitFolder + ". Run Seal the Deal > Lanes > Set Up UI first.");
                 return complete ? kit : null;
             }
         }

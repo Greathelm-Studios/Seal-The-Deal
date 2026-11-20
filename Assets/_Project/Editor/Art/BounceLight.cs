@@ -21,7 +21,7 @@ namespace CloseTheDeal.Editor.Art
 {
     /// <summary>
     /// Places fake bounce lights on the sun patches of the open scene. Menu:
-    /// <c>Close the Deal &gt; Art &gt; Add Bounce Light</c>.
+    /// <c>Seal the Deal &gt; Art &gt; Add Bounce Light</c>.
     /// </summary>
     /// <remarks>
     /// Works out where sunlight through each window bay lands on each floor of the <c>Kit Office</c>
@@ -71,7 +71,7 @@ namespace CloseTheDeal.Editor.Art
         /// <summary>The bounce's colour: the sun's near white, cooled by the pale blue-grey floor it comes off.</summary>
         static readonly Color BounceColour = new Color(0.86f, 0.91f, 1f);
 
-        [MenuItem("Close the Deal/Art/Add Bounce Light")]
+        [MenuItem("Seal the Deal/Art/Add Bounce Light")]
         static void AddFromMenu() => Add(askFirst: true);
 
         /// <summary>

@@ -7,7 +7,7 @@ namespace CloseTheDeal.Customisation
     /// Designer content (AGENTS.md §4): read at runtime, never written.
     /// Design: docs/systems/CUSTOMISATION.md.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Customisation/Outfit Option", fileName = "Option_")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Customisation/Outfit Option", fileName = "Option_")]
     public sealed class OutfitOption : ScriptableObject
     {
         [Tooltip("What the player reads in the fitting room. Keep it short: two or three words, straight-faced.")]

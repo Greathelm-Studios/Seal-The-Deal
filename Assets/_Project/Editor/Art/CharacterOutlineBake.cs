@@ -21,7 +21,7 @@ namespace CloseTheDeal.Editor.Art
 {
     /// <summary>
     /// Bakes contour normals for the selected model(s). Menu:
-    /// <c>Close the Deal &gt; Art &gt; Bake Character Outline Normals</c>.
+    /// <c>Seal the Deal &gt; Art &gt; Bake Character Outline Normals</c>.
     /// </summary>
     /// <remarks>
     /// For each mesh in a selected model it writes <c>&lt;model folder&gt;/Outline/&lt;mesh&gt;_Outline.asset</c>:
@@ -50,7 +50,7 @@ namespace CloseTheDeal.Editor.Art
         /// </summary>
         const float WeldDistance = 0.00001f;
 
-        [MenuItem("Close the Deal/Art/Bake Character Outline Normals")]
+        [MenuItem("Seal the Deal/Art/Bake Character Outline Normals")]
         static void BakeSelected()
         {
             int models = 0;

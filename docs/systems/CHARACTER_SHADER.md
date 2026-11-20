@@ -23,7 +23,7 @@ The bible text is at [art_bible.txt](../../ArtSource/Kit/concepts/Office/refs/ar
 
 - Shader: [CharacterToon.shader](../../Assets/_Project/Art/Toon/CharacterToon.shader), listed in the material shader menu as `Close the Deal/Character Toon`.
 - Starter materials: [Assets/_Project/Art/Toon/Materials/](../../Assets/_Project/Art/Toon/Materials/): `Char_Suit_Navy`, `Char_Shirt_White`, `Char_Skin`, `Char_Shoe_Leather`.
-- Tool: `Close the Deal > Art > Build Character Toon Materials` ([CharacterToonMaterials.cs](../../Assets/_Project/Editor/Art/CharacterToonMaterials.cs)) writes any starter material that is missing or untouched. It never overwrites one a person has edited, and touches no scene or prefab.
+- Tool: `Seal the Deal > Art > Build Character Toon Materials` ([CharacterToonMaterials.cs](../../Assets/_Project/Editor/Art/CharacterToonMaterials.cs)) writes any starter material that is missing or untouched. It never overwrites one a person has edited, and touches no scene or prefab.
 - First real character: [Assets/_Project/Art/Characters/STDMC/](../../Assets/_Project/Art/Characters/STDMC/), with seven toon materials made from the model's own colours, the baked outline meshes and the prefab `STDMC_Toon`. `STDMC_Toon` holds `STDMC_Rigged.fbx`: the model on a Mixamo skeleton (52 bones), imported as a Unity humanoid at 1.8 m with the toon materials mapped in its import settings, standing with its feet at the prefab's origin. `STDMC.fbx` is the earlier static export with no skeleton; nothing uses it any more.
 - Player: the greybox tool ([GreyboxSceneSetup.cs](../../Assets/_Project/Editor/Greybox/GreyboxSceneSetup.cs)) nests `STDMC_Toon` in [Player.prefab](../../Assets/_Project/Prefabs/Player.prefab) as the body whenever it builds that prefab, so a change to `STDMC_Toon` reaches every player.
 - Face: [Character eyes](CHARACTER_EYES.md) owns the head-mounted eye cards, their alpha-clipped shader and the artist texture layout.
@@ -60,7 +60,7 @@ To give it a contour later, delete the material and re-run the tool with a width
 
 ## Known limitations
 
-- **The contour needs smooth normals, and hard-edged meshes need a bake.** On a hard edge the line splits open. Select the model and run `Close the Deal > Art > Bake Character Outline Normals` ([CharacterOutlineBake.cs](../../Assets/_Project/Editor/Art/CharacterOutlineBake.cs)): it writes a copy of each mesh into an `Outline` folder beside the model, with smoothed normals in an extra channel that only the contour uses. Point the character at the baked mesh, and re-run after re-exporting the model.
+- **The contour needs smooth normals, and hard-edged meshes need a bake.** On a hard edge the line splits open. Select the model and run `Seal the Deal > Art > Bake Character Outline Normals` ([CharacterOutlineBake.cs](../../Assets/_Project/Editor/Art/CharacterOutlineBake.cs)): it writes a copy of each mesh into an `Outline` folder beside the model, with smoothed normals in an extra channel that only the contour uses. Point the character at the baked mesh, and re-run after re-exporting the model.
 - **Skin colours are placeholders.** The bible gives no skin hexes; `Char_Skin` is one neutral tone so the shader can be judged.
 - **No screen-space shadow support.** The PC renderer doesn't use that feature; the shader says where to add it if that changes.
 - **Not checked for this shader:** animation, Play Mode, a client's view, frame cost with 8 players, and the Mobile renderer.

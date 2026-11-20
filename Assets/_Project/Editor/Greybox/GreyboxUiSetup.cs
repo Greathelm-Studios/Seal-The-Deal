@@ -36,7 +36,7 @@ namespace CloseTheDeal.Editor.Greybox
         const float PrimaryHeight = 64f;
         const float ControlHeight = 56f;
 
-        [MenuItem("Close the Deal/Greybox/Rebuild Game UI")]
+        [MenuItem("Seal the Deal/Greybox/Rebuild Game UI")]
         public static void RebuildGameUi()
         {
             // Scene objects can't carry the generated-asset fingerprint, so ask instead. Batch runs (UI preview capture) skip the question.
@@ -52,7 +52,7 @@ namespace CloseTheDeal.Editor.Greybox
             SteamLobby lobby = Object.FindAnyObjectByType<SteamLobby>();
             if (lobby == null)
             {
-                Debug.LogError("[UI] No SteamLobby in the scene. Run Close the Deal > Greybox > Set Up Scene first.");
+                Debug.LogError("[UI] No SteamLobby in the scene. Run Seal the Deal > Greybox > Set Up Scene first.");
                 return;
             }
 
@@ -87,7 +87,7 @@ namespace CloseTheDeal.Editor.Greybox
         }
 
         /// <summary>TextMeshPro's essential resources (default font, shaders, settings), imported silently.</summary>
-        [MenuItem("Close the Deal/Greybox/Import TextMeshPro Essentials")]
+        [MenuItem("Seal the Deal/Greybox/Import TextMeshPro Essentials")]
         public static void ImportTextMeshProEssentials()
         {
             if (TextMeshProReady())
@@ -157,7 +157,7 @@ namespace CloseTheDeal.Editor.Greybox
         {
             if (!TextMeshProReady())
             {
-                Debug.LogError("[UI] TextMeshPro essentials are missing. Run Close the Deal > Greybox > Import TextMeshPro Essentials, then Rebuild Game UI.");
+                Debug.LogError("[UI] TextMeshPro essentials are missing. Run Seal the Deal > Greybox > Import TextMeshPro Essentials, then Rebuild Game UI.");
                 return;
             }
 
@@ -245,7 +245,7 @@ namespace CloseTheDeal.Editor.Greybox
             var fitter = card.AddComponent<UnityEngine.UI.ContentSizeFitter>();
             fitter.verticalFit = UnityEngine.UI.ContentSizeFitter.FitMode.PreferredSize;
 
-            Row(Label(card.transform, "Title", "<b>CLOSE THE DEAL</b>", 40, Text), 48f);
+            Row(Label(card.transform, "Title", "<b>SEAL THE DEAL</b>", 40, Text), 48f);
             Row(Label(card.transform, "Subtitle", "Greybox playtest", 18, Muted), 24f);
             r.Mode = Row(Label(card.transform, "Mode", "Starting...", 18, Muted), 24f);
             Rule(card.transform);

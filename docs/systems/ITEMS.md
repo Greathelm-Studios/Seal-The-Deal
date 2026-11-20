@@ -66,7 +66,7 @@ An item's weight is authored twice, on its definition and as its prefab body's m
 
 Any loose object can be picked up and thrown, not only the items above (Alex's direction, 2026-11-13; not yet a GDD decision): monitors, tablets, plant pots, chairs, anything that is its own networked prop and weighs no more than the 35 kg limit. There is one pickup system: this one. Nothing new is synced for it.
 
-**What a prop needs** (Close the Deal > Items > **Make Selected Prefabs Throwable** adds whatever is missing to the selected prefabs and logs what it did):
+**What a prop needs** (Seal the Deal > Items > **Make Selected Prefabs Throwable** adds whatever is missing to the selected prefabs and logs what it did):
 
 - Its own prefab, not merged into a desk or a floor piece, with its pivot at its base or centre.
 - One simple collider (a box or a capsule; a mesh collider must be convex) on the **Prop** layer.
@@ -121,7 +121,7 @@ What a HUD reads for items. All of it is events: nothing here needs checking eve
 
 ### The item HUD (built)
 
-`ItemHud` ([ItemHud.cs](../../Assets/_Project/Scripts/Items/ItemHud.cs)) draws the rows above from the UI kit only: the `Plate` and `KeyHint` prefabs, `UiTokens` colours, type, timings and springs, `UiMotion` and `UiSound`. **Close the Deal > Lanes > Add Item HUD To Open Scene** puts it under the game menu's `Hud` (Set Up Integration and Set Up Pickups call it); it replaces the old two-line `ItemPromptLabel`, which is deleted.
+`ItemHud` ([ItemHud.cs](../../Assets/_Project/Scripts/Items/ItemHud.cs)) draws the rows above from the UI kit only: the `Plate` and `KeyHint` prefabs, `UiTokens` colours, type, timings and springs, `UiMotion` and `UiSound`. **Seal the Deal > Lanes > Add Item HUD To Open Scene** puts it under the game menu's `Hud` (Set Up Integration and Set Up Pickups call it); it replaces the old two-line `ItemPromptLabel`, which is deleted.
 
 | Piece | Where | Looks | Moves | Sound |
 |---|---|---|---|---|
@@ -190,7 +190,7 @@ Under [Assets/_Project/Scripts/Items/](../../Assets/_Project/Scripts/Items/):
 
 Shared with other lanes: [Core/IDamageable.cs](../../Assets/_Project/Scripts/Core/IDamageable.cs).
 
-Setup: **Close the Deal > Lanes > Set Up Pickups** ([PickupsLaneSetup.cs](../../Assets/_Project/Editor/Lanes/PickupsLaneSetup.cs)) creates any missing profile and item prefab (and swaps an older item prefab's NetworkTransform for a `NetBody`), adds `Pickup` to the greybox furniture prefabs and `ItemCarrier` to `Player.prefab` where missing, and builds `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`. That scene holds a real `TowerBuilder` whose profile (`Profiles/Items/LaneTowerFrame.asset`) stacks empty floors (`Prefabs/Items/LaneEmptyFloor.prefab`): Switchboard needs a built tower to stream props, and the hand-built office slice sits inside that tower's box. It never changes an asset or component that already exists. **Run Pickups Check** on the same menu plays that scene by script and writes a report and frames.
+Setup: **Seal the Deal > Lanes > Set Up Pickups** ([PickupsLaneSetup.cs](../../Assets/_Project/Editor/Lanes/PickupsLaneSetup.cs)) creates any missing profile and item prefab (and swaps an older item prefab's NetworkTransform for a `NetBody`), adds `Pickup` to the greybox furniture prefabs and `ItemCarrier` to `Player.prefab` where missing, and builds `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`. That scene holds a real `TowerBuilder` whose profile (`Profiles/Items/LaneTowerFrame.asset`) stacks empty floors (`Prefabs/Items/LaneEmptyFloor.prefab`): Switchboard needs a built tower to stream props, and the hand-built office slice sits inside that tower's box. It never changes an asset or component that already exists. **Run Pickups Check** on the same menu plays that scene by script and writes a report and frames.
 
 ## Known limitations
 

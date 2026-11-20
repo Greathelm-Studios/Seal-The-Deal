@@ -37,4 +37,4 @@
 - Ship INK2 / INK3 / DISABLED as opaque colours (Linear colour space makes alpha text lighter than the mockups).
 - 9-sliced plate, amber plate and keycap sprites; TMP font assets for the three faces; a blur pass only if Curtain Wall is chosen.
 - Per HUD element: who owns the data on the host, what is synced, at what rate (AGENTS.md §3), before code.
-- Verify with `Close the Deal > Greybox > Capture UI Preview` against these PNGs at 1920×1080 and 1280×720.
+- Verify with `Seal the Deal > Greybox > Capture UI Preview` against these PNGs at 1920×1080 and 1280×720.

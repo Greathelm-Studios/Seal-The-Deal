@@ -34,16 +34,16 @@ The body it runs on is the active ragdoll described in [CHARACTER_ANIMATION.md](
 
 ## Using it
 
-1. `Close the Deal > Dev > Place Hit Dummy` puts one on the floor 3 m in front of the Scene view (or in front of your camera while playing), facing you. The scene is not saved.
+1. `Seal the Deal > Dev > Place Hit Dummy` puts one on the floor 3 m in front of the Scene view (or in front of your camera while playing), facing you. The scene is not saved.
 2. Press Play.
-3. `Close the Deal > Dev > Hit Bench`: pick a preset (pistol shot, melee hit, thrown chair, thrown desk, blast near, blast far) or set the values, then press **Hit**.
+3. `Seal the Deal > Dev > Hit Bench`: pick a preset (pistol shot, melee hit, thrown chair, thrown desk, blast near, blast far) or set the values, then press **Hit**.
    With its Dummy slot left empty the bench hits the dummy nearest your camera, so a dummy placed in front of you is the one hit even while another stands on the roof. The window says whether the dummy can be hit right now, and under the button what the last hit did (flinched, knocked down). It also writes each hit to the Console as `[HitBench]`.
 
 **If nothing happens:** read the bench's status line. The usual cause is the code being reloaded during Play (another change to a script while the game runs): every character's ragdoll loses its body and stops, with one `[PlayerRagdoll] Lost its body` error. Stop and press Play again. Setting `Edit > Preferences > General > Script Changes While Playing` to **Recompile After Finished Playing** stops it happening; in a shared Editor with several sessions writing code, that setting matters.
 
-`Close the Deal > Dev > Build Hit Dummy Prefab` rebuilds the prefab; like the greybox prefabs it is left alone once a person has edited it.
+`Seal the Deal > Dev > Build Hit Dummy Prefab` rebuilds the prefab; like the greybox prefabs it is left alone once a person has edited it.
 
-**Setting up players:** run `Close the Deal > Greybox > Add Hit Reactions to Player` once (it asks first). It adds `PlayerHits` to `Player.prefab`, creates `Assets/_Project/Profiles/PlayerHitReaction.asset` with the player tuning if it is missing, and gives the player's ragdoll that profile if it has none. Nothing else in the prefab changes. `Rebuild Player Prefab` adds the same.
+**Setting up players:** run `Seal the Deal > Greybox > Add Hit Reactions to Player` once (it asks first). It adds `PlayerHits` to `Player.prefab`, creates `Assets/_Project/Profiles/PlayerHitReaction.asset` with the player tuning if it is missing, and gives the player's ragdoll that profile if it has none. Nothing else in the prefab changes. `Rebuild Player Prefab` adds the same.
 
 ## Shooting, swinging and throwing
 

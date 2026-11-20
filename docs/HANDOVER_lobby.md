@@ -10,7 +10,7 @@ Both firms spawn into one shared ground-floor reception, ready up at the desk, p
 
 ## Ready for review
 
-- **The reception**, built by `Close the Deal > Lanes > Set Up Lobby` into `Assets/_Project/Scenes/Lanes/Lane_Lobby.unity` from the kit: glass street front, rival tower base, two lifts, cobalt directory with "Seal the Deal", reception desk with a secretary figure, two firm stands (cobalt, cyan), a glass tailor's corner with mirror and suit rail, water cooler, copier, benches.
+- **The reception**, built by `Seal the Deal > Lanes > Set Up Lobby` into `Assets/_Project/Scenes/Lanes/Lane_Lobby.unity` from the kit: glass street front, rival tower base, two lifts, cobalt directory with "Seal the Deal", reception desk with a secretary figure, two firm stands (cobalt, cyan), a glass tailor's corner with mirror and suit rail, water cooler, copier, benches.
 - **Ready board, prompts and secretary subtitles** (Paper and Hairline uGUI on an Overlay canvas, TextMeshPro, LiberationSans). Chosen uGUI because the project already builds its menu in uGUI and the fitting room needs `Selectable`-free keyboard focus drawn by hand.
 - **Firm sign-in with auto-balance**, host-validated; ready board shows firm, ready and "In the fitting room".
 - **Fitting room**: camera swing to a three-quarter view, immediate browsing with a small bob, Keep / Put back, locked choices shown with how to unlock, keyboard and pad.
@@ -21,7 +21,7 @@ Both firms spawn into one shared ground-floor reception, ready up at the desk, p
 - **Alex's rigged STDMC is now in the branch (merged from `buffer`).** The outfit attaches to the player's own `Graphics/Lean/Body` model (split into several meshes; materials are matched by name across all of them) and no second figure is added. Seen in the fitting room: the suit and shirt recolour on the rigged, animated model. The secretary figure is the same model without an animator, so she holds a T-pose.
 - **Only three outfit categories** (Suit, Shirt, Belt). Hair and shoes share one material and jacket and trousers share one, so those categories can't ship.
 - **No mouse clicks on the fitting form**: the cursor stays captured because a free cursor opens `GameMenu`.
-- **The Esc menu still reads CLOSE THE DEAL** (`GreyboxUiSetup`): belongs to the rename pass.
+- **The Esc menu still reads SEAL THE DEAL** (`GreyboxUiSetup`): belongs to the rename pass.
 - **Player.prefab is changed by the setup menu and not committed** (it would conflict with Alex's player build): re-run the menu after merge.
 - Capture shows the UI washed out because the test render puts the Overlay canvas through post-processing; a real Overlay canvas is not.
 
@@ -71,8 +71,8 @@ Moving through the fitting-room form and the host list is the UI kit's navigatio
 
 1. Merge the lane branch. Expect add/add on `Assets/_Project/Editor/Lanes.meta` and `Assets/_Project/Scenes/Lanes.meta` (keep either).
 2. `Assets/DefaultPrefabObjects.asset` is rewritten by FishNet on first open; do not hand-merge.
-3. Run `Close the Deal > Lanes > Set Up Lobby` once. It adds `PlayerOutfit` and the outfit figure (or `OutfitView` on an existing `Graphics/Lean/Body` model) to `Player.prefab`, never rebuilds Graphics, rebuilds `Lane_Lobby.unity`.
-4. Run `Close the Deal > Lanes > Set Up Match` (game-mode lane) after it, then subscribe `HostStartRun` to `RunStartRequested` (not done: no match code here).
+3. Run `Seal the Deal > Lanes > Set Up Lobby` once. It adds `PlayerOutfit` and the outfit figure (or `OutfitView` on an existing `Graphics/Lean/Body` model) to `Player.prefab`, never rebuilds Graphics, rebuilds `Lane_Lobby.unity`.
+4. Run `Seal the Deal > Lanes > Set Up Match` (game-mode lane) after it, then subscribe `HostStartRun` to `RunStartRequested` (not done: no match code here).
 
 ## What waits on Alex's art
 
@@ -94,7 +94,7 @@ Moving through the fitting-room form and the host list is the UI kit's navigatio
 
 ## Open, for whoever picks this up
 
-- Fixed 2026-11-14 by the one-off migration **Close the Deal > Lanes > Migrations > Player: Outfit on the Real Model (once)** (hub #543, owner's go-ahead): Player.prefab drew every player twice. It deleted the greybox figure at Graphics/Lean/Outfit, put an OutfitView on Graphics/Lean/Body (Catalog = OutfitCatalog, Bodies = Body's renderers, change bob on Body) and pointed PlayerOutfit > View at it. Re-running it does nothing. Not yet seen in a played game.
+- Fixed 2026-11-14 by the one-off migration **Seal the Deal > Lanes > Migrations > Player: Outfit on the Real Model (once)** (hub #543, owner's go-ahead): Player.prefab drew every player twice. It deleted the greybox figure at Graphics/Lean/Outfit, put an OutfitView on Graphics/Lean/Body (Catalog = OutfitCatalog, Bodies = Body's renderers, change bob on Body) and pointed PlayerOutfit > View at it. Re-running it does nothing. Not yet seen in a played game.
 - Owner's direction 2026-11-14: no more gameplay, rules or netcode in this lane. Not built and left open: a ban or remove list (a removed player can rejoin), locking the lobby, moving a player between firms, unlocks from career stats (ProfileStore) instead of runs started, rematch with the same firms.
 - Fonts are the kit's stand-in (Liberation Sans) until the target faces are licensed.
 

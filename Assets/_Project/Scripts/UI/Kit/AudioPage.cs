@@ -14,7 +14,7 @@ namespace CloseTheDeal.UI
     /// Modified: Claude Fable 5.2, 2026-11-15, the four voice chat rows (Harvey: "do the delay and mic picker and do
     /// the settings in the settings menu"). NOT YET REVIEWED BY A HUMAN.
     /// </remarks>
-    [AddComponentMenu("Close the Deal/UI/Settings Page - Audio")]
+    [AddComponentMenu("Seal the Deal/UI/Settings Page - Audio")]
     public sealed class AudioPage : UiSettingsPage
     {
         [Tooltip("Master, Music, Effects, Voice, Interface: same order as the mixer's buses.")]

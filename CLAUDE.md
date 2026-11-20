@@ -1,4 +1,4 @@
-# Close the Deal — Claude Code context
+# Seal the Deal — Claude Code context
 
 **Read [AGENTS.md](AGENTS.md) first.** It is the single entry point for every agent and tool: repo rules, project map (§10), compile check (§11) and the shared notes (§12). Where it and a harness default disagree, AGENTS.md wins. Don't restate its rules here.
 

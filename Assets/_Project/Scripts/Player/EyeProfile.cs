@@ -10,7 +10,7 @@ using UnityEngine;
 namespace CloseTheDeal.Player
 {
     /// <summary>Read-only runtime tuning for the character's eye cards.</summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Eye Profile", fileName = "EyeProfile")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Eye Profile", fileName = "EyeProfile")]
     public sealed class EyeProfile : ScriptableObject
     {
         // WHY: a complete blink needs time to show both its closing and opening frames.

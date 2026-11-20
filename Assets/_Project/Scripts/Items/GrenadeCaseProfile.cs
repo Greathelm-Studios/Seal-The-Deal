@@ -4,7 +4,7 @@ using UnityEngine;
 namespace CloseTheDeal.Items
 {
     /// <summary>Designer-owned tuning for the grenade case. Runtime only reads it (AGENTS.md §4).</summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Items/Grenade Case Profile", fileName = "GrenadeCase")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Items/Grenade Case Profile", fileName = "GrenadeCase")]
     public sealed class GrenadeCaseProfile : ScriptableObject
     {
         [Header("Fuse")]

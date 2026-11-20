@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace CloseTheDeal.UI
 {
     /// <summary>Fades an older (pre-kit) panel in when it appears, so it never cuts in. Uses the kit's panel timing.</summary>
-    [AddComponentMenu("Close the Deal/UI/Fade In")]
+    [AddComponentMenu("Seal the Deal/UI/Fade In")]
     [RequireComponent(typeof(CanvasGroup))]
     public sealed class UiFadeIn : MonoBehaviour, IUiAnimated
     {

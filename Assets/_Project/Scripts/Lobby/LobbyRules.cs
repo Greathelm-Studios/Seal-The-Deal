@@ -8,7 +8,7 @@ namespace CloseTheDeal.Lobby
     /// start. Designer content (AGENTS.md §4): read at runtime, never written.
     /// Every rule here is a proposal waiting on the owner; see docs/systems/LOBBY.md.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Lobby/Lobby Rules", fileName = "LobbyRules")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Lobby/Lobby Rules", fileName = "LobbyRules")]
     public sealed class LobbyRules : ScriptableObject
     {
         [Header("Firms")]

@@ -48,7 +48,7 @@ namespace CloseTheDeal.Editor.Greybox
         /// <summary>The character every player wears: the toon-shaded STDMC model, scaled to 1.8 m with its feet at the origin.</summary>
         const string CharacterModelPath = "Assets/_Project/Art/Characters/STDMC/STDMC_Toon.prefab";
 
-        [MenuItem("Close the Deal/Greybox/Set Up Scene")]
+        [MenuItem("Seal the Deal/Greybox/Set Up Scene")]
         public static void SetUpScene()
         {
             Scene scene = SceneManager.GetActiveScene();
@@ -101,7 +101,7 @@ namespace CloseTheDeal.Editor.Greybox
             GreyboxUiSetup.Ensure(EnsureSteam());
         }
 
-        [MenuItem("Close the Deal/Greybox/Rebuild Player Prefab")]
+        [MenuItem("Seal the Deal/Greybox/Rebuild Player Prefab")]
         public static void RebuildPlayerPrefab()
         {
             EnsureLayers();
@@ -110,7 +110,7 @@ namespace CloseTheDeal.Editor.Greybox
         }
 
         /// <summary>Player prefab, prop prefabs, floor templates and the scene, all rewritten from the tool.</summary>
-        [MenuItem("Close the Deal/Greybox/Rebuild Everything")]
+        [MenuItem("Seal the Deal/Greybox/Rebuild Everything")]
         public static void RebuildEverything()
         {
             EnsureLayers();
@@ -134,7 +134,7 @@ namespace CloseTheDeal.Editor.Greybox
                 return BuildPlayerPrefab();
 
             if (existing.GetComponent<PlayerMotor>() == null)
-                Debug.LogWarning("[Greybox] Player.prefab is from before PlayerMotor. Run Close the Deal > Greybox > Rebuild Player Prefab.");
+                Debug.LogWarning("[Greybox] Player.prefab is from before PlayerMotor. Run Seal the Deal > Greybox > Rebuild Player Prefab.");
 
             return existing.GetComponent<NetworkObject>();
         }

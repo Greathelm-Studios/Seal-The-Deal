@@ -49,7 +49,7 @@ namespace CloseTheDeal.Editor.UI
         }
         static float F(string s) => float.Parse(s, System.Globalization.CultureInfo.InvariantCulture);
 
-        [MenuItem("Close the Deal/UI/Dump Scene For Glass Capture")]
+        [MenuItem("Seal the Deal/UI/Dump Scene For Glass Capture")]
         public static void Dump()
         {
             var sb = new StringBuilder();

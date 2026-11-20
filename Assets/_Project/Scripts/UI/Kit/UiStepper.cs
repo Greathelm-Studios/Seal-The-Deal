@@ -10,7 +10,7 @@ namespace CloseTheDeal.UI
     /// Picks one of a few named choices with ‹ and ›. Left / right steps (it wraps), up / down moves focus on.
     /// Clicking an arrow steps that way.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Stepper")]
+    [AddComponentMenu("Seal the Deal/UI/Stepper")]
     public sealed class UiStepper : UiControl, IUiStepTarget
     {
         [Tooltip("The name of the current choice, between the arrows.")]

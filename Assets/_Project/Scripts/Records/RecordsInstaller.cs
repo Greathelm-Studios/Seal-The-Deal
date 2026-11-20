@@ -11,12 +11,12 @@ namespace CloseTheDeal.Records
     /// The prefab is named by Resources/Gaps/RecordsInstaller.asset; delete that asset to turn
     /// this off. Design: docs/systems/RECORDS.md.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Records/Installer", fileName = "RecordsInstaller")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Records/Installer", fileName = "RecordsInstaller")]
     public sealed class RecordsInstaller : ScriptableObject
     {
         public const string ResourcePath = "Gaps/RecordsInstaller";
 
-        [Tooltip("What is added to a scene with a match in it: the Records prefab built by Close the Deal > Lanes > Gaps.")]
+        [Tooltip("What is added to a scene with a match in it: the Records prefab built by Seal the Deal > Lanes > Gaps.")]
         [SerializeField] GameObject _prefab;
 
         public GameObject Prefab => _prefab;
@@ -41,7 +41,7 @@ namespace CloseTheDeal.Records
             var installer = Resources.Load<RecordsInstaller>(ResourcePath);
             if (installer == null || installer._prefab == null)
             {
-                Debug.LogWarning("[Records] No installer prefab (Resources/" + ResourcePath + "); match records, profile and names over heads are off in this scene. Run Close the Deal > Lanes > Gaps > Build Records Prefab.");
+                Debug.LogWarning("[Records] No installer prefab (Resources/" + ResourcePath + "); match records, profile and names over heads are off in this scene. Run Seal the Deal > Lanes > Gaps > Build Records Prefab.");
                 return null;
             }
 

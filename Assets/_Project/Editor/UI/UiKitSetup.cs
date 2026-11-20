@@ -16,7 +16,7 @@ namespace CloseTheDeal.Editor.UI
     /// stack, the title, settings and confirm screens and the focus marks, plus the kit crosshair in the game
     /// menu's HUD. It only adds: an existing KitUI or kit crosshair is left as it is. Guide: docs/systems/UI_KIT.md.
     ///
-    /// Menu: Close the Deal > Lanes > Set Up UI (the open scene; save it yourself).
+    /// Menu: Seal the Deal > Lanes > Set Up UI (the open scene; save it yourself).
     /// Shell: -executeMethod CloseTheDeal.Editor.UI.UiKitSetup.SetUpFromCommandLine (Lane_Integration.unity, saved).
     /// Set Up Scene, Set Up Integration and Make Open Scene Playable reach it through GreyboxUiSetup.Ensure.
     /// </summary>
@@ -26,7 +26,7 @@ namespace CloseTheDeal.Editor.UI
         const string CanvasName = "KitUI";
         const string CrosshairName = "KitCrosshair";
 
-        [MenuItem("Close the Deal/Lanes/Set Up UI")]
+        [MenuItem("Seal the Deal/Lanes/Set Up UI")]
         public static void SetUpFromMenu()
         {
             BuildAssets();
@@ -38,7 +38,7 @@ namespace CloseTheDeal.Editor.UI
         /// Replaces the open scene's KitUI with a fresh copy of the kit canvas prefab, after asking (it throws away
         /// anything changed on that KitUI in the scene). For after a kit prefab was rebuilt.
         /// </summary>
-        [MenuItem("Close the Deal/Lanes/Replace UI In Open Scene")]
+        [MenuItem("Seal the Deal/Lanes/Replace UI In Open Scene")]
         public static void ReplaceFromMenu()
         {
             if (!EditorUtility.DisplayDialog("Replace UI", "This rebuilds the kit's prefabs (any a person edited are skipped), deletes KitUI in the open scene and adds a fresh one. Changes made to KitUI in this scene are lost; the match lane's section in the in-game menu is carried across; other objects are untouched.", "Replace", "Cancel"))
@@ -130,7 +130,7 @@ namespace CloseTheDeal.Editor.UI
             GameMenu menu = Object.FindAnyObjectByType<GameMenu>(FindObjectsInactive.Include);
             if (menu == null)
             {
-                Debug.LogError("[UI] No game menu in the open scene. Run Close the Deal > Greybox > Set Up Scene (or the lane's own setup) first.");
+                Debug.LogError("[UI] No game menu in the open scene. Run Seal the Deal > Greybox > Set Up Scene (or the lane's own setup) first.");
                 return false;
             }
 
@@ -276,7 +276,7 @@ namespace CloseTheDeal.Editor.UI
         static void ReportTitleSky()
         {
             if (RenderSettings.skybox == null)
-                Debug.LogWarning("[UI] This scene has no sky material, so the title shows the flat fallback sky instead of the live one. Close the Deal > Art > Apply Office Look gives it the game's sky.");
+                Debug.LogWarning("[UI] This scene has no sky material, so the title shows the flat fallback sky instead of the live one. Seal the Deal > Art > Apply Office Look gives it the game's sky.");
             else
                 Debug.Log("[UI] The title will show this scene's sky (" + RenderSettings.skybox.name + ") live behind its window frame.");
         }

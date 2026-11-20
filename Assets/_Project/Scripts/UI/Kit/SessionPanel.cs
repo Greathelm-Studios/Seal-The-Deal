@@ -12,7 +12,7 @@ namespace CloseTheDeal.UI
     /// because nothing measurable is happening), and Cancel (Esc / B), which leaves. Opens and closes with the game
     /// menu's state (UiRoot); text changes only on lobby events and once a second while connecting.
     /// </summary>
-    [AddComponentMenu("Close the Deal/UI/Session Panel")]
+    [AddComponentMenu("Seal the Deal/UI/Session Panel")]
     public sealed class SessionPanel : UiScreen
     {
         /// <summary>Opens and closes under lane 8's CloudWipe (docs/systems/UI_KIT.md "Screens").</summary>

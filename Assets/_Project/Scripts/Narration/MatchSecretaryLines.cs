@@ -26,7 +26,7 @@ namespace CloseTheDeal.Narration
     /// never the same twice in a row. Designer content: read at runtime, never written. Every
     /// shipped line is a proposal for the owner. Design: docs/systems/NARRATION.md.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/Narration/Match Secretary Lines", fileName = "MatchSecretaryLines")]
+    [CreateAssetMenu(menuName = "Seal the Deal/Narration/Match Secretary Lines", fileName = "MatchSecretaryLines")]
     public sealed class MatchSecretaryLines : ScriptableObject
     {
         [Serializable]

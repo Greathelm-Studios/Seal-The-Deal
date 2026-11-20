@@ -50,7 +50,7 @@ namespace CloseTheDeal.UI
     /// Colours are the art bible's seven swatches plus Amber; motion is the feel table in
     /// ArtSource/UI/research/feel_wii_ds.md §2.2. Guide: docs/systems/UI_KIT.md.
     /// </summary>
-    [CreateAssetMenu(menuName = "Close the Deal/UI Tokens", fileName = "UiTokens")]
+    [CreateAssetMenu(menuName = "Seal the Deal/UI Tokens", fileName = "UiTokens")]
     public sealed class UiTokens : ScriptableObject
     {
         // ---- Colour ----------------------------------------------------------------------------

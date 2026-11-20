@@ -18,7 +18,7 @@ namespace CloseTheDeal.Editor.Greybox
         const int Width = 1920;
         const int Height = 1080;
 
-        [MenuItem("Close the Deal/Greybox/Capture UI Preview")]
+        [MenuItem("Seal the Deal/Greybox/Capture UI Preview")]
         public static void CaptureFromMenu()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
