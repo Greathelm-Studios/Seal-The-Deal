@@ -24,8 +24,7 @@ namespace CloseTheDeal.UI
 
         List<Vector2Int> _sizes = new();
         Vector2Int _previousSize;
-        Vector2Int _previousSaved;
-        bool _hadSavedSize;
+        Vector2Int _previewSize;
         float _countdown = -1f;
         int _shownSeconds = -1;
         string _lastReadout;
@@ -61,7 +60,6 @@ namespace CloseTheDeal.UI
             _resolution.SetOptions(names, Mathf.Max(0, _sizes.IndexOf(UiVideo.Resolution)));
             _mode.SetOptions(UiVideo.ModeNames, UiVideo.Mode);
             _vsync.SetWithoutNotify(UiVideo.VSync);
-            _frameCap.SetOptions(UiVideo.CapNames, UiVideo.FrameCap);
             _quality.SetOptions(QualitySettings.names, UiVideo.Quality);
             _quality.transform.parent.gameObject.SetActive(QualitySettings.names.Length > 1); // one level on this platform: nothing to choose
             if (_glass != null)
@@ -71,6 +69,7 @@ namespace CloseTheDeal.UI
 
         // Lane 7's three values, in its order: Auto (blur where the renderer has it), Blur, No blur.
         static readonly string[] GlassNames = { "Auto", "Blur", "No blur" };
+        static readonly string[] SyncedCap = { "VSync on" };
 
         static int GlassIndex => Mathf.Clamp((int)UiGlassSettings.Current, 0, GlassNames.Length - 1);
 
@@ -111,8 +110,8 @@ namespace CloseTheDeal.UI
             DrawReadout();
             if (_countdown < 0f)
                 return;
-            _countdown -= dt;
-            int seconds = Mathf.CeilToInt(Mathf.Max(0f, _countdown));
+            _countdown = Mathf.Max(0f, _countdown - dt);
+            int seconds = Mathf.CeilToInt(_countdown);
             if (seconds != _shownSeconds)
             {
                 _shownSeconds = seconds;
@@ -163,7 +162,9 @@ namespace CloseTheDeal.UI
 
         void ShowCapUse()
         {
-            _frameCap.interactable = !UiVideo.VSync;
+            bool synced = UiVideo.VSync;
+            _frameCap.SetOptions(synced ? SyncedCap : UiVideo.CapNames, synced ? 0 : UiVideo.FrameCap);
+            _frameCap.interactable = !synced;
             _frameCap.RefusalReason = "Turn off vertical sync to set a frame rate limit.";
         }
 
@@ -173,16 +174,16 @@ namespace CloseTheDeal.UI
             if (index < 0 || index >= _sizes.Count)
                 return;
             _previousSize = new Vector2Int(Screen.width, Screen.height); // what the screen really was, to go back to
-            _previousSaved = UiVideo.Resolution;
-            _hadSavedSize = UiVideo.HasSavedResolution;
-            UiVideo.Resolution = _sizes[index];
+            _previewSize = _sizes[index];
             UiScreen screen = GetComponentInParent<UiScreen>();
             if (_dialog == null || screen == null || screen.Stack == null)
             {
-                RaiseSaved();
+                _resolution.SetWithoutNotify(Mathf.Max(0, _sizes.IndexOf(UiVideo.Resolution)));
+                RaiseSaved("Resolution could not be previewed.");
                 return;
             }
 
+            UiVideo.ApplySize(_previewSize);
             _countdown = _revertSeconds;
             _shownSeconds = -1;
             _dialog.Configure("Keep this resolution?", "Reverting in " + Mathf.CeilToInt(_revertSeconds) + ".", "Keep", "Revert", Keep, Revert);
@@ -192,6 +193,7 @@ namespace CloseTheDeal.UI
         void Keep()
         {
             _countdown = -1f;
+            UiVideo.SaveResolution(_previewSize);
             _dialog.Stack?.Pop(false);
             RaiseSaved("Resolution kept and saved on this PC.");
         }
@@ -203,7 +205,7 @@ namespace CloseTheDeal.UI
             if (_countdown < 0f)
                 return;
             _countdown = -1f;
-            UiVideo.Restore(_hadSavedSize ? _previousSaved : _previousSize, _hadSavedSize);
+            UiVideo.ApplySize(_previousSize);
             _resolution.SetWithoutNotify(Mathf.Max(0, _sizes.IndexOf(UiVideo.Resolution)));
             UiScreen top = _dialog.Stack != null ? _dialog.Stack.Top : null;
             if (closeDialog && top == _dialog)

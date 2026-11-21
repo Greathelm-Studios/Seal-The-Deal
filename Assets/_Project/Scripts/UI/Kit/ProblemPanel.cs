@@ -88,7 +88,7 @@ namespace CloseTheDeal.UI
             string host = _lobby != null && !string.IsNullOrEmpty(_lobby.ProblemHost) ? _lobby.ProblemHost : "the host";
             string detail = _lobby != null ? _lobby.ProblemDetail : string.Empty;
             int max = _lobby != null ? _lobby.MaxPlayers : 8;
-            Words words = WordsFor(problem, host, detail, max);
+            Words words = WordsFor(problem, host, detail, max, _lobby != null && _lobby.LocalMode);
             words.Headline = Sentence(words.Headline);
             if (_caption != null) _caption.text = words.Caption;
             if (_headline != null) _headline.text = words.Headline;
@@ -124,7 +124,9 @@ namespace CloseTheDeal.UI
                         break;
                     case Fix.TryAgain:
                         usable = _lobby.CanRetryJoin;
-                        why = "There's nothing to try again. Join a friend from Steam.";
+                        why = _lobby.LocalMode
+                            ? "Return to the title and choose Join on this PC."
+                            : "There's nothing to try again. Join a friend from Steam.";
                         break;
                     case Fix.HostAgain:
                         usable = _lobby.Ready && !_lobby.IsActive;
@@ -196,10 +198,20 @@ namespace CloseTheDeal.UI
         const string HostCaption = "§ 1  HOST GAME";
         const string GameCaption = "§ 1  GAME";
 
-        static Words WordsFor(LobbyProblem problem, string host, string detail, int max)
+        static Words WordsFor(LobbyProblem problem, string host, string detail, int max, bool local)
         {
             switch (problem)
             {
+                case LobbyProblem.Unreachable when local:
+                case LobbyProblem.ConnectionLost when local:
+                    return W(JoinCaption, "Unable to reach the game on this PC.",
+                        "Choose Host a game in a second copy of Seal the Deal on this PC, then try again here.",
+                        Fix.TryAgain, "Try again", "Reconnect to the game on this PC.");
+                case LobbyProblem.HostClosed when local:
+                case LobbyProblem.HostDropped when local:
+                    return W(GameCaption, "The host on this PC disconnected.",
+                        "Host here, or go back and join once the other copy is hosting again.",
+                        Fix.HostAgain, "Host a game", "Start a game on this PC.");
                 case LobbyProblem.NetworkBroken:
                     return W(HostCaption, "Unable to start the network.", "Restart Seal the Deal. If it keeps happening, reinstall it from Steam.",
                         Fix.Quit, "Quit to desktop", "Close the game so it can start again cleanly.");
@@ -219,8 +231,9 @@ namespace CloseTheDeal.UI
                     return W(JoinCaption, "Unable to join. Steam refused the request" + Code(detail) + ".", "This is usually brief. Try again.",
                         Fix.TryAgain, "Try again", "Ask to join the same game again.");
                 case LobbyProblem.VersionMismatch:
-                    return W(JoinCaption, "Unable to join. " + host + " is on " + (string.IsNullOrEmpty(detail) ? "another version" : "version " + detail) + ", you are on " + Application.version + ".",
-                        "Whoever is behind needs to update. Steam updates the game when it restarts.",
+                    return W(JoinCaption, "Unable to join. Game versions differ.",
+                        "Update Seal the Deal through Steam and try again. Your version: " + Application.version
+                        + ". Host version: " + (string.IsNullOrEmpty(detail) ? "unknown" : detail) + ".",
                         Fix.Quit, "Quit to desktop", "Close the game so Steam can update it.");
                 case LobbyProblem.Unreachable:
                     return W(JoinCaption, "Unable to reach " + host + "'s game.", "They may have left, or the connection failed. Try joining again.",

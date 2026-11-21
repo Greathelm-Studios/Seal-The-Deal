@@ -13,6 +13,14 @@ namespace CloseTheDeal.Editor.UI
 
         internal static Sprite White, Outline1, Outline2, Dashed, Bracket, Chevron, Grid, Sky, Barcode, Diamond, Triangle, Pointer;
 
+        // Shape and depth (2026-11-15, after Cocoon's tokens): one radius per class (panel 20, card 16, button 12,
+        // small 8), a soft shadow, and a "pillowy" bevel (light along the top inside edge, shade along the bottom).
+        // Drawn at 2x and imported at 200 pixels per unit, so corners stay crisp at 1440p and 4K.
+        internal static Sprite Round8, Round12, Round16, Round20, Ring8, Ring12, Ring16Bold, Ring20, Shadow12, Shadow20,
+            BevelTop12, BevelBottom12, Signature;
+
+        const int Hi = 2;   // drawing scale of the rounded sprites
+
         internal static void Ensure(CloseTheDeal.UI.UiTokens tokens)
         {
             UiKitAssets.EnsureFolder(Folder);
@@ -28,6 +36,120 @@ namespace CloseTheDeal.Editor.UI
             Diamond = Make("Kit_Diamond", 64, 64, 0, false, (x, y) => Mathf.Clamp01(32.5f - (Mathf.Abs(x + 0.5f - 32f) + Mathf.Abs(y + 0.5f - 32f))));
             Triangle = Make("Kit_Triangle", 64, 64, 0, false, TriangleAlpha);
             Pointer = Make("Kit_Pointer", 20, 24, 0, false, PointerAlpha);
+
+            Round8 = Rounded("Kit_Round8", 8);
+            Round12 = Rounded("Kit_Round12", 12);
+            Round16 = Rounded("Kit_Round16", 16);
+            Round20 = Rounded("Kit_Round20", 20);
+            Ring8 = Ring("Kit_Ring8", 8, 1f);
+            Ring12 = Ring("Kit_Ring12", 12, 1f);
+            Ring16Bold = Ring("Kit_Ring16Bold", 16, 2f);
+            Ring20 = Ring("Kit_Ring20", 20, 1f);
+            Shadow12 = SoftShadow("Kit_Shadow12", 12, 16);
+            Shadow20 = SoftShadow("Kit_Shadow20", 20, 24);
+            BevelTop12 = Bevel("Kit_BevelTop12", 12, true);
+            BevelBottom12 = Bevel("Kit_BevelBottom12", 12, false);
+            Signature = MakeSignature(tokens);
+        }
+
+        // ---- Rounded shapes (2x) -------------------------------------------------------------------
+
+        /// <summary>Signed distance from (px, py) to a rounded box spanning [x0, x1] x [y0, y1]; negative inside.</summary>
+        static float RoundBox(float px, float py, float x0, float y0, float x1, float y1, float r)
+        {
+            float cx = (x0 + x1) * 0.5f, cy = (y0 + y1) * 0.5f;
+            float qx = Mathf.Abs(px - cx) - ((x1 - x0) * 0.5f - r);
+            float qy = Mathf.Abs(py - cy) - ((y1 - y0) * 0.5f - r);
+            float outside = new Vector2(Mathf.Max(qx, 0f), Mathf.Max(qy, 0f)).magnitude;
+            return outside + Mathf.Min(Mathf.Max(qx, qy), 0f) - r;
+        }
+
+        /// <summary>A white rounded rectangle, 9-sliced so it fits any size at radius r.</summary>
+        static Sprite Rounded(string name, int r)
+        {
+            int rr = r * Hi, s = rr * 2 + 4;
+            return MakeHi(name, s, s, rr + 1, (x, y) => Mathf.Clamp01(0.5f - RoundBox(x + 0.5f, y + 0.5f, 0f, 0f, s, s, rr)));
+        }
+
+        /// <summary>A rounded keyline, width in 1x pixels, its outer edge on the shape's edge.</summary>
+        static Sprite Ring(string name, int r, float width)
+        {
+            int rr = r * Hi, s = rr * 2 + 4;
+            float w = width * Hi;
+            return MakeHi(name, s, s, rr + 1, (x, y) =>
+            {
+                float d = RoundBox(x + 0.5f, y + 0.5f, 0f, 0f, s, s, rr);
+                return Mathf.Clamp01(0.5f - d) * Mathf.Clamp01(0.5f + d + w);
+            });
+        }
+
+        /// <summary>A soft shadow for a radius-r shape, spreading `blur` 1x pixels past it. Place it outset by `blur`.</summary>
+        static Sprite SoftShadow(string name, int r, int blur)
+        {
+            int rr = r * Hi, b = blur * Hi, s = (rr + b) * 2 + 4;
+            return MakeHi(name, s, s, rr + b + 1, (x, y) =>
+            {
+                float d = RoundBox(x + 0.5f, y + 0.5f, b, b, s - b, s - b, rr);
+                if (d <= 0f)
+                    return 1f;
+                float k = d / (b * 0.55f);
+                return Mathf.Exp(-k * k);
+            });
+        }
+
+        /// <summary>The bevel: light along the top inside edge (top), or shade along the bottom inside edge.</summary>
+        static Sprite Bevel(string name, int r, bool top)
+        {
+            int rr = r * Hi, s = rr * 2 + 4;
+            float band = 3f * Hi;
+            return MakeHi(name, s, s, rr + 1, (x, y) =>
+            {
+                float d = RoundBox(x + 0.5f, y + 0.5f, 0f, 0f, s, s, rr);
+                float inside = Mathf.Clamp01(0.5f - d);
+                float rim = Mathf.Clamp01(1f + d / band);                    // 1 at the edge, 0 a band's width in
+                float side = top ? Mathf.Clamp01((y + 0.5f - s * 0.5f) / (s * 0.5f)) : Mathf.Clamp01((s * 0.5f - (y + 0.5f)) / (s * 0.5f));
+                return inside * rim * Mathf.Sqrt(side);
+            });
+        }
+
+        /// <summary>
+        /// The one signature gradient, for the primary button only: Corporate Cobalt to Electric Blue, left to right,
+        /// at the primary button's own size (a 9-slice can't carry a horizontal gradient). Paper text stays legible
+        /// across it. Colour is baked in, so the button tints it white.
+        /// </summary>
+        static Sprite MakeSignature(CloseTheDeal.UI.UiTokens tokens)
+        {
+            string path = Folder + "/Kit_Signature.png";
+            if (!GeneratedAssetGuard.MayOverwrite(path))
+                return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            int w = Mathf.RoundToInt(420f * Hi), h = Mathf.RoundToInt(tokens.PrimaryHeight * Hi), rr = 12 * Hi;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    Color c = Color.Lerp(tokens.Cobalt, tokens.Electric, Mathf.SmoothStep(0f, 1f, (x + 0.5f) / w));
+                    c.a = Mathf.Clamp01(0.5f - RoundBox(x + 0.5f, y + 0.5f, 0f, 0f, w, h, rr));
+                    tex.SetPixel(x, y, c);
+                }
+            }
+
+            return Save(tex, path, 0, false, false, 100f * Hi);
+        }
+
+        static Sprite MakeHi(string name, int w, int h, int border, Func<int, int, float> alpha)
+        {
+            string path = $"{Folder}/{name}.png";
+            if (!GeneratedAssetGuard.MayOverwrite(path))
+                return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha(x, y)));
+            }
+
+            return Save(tex, path, border, false, false, 100f * Hi);
         }
 
         static float TriangleAlpha(int x, int y)
@@ -119,7 +241,7 @@ namespace CloseTheDeal.Editor.UI
             return Save(tex, path, border, point, wrap);
         }
 
-        static Sprite Save(Texture2D tex, string path, int border, bool point, bool wrap)
+        static Sprite Save(Texture2D tex, string path, int border, bool point, bool wrap, float pixelsPerUnit = 100f)
         {
             bool isNew = !File.Exists(path);
             tex.Apply();
@@ -137,7 +259,7 @@ namespace CloseTheDeal.Editor.UI
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
-            importer.spritePixelsPerUnit = 100f;
+            importer.spritePixelsPerUnit = pixelsPerUnit;
             importer.spriteBorder = new Vector4(border, border, border, border);
             importer.filterMode = point ? FilterMode.Point : FilterMode.Bilinear;
             importer.wrapMode = wrap ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;

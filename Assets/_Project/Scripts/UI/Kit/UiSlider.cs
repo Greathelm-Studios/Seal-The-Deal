@@ -67,6 +67,8 @@ namespace CloseTheDeal.UI
         {
             base.OnEnable();
             onValueChanged.AddListener(OnMoved);
+            if (!Application.isPlaying)
+                return;   // edit mode: leave the serialized layout and readout alone (see UiControl.OnEnable)
             _pointerInside = false;
             _selected = EventSystem.current != null && EventSystem.current.currentSelectedGameObject == gameObject;
             _fx.SetState(IsInteractable(), false, false, _selected, true);
@@ -103,9 +105,9 @@ namespace CloseTheDeal.UI
 
         protected override void DoStateTransition(SelectionState state, bool instant)
         {
-            if (_fx == null)
-                return;
-            _fx.SetState(state != SelectionState.Disabled, _pointerInside, state == SelectionState.Pressed, _selected, instant || !Application.isPlaying);
+            if (_fx == null || !Application.isPlaying)
+                return;   // edit mode: leave the serialized layout alone (see UiControl.OnEnable)
+            _fx.SetState(state != SelectionState.Disabled, _pointerInside, state == SelectionState.Pressed, _selected, instant);
         }
 
         public override void OnPointerEnter(PointerEventData eventData)

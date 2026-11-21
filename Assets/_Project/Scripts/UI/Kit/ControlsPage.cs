@@ -1,4 +1,5 @@
 using System;
+using CloseTheDeal.Combat;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -45,6 +46,7 @@ namespace CloseTheDeal.UI
         [SerializeField] float _lookHeight = 192f;
 
         InputActionAsset _working;
+        bool _hasCustomBindings;
         CanvasGroup _screenGroup;
         InputActionRebindingExtensions.RebindingOperation _operation;
         BindingRow _listening;
@@ -124,7 +126,7 @@ namespace CloseTheDeal.UI
         public override bool AtDefaults =>
             Mathf.Approximately(InputPrefs.LookSensitivity, 1f) && !InputPrefs.InvertY && Mathf.Approximately(InputPrefs.StickLookSpeed, 1f)
             && InputPrefs.StickDeadZone == null
-            && string.IsNullOrEmpty(InputPrefs.BindingOverridesJson);
+            && (_working != null ? !_hasCustomBindings : string.IsNullOrEmpty(InputPrefs.BindingOverridesJson));
 
         public override void ResetToDefaults()
         {
@@ -156,18 +158,33 @@ namespace CloseTheDeal.UI
             if (_working == null)
                 _working = Instantiate(_actions);
             _working.RemoveAllBindingOverrides();
+            _hasCustomBindings = false;
             if (!string.IsNullOrEmpty(InputPrefs.BindingOverridesJson))
+            {
                 _working.LoadBindingOverridesFromJson(InputPrefs.BindingOverridesJson);
+                RemoveDefaultOverrides();
+                foreach (var binding in _working.bindings)
+                    _hasCustomBindings |= binding.hasOverrides;
+            }
         }
 
         void DrawBindings()
         {
-            bool live = InputPrefs.BindingsHooked;
             foreach (BindingRow row in _bindings)
             {
                 InputAction action = _working != null ? _working.FindAction("Player/" + row.Action) : null;
+                bool fixedInput = IsFixedInput(row.Action);
+                bool live = InputPrefs.BindingsHooked && !fixedInput;
                 string key = action != null ? KeyName(action, KeyIndex(action, row.Part)) : "—";
                 string pad = action != null ? PadName(action, BindingIndex(action, row.Part, "<Gamepad>")) : "—";
+                if (fixedInput && action != null)
+                {
+                    int keyIndex = KeyIndex(action, row.Part);
+                    if (keyIndex >= 0)
+                        key = UiGlyphs.Name(action.bindings[keyIndex].path, UiDeviceKind.KeyboardMouse);
+                    if (row.Action == "Reload")
+                        pad = UiGlyphs.Name(WeaponHolder.ReloadPadBinding, UiGlyphs.Current);
+                }
                 if (row.Cap != null)
                 {
                     row.Cap.text = key;
@@ -291,11 +308,14 @@ namespace CloseTheDeal.UI
             Commit("Saved on this PC.");
         }
 
+        // Weapons and items consume their own fixed actions in the game.
+        static bool IsFixedInput(string action) => action == "Attack" || action == "AltFire" || action == "Reload";
+
         bool HasRow(string actionName)
         {
             foreach (BindingRow row in _bindings)
             {
-                if (string.Equals(row.Action, actionName, StringComparison.Ordinal))
+                if (!IsFixedInput(actionName) && string.Equals(row.Action, actionName, StringComparison.Ordinal))
                     return true;
             }
 
@@ -320,7 +340,7 @@ namespace CloseTheDeal.UI
                 for (int i = 0; i < candidate.bindings.Count; i++)
                 {
                     if ((candidate == action && i == index)
-                        || !string.Equals(candidate.bindings[i].effectivePath, path, StringComparison.OrdinalIgnoreCase))
+                        || !string.Equals(IsFixedInput(candidate.name) ? candidate.bindings[i].path : candidate.bindings[i].effectivePath, path, StringComparison.OrdinalIgnoreCase))
                         continue;
                     bool fixedKey = !HasRow(candidate.name);
                     if (other == null || fixedKey)
@@ -380,9 +400,26 @@ namespace CloseTheDeal.UI
             RaiseSaved(line);
         }
 
+        void RemoveDefaultOverrides()
+        {
+            foreach (var action in _working)
+            {
+                for (int i = 0; i < action.bindings.Count; i++)
+                {
+                    var binding = action.bindings[i];
+                    if (binding.overridePath != null && binding.overrideProcessors == null && binding.overrideInteractions == null
+                        && string.Equals(binding.overridePath, binding.path, StringComparison.OrdinalIgnoreCase))
+                        action.RemoveBindingOverride(i);
+                }
+            }
+        }
+
         void SaveKeys()
         {
-            InputPrefs.BindingOverridesJson = _working.SaveBindingOverridesAsJson();
+            RemoveDefaultOverrides();
+            string json = _working.SaveBindingOverridesAsJson();
+            _hasCustomBindings = !string.IsNullOrEmpty(json);
+            InputPrefs.BindingOverridesJson = json;
             UiSound.Play(UiSoundEvent.KeyBindSet);
         }
 
@@ -412,7 +449,7 @@ namespace CloseTheDeal.UI
             switch (action)
             {
                 case "Attack": return "Fire";
-                case "AltFire": return "Aim";
+                case "AltFire": return "Use item";
                 case "Throw": return "Drop / Throw";
                 case "Voice": return "Mute / Push to talk";
                 case "Lean": return string.Equals(part, "negative", StringComparison.OrdinalIgnoreCase) ? "Lean left" : "Lean right";

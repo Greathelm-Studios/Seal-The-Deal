@@ -55,6 +55,7 @@ namespace CloseTheDeal.Items
         Vector2 _handsHome;
         float _loadWidth;
         float _labelAfterKey;
+        float _promptCapWidth;
 
         /// <summary>What the prompt reads for a person, key first ("F · Pick up Chair"); empty while it is hidden. For checks and captions.</summary>
         public string PromptReading => !_shown ? "" : _promptKeyCap.activeSelf ? _promptKey.text + " · " + _promptLabel.text : _promptLabel.text;
@@ -88,6 +89,7 @@ namespace CloseTheDeal.Items
             _promptHome = _prompt.anchoredPosition;
             _handsHome = _hands.anchoredPosition;
             _loadWidth = ((RectTransform)_handsLoadFill.parent).rect.width;
+            _promptCapWidth = ((RectTransform)_promptKeyCap.transform).rect.width;
             _labelAfterKey = _promptLabel.rectTransform.anchoredPosition.x;
             _promptFade.Snap(0f);
             _promptRise.Snap(0f);
@@ -100,6 +102,7 @@ namespace CloseTheDeal.Items
         {
             ItemCarrier.LocalChanged += Bind;
             ItemCarrier.UsingPadChanged += OnDeviceChanged;
+            UiGlyphs.Changed += RefreshDevice;
             Bind(ItemCarrier.Local);
             LabelKeys();
         }
@@ -108,6 +111,7 @@ namespace CloseTheDeal.Items
         {
             ItemCarrier.LocalChanged -= Bind;
             ItemCarrier.UsingPadChanged -= OnDeviceChanged;
+            UiGlyphs.Changed -= RefreshDevice;
             Bind(null);
             UiMotion.Sleep(this);
         }
@@ -168,7 +172,9 @@ namespace CloseTheDeal.Items
             ShowPrompt(true);
         }
 
-        void OnDeviceChanged(bool pad)
+        void OnDeviceChanged(bool pad) => RefreshDevice();
+
+        void RefreshDevice()
         {
             LabelKeys();
             if (_refusalLeft > 0f)
@@ -276,7 +282,14 @@ namespace CloseTheDeal.Items
 
             // The plate fits its words: key cap, gap, label, padding either side.
             RectTransform label = _promptLabel.rectTransform;
-            float keyRoom = showKey ? _labelAfterKey : 0f;
+            float keyRoom = 0f;
+            if (showKey)
+            {
+                float capWidth = Mathf.Max(_promptCapWidth, _promptKey.preferredWidth + KeyCapPadding);
+                Resize((RectTransform)_promptKeyCap.transform, capWidth);
+                Resize(_promptKey.rectTransform, capWidth);
+                keyRoom = _labelAfterKey + capWidth - _promptCapWidth;
+            }
             Vector2 labelPosition = label.anchoredPosition;
             labelPosition.x = keyRoom;
             label.anchoredPosition = labelPosition;

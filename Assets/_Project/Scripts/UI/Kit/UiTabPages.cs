@@ -118,6 +118,10 @@ namespace CloseTheDeal.UI
                     UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(_tabs[index].gameObject);
             }
 
+            _groups[index].interactable = true;
+            if (previous >= 0)
+                _groups[previous].interactable = false;
+
             UiSettingsPage page = _pages[index];
             page.gameObject.SetActive(true);
             page.ShowSaved();
@@ -204,7 +208,7 @@ namespace CloseTheDeal.UI
             if (group != null)
             {
                 group.alpha = alpha;
-                group.blocksRaycasts = alpha > 0.5f;
+                group.blocksRaycasts = index == _current && alpha > 0.5f;
             }
 
             var rect = (RectTransform)_pages[index].transform;

@@ -87,6 +87,12 @@ namespace CloseTheDeal.UI
             }
             if (string.IsNullOrEmpty(text))
                 text = "\u2014"; // nothing bound on this device: a dash, never the other device's key
+            SetKeyText(text);
+        }
+
+        /// <summary>Displays a key supplied by a gameplay prompt and fits the cap to its device label.</summary>
+        public void SetKeyText(string text)
+        {
             if (text == _shown)
                 return;
             _shown = text;

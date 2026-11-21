@@ -618,6 +618,128 @@ namespace CloseTheDeal.Editor.Lanes
             Wire("_tokens", t);
             Wire("_root", root.gameObject);
             so.ApplyModifiedPropertiesWithoutUndo();
+            ApplyV3MatchHud(root);
+        }
+
+        /// <summary>Applies the V3 match header and floor list to an authored match HUD; keeps its bindings and remaining HUD intact.</summary>
+        internal static void ApplyV3MatchHud(Transform root)
+        {
+            UiTokens t = AssetDatabase.LoadAssetAtPath<UiTokens>(KitTokensPath);
+            RectTransform clock = (RectTransform)root.Find("Clock");
+            RectTransform tracker = (RectTransform)root.Find("Tracker");
+            RectTransform ladder = (RectTransform)root.Find("Ladder");
+            var top = new Vector2(0.5f, 1f);
+            ladder.gameObject.SetActive(false);
+            tracker.gameObject.SetActive(false);
+            var hud = new SerializedObject(root.GetComponentInParent<MatchHud>(true));
+            hud.FindProperty("_compactFloors").boolValue = true;
+            hud.ApplyModifiedPropertiesWithoutUndo();
+
+            Anchored(clock, top, new Vector2(0, -18), new Vector2(144, 57));
+            foreach (var name in new[] { "Shadow", "Edge", "Surface", "HudFace" })
+            {
+                var layer = clock.Find(name);
+                if (layer != null)
+                    layer.gameObject.SetActive(false);
+            }
+            MatchText(clock, "Caption", 0, 0, 144, 17, 13, t.Navy, TextAlignmentOptions.Center);
+            MatchText(clock, "Time", 0, 7, 144, 48, 31, Color.white, TextAlignmentOptions.Center);
+            var time = clock.Find("Time").GetComponent<TMP_Text>();
+            time.characterSpacing = 0f;
+            const string clockInk = "Assets/_Project/UI/Fonts/HUD Clock.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(clockInk);
+            if (material == null)
+            {
+                material = new Material(time.fontSharedMaterial);
+                material.EnableKeyword("OUTLINE_ON");
+                material.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.18f);
+                material.SetColor(ShaderUtilities.ID_OutlineColor, t.Navy);
+                AssetDatabase.CreateAsset(material, clockInk);
+            }
+            time.fontSharedMaterial = material;
+            ConfigureBriefcaseArrows(root.Find("BriefcaseEdgeMarker"));
+
+            var prompt = (RectTransform)root.Find("Prompt");
+            MatchSurface(prompt, t.Paper, "KeyCap");
+            prompt.Find("HudFace").SetAsFirstSibling();
+            UiKitAssets.Place((RectTransform)prompt.Find("KeyCap"), 12, 5, 48, 30);
+            MatchText(prompt, "Key", 12, 5, 48, 30, 18, t.Navy, TextAlignmentOptions.Center);
+            MatchText(prompt, "Label", 70, 0, 290, 40, 20, t.Navy);
+            foreach (var part in new[] { "KeyCap", "Key", "Label" })
+            {
+                var rect = (RectTransform)prompt.Find(part);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(rect);
+                if (rect.TryGetComponent<TMP_Text>(out var label))
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(label);
+            }
+
+            var banner = (RectTransform)root.Find("Banner");
+            Anchored(banner, new Vector2(0.5f, 1f), new Vector2(0, -98), new Vector2(670, 60));
+            MatchSurface(banner, t.CobaltDeep, "Text");
+            MatchText(banner, "Text", 16, 0, 638, 60, 24, Color.white, TextAlignmentOptions.Center);
+
+            var notice = (RectTransform)root.Find("Notice");
+            Anchored(notice, new Vector2(0.5f, 0f), new Vector2(0, 54), new Vector2(540, 70));
+            MatchSurface(notice, t.Paper, "Line");
+            var line = (RectTransform)notice.Find("Line");
+            UiKitAssets.Place(line, 0, 0, 540, 70);
+            UiKitAssets.Place((RectTransform)line.Find("Mark"), 12, 18, 3, 34);
+            UiKitAssets.Place((RectTransform)line.Find("MarkOutline"), 12, 18, 3, 34);
+            MatchText(line, "Text", 26, 2, 498, 66, 20, t.Navy);
+        }
+
+        static void ConfigureBriefcaseArrows(Transform marker)
+        {
+            if (marker == null)
+                return;
+            var body = marker.Find("Body");
+            var pointer = (RectTransform)body.Find("Pointer");
+            var arrow = pointer.GetComponent<UnityEngine.UI.Image>();
+            arrow.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_TitleV3Chevron.png");
+            arrow.preserveAspect = true;
+            pointer.sizeDelta = new Vector2(17, 25);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(pointer);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(arrow);
+            var partner = body.Find("OppositeChevron");
+            if (partner == null)
+                partner = Object.Instantiate(pointer, body, false);
+            partner.name = "OppositeChevron";
+            partner.localRotation = Quaternion.Euler(0, 0, 180);
+            var component = marker.GetComponent<UiEdgeMarker>();
+            UiKitAssets.Set(component, "_oppositeChevron", partner.GetComponent<UnityEngine.UI.Image>());
+            PrefabUtility.RecordPrefabInstancePropertyModifications(component);
+        }
+
+        static void MatchSurface(RectTransform panel, Color colour, string before)
+        {
+            var face = (RectTransform)panel.Find("HudFace");
+            if (face == null)
+            {
+                face = UiKitAssets.Fill(panel, "HudFace");
+                UiKitAssets.Img(face, null, colour);
+                face.SetSiblingIndex(panel.Find(before).GetSiblingIndex());
+            }
+            var image = face.GetComponent<UnityEngine.UI.Image>();
+            image.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_Round16.png");
+            image.type = UnityEngine.UI.Image.Type.Sliced;
+            colour.a = 0.88f;
+            image.color = colour;
+            foreach (var name in new[] { "Surface", "Shadow", "Edge" })
+            {
+                var layer = panel.Find(name);
+                if (layer != null)
+                    layer.gameObject.SetActive(false);
+            }
+        }
+
+        static void MatchText(Transform parent, string path, float x, float y, float w, float h,
+            float size, Color colour, TextAlignmentOptions alignment = TextAlignmentOptions.MidlineLeft)
+        {
+            var text = parent.Find(path).GetComponent<TMP_Text>();
+            UiKitAssets.Place(text.rectTransform, x, y, w, h);
+            text.fontSize = size;
+            text.color = colour;
+            text.alignment = alignment;
         }
 
         static bool OnKit(Component component)
@@ -695,6 +817,8 @@ namespace CloseTheDeal.Editor.Lanes
             RectTransform actionRect = (RectTransform)action.transform;
             UiKitAssets.Place(actionRect, 20f, 120f, 584f, t.PrimaryHeight);
             TMP_Text actionLabel = action.transform.Find("Plate/Label")?.GetComponent<TMP_Text>();
+            if (section.parent.name == "MatchSlot")
+                StyleMatchSummary(section, t);
 
 
             var so = new SerializedObject(panel);
@@ -709,6 +833,29 @@ namespace CloseTheDeal.Editor.Lanes
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        internal static void StyleMatchSummary(RectTransform section, UiTokens t)
+        {
+            foreach (var name in new[] { "Edge", "Surface", "Shadow" })
+            {
+                var layer = section.Find(name);
+                if (layer != null)
+                    layer.gameObject.SetActive(false);
+            }
+            var title = section.Find("Headline").GetComponent<TMP_Text>();
+            title.font = t.Heading.Font;
+            title.fontStyle = t.Heading.Style;
+            title.characterSpacing = t.Heading.Tracking;
+            title.fontSize = 33;
+            title.enableAutoSizing = true;
+            title.fontSizeMax = 33;
+            title.fontSizeMin = 22;
+            UiKitAssets.Place(title.rectTransform, 0, 0, 1060, 59);
+            UiKitAssets.Place((RectTransform)section.Find("Reason"), 0, 67, 1060, 62);
+            UiKitAssets.Place((RectTransform)section.Find("Reason/Text"), 22, 0, 1038, 62);
+            var button = section.Find("MatchActionButton").GetComponent<UiButton>();
+            UiKitAssets.Place((RectTransform)button.transform, 0, 138, 530, t.PrimaryHeight);
+            UiKitScreens.AddV3FocusMark(button);
+        }
         static UnityEngine.UI.Image ClockWarning(Kit kit, Transform clock)
         {
             Transform caption = clock.Find("Caption");

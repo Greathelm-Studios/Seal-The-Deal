@@ -25,10 +25,10 @@ namespace CloseTheDeal.Lobby
         // Prompts are fixed strings so nothing is built per frame (AGENTS.md §6).
         const string KeyReady = "F   Ready up";
         const string KeyUnready = "F   Take back your ready";
-        const string KeyStart = "Hold F   Start the run";
+        const string KeyStart = "F   Hold to start the run";
         const string PadReady = "Y   Ready up";
         const string PadUnready = "Y   Take back your ready";
-        const string PadStart = "Hold Y   Start the run";
+        const string PadStart = "Y   Hold to start the run";
         const string KeyWaiting = "F   Take back your ready   (waiting for the host)";
         const string PadWaiting = "Y   Take back your ready   (waiting for the host)";
         const string Started = "The run has started";
@@ -148,8 +148,8 @@ namespace CloseTheDeal.Lobby
             string why = reason == StartBlock.NeedBothFirms
                 ? roster.Rules.FirmName(roster.SmallerFirm()) + " has nobody."
                 : "The firms are uneven.";
-            _confirmKeyPrompt = why + "   Hold F again to start anyway";
-            _confirmPadPrompt = why + "   Hold Y again to start anyway";
+            _confirmKeyPrompt = "F   " + why + " Hold again to start anyway.";
+            _confirmPadPrompt = "Y   " + why + " Hold again to start anyway.";
             _confirmUntil = Time.unscaledTime + roster.Rules.ConfirmSeconds;
             OnConfirmArmed?.Invoke(reason);
         }

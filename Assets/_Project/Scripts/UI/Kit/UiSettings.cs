@@ -37,8 +37,8 @@ namespace CloseTheDeal.UI
         public const CrosshairStyle DefaultCrosshairStyle = CrosshairStyle.CrossAndDot;
         public const CrosshairColour DefaultCrosshairColour = CrosshairColour.PaperWhite;
         public const int DefaultCrosshairSize = 100;
-        /// <summary>On while netcode is still being tested; the inventory's release default is off.</summary>
-        public const bool DefaultNetworkStats = true;
+        /// <summary>Fresh player profiles show diagnostics only in the Editor and development builds.</summary>
+        public static bool DefaultNetworkStats => Debug.isDebugBuild;
 
         /// <summary>Fires after any setting changes (already saved).</summary>
         public static event Action Changed;

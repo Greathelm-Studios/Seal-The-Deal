@@ -100,6 +100,10 @@ namespace CloseTheDeal.UI
         protected override void OnEnable()
         {
             base.OnEnable();
+            // Selectables run in edit mode too. Posing the visuals there would be saved into the prefab or scene, and
+            // the brackets take their home from where they sit, so every editor save pushed them out further.
+            if (!Application.isPlaying)
+                return;
             _pointerInside = false;
             _selected = EventSystem.current != null && EventSystem.current.currentSelectedGameObject == gameObject;
             _fx.SetState(IsInteractable(), false, false, _selected, true);
@@ -113,9 +117,9 @@ namespace CloseTheDeal.UI
 
         protected override void DoStateTransition(SelectionState state, bool instant)
         {
-            if (_fx == null)
-                return;
-            _fx.SetState(state != SelectionState.Disabled, _pointerInside, state == SelectionState.Pressed, _selected, instant || !Application.isPlaying);
+            if (_fx == null || !Application.isPlaying)
+                return;   // edit mode: leave the serialized layout alone (see OnEnable)
+            _fx.SetState(state != SelectionState.Disabled, _pointerInside, state == SelectionState.Pressed, _selected, instant);
         }
 
         public override void OnPointerEnter(PointerEventData eventData)

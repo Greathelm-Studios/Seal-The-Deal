@@ -272,9 +272,9 @@ namespace CloseTheDeal.Editor.Lanes
         }
 
         const string KitFolder = "Assets/_Project/UI/Kit";
-        const float CardWidth = 560f;
+        const float CardWidth = 412f;
         const float CardTop = 92f;
-        const float RowHeight = 44f;
+        const float RowHeight = 40f;
 
         static readonly (string Label, string Action, string PadAction, string KeyboardText)[] HelpLines =
         {
@@ -289,7 +289,7 @@ namespace CloseTheDeal.Editor.Lanes
             ("Fire", "Attack", "", ""),
             ("Aim or alternate fire", "AltFire", "", ""),
             ("Use", "Interact", "", ""),
-            ("Throw or drop", "Throw", "", ""),
+            ("Drop held item", "Throw", "", ""),
             ("Reload", "Reload", "", ""),
             ("Close this card", "Help", "", ""),
         };
@@ -510,9 +510,8 @@ namespace CloseTheDeal.Editor.Lanes
             var card = (GameObject)PrefabUtility.InstantiatePrefab(platePrefab, root);
             card.name = "ControlsCard";
             var cardRect = (RectTransform)card.transform;
-            cardRect.anchorMin = cardRect.anchorMax = new Vector2(0f, 0.5f);
-            cardRect.pivot = new Vector2(0f, 0.5f);
-            cardRect.anchoredPosition = new Vector2(64f, 0f);
+            cardRect.anchorMin = cardRect.anchorMax = cardRect.pivot = Vector2.up;
+            cardRect.anchoredPosition = new Vector2(24f, -78f);
             cardRect.sizeDelta = new Vector2(CardWidth, CardTop + HelpLines.Length * RowHeight + 24f);
             var cardGroup = card.AddComponent<CanvasGroup>();
             cardGroup.alpha = 0f;
