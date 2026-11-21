@@ -459,6 +459,19 @@ namespace CloseTheDeal.Editor.UI
 
         // ---- Confirm dialog ---------------------------------------------------------------------------------
 
+        internal static RectTransform ConfirmationPlate(Transform frame)
+        {
+            // Match the white plate, fine cobalt edge and registration squares on the v3 title artwork.
+            const float width = 640f, height = 258f;
+            var plate = Box(frame, "Pane", 1168f, 752f, width, height, UiTokens.WithAlpha(Color.white, 0.94f)).rectTransform;
+            Img(Fill(plate, "Edge"), UiKitArt.Outline1, UiTokens.WithAlpha(Tokens.Cobalt, 0.5f));
+            Box(plate, "TopLeft", -3f, -3f, 6f, 6f, Tokens.Cobalt);
+            Box(plate, "TopRight", width - 3f, -3f, 6f, 6f, Tokens.Cobalt);
+            Box(plate, "BottomLeft", -3f, height - 3f, 6f, 6f, Tokens.Cobalt);
+            Box(plate, "BottomRight", width - 3f, height - 3f, 6f, 6f, Tokens.Cobalt);
+            return plate;
+        }
+
         static GameObject BuildConfirm()
         {
             UiTokens t = Tokens;
@@ -467,8 +480,7 @@ namespace CloseTheDeal.Editor.UI
             RectTransform frame = DesignFrame(root, "Content");
             var reveal = new List<CanvasGroup>();
 
-            var pane = Place<RectTransform>(UiKitComponents.GlassPane, frame, "Pane", 1168f, 752f);
-            pane.sizeDelta = new Vector2(640f, 258f);
+            ConfirmationPlate(frame);
 
             RectTransform words = RevealLine(frame, "Words");
             reveal.Add(words.GetComponent<CanvasGroup>());

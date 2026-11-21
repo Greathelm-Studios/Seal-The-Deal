@@ -41,6 +41,8 @@ namespace CloseTheDeal.Combat
         [SerializeField] TMP_Text _magazineText;
         [SerializeField] TMP_Text _weaponName;
         [SerializeField] TMP_Text _weaponState;
+        [Tooltip("The action strip behind the weapon status. It changes colour for reloads and ammo warnings.")]
+        [SerializeField] Image _statePlate;
         [Tooltip("The thin bar under the ammo that fills during a reload or a draw.")]
         [SerializeField] RectTransform _progressFill;
         [Tooltip("The two slot rows, slot 1 first: their text and the bar that marks the gun in hand.")]
@@ -337,7 +339,8 @@ namespace CloseTheDeal.Combat
                 WeaponDefinition inSlot = _holder.WeaponInSlot(i);
                 bool active = i == _holder.ActiveSlot && inSlot != null;
                 _slotTexts[i].text = inSlot != null ? $"{i + 1}  {inSlot.DisplayName.ToUpperInvariant()}" : $"{i + 1}  —";
-                _slotTexts[i].color = active ? _tokens.Navy : inSlot != null ? _tokens.Ink3 : _tokens.Disabled;
+                Color selectedInk = _statePlate != null ? _tokens.Paper : _tokens.Navy;
+                _slotTexts[i].color = active ? selectedInk : inSlot != null ? _tokens.Ink2 : _tokens.Ink3;
                 _slotBars[i].enabled = active;
             }
 
@@ -360,7 +363,12 @@ namespace CloseTheDeal.Combat
             _ammoText.SetText("{0}", inMagazine);
             _magazineText.SetText("/ {0}", magazineSize);
             _empty = magazineSize > 0 && inMagazine == 0;
-            _ammoText.color = _empty ? _tokens.Amber : LowAmmo ? _tokens.Electric : _tokens.Navy;
+            if (magazineSize == 0 && _statePlate != null)
+            {
+                _ammoText.text = "—";
+                _magazineText.text = string.Empty;
+            }
+            _ammoText.color = _statePlate != null ? _tokens.Navy : _empty ? _tokens.Amber : LowAmmo ? _tokens.Electric : _tokens.Navy;
             ShowState();
         }
 
@@ -392,7 +400,16 @@ namespace CloseTheDeal.Combat
                 default: _weaponState.text = _empty ? EmptyText() : _holder.ActiveWeapon == null ? string.Empty : LowAmmo ? "LOW AMMO" : "READY"; break;
             }
 
-            _weaponState.color = _empty && _holder.State == WeaponState.Ready ? _tokens.Amber : _tokens.Ink3;
+            if (_statePlate == null)
+            {
+                _weaponState.color = _empty && _holder.State == WeaponState.Ready ? _tokens.Amber : _tokens.Ink3;
+                return;
+            }
+
+            bool busy = _holder.State != WeaponState.Ready;
+            _statePlate.enabled = _holder.ActiveWeapon != null;
+            _statePlate.color = busy ? _tokens.Cobalt : LowAmmo ? _tokens.Amber : _tokens.HoverTint;
+            _weaponState.color = busy ? _tokens.Paper : _tokens.Navy;
         }
 
         WeaponState _lastState;

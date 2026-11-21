@@ -132,7 +132,7 @@ The catalog names guns on the network by their place in the list. **Add new guns
 
 ## Combat HUD contract
 
-The combat HUD marks low ammo at the authored threshold and shows the reload control when empty. Holding automatic fire until empty produces one dry click on the next firing interval. The hit marker waits for host confirmation.
+The Integration HUD groups the equipped weapon, rounds remaining, magazine capacity, reload progress and both weapon slots on one lower-right card. Cobalt marks the active slot and a reload or draw in progress. An amber strip marks low ammo at the authored threshold and names the reload control when empty. A separate health strip sits above the card while the player is hurt and briefly after recovery. Holding automatic fire until empty produces one dry click on the next firing interval. The hit marker waits for host confirmation.
 
 What a combat HUD reads. Everything is an event or a property read when an event says it changed; nothing needs polling every frame except the two countdowns, which a HUD reads only while it is showing them. The HUD never decides anything: a hit marker appears only when the host says the hit landed.
 

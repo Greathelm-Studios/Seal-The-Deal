@@ -116,7 +116,7 @@ namespace CloseTheDeal.Editor.Lanes
 
             BuildHitMarker(root, tokens, so);
             BuildDamageMarks(root, so);
-            BuildWeaponColumn(root, tokens, plate, so);
+            BuildWeaponColumn(root, tokens, so);
             BuildDownCard(root, tokens, plate, so);
             so.ApplyModifiedPropertiesWithoutUndo();
             Debug.Log("[Shooting Lane] Added the combat HUD under the game menu's Hud.");
@@ -199,55 +199,63 @@ namespace CloseTheDeal.Editor.Lanes
             SetObjects(so, "_damageMarks", marks);
         }
 
-        /// <summary>Bottom right, from the bottom up: the weapon plate (ammo, name, state, progress), the two slots, health while hurt.</summary>
-        static void BuildWeaponColumn(RectTransform root, UiTokens tokens, GameObject plate, SerializedObject so)
+        /// <summary>One weapon card: live magazine, action feedback and two loadout tabs. Health appears above it only while hurt.</summary>
+        static void BuildWeaponColumn(RectTransform root, UiTokens tokens, SerializedObject so)
         {
             var corner = new Vector2(1f, 0f);
-            const float right = -32f, width = 320f;
+            var round = AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_Round16.png");
+            var tab = AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_Round8.png");
+            const float width = 360f;
+            RectTransform weapon = Anchored(root, "WeaponPlate", corner, corner, new Vector2(-24f, 24f), new Vector2(width, 138f));
+            UiKitAssets.Img(weapon, round, tokens.Paper);
 
-            RectTransform weapon = PlateAt(root, plate, "WeaponPlate", corner, corner, new Vector2(right, 32f), new Vector2(width, 118f));
-            TMP_Text ammo = HudText(weapon, "Ammo", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -4f), new Vector2(130f, 70f), tokens.Heading, tokens.Navy, TextAlignmentOptions.BottomLeft, "12");
-            ammo.fontSize = 52f;
+            TMP_Text name = UiKitAssets.Label(weapon, "WeaponName", 18, 10, 184, 39, "PISTOL", tokens.Item, tokens.Navy);
+            name.fontSize = 23f;
+            TMP_Text ammo = UiKitAssets.Label(weapon, "Ammo", 198, 1, 84, 56, "12", tokens.Heading, tokens.Navy, TextAlignmentOptions.MidlineRight);
+            ammo.fontSize = 48f;
+            ammo.characterSpacing = 0f;
             Unclipped(ammo);
-            TMP_Text magazine = HudText(weapon, "Magazine", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(140f, -46f), new Vector2(90f, 26f), tokens.Label, tokens.Ink3, TextAlignmentOptions.BottomLeft, "/ 12");
-            TMP_Text name = HudText(weapon, "WeaponName", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -16f), new Vector2(140f, 24f), tokens.Label, tokens.Navy, TextAlignmentOptions.TopRight, "PISTOL");
-            TMP_Text state = HudText(weapon, "State", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(20f, 24f), new Vector2(width - 40f, 22f), tokens.Caption, tokens.Ink3, TextAlignmentOptions.MidlineLeft, "READY");
-            state.fontSize = Mathf.Max(state.fontSize, MinHudCaption);
-            RectTransform track = Anchored(weapon, "ProgressTrack", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(20f, 14f), new Vector2(width - 40f, 3f));
+            TMP_Text magazine = UiKitAssets.Label(weapon, "Magazine", 290, 20, 62, 30, "/ 12", tokens.Label, tokens.Ink2);
+            magazine.fontSize = 17f;
+
+            Image statePlate = UiKitAssets.Box(weapon, "StatusPlate", 14, 55, width - 28, 28, tokens.HoverTint, tab);
+            TMP_Text state = UiKitAssets.Label(weapon, "State", 24, 55, width - 48, 28, "READY", tokens.Label, tokens.Navy);
+            state.fontSize = 16f;
+            RectTransform track = UiKitAssets.At(weapon, "ProgressTrack", 18, 86, width - 36, 3);
             Solid(track, tokens.Hair);
-            RectTransform fill = Anchored(track, "Fill", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(width - 40f, 3f));
+            RectTransform fill = Anchored(track, "Fill", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, track.sizeDelta);
             Solid(fill, tokens.Cobalt);
             fill.localScale = new Vector3(0f, 1f, 1f);
 
-            var slotTexts = new Object[2];
-            var slotBars = new Object[2];
-            for (int i = 0; i < 2; i++)
+            var slotTexts = new Object[WeaponHolder.SlotCount];
+            var slotBars = new Object[WeaponHolder.SlotCount];
+            float tabWidth = (width - 34f) / WeaponHolder.SlotCount;
+            for (int i = 0; i < WeaponHolder.SlotCount; i++)
             {
-                // Slot 1 above slot 2, as on the keyboard.
-                float y = 32f + 118f + 10f + (1 - i) * 30f;
-                RectTransform row = Anchored(root, "Slot" + (i + 1), corner, corner, new Vector2(right, y), new Vector2(width, 26f));
-                Solid(row, tokens.Paper);
-                slotTexts[i] = HudText(row, "Text", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(14f, 0f), new Vector2(width - 14f, 26f), tokens.Label, tokens.Ink3, TextAlignmentOptions.MidlineLeft, (i + 1) + "  —");
-                RectTransform bar = Anchored(row, "Bar", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(4f, 20f));
-                slotBars[i] = Solid(bar, tokens.Cobalt);
+                RectTransform row = UiKitAssets.At(weapon, "Slot" + (i + 1), 14 + i * (tabWidth + 6), 97, tabWidth, 30);
+                slotBars[i] = UiKitAssets.Img(row, tab, tokens.Cobalt);
+                slotTexts[i] = UiKitAssets.Label(row, "Text", 8, 0, tabWidth - 16, 30, (i + 1) + "  —", tokens.Label, tokens.Navy,
+                    TextAlignmentOptions.Center);
             }
 
-            RectTransform health = PlateAt(root, plate, "HealthPlate", corner, corner, new Vector2(right, 32f + 118f + 10f + 60f + 12f), new Vector2(width, 48f));
+            RectTransform health = Anchored(root, "HealthPlate", corner, corner, new Vector2(-24f, 170f), new Vector2(244f, 60f));
+            UiKitAssets.Img(health, round, tokens.Paper);
             var group = health.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
             group.interactable = false;
-            HudText(health, "Label", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20f, 6f), new Vector2(120f, 22f), tokens.Caption, tokens.Ink3, TextAlignmentOptions.MidlineLeft, "HEALTH").fontSize = Mathf.Max(tokens.Caption.Size, MinHudCaption);
-            TMP_Text number = HudText(health, "Number", new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-20f, 6f), new Vector2(80f, 22f), tokens.Label, tokens.Navy, TextAlignmentOptions.MidlineRight, "100");
-            RectTransform healthTrack = Anchored(health, "Track", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(20f, 10f), new Vector2(width - 40f, 4f));
-            Solid(healthTrack, tokens.Hair);
-            RectTransform healthFill = Anchored(healthTrack, "Fill", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(width - 40f, 4f));
-            Image healthFillImage = Solid(healthFill, tokens.Cobalt);
+            UiKitAssets.Label(health, "Label", 16, 6, 160, 28, "HEALTH", tokens.Label, tokens.Ink2);
+            TMP_Text number = UiKitAssets.Label(health, "Number", 170, 4, 58, 30, "100", tokens.Item, tokens.Navy, TextAlignmentOptions.MidlineRight);
+            RectTransform healthTrack = UiKitAssets.At(health, "Track", 16, 39, 212, 8);
+            UiKitAssets.Img(healthTrack, tab, tokens.Hair);
+            RectTransform healthFill = Anchored(healthTrack, "Fill", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, healthTrack.sizeDelta);
+            Image healthFillImage = UiKitAssets.Img(healthFill, tab, tokens.Cobalt);
 
             so.FindProperty("_weaponPlate").objectReferenceValue = weapon;
             so.FindProperty("_ammoText").objectReferenceValue = ammo;
             so.FindProperty("_magazineText").objectReferenceValue = magazine;
             so.FindProperty("_weaponName").objectReferenceValue = name;
             so.FindProperty("_weaponState").objectReferenceValue = state;
+            so.FindProperty("_statePlate").objectReferenceValue = statePlate;
             so.FindProperty("_progressFill").objectReferenceValue = fill;
             SetObjects(so, "_slotTexts", slotTexts);
             SetObjects(so, "_slotBars", slotBars);

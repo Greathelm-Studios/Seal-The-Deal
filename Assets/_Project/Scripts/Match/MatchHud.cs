@@ -97,6 +97,7 @@ namespace CloseTheDeal.MatchMode
         float _bannerUntil = -1f;
         float _noticeUntil = -1f;
         bool _capWarning;
+        Color _clockInk, _clockCaptionInk;
         bool _showingRefusal;
         bool _awake;
         RectTransform _canvasRect;
@@ -115,6 +116,8 @@ namespace CloseTheDeal.MatchMode
             if (!_wired)
                 return;
 
+            _clockInk = _clockText.color;
+            _clockCaptionInk = _clockCaption.color;
             _promptHint = _prompt.GetComponent<UiKeyHint>();
             _bannerHome = _banner.anchoredPosition;
             _noticeHome = _notice.anchoredPosition;
@@ -235,8 +238,8 @@ namespace CloseTheDeal.MatchMode
         {
             _clockText.text = FormatClock(secondsLeft);
             // Warned by an amber plate, never amber text: Navy reads at 8:1 on amber, amber at 1.7:1 on white.
-            _clockText.color = _tokens.Navy;
-            _clockCaption.color = _capWarning ? _tokens.Navy : _tokens.Ink2;
+            _clockText.color = _capWarning ? _tokens.Navy : _clockInk;
+            _clockCaption.color = _capWarning ? _tokens.Navy : _clockCaptionInk;
             if (_clockWarning != null)
                 _clockWarning.enabled = _capWarning;
             // Said in words as well as colour.
@@ -304,14 +307,14 @@ namespace CloseTheDeal.MatchMode
             {
                 case BriefcaseState.Carried:
                     if (local != null && status.CarrierId == local.ObjectId)
-                        return "You have the briefcase";
+                        return "Carry it to a roof";
                     if (local != null)
-                        return status.CarrierFirm == local.Firm ? "Your firm has it" : "The rival firm has it";
+                        return status.CarrierFirm == local.Firm ? "Protect your carrier" : "Stop the rival carrier";
                     return _match.FirmName(status.CarrierFirm) + " has it";
                 case BriefcaseState.Returning:
-                    return "It left the buildings";
+                    return "Briefcase returning";
                 default:
-                    return "Nobody has the briefcase";
+                    return "Collect the briefcase";
             }
         }
 
@@ -380,7 +383,7 @@ namespace CloseTheDeal.MatchMode
             _rowBoxes[floor].color = isOpen ? _tokens.Cobalt : _tokens.Ink3;
             _rowLabels[floor].color = isOpen ? _tokens.Navy : _tokens.Ink3;
             string label = _match.Arena.FloorLabel(floor);
-            _rowLabels[floor].text = respawnHere ? label + "  · you respawn here" : label;
+            _rowLabels[floor].text = respawnHere ? label + " · Respawn" : label;
             _rowMarks[floor].enabled = caseHere;
             if (caseHere)
                 _rowMarks[floor].color = _trackerBar.color;
