@@ -160,8 +160,11 @@ namespace CloseTheDeal.Combat
             _downLine.text = string.IsNullOrEmpty(report.ComesBackOn) ? DefaultDownLine : "BACK ON " + report.ComesBackOn.ToUpperInvariant() + " IN";
         }
 
+        void OnEnable() => UiGlyphs.Changed += ShowState;
+
         void OnDisable()
         {
+            UiGlyphs.Changed -= ShowState;
             Bind(null);
         }
 
@@ -402,13 +405,12 @@ namespace CloseTheDeal.Combat
         WeaponState _lastState;
         float _shownProgress = -1f;
 
-        /// <summary>The empty hint names the button the player last used: R on a keyboard, Y on a pad.</summary>
-        static string EmptyText()
+        static string EmptyText() => UiGlyphs.Current switch
         {
-            var pad = UnityEngine.InputSystem.Gamepad.current;
-            bool onPad = pad != null && pad.lastUpdateTime > (UnityEngine.InputSystem.Keyboard.current?.lastUpdateTime ?? 0d);
-            return onPad ? "EMPTY · Y TO RELOAD" : "EMPTY · R TO RELOAD";
-        }
+            UiDeviceKind.KeyboardMouse => "EMPTY · R TO RELOAD",
+            UiDeviceKind.PlayStation => "EMPTY · TRIANGLE TO RELOAD",
+            _ => "EMPTY · Y TO RELOAD"
+        };
 
         void ShowProgress()
         {

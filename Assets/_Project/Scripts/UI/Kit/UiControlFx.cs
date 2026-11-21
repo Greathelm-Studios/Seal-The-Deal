@@ -337,12 +337,16 @@ namespace CloseTheDeal.UI
             }
         }
 
+        static readonly Color PrimaryHover = new(0.86f, 0.89f, 0.96f);
+        static readonly Color PrimaryPress = new(0.62f, 0.67f, 0.80f);
+
         void ResolveColours(float hover, float press, out Color fill, out Color ink, out Color outline)
         {
             UiTokens t = Tokens;
             if (!_interactable)
             {
-                fill = Variant == UiVariant.Quiet ? Color.clear : t.Paper;
+                // The primary's fill is the signature gradient sprite, tinted: faded rather than painted paper.
+                fill = Variant == UiVariant.Quiet ? Color.clear : Variant == UiVariant.Primary ? UiTokens.WithAlpha(Color.white, 0.35f) : t.Paper;
                 ink = t.Disabled;
                 outline = Color.clear;
                 return;
@@ -351,7 +355,8 @@ namespace CloseTheDeal.UI
             switch (Variant)
             {
                 case UiVariant.Primary:
-                    fill = Color.Lerp(Color.Lerp(t.Cobalt, t.CobaltDeep, hover), t.Navy, press * 0.6f);
+                    // The fill sprite carries the cobalt-to-electric gradient; the tint only deepens it on hover and press.
+                    fill = Color.Lerp(Color.Lerp(Color.white, PrimaryHover, hover), PrimaryPress, press * 0.6f);
                     ink = t.Paper;
                     outline = Color.clear;
                     return;
@@ -377,7 +382,7 @@ namespace CloseTheDeal.UI
                 default:
                     fill = Color.Lerp(Color.Lerp(t.Paper, t.HoverTint, hover), t.Silver, press);
                     ink = t.Navy;
-                    outline = t.Navy;
+                    outline = UiTokens.WithAlpha(t.Navy, Mathf.Lerp(0.16f, 0.4f, hover));   // the bevel and shadow carry the shape
                     return;
             }
         }

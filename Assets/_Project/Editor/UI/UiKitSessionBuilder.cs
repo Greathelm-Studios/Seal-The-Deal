@@ -17,8 +17,8 @@ namespace CloseTheDeal.Editor.UI
     /// </summary>
     internal static class UiKitSessionBuilder
     {
-        const float Left = 832f;
-        const float Width = 976f;
+        const float Left = 992f;
+        const float Width = 816f;
 
         internal static GameObject BuildSession()
         {

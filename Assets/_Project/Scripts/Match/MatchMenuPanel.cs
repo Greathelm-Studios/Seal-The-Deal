@@ -8,7 +8,7 @@ namespace CloseTheDeal.MatchMode
     /// <summary>
     /// The match's section of the game menu, built with the UI kit: where the match stands,
     /// who sealed the deal and why, and the host's one button (start, then rematch). Everyone
-    /// else reads why they can't press it. When a match ends it opens the menu through
+    /// else reads the next step in the status line. When a match ends it opens the menu through
     /// GameMenu, so the menu's rule still holds: menu open, mouse free, player idle. A full
     /// results screen is lane 5's; this is the result until that lands. Text changes only on
     /// match events. Design: docs/systems/MATCH.md.
@@ -106,7 +106,7 @@ namespace CloseTheDeal.MatchMode
                 return;
 
             _menu.Open();
-            if (EventSystem.current != null)
+            if (_action.isActiveAndEnabled && _action.IsInteractable() && EventSystem.current != null)
                 EventSystem.current.SetSelectedGameObject(_action.gameObject);
         }
 
@@ -132,12 +132,10 @@ namespace CloseTheDeal.MatchMode
             _headline.text = Headline(phase);
             _reason.Set(Detail(phase, own), phase == MatchPhase.Ended ? UiStatusKind.Info : UiStatusKind.Busy);
 
-            // Shown to everyone while there is something to start; only the host can press it,
-            // and anyone else who tries is told why (the kit's refusal plate and line).
-            _action.gameObject.SetActive(action);
+            _action.gameObject.SetActive(host && action);
             _actionLabel.text = phase == MatchPhase.Ended ? _rematchLabel : _startLabel;
             _action.interactable = host && (_match.CanHostStart || _match.CanHostRematch);
-            _action.RefusalReason = host ? "The towers are still being built." : phase == MatchPhase.Ended ? _waitingForRematch : _waitingForStart;
+            _action.RefusalReason = "The towers are still being built.";
         }
 
         string Headline(MatchPhase phase)
@@ -159,7 +157,10 @@ namespace CloseTheDeal.MatchMode
         string Detail(MatchPhase phase, int own)
         {
             if (phase == MatchPhase.Ended)
-                return _match.ReasonLine(_match.Snapshot, own);
+            {
+                string result = _match.ReasonLine(_match.Snapshot, own);
+                return _match.IsServerStarted ? result : result + "  " + _waitingForRematch;
+            }
 
             string firms = $"You are with {_match.FirmName(own)}.  {FirmMember.CountIn(own)} v {FirmMember.CountIn(1 - own)}";
             if (phase == MatchPhase.Waiting && !_match.IsServerStarted)

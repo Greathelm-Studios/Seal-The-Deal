@@ -10,7 +10,7 @@ The **ready board** (top right) lists both firms, who is in each, who is ready a
 Looking at something usable shows a **prompt** above the bottom of the screen:
 
 - **Firm sign-in stands** (a sign in each firm's own colour either side of the desk): F signs you in with that firm.
-- **The reception desk**: F readies you up, or takes it back. When everyone is ready and the rule below is met, the host's prompt becomes **Hold F · Start the run**, with a fill bar; a tap still takes the host's ready back.
+- **The reception desk**: F readies you up, or takes it back. When everyone is ready and the rule below is met, the host's prompt becomes **Hold to start the run** beside the current device’s F, Y or Triangle keycap, with a fill bar; a tap still takes the host's ready back.
 - **The tailor's mirror** in the glass corner: F opens the fitting room ([CUSTOMISATION.md](CUSTOMISATION.md)).
 
 The **secretary** sits behind the desk. When someone arrives, readies, signs in or is refused, and when the run starts, she says one deadpan line as a subtitle (navy bar at the bottom) and turns her head toward the camera.
@@ -94,8 +94,8 @@ What a screen reads, and when it changes. UI reads this state and sends requests
 |---|---|
 | `ReadyUp` | "You are with {firm}. Ready up at the reception desk. To change firm, use a sign-in stand." |
 | `WaitForOthers` | "Ready. Waiting for {names}." |
-| `StartRun` (host) | "Everyone is ready. Hold F at the desk to start the run." |
-| `StartShortHanded` (host) | "Everyone is ready. {firm} has nobody, but you can still start: hold F at the desk, then hold it again to confirm." |
+| `StartRun` (host) | "Everyone is ready. Hold {interact} at the desk to start the run." |
+| `StartShortHanded` (host) | "Everyone is ready. {reason}. Hold {interact} at the desk twice to start anyway." |
 | `WaitForHost` | "Everyone is ready. Waiting for the host to start the run." |
 | `Fitting` | "You are in the fitting room. Keep the outfit or put it back to continue." |
 

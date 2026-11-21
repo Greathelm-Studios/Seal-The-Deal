@@ -44,7 +44,7 @@ namespace CloseTheDeal.Editor.UI
 
             RectTransform buttons = RevealLine(frame, "Buttons");
             reveal.Add(buttons.GetComponent<CanvasGroup>());
-            RectTransform column = At(buttons, "Column", X, 248f, W, 268f);
+            RectTransform column = At(buttons, "Column", X + 40f, 248f, W - 40f, 268f);
             var layout = column.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.spacing = t.SpaceS;
             layout.childControlWidth = true;
@@ -66,14 +66,14 @@ namespace CloseTheDeal.Editor.UI
 
             RectTransform info = RevealLine(frame, "FocusInfo");
             reveal.Add(info.GetComponent<CanvasGroup>());
-            TextMeshProUGUI heading = Label(info, "FocusHeading", X, 476f, W, 24f, "§ BACK TO GAME", t.Section, t.Navy);
-            Box(info, "FocusRule", X, 502f, W, 1f, t.Hair);
-            TextMeshProUGUI body = Label(info, "FocusBody", X, 512f, W, 84f, back.Description, t.Body, t.Ink2, TextAlignmentOptions.TopLeft, true);
+            TextMeshProUGUI heading = Label(info, "FocusHeading", X, 540f, W, 24f, "§ BACK TO GAME", t.Section, t.Navy);
+            Box(info, "FocusRule", X, 566f, W, 1f, t.Hair);
+            TextMeshProUGUI body = Label(info, "FocusBody", X, 576f, W, 72f, back.Description, t.Body, t.Ink2, TextAlignmentOptions.TopLeft, true);
 
             RectTransform sessionLine = RevealLine(frame, "Session");
             reveal.Add(sessionLine.GetComponent<CanvasGroup>());
-            Label(sessionLine, "SessionCaption", X, 612f, W, 18f, "§ SESSION", t.Section, t.Ink3).fontSize = 12f;
-            var session = Place<UiStatusLine>(UiKitComponents.StatusLine, sessionLine, "SessionLine", X, 636f);
+            Label(sessionLine, "SessionCaption", X, 660f, W, 18f, "§ SESSION", t.Section, t.Ink3).fontSize = 12f;
+            var session = Place<UiStatusLine>(UiKitComponents.StatusLine, sessionLine, "SessionLine", X, 684f);
             ((RectTransform)session.transform).sizeDelta = new Vector2(W, 76f);
             ((RectTransform)session.transform.Find("Text")).sizeDelta = new Vector2(W - 22f, 76f);
 
@@ -152,10 +152,10 @@ namespace CloseTheDeal.Editor.UI
                 {
                     float y = SeatsY + 112f + seat * 48f;
                     string n = firm + "_" + seat;
-                    refs.Marks.Add(Box(parent, "SeatMark" + n, x, y + 19f, 10f, 10f, t.Cyan));
-                    refs.Rings.Add(Box(parent, "SeatRing" + n, x, y + 19f, 10f, 10f, t.Ink3, UiKitArt.Outline1));
-                    refs.Names.Add(Label(parent, "SeatName" + n, x + 18f, y, colW - 104f, 48f, "Seat available", t.Body, t.Ink3));
-                    refs.States.Add(Label(parent, "SeatState" + n, x + colW - 84f, y, 84f, 48f, string.Empty, t.Caption, t.Ink2, TextAlignmentOptions.MidlineRight));
+                    refs.Marks.Add(Box(parent, "SeatMark" + n, x, y + 8f, 10f, 10f, t.Cyan));
+                    refs.Rings.Add(Box(parent, "SeatRing" + n, x, y + 8f, 10f, 10f, t.Ink3, UiKitArt.Outline1));
+                    refs.Names.Add(Label(parent, "SeatName" + n, x + 18f, y, colW - 18f, 25f, "Seat available", t.Body, t.Ink3));
+                    refs.States.Add(Label(parent, "SeatState" + n, x + 18f, y + 25f, colW - 18f, 20f, string.Empty, t.Caption, t.Ink2));
                 }
             }
 

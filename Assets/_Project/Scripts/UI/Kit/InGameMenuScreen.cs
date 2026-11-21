@@ -189,7 +189,7 @@ namespace CloseTheDeal.UI
                 : "Go back to the title. Your team carries on without you.";
 
             int count = _lobby.PlayerCount;
-            string who = host ? "You are hosting" : "Hosted by " + _lobby.HostDisplayName;
+            string who = host ? "You are hosting" : local ? "Connected locally" : "Hosted by " + _lobby.HostDisplayName;
             string players = count == 1 ? "1 player" : count + " players";
             _sessionText = who + ".  " + players + " of " + _lobby.MaxPlayers + (local ? ", on this PC." : ".");
             if (!_refusalShown && _session != null)
@@ -361,7 +361,7 @@ namespace CloseTheDeal.UI
 
             int count = _lobby.PlayerCount;
             if (!_lobby.IsHosting)
-                _confirm.Configure("Leave " + _lobby.HostDisplayName + "'s game?", "Your team carries on without you.", "Leave game", "Stay", Leave);
+                _confirm.Configure(_lobby.LocalMode ? "Leave this local game?" : "Leave " + _lobby.HostDisplayName + "'s game?", "Your team carries on without you.", "Leave game", "Stay", Leave);
             else if (count > 1)
                 _confirm.Configure("End the game for everyone?", "You are the host. Leaving sends all " + count + " players back to the title.",
                     "End game for everyone", "Stay", Leave);

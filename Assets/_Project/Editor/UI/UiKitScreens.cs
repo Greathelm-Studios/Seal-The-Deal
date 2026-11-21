@@ -26,7 +26,7 @@ namespace CloseTheDeal.Editor.UI
         /// The window bars at 1080p: a 20 px paper face plus a 4 px silver reveal (mullions) or shadow (transom), 24 px
         /// in all. The owner found the first 44 + 10 px bars too heavy; the panes read as panes at 720p (16 px) too.
         /// </summary>
-        const float BarFace = 20f, BarShade = 4f;
+        const float WindowInset = 112f, WindowTop = 88f, WindowBottom = 36f;   // the sky window inside the sky band
 
         internal static void Build(bool rebuild)
         {
@@ -213,11 +213,11 @@ namespace CloseTheDeal.Editor.UI
             layout.childControlHeight = false;
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
-            var host = Instance<UiButton>(UiKitComponents.Primary, column, "HostGame");
+            var host = Instance<UiButton>(UiKitComponents.Secondary, column, "HostGame");
             var join = Instance<UiButton>(UiKitComponents.Secondary, column, "JoinOnThisPc");
             var settings = Instance<UiButton>(UiKitComponents.Secondary, column, "Settings");
-            var quit = Instance<UiButton>(UiKitComponents.Quiet, column, "QuitToDesktop");
-            SetLabel(host, "Host game");
+            var quit = Instance<UiButton>(UiKitComponents.Secondary, column, "QuitToDesktop");
+            SetLabel(host, "Host a game");
             SetLabel(join, "Join on this PC");
             SetLabel(settings, "Settings");
             SetLabel(quit, "Quit to desktop");
@@ -241,7 +241,95 @@ namespace CloseTheDeal.Editor.UI
             SetArray(screen, "_versionLines", new Object[] { version });
             Set(screen, "_menuGroup", menuLine.GetComponent<CanvasGroup>());
             SetArray(screen, "_centreGroups", new Object[] { statusGroup.GetComponent<CanvasGroup>() });
+            ApplyTitleArtwork(root);
             return root.gameObject;
+        }
+
+        // The same layout is applied to the existing prefab in place so scene references and local file IDs survive.
+        [MenuItem("Seal the Deal/UI/Apply V3 Title Artwork")]
+        public static void ApplyV3Title()
+        {
+            const string path = ScreenFolder + "/TitleScreen.prefab";
+            using var scope = new PrefabUtility.EditPrefabContentsScope(path);
+            var root = (RectTransform)scope.prefabContentsRoot.transform;
+            EnsureTokens();
+            if (root.Find("Content/V3Artwork") != null)
+            {
+                var column = (RectTransform)root.Find("Content/Menu/Column");
+                var screen = root.GetComponent<TitleScreen>();
+                var secondary = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/Button_Secondary.prefab");
+                // Earlier title rows carry artwork overrides. Replace just those four nested instances.
+                foreach (var row in column.GetComponentsInChildren<UiButton>(true))
+                {
+                    if (row.transform.Find("Plate/V3Selected") == null)
+                        continue;
+                    var replacement = Instance<UiButton>(secondary, column, row.name);
+                    replacement.transform.SetSiblingIndex(row.transform.GetSiblingIndex());
+                    SetLabel(replacement, row.Fx.Label.text);
+                    replacement.Description = row.Description;
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(replacement);
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(replacement.Fx.Label);
+                    var fields = new[] { "_host", "_joinLocal", "_settings", "_quit", "_firstFocus" };
+                    var serialized = new SerializedObject(screen);
+                    foreach (string field in fields)
+                    {
+                        var property = serialized.FindProperty(field);
+                        if (property.objectReferenceValue == row)
+                            property.objectReferenceValue = replacement;
+                    }
+                    serialized.ApplyModifiedPropertiesWithoutUndo();
+                    Object.DestroyImmediate(row.gameObject);
+                }
+                return;
+            }
+            UiKitArt.Ensure(Tokens);
+            ApplyTitleArtwork(root);
+        }
+
+        static void ApplyTitleArtwork(RectTransform root)
+        {
+            var t = Tokens;
+            var frame = (RectTransform)root.Find("Content");
+            var artwork = AssetDatabase.LoadAssetAtPath<Sprite>(ScreenFolder + "/TitleV3Artwork.png");
+            if (artwork == null)
+                throw new System.InvalidOperationException("The V3 title artwork must be imported as a sprite.");
+            Img(Fill(frame, "V3Artwork"), artwork, Color.white).transform.SetAsFirstSibling();
+            root.Find("SunOnPaper").gameObject.SetActive(false);
+            root.Find("Grid").gameObject.SetActive(false);
+            root.Find("Paper").GetComponent<Image>().color = new Color32(251, 251, 252, 255);
+            var sky = (RectTransform)root.Find("SkyWindow");
+            sky.anchorMin = sky.anchorMax = new Vector2(0.5f, 0.5f);
+            sky.pivot = new Vector2(0.5f, 1f);
+            sky.sizeDelta = new Vector2(1920, SillY);
+            sky.anchoredPosition = new Vector2(0, 540);
+
+            var title = frame.Find("Lockup/Title").GetComponent<TMP_Text>();
+            UiKitAssets.Place(title.rectTransform, 196, 548, 696, 146);
+            title.text = "seal the deal";
+            title.fontSize = 92;
+            title.fontStyle = FontStyles.Normal;
+            title.characterSpacing = 6;
+            var terms = frame.Find("Lockup/Terms").GetComponent<TMP_Text>();
+            UiKitAssets.Place(terms.rectTransform, 196, 687, 680, 45);
+            terms.fontSize = 19;
+            var version = frame.Find("Lockup/Version").GetComponent<TMP_Text>();
+            UiKitAssets.Place(version.rectTransform, 1490, 30, 318, 38);
+            version.fontSize = 13;
+            UiKitAssets.Place((RectTransform)frame.Find("Mode/ModeText"), 184, 778, 960, 46);
+            Box(frame.Find("Mode"), "ConnectionMark", 160, 790, 10, 10, t.Cobalt, UiKitArt.Outline1);
+            UiKitAssets.Place((RectTransform)frame.Find("Status/StatusLine"), 160, 826, 640, 52);
+
+            var menu = frame.Find("Menu");
+            var caption = Label(menu, "MainMenu", 1388, 626, 420, 40, "[ main menu ]", t.Caption, t.Ink3);
+            caption.fontSize = 13;
+            var column = (RectTransform)menu.Find("Column");
+            UiKitAssets.Place(column, 1388, 668, 420, 278);
+            column.GetComponent<VerticalLayoutGroup>().spacing = 18;
+
+            UiKitComponents.KeyHint = AssetDatabase.LoadAssetAtPath<GameObject>(KitFolder + "/KeyHint.prefab");
+            Hint(frame, "SelectHint", 112, 983, "select", "UI/Submit");
+            Hint(frame, "BackHint", 274, 983, "back", "UI/Cancel");
+            Hint(frame, "MoveHint", 424, 983, "move", keyboard: "↑↓", padControl: "leftStick");
         }
 
         /// <summary>
@@ -312,73 +400,34 @@ namespace CloseTheDeal.Editor.UI
             sky.offsetMax = Vector2.zero;
             sky.gameObject.AddComponent<CanvasGroup>();
 
-            slot = Fill(sky, "BackdropSlot");
+            // One window, no bars (Adam, 2026-11-15): the live sky inside a rounded pane (radius 20) inset from the
+            // edges, as in mockup v3 and ref 02's sky windows. A soft shadow under it and a light glass rim on it give
+            // the depth the frame bars used to; wider screens widen the window, so they show more sky.
+            RectTransform shade = Fill(sky, "WindowShadow");
+            shade.offsetMin = new Vector2(WindowInset - 24f, WindowBottom - 24f - 8f);
+            shade.offsetMax = new Vector2(-WindowInset + 24f, -WindowTop + 24f - 8f);
+            Img(shade, UiKitArt.Shadow20, UiTokens.WithAlpha(t.Navy, 0.14f));
+
+            RectTransform window = Fill(sky, "Window");
+            window.offsetMin = new Vector2(WindowInset, WindowBottom);
+            window.offsetMax = new Vector2(-WindowInset, -WindowTop);
+            Img(window, UiKitArt.Round20, Color.white);
+            window.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+
+            slot = Fill(window, "BackdropSlot");
             // Only one sky: lane 8's live one (its own traced clouds and the towers). This flat gradient shows only
             // where the live sky can't run (no sky material in the scene).
-            RectTransform fallback = Fill(sky, "StaticSky");
+            RectTransform fallback = Fill(window, "StaticSky");
             Img(fallback, UiKitArt.Sky, Color.white);
             staticSky = fallback.gameObject;
 
-            RectTransform frame = Node(sky, "Frame");
-            Stretch(frame);
-            RectTransform transom = Node(frame, "Transom");
-            transom.anchorMin = new Vector2(0f, 1f);
-            transom.anchorMax = new Vector2(1f, 1f);
-            transom.pivot = new Vector2(0.5f, 1f);
-            transom.sizeDelta = new Vector2(0f, BarFace);
-            transom.anchoredPosition = new Vector2(0f, -302f); // centred where the 40 px bar was
-            Img(transom, UiKitArt.White, t.Paper);
-            RectTransform transomShade = Node(transom, "Shadow");
-            transomShade.anchorMin = new Vector2(0f, 0f);
-            transomShade.anchorMax = new Vector2(1f, 0f);
-            transomShade.pivot = new Vector2(0.5f, 1f);
-            transomShade.sizeDelta = new Vector2(0f, BarShade);
-            Img(transomShade, UiKitArt.White, t.Silver);
-
-            RectTransform mullions = DesignFrame(frame, "Mullions");
-            mullions.anchorMin = new Vector2(0.5f, 0f);
-            mullions.anchorMax = new Vector2(0.5f, 1f);
-            mullions.sizeDelta = new Vector2(1920f, 0f);
-            Post(mullions, "MullionLeft", 640f);
-            Post(mullions, "MullionRight", 1280f);
-
-            RectTransform sill = Node(frame, "Sill");
-            sill.anchorMin = new Vector2(0f, 0f);
-            sill.anchorMax = new Vector2(1f, 0f);
-            sill.pivot = new Vector2(0.5f, 1f);
-            sill.sizeDelta = new Vector2(0f, 12f);
-            Img(sill, UiKitArt.White, t.Silver);
-            RectTransform edge = Node(sill, "Edge");
-            edge.anchorMin = new Vector2(0f, 0f);
-            edge.anchorMax = new Vector2(1f, 0f);
-            edge.pivot = new Vector2(0.5f, 1f);
-            edge.sizeDelta = new Vector2(0f, 1f);
-            Img(edge, UiKitArt.White, t.Black);
+            // The glass: a bright inner rim and a hairline outside it, drawn over the sky, not masked by it.
+            RectTransform rim = Fill(sky, "GlassRim");
+            rim.offsetMin = window.offsetMin;
+            rim.offsetMax = window.offsetMax;
+            Img(rim, UiKitArt.Ring20, UiTokens.WithAlpha(Color.white, 0.85f));
+            Img(Fill(rim, "Hairline", -1f), UiKitArt.Ring20, t.Hair);
             return sky;
-        }
-
-        /// <summary>A mullion with depth: a paper face, a hairline on its lit edge and a silver reveal on its shadow side.</summary>
-        static void Post(RectTransform parent, string name, float centreX)
-        {
-            RectTransform post = Node(parent, name);
-            post.anchorMin = new Vector2(0f, 0f);
-            post.anchorMax = new Vector2(0f, 1f);
-            post.pivot = new Vector2(0.5f, 0.5f);
-            post.sizeDelta = new Vector2(BarFace, 0f);
-            post.anchoredPosition = new Vector2(centreX, 0f);
-            Img(post, UiKitArt.White, Tokens.Paper);
-            RectTransform reveal = Node(post, "Reveal");
-            reveal.anchorMin = new Vector2(1f, 0f);
-            reveal.anchorMax = new Vector2(1f, 1f);
-            reveal.pivot = new Vector2(0f, 0.5f);
-            reveal.sizeDelta = new Vector2(BarShade, 0f);
-            Img(reveal, UiKitArt.White, Tokens.Silver);
-            RectTransform lit = Node(post, "LitEdge");
-            lit.anchorMin = new Vector2(0f, 0f);
-            lit.anchorMax = new Vector2(0f, 1f);
-            lit.pivot = new Vector2(1f, 0.5f);
-            lit.sizeDelta = new Vector2(1f, 0f);
-            Img(lit, UiKitArt.White, Tokens.Hair);
         }
 
         // ---- Confirm dialog ---------------------------------------------------------------------------------
@@ -392,7 +441,7 @@ namespace CloseTheDeal.Editor.UI
             var reveal = new List<CanvasGroup>();
 
             var pane = Place<RectTransform>(UiKitComponents.GlassPane, frame, "Pane", 1168f, 752f);
-            pane.sizeDelta = new Vector2(640f, 204f);
+            pane.sizeDelta = new Vector2(640f, 258f);
 
             RectTransform words = RevealLine(frame, "Words");
             reveal.Add(words.GetComponent<CanvasGroup>());
@@ -402,9 +451,9 @@ namespace CloseTheDeal.Editor.UI
 
             RectTransform actions = RevealLine(frame, "Actions");
             reveal.Add(actions.GetComponent<CanvasGroup>());
-            RectTransform hint = (RectTransform)Hint(actions, "EscHint", 1200f, 876f, "Stay", "UI/Cancel").transform;
-            var confirm = Place<UiButton>(UiKitComponents.Secondary, actions, "Confirm", 1328f, 868f);
-            ((RectTransform)confirm.transform).sizeDelta = new Vector2(188f, t.SecondaryHeight);
+            RectTransform hint = (RectTransform)Hint(actions, "EscHint", 1200f, 948f, "Stay", "UI/Cancel").transform;
+            var confirm = Place<UiButton>(UiKitComponents.Secondary, actions, "Confirm", 1250f, 868f);
+            ((RectTransform)confirm.transform).sizeDelta = new Vector2(266f, t.SecondaryHeight);
             SetLabel(confirm, "Quit to desktop");
             var stay = Place<UiButton>(UiKitComponents.Primary, actions, "Stay", 1588f, 868f);
             ((RectTransform)stay.transform).sizeDelta = new Vector2(188f, t.SecondaryHeight);

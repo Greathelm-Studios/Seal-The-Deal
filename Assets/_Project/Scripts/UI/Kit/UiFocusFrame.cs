@@ -105,6 +105,9 @@ namespace CloseTheDeal.UI
 
         void SetTarget(RectTransform target)
         {
+            // Adjacent dialog actions share a row. Keep the cue out of their labels during a focus change.
+            if (_target != target && target.GetComponentInParent<UiConfirmDialog>() != null)
+                _placed = false;
             _target = target;
             UiMotion.Wake(this);
         }

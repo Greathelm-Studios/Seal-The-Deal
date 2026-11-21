@@ -101,6 +101,8 @@ namespace CloseTheDeal.MatchMode
         bool _awake;
         RectTransform _canvasRect;
         Camera _uiCamera;
+        MatchPrompt _visiblePrompt;
+        UiKeyHint _promptHint;
         bool _wired;
 
         // ---- Lifecycle ---------------------------------------------------------------------------
@@ -113,6 +115,7 @@ namespace CloseTheDeal.MatchMode
             if (!_wired)
                 return;
 
+            _promptHint = _prompt.GetComponent<UiKeyHint>();
             _bannerHome = _banner.anchoredPosition;
             _noticeHome = _notice.anchoredPosition;
             _ladderRow.gameObject.SetActive(false);
@@ -146,6 +149,7 @@ namespace CloseTheDeal.MatchMode
             FirmMember.OnLocalChanged += RefreshAll;
             FirmMember.OnNotice += OnNotice;
             FirmMember.OnPromptChanged += ShowPrompt;
+            UiGlyphs.Changed += RefreshPromptKey;
 
             if (_match.IsLive)
                 RefreshAll();
@@ -174,6 +178,7 @@ namespace CloseTheDeal.MatchMode
             FirmMember.OnLocalChanged -= RefreshAll;
             FirmMember.OnNotice -= OnNotice;
             FirmMember.OnPromptChanged -= ShowPrompt;
+            UiGlyphs.Changed -= RefreshPromptKey;
             UiMotion.Sleep(this);
             _awake = false;
         }
@@ -471,17 +476,29 @@ namespace CloseTheDeal.MatchMode
 
         void ShowPrompt(MatchPrompt prompt)
         {
+            _visiblePrompt = prompt;
             _prompt.SetActive(prompt != MatchPrompt.None);
-            if (prompt == MatchPrompt.PickUpBriefcase)
-            {
-                _promptKey.text = FirmMember.InteractKeyLabel;
-                _promptLabel.text = "Pick up the briefcase";
-            }
-            else if (prompt == MatchPrompt.DropBriefcase)
-            {
-                _promptKey.text = FirmMember.DropKeyLabel;
-                _promptLabel.text = "Drop the briefcase";
-            }
+            if (prompt == MatchPrompt.None)
+                return;
+
+            _promptLabel.text = prompt == MatchPrompt.PickUpBriefcase ? "Pick up the briefcase" : "Drop the briefcase";
+            RefreshPromptKey();
+        }
+
+        void RefreshPromptKey()
+        {
+            if (_visiblePrompt == MatchPrompt.None)
+                return;
+
+            bool pickup = _visiblePrompt == MatchPrompt.PickUpBriefcase;
+            string path = UiGlyphs.OnPad
+                ? (pickup ? FirmMember.InteractPad : FirmMember.DropPad)
+                : (pickup ? FirmMember.InteractKey : FirmMember.DropKey);
+            string label = UiGlyphs.Name(path, UiGlyphs.Current);
+            if (_promptHint != null)
+                _promptHint.SetKeyText(label);
+            else
+                _promptKey.text = label;
         }
 
         // ---- Marker (local, per frame while shown) --------------------------------------------------
