@@ -31,12 +31,13 @@ namespace CloseTheDeal.Voice
 
         /// <summary>RNNoise expects samples as large as a 16-bit recording's; ours are -1 to 1.</summary>
         const float Scale = 32768f;
+        const float InvScale = 1f / Scale;
 
         const string Library = "rnnoise";
 
-        [DllImport(Library)] static extern IntPtr rnnoise_create(IntPtr model);
-        [DllImport(Library)] static extern void rnnoise_destroy(IntPtr state);
-        [DllImport(Library)] static extern float rnnoise_process_frame(IntPtr state, [Out] float[] output, [In] float[] input);
+        [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] static extern IntPtr rnnoise_create(IntPtr model);
+        [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] static extern void rnnoise_destroy(IntPtr state);
+        [DllImport(Library, CallingConvention = CallingConvention.Cdecl)] static extern float rnnoise_process_frame(IntPtr state, [Out] float[] output, [In] float[] input);
 
         readonly float[] _in = new float[FrameSamples];
         readonly float[] _out = new float[FrameSamples];
@@ -75,9 +76,11 @@ namespace CloseTheDeal.Voice
                 _in[i] = samples[offset + i] * Scale;
             float speech = rnnoise_process_frame(_state, _out, _in);
             for (int i = 0; i < FrameSamples; i++)
-                samples[offset + i] = _out[i] / Scale;
+                samples[offset + i] = _out[i] * InvScale;
             return speech;
         }
+
+        ~VoiceCleaner() => Dispose();
 
         public void Dispose()
         {
@@ -85,6 +88,7 @@ namespace CloseTheDeal.Voice
                 return;
             rnnoise_destroy(_state);
             _state = IntPtr.Zero;
+            GC.SuppressFinalize(this);
         }
     }
 }

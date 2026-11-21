@@ -140,11 +140,13 @@ namespace CloseTheDeal.Player
             }
         }
 
-        void Awake()
+        void EnsureInitialized()
         {
+            if (_own != null || _actions == null)
+                return;
+
             // The asset on the prefab is one object shared by every player in the game. Each
-            // reader takes its own copy: otherwise a remote player's body spawning (whose reader
-            // is switched off) would disable the actions the local player is reading.
+            // active reader takes its own copy lazily so remote players clone nothing.
             _own = Instantiate(_actions);
             ApplyBindingOverrides();
             _map = _own.FindActionMap("Player", true);
@@ -168,13 +170,18 @@ namespace CloseTheDeal.Player
 
         void OnEnable()
         {
+            EnsureInitialized();
+            if (_map == null)
+                return;
+
             _map.Enable();
             InputPrefs.Changed += ApplyBindingOverrides;
         }
 
         void OnDisable()
         {
-            _map.Disable();
+            if (_map != null)
+                _map.Disable();
             InputPrefs.Changed -= ApplyBindingOverrides;
             ClearLatches();
         }
@@ -256,6 +263,10 @@ namespace CloseTheDeal.Player
         /// </summary>
         public string BindingText(string actionName, bool gamepad)
         {
+            EnsureInitialized();
+            if (_map == null)
+                return string.Empty;
+
             InputAction action = _map.FindAction(actionName);
             if (action == null)
                 return string.Empty;

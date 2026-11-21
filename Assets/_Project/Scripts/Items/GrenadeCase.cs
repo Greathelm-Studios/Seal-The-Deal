@@ -56,6 +56,7 @@ namespace CloseTheDeal.Items
         float _flashLeft;
         Vector3 _flashPoint;
         float _flashSize;
+        bool _ticking;
 
         /// <summary>Every machine. The case was armed.</summary>
         public event Action<GrenadeCase> Armed;
@@ -93,10 +94,23 @@ namespace CloseTheDeal.Items
             ItemAudio.Configure(_audio, Item.Sounds);
         }
 
+        public override void OnStopNetwork()
+        {
+            base.OnStopNetwork();
+            _nextBeepIn = 0f;
+            _lightOffIn = 0f;
+            _flashLeft = 0f;
+            if (_flash != null)
+                _flash.gameObject.SetActive(false);
+            ShowLight(false);
+            enabled = false;
+        }
+
         /// <summary>Out of play before it went off (it fell out of the building): it is disarmed, not left to go off at its home.</summary>
         public override void ServerOnSentAway(bool usedUp)
         {
             _detonateTick.Value = 0;
+            SetServerTick(false);
         }
 
         public override void OnStartServer()
@@ -106,13 +120,25 @@ namespace CloseTheDeal.Items
             _nextBeepIn = 0f;
             _lightOffIn = 0f;
             _flashLeft = 0f;
-            TimeManager.OnTick += ServerTick;
+            _ticking = false;
         }
 
         public override void OnStopServer()
         {
             base.OnStopServer();
-            TimeManager.OnTick -= ServerTick;
+            SetServerTick(false);
+        }
+
+        void SetServerTick(bool active)
+        {
+            if (_ticking == active || TimeManager == null)
+                return;
+
+            _ticking = active;
+            if (active)
+                TimeManager.OnTick += ServerTick;
+            else
+                TimeManager.OnTick -= ServerTick;
         }
 
         // ---- Host ----------------------------------------------------------------------------
@@ -123,17 +149,25 @@ namespace CloseTheDeal.Items
                 return;
 
             _detonateTick.Value = TimeManager.Tick + TimeManager.TimeToTicks(_profile.FuseSeconds, TickRounding.RoundUp);
+            SetServerTick(true);
         }
 
         public override void ServerOnReturned()
         {
             _detonateTick.Value = 0;
+            SetServerTick(false);
         }
 
         void ServerTick()
         {
             uint at = _detonateTick.Value;
-            if (at != 0 && TimeManager.Tick >= at)
+            if (at == 0)
+            {
+                SetServerTick(false);
+                return;
+            }
+
+            if (TimeManager.Tick >= at)
                 ServerExplode();
         }
 
@@ -142,6 +176,7 @@ namespace CloseTheDeal.Items
             // Wherever the case is right now: on the floor, in the air, or in someone's hands.
             Vector3 point = Item.Body.worldCenterOfMass;
             _detonateTick.Value = 0;
+            SetServerTick(false);
 
             if (_profile.Blast == null)
             {
@@ -150,7 +185,7 @@ namespace CloseTheDeal.Items
                 return;
             }
 
-            Knockback.Explode(point, _profile.Blast, ItemLayers.PlayerMask, ItemLayers.PropMask, KnockBuffer);
+            Knockback.Explode(point, _profile.Blast, ItemLayers.PlayerMask, ItemLayers.PropMask, KnockBuffer, Item.LastHolderClientId);
             ItemBlast.Damage(point, _profile.Blast.Radius, _profile.Damage, _profile.EdgeDamage, Item.LastHolderClientId);
             ObserversExploded(point, _profile.Blast.Radius);
             Item.ServerUseUp();

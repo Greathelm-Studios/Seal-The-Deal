@@ -24,14 +24,44 @@ namespace CloseTheDeal.Items
         /// <summary>Everything a look can land on: the building and loose things, never players.</summary>
         public static int LookMask { get { Resolve(); return ~_playerMask; } }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            _resolved = false;
+            _playerLayer = 0;
+            _playerMask = 0;
+            _propMask = 0;
+        }
+
         static void Resolve()
         {
             if (_resolved)
                 return;
 
-            _playerLayer = LayerMask.NameToLayer(PlayerLayerName);
-            _playerMask = 1 << _playerLayer;
-            _propMask = 1 << LayerMask.NameToLayer(PropLayerName);
+            int playerLayer = LayerMask.NameToLayer(PlayerLayerName);
+            if (playerLayer >= 0)
+            {
+                _playerLayer = playerLayer;
+                _playerMask = 1 << playerLayer;
+            }
+            else
+            {
+                Debug.LogWarning($"[Items] Physics layer \"{PlayerLayerName}\" is missing.");
+                _playerLayer = 0;
+                _playerMask = 0;
+            }
+
+            int propLayer = LayerMask.NameToLayer(PropLayerName);
+            if (propLayer >= 0)
+            {
+                _propMask = 1 << propLayer;
+            }
+            else
+            {
+                Debug.LogWarning($"[Items] Physics layer \"{PropLayerName}\" is missing.");
+                _propMask = 0;
+            }
+
             _resolved = true;
         }
     }

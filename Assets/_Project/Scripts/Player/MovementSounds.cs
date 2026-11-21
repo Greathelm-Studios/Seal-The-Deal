@@ -28,9 +28,7 @@ namespace CloseTheDeal.Player
             _set = set;
             _oneShots = NewSource("Movement one-shots", false);
             _slideLoop = NewSource("Movement slide loop", true);
-            _windLoop = NewSource("Movement wind", true);
             _slideLoop.clip = set.SlideLoop;
-            _windLoop.clip = set.WindLoop;
             _motor.Jumped += OnJumped;
             _motor.Landed += OnLanded;
             _motor.SlideChanged += OnSlideChanged;
@@ -149,18 +147,27 @@ namespace CloseTheDeal.Player
 
         void Wind(in PlayerAnimState state)
         {
-            if (_windLoop.clip == null)
-                return;
-
-            float level = IsLocal ? Mathf.InverseLerp(_set.WindFromSpeed, _set.WindFullSpeed, state.PlanarSpeed) : 0f;
-            if (level <= 0f)
+            if (!IsLocal || _set.WindLoop == null)
             {
-                if (_windLoop.isPlaying)
+                if (_windLoop != null && _windLoop.isPlaying)
                     _windLoop.Stop();
                 return;
             }
 
-            _windLoop.spatialBlend = 0f;
+            float level = Mathf.InverseLerp(_set.WindFromSpeed, _set.WindFullSpeed, state.PlanarSpeed);
+            if (level <= 0f)
+            {
+                if (_windLoop != null && _windLoop.isPlaying)
+                    _windLoop.Stop();
+                return;
+            }
+
+            if (_windLoop == null)
+            {
+                _windLoop = NewSource("Movement wind", true);
+                _windLoop.clip = _set.WindLoop;
+                _windLoop.spatialBlend = 0f;
+            }
             _windLoop.volume = _set.Volume * level;
             if (!_windLoop.isPlaying)
                 _windLoop.Play();

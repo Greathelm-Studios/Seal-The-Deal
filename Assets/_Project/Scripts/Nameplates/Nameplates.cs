@@ -196,9 +196,11 @@ namespace CloseTheDeal.Nameplates
             tag.Chip = MakeChip(member.name, out tag.Name);
             tag.ChipGroup = tag.Chip.gameObject.AddComponent<CanvasGroup>();
             tag.ChipGroup.alpha = 0f;
+            tag.Chip.gameObject.SetActive(false);
             tag.Marker = MakeMarker();
             tag.MarkerGroup = tag.Marker.gameObject.AddComponent<CanvasGroup>();
             tag.MarkerGroup.alpha = 0f;
+            tag.Marker.gameObject.SetActive(false);
             return tag;
         }
 
@@ -298,9 +300,10 @@ namespace CloseTheDeal.Nameplates
         /// <summary>Shows a teammate's name, or a raider's marker, at the spot above their head.</summary>
         void Place(Tag tag, FirmMember me, Camera cam, MatchDirector runningMatch)
         {
-            bool onScreen = TryPlace(tag, cam, out Vector2 at) && Alive(tag);
             bool team = tag.Member.Firm == me.Firm;
             bool marked = !team && runningMatch != null && RaiderMarked(tag, me, runningMatch);
+            Vector2 at = default;
+            bool onScreen = (team || marked) && Alive(tag) && TryPlace(tag, cam, out at);
             Fade(tag.ChipGroup, onScreen && team);
             Fade(tag.MarkerGroup, onScreen && marked);
             if (onScreen && team)
@@ -340,11 +343,17 @@ namespace CloseTheDeal.Nameplates
 
         void Fade(CanvasGroup group, bool show)
         {
+            GameObject go = group.gameObject;
+            if (show && !go.activeSelf)
+                go.SetActive(true);
             float target = show ? 1f : 0f;
-            if (Mathf.Approximately(group.alpha, target))
-                return;
-            float seconds = _tokens != null ? (show ? _tokens.PanelIn : _tokens.PanelOut) : 0.15f;
-            group.alpha = UiMotion.Reduced || seconds <= 0f ? target : Mathf.MoveTowards(group.alpha, target, Time.unscaledDeltaTime / seconds);
+            if (!Mathf.Approximately(group.alpha, target))
+            {
+                float seconds = _tokens != null ? (show ? _tokens.PanelIn : _tokens.PanelOut) : 0.15f;
+                group.alpha = UiMotion.Reduced || seconds <= 0f ? target : Mathf.MoveTowards(group.alpha, target, Time.unscaledDeltaTime / seconds);
+            }
+            if (!show && group.alpha <= 0f && go.activeSelf)
+                go.SetActive(false);
         }
     }
 }

@@ -48,7 +48,7 @@ Presses are latched every frame and kept until the owning system consumes them o
 
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
-| Player body (position, velocity, state, jump timers, lean, crouch, slide, climb target and exit speed, event counters) | **Host.** The owning client predicts its own body. Other clients run each other player a few ticks past that player's last input that has arrived, repeating it (presses left out) for up to a third of a second, then letting go | Host → everyone: the reconcile, about 115 B before FishNet's packing | Every tick, 60/s |
+| Player body (position, velocity, state, jump timers, lean, crouch, slide, climb target and exit speed, event counters) | **Host.** The owning client predicts its own body. Other clients run each other player a few ticks past that player's last input that has arrived, repeating it (presses left out) for up to a third of a second, then letting go | Host → everyone: custom-serialized `MoveReconcile` (`Lean` quantized to `sbyte`, `Crouch` to `byte`, `StateTicksLeft` to `ushort`, packed flags, omitting `Mantle` unless mantling and `PendingKnock` when zero — 14 B payload plus `PredictionRigidbody` on normal ticks) | Every tick, 60/s |
 | Player input (move, yaw, sprint, crouch, jump press and hold, lean side) | Owning client | Client → host, about 19 B | Every tick, 60/s |
 | Animation state (`PlayerAnimState`) | Nobody: every machine works it out each frame from the body state above | Nothing extra | — |
 | Jump, landing, climb, refusal events | Counted on the tick inside the reconcile, raised once per change on every machine | Inside the reconcile | — |
@@ -80,7 +80,7 @@ Quake-lineage acceleration, written for this game:
 
 | State | Enters when | Does | Leaves when |
 |---|---|---|---|
-| Grounded | feet within the ground probe of a floor flatter than 50° | runs or slides as above; follows stairs and ramp tops down (`Step Down Snap`); Space or held hop jumps, or climbs if something climbable is ahead | leaves the floor; jumps; climbs |
+| Grounded | feet within the ground probe of a floor flatter than 58° | runs or slides as above; steps up risers up to `Step Up Height` (0.35 m), adopts walkable ramp slopes on entry, and follows stairs and ramp tops down (`Step Down Snap`); Space or held hop jumps, or climbs if something climbable is ahead | leaves the floor; jumps; climbs |
 | Airborne | left the floor or jumped | air acceleration as above; air gravity rising, heavier fall gravity falling; letting go of Space while rising keeps half the upward speed; a jump still works 0.1 s after walking off an edge | lands moving downward; grabs a ledge |
 | Mantling | Space at, or a jump into, something whose top is between the min and max ledge height with room to stand on or over it | rises to the top, then moves across at least as fast as you came in; gravity ignored | stands on a deep top (Grounded) or clears a thin one (Airborne), keeping 90 % of the entry speed; times out at 2× the climb time |
 | Knocked | the host applies a knockback (also mid-climb) | no steering; extra gravity; skids to a stop on the floor | the control-loss time passes |
@@ -97,7 +97,7 @@ Until there is an animation, the crouch squashes the body toward the feet (`Squa
 
 ## UI contract: what a HUD reads from movement
 
-Read from `PlayerMotor.Local` (null until the local player has spawned; subscribe to `PlayerMotor.LocalChanged` once it exists, see below) and from any other `PlayerMotor` for other players. **Nothing here is polled per frame by design**: take the value when an event fires, or read `AnimState` once in `Update` only for a continuously moving visual (a speed bar). Nothing here is decided by the UI: it shows host-confirmed state and sends no requests of its own.
+Read from `PlayerMotor.Local` (null until the local player has spawned; subscribe to `PlayerMotor.LocalChanged` once it exists, see below), `PlayerMotor.All` (all currently enabled player bodies), and from any other `PlayerMotor` for other players. **Nothing here is polled per frame by design**: take the value when an event fires, or read `AnimState` once in `Update` only for a continuously moving visual (a speed bar). Nothing here is decided by the UI: it shows host-confirmed state and sends no requests of its own.
 
 | Thing | Type | Who owns it | Where it comes from | When it changes |
 |---|---|---|---|---|

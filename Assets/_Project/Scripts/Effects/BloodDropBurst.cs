@@ -12,6 +12,7 @@
 using CloseTheDeal.Player;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Effects
 {
@@ -56,12 +57,24 @@ namespace CloseTheDeal.Effects
         /// <summary>Drops that would start closer to this machine's eye than this, metres, are left out. WHY: in the body view the eye is in the struck body, and a 5 cm drop 20 cm from the lens fills a quarter of the screen.</summary>
         const float NearEye = 0.5f;
 
+        /// <summary>Beyond this distance from the camera, in metres, drop bursts are skipped.</summary>
+        const float MaxDropDistance = 60f;
+
         static BloodDropBurst instance;
+        static Camera _mainCamera;
         static readonly int CutColorId = Shader.PropertyToID("_CutColor");
 
         ParticleSystem drops;
         Material material;
         BloodProfile profile;
+        bool _ownsProfile;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            instance = null;
+            _mainCamera = null;
+        }
 
         /// <summary>Makes the system when a Play Mode or build session has loaded its first scene.</summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -93,16 +106,39 @@ namespace CloseTheDeal.Effects
                 // Defaults in code: the field initialisers in BloodProfile.
                 profile = ScriptableObject.CreateInstance<BloodProfile>();
                 profile.hideFlags = HideFlags.HideAndDontSave;
+                _ownsProfile = true;
+            }
+            else
+            {
+                _ownsProfile = false;
             }
 
             material = LoadMaterial();
             if (material != null)
+            {
+                material.SetColor(CutColorId, profile.CutColor);
                 drops = BuildSystem();
+            }
         }
 
-        void OnEnable() => HitFeed.Struck += OnStruck;
+        void OnEnable()
+        {
+            HitFeed.Struck += OnStruck;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
+        }
 
-        void OnDisable() => HitFeed.Struck -= OnStruck;
+        void OnDisable()
+        {
+            HitFeed.Struck -= OnStruck;
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        }
+
+        void OnSceneUnloaded(Scene scene)
+        {
+            _mainCamera = null;
+            if (drops != null)
+                drops.Clear();
+        }
 
         void OnDestroy()
         {
@@ -111,6 +147,12 @@ namespace CloseTheDeal.Effects
                 Destroy(material);
                 material = null;
             }
+            if (_ownsProfile && profile != null)
+            {
+                Destroy(profile);
+                profile = null;
+            }
+            _ownsProfile = false;
             if (instance == this)
                 instance = null;
         }
@@ -185,6 +227,15 @@ namespace CloseTheDeal.Effects
             if (drops == null)
                 return;
 
+            int maxParticles = drops.main.maxParticles;
+            int remaining = maxParticles - drops.particleCount;
+            if (remaining <= 0)
+                return;
+
+            bool hasEye = TryCameraPosition(out Vector3 eyePos);
+            if (hasEye && (hit.Point - eyePos).sqrMagnitude > MaxDropDistance * MaxDropDistance)
+                return;
+
             BloodProfile p = profile;
             bool melee = hit.Type == HitType.Melee;
             // A harder hit throws more; the square root keeps a 300 N·s hit from throwing fifteen times a pistol's.
@@ -192,24 +243,24 @@ namespace CloseTheDeal.Effects
             Vector3 dir = hit.Direction.sqrMagnitude > 1e-4f ? hit.Direction.normalized : (victim != null ? victim.forward : Vector3.forward);
             float cone = Mathf.Min(p.DropSpread * (melee ? 2f : 1f), 85f);
 
-            material.SetColor(CutColorId, p.CutColor);
             var drop = new ParticleSystem.EmitParams { startColor = p.BloodColor };
 
             int fromWound = Mathf.Min(Mathf.RoundToInt(p.DropsFromWound * strength), p.MaxDropsPerHit);
-            for (int i = 0; i < fromWound; i++)
+            for (int i = 0; i < fromWound && remaining > 0; i++)
             {
                 // Most fly on the way the hit was going; a share sprays back at the attacker, slower and wider.
                 bool back = Random.value < p.BackSpray;
                 Vector3 way = back ? InCone(-dir, Mathf.Min(cone * 1.6f, 85f)) : InCone(dir, cone);
                 float speed = p.DropSpeed * Random.Range(0.4f, 1f) * (back ? 0.5f : 1f);
-                Emit(ref drop, hit.Point, way * speed, p);
+                if (Emit(ref drop, hit.Point, way * speed, p, hasEye, eyePos))
+                    remaining--;
             }
 
-            if (victim == null)
+            if (victim == null || remaining <= 0)
                 return;
 
             int fromBody = Mathf.Min(Mathf.RoundToInt(p.DropsFromBody * strength), p.MaxDropsPerHit - fromWound);
-            for (int i = 0; i < fromBody; i++)
+            for (int i = 0; i < fromBody && remaining > 0; i++)
             {
                 // Shaken off the rest of the body: outward from its centre line, pushed a little
                 // the way the hit went and a little up, at a fraction of the wound's speed.
@@ -217,21 +268,42 @@ namespace CloseTheDeal.Effects
                 var outward = new Vector3(ring.x, 0f, ring.y);
                 Vector3 from = victim.position + Vector3.up * Random.Range(BodyLow, BodyHigh) + outward * BodyRadius;
                 Vector3 way = (outward + dir * 0.6f + Vector3.up * 0.5f).normalized;
-                Emit(ref drop, from, way * (p.DropSpeed * Random.Range(0.2f, 0.5f)), p);
+                if (Emit(ref drop, from, way * (p.DropSpeed * Random.Range(0.2f, 0.5f)), p, hasEye, eyePos))
+                    remaining--;
             }
         }
 
-        void Emit(ref ParticleSystem.EmitParams drop, Vector3 position, Vector3 velocity, BloodProfile p)
+        static bool TryCameraPosition(out Vector3 position)
         {
-            PlayerCamera eye = PlayerCamera.Instance;
-            if (eye != null && (eye.transform.position - position).sqrMagnitude < NearEye * NearEye)
-                return;
+            if (PlayerCamera.Instance != null)
+            {
+                position = PlayerCamera.Instance.transform.position;
+                return true;
+            }
+
+            if (_mainCamera == null)
+                _mainCamera = Camera.main;
+            if (_mainCamera != null)
+            {
+                position = _mainCamera.transform.position;
+                return true;
+            }
+
+            position = Vector3.zero;
+            return false;
+        }
+
+        bool Emit(ref ParticleSystem.EmitParams drop, Vector3 position, Vector3 velocity, BloodProfile p, bool hasEye, Vector3 eyePos)
+        {
+            if (hasEye && (eyePos - position).sqrMagnitude < NearEye * NearEye)
+                return false;
 
             drop.position = position;
             drop.velocity = velocity;
             drop.startSize = p.DropSize * Random.Range(0.5f, 1.3f);
             drop.startLifetime = p.DropLife * Random.Range(0.6f, 1.2f);
             drops.Emit(drop, 1);
+            return true;
         }
 
         /// <summary>A random direction within <paramref name="degrees"/> of <paramref name="dir"/>, spread evenly over the cone's circle.</summary>

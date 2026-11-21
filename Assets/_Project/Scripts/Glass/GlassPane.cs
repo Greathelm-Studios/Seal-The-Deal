@@ -26,7 +26,9 @@ namespace CloseTheDeal.Glass
         public static event Action<GlassPane, Vector3> AnyBroken;
 
         static readonly Dictionary<Collider, GlassPane> ByCollider = new();
+        static bool _skipNextAwake;
 
+        bool _initialized;
         Vector3 _localCentre;
         Vector3 _localNormal = Vector3.forward;
         Vector3 _localUp = Vector3.up;
@@ -43,8 +45,35 @@ namespace CloseTheDeal.Glass
         /// <summary>The direction the pane faces (one of its two faces), world space.</summary>
         public Vector3 Normal => transform.TransformDirection(_localNormal);
 
+        internal static void PrepareKnown() => _skipNextAwake = true;
+        internal static void ClearPrepared() => _skipNextAwake = false;
+
+        /// <summary>Initializes a pane added dynamically for a known renderer/collider pair without scanning children.</summary>
+        internal void InitKnown(Renderer renderer, Collider collider)
+        {
+            if (_initialized)
+                return;
+
+            _initialized = true;
+            _renderers = renderer != null ? new[] { renderer } : Array.Empty<Renderer>();
+            _colliders = collider != null ? new[] { collider } : Array.Empty<Collider>();
+            if (collider != null)
+                ByCollider[collider] = this;
+
+            MeasureShape();
+        }
+
         void Awake()
         {
+            if (_skipNextAwake)
+            {
+                _skipNextAwake = false;
+                return;
+            }
+            if (_initialized)
+                return;
+
+            _initialized = true;
             if (_renderers.Length == 0)
                 _renderers = GetComponentsInChildren<Renderer>(true);
             if (_colliders.Length == 0)
@@ -72,6 +101,7 @@ namespace CloseTheDeal.Glass
         static void ResetStatics()
         {
             ByCollider.Clear();
+            _skipNextAwake = false;
         }
 
         /// <summary>The pane a collider belongs to, if any. A lookup, so a shot can ask about every surface it meets without searching the hierarchy.</summary>
@@ -91,9 +121,11 @@ namespace CloseTheDeal.Glass
         /// <summary>Nearest point of the pane to a point, world space. For blast radius checks.</summary>
         public Vector3 ClosestPoint(Vector3 point)
         {
-            return _colliders.Length > 0 && _colliders[0] != null && _colliders[0].enabled
-                ? _colliders[0].ClosestPoint(point)
-                : Centre;
+            if (_colliders.Length == 0 || _colliders[0] == null || !_colliders[0].enabled)
+                return Centre;
+
+            Collider col = _colliders[0];
+            return col is MeshCollider mesh && !mesh.convex ? col.ClosestPointOnBounds(point) : col.ClosestPoint(point);
         }
 
         /// <summary>Hides or restores the pane on this machine. The registry calls this; nothing else should.</summary>

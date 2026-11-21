@@ -84,5 +84,12 @@ namespace CloseTheDeal.Net
             IsReady = false;
             _instance = null;
         }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            IsReady = false;
+            _instance = null;
+        }
     }
 }

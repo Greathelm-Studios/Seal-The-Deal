@@ -117,7 +117,10 @@ namespace CloseTheDeal.UI
             {
                 UiGlyphs.Note(keyboard != null && keyboard.anyKey.wasPressedThisFrame ? keyboard : pad);
                 if (!UsingKeysOrPad)
+                {
                     _switchFrame = Time.frameCount;
+                    UiFocusFrame.WakeUp();
+                }
                 UsingKeysOrPad = true;
                 UiMotion.NoteInput();
             }
@@ -130,7 +133,11 @@ namespace CloseTheDeal.UI
         }
 
         /// <summary>For the capture tool and checks: pretend the player just used a key or pad.</summary>
-        public static void ForceKeysOrPad(bool value) => UsingKeysOrPad = value;
+        public static void ForceKeysOrPad(bool value)
+        {
+            UsingKeysOrPad = value;
+            UiFocusFrame.WakeUp();
+        }
 
         static bool PadActive(Gamepad pad)
         {

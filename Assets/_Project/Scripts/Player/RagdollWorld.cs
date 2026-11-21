@@ -69,14 +69,21 @@ namespace CloseTheDeal.Player
         /// <summary>Seconds between sweeps for proxies no ragdoll is near.</summary>
         const float SweepInterval = 2f;
 
+        struct ProxyEntry
+        {
+            public GameObject Proxy;
+            public Bounds Bounds;
+        }
+
         static Scene _scene;
         static PhysicsScene _physics;
         static readonly List<PlayerRagdoll> Ragdolls = new(8);
-        static readonly Dictionary<Collider, GameObject> Proxies = new(256);
+        static readonly Dictionary<Collider, ProxyEntry> Proxies = new(256);
         static readonly List<Collider> Stale = new(64);
-        static readonly Collider[] Nearby = new Collider[128];
+        static readonly Collider[] Nearby = new Collider[256];
         static int _steppedFrame = -1;
         static float _leftover;
+        static float _nextMatch;
         static float _nextSweep;
 
         /// <summary>How far between the last two steps the current frame falls, 0–1; ragdolls blend their bodies by this so motion does not step at the physics rate.</summary>
@@ -104,8 +111,10 @@ namespace CloseTheDeal.Player
             _physics = default;
             Ragdolls.Clear();
             Proxies.Clear();
+            Stale.Clear();
             _steppedFrame = -1;
             _leftover = 0f;
+            _nextMatch = 0f;
             _nextSweep = 0f;
             Blend = 1f;
         }
@@ -117,12 +126,29 @@ namespace CloseTheDeal.Player
         /// <param name="root">The root object holding its rigidbodies. Must have no parent.</param>
         public static void Add(PlayerRagdoll ragdoll, GameObject root)
         {
-            SceneManager.MoveGameObjectToScene(root, Scene);
-            Ragdolls.Add(ragdoll);
+            Scene target = Scene;
+            if (root.scene != target)
+                SceneManager.MoveGameObjectToScene(root, target);
+            if (!Ragdolls.Contains(ragdoll))
+                Ragdolls.Add(ragdoll);
         }
 
-        /// <summary>Stops stepping a ragdoll. Its root object is the caller's to destroy.</summary>
-        public static void Remove(PlayerRagdoll ragdoll) => Ragdolls.Remove(ragdoll);
+        /// <summary>Stops stepping a ragdoll. Unloads the ragdoll world when no ragdolls remain.</summary>
+        public static void Remove(PlayerRagdoll ragdoll)
+        {
+            if (!Ragdolls.Remove(ragdoll) || Ragdolls.Count > 0)
+                return;
+
+            if (_scene.IsValid() && _scene.isLoaded && SceneManager.sceneCount > 1)
+                SceneManager.UnloadSceneAsync(_scene);
+            _scene = default;
+            _physics = default;
+            Proxies.Clear();
+            Stale.Clear();
+            _leftover = 0f;
+            _nextMatch = 0f;
+            _nextSweep = 0f;
+        }
 
         /// <summary>
         /// Advances the ragdoll world by this frame's time. Safe to call from every ragdoll each
@@ -135,7 +161,11 @@ namespace CloseTheDeal.Player
                 return;
             _steppedFrame = Time.frameCount;
 
-            MatchSwitchedOff();
+            if (Time.time >= _nextMatch)
+            {
+                _nextMatch = Time.time + ProxyRefresh;
+                MatchSwitchedOff();
+            }
             _leftover = Mathf.Min(_leftover + dt, StepTime * MaxStepsPerFrame);
             while (_leftover >= StepTime)
             {
@@ -168,16 +198,28 @@ namespace CloseTheDeal.Player
                 // Anything with a rigidbody moves; a copy would be left standing where it was.
                 if (source.attachedRigidbody != null || Proxies.ContainsKey(source))
                     continue;
-                Proxies.Add(source, MakeProxy(source));
+                Proxies.Add(source, new ProxyEntry { Proxy = MakeProxy(source), Bounds = source.bounds });
             }
         }
 
         /// <summary>Seconds between a ragdoll's calls to <see cref="CopyLevelAround"/>.</summary>
         public static float RefreshTime => ProxyRefresh;
 
-        /// <summary>Makes a still copy of one collider in the ragdoll world, or an empty object for a type that is not copied (so it is not looked at again).</summary>
+        /// <summary>Makes a still copy of one collider in the ragdoll world, or null for an unsupported collider type.</summary>
         static GameObject MakeProxy(Collider source)
         {
+            switch (source)
+            {
+                case BoxCollider _:
+                case SphereCollider _:
+                case CapsuleCollider _:
+                    break;
+                case MeshCollider mesh when mesh.sharedMesh != null:
+                    break;
+                default:
+                    return null;
+            }
+
             var proxy = new GameObject("Proxy");
             SceneManager.MoveGameObjectToScene(proxy, Scene);
             Transform from = source.transform;
@@ -205,8 +247,9 @@ namespace CloseTheDeal.Player
                     break;
                 case MeshCollider mesh:
                     var meshCopy = proxy.AddComponent<MeshCollider>();
-                    meshCopy.sharedMesh = mesh.sharedMesh;
                     meshCopy.convex = mesh.convex;
+                    meshCopy.cookingOptions = mesh.cookingOptions;
+                    meshCopy.sharedMesh = mesh.sharedMesh;
                     break;
             }
             return proxy;
@@ -214,24 +257,18 @@ namespace CloseTheDeal.Player
 
         /// <summary>
         /// Switches each level copy off or on to match the collider it copies.
+        /// Throttled to <see cref="ProxyRefresh"/> instead of checking every proxy every frame.
         /// </summary>
-        /// <remarks>
-        /// WHY every frame and not in the two-second sweep: a broken window pane is not
-        /// destroyed, only has its collider switched off. Its copy here used to stay solid until
-        /// the next sweep, so a body running through the gap could bump an invisible pane for up
-        /// to two seconds. The cost is one check per copy per frame, and there are only the
-        /// copies within reach of a ragdoll. A copy switched off this way comes back if the
-        /// collider does (a door that closes again).
-        /// </remarks>
         static void MatchSwitchedOff()
         {
-            foreach (KeyValuePair<Collider, GameObject> pair in Proxies)
+            foreach (KeyValuePair<Collider, ProxyEntry> pair in Proxies)
             {
-                if (pair.Key == null || pair.Value == null)
+                ProxyEntry entry = pair.Value;
+                if (pair.Key == null || entry.Proxy == null)
                     continue;
                 bool solid = pair.Key.enabled && pair.Key.gameObject.activeInHierarchy;
-                if (pair.Value.activeSelf != solid)
-                    pair.Value.SetActive(solid);
+                if (entry.Proxy.activeSelf != solid)
+                    entry.Proxy.SetActive(solid);
             }
         }
 
@@ -239,15 +276,26 @@ namespace CloseTheDeal.Player
         static void Sweep()
         {
             Stale.Clear();
-            foreach (KeyValuePair<Collider, GameObject> pair in Proxies)
+            foreach (KeyValuePair<Collider, ProxyEntry> pair in Proxies)
             {
-                if (pair.Key == null || !NearAnyRagdoll(pair.Key.bounds))
+                if (pair.Key == null)
+                {
+                    Stale.Add(pair.Key);
+                    continue;
+                }
+
+                Bounds bounds = pair.Key.enabled && pair.Key.gameObject.activeInHierarchy
+                    ? pair.Key.bounds
+                    : pair.Value.Bounds;
+                if (!NearAnyRagdoll(bounds))
                     Stale.Add(pair.Key);
             }
 
             for (int i = 0; i < Stale.Count; i++)
             {
-                Object.Destroy(Proxies[Stale[i]]);
+                GameObject proxy = Proxies[Stale[i]].Proxy;
+                if (proxy != null)
+                    Object.Destroy(proxy);
                 Proxies.Remove(Stale[i]);
             }
         }

@@ -81,6 +81,7 @@ namespace CloseTheDeal.UI
 
         void Awake()
         {
+            UiMotion.EnsureSubCanvas(gameObject);
             _parent = (RectTransform)_frame.parent;
             _bracketHome = new Vector2[_brackets.Length];
             for (int i = 0; i < _brackets.Length; i++)
@@ -129,9 +130,9 @@ namespace CloseTheDeal.UI
 
             _shown.Step(dt);
             _group.alpha = _shown.Value;
-            if (valid)
+            if (valid && (_wantVisible || _shown.Value > 0.001f))
                 Track(dt);
-            return valid || _shown.Running;
+            return visible || _shown.Running;
         }
 
         void Track(float dt)

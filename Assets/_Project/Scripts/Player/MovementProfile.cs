@@ -37,6 +37,9 @@ namespace CloseTheDeal.Player
         public float TurnSpeed = 720f;
 
         [Header("Stairs and slopes")]
+        [Tooltip("Tallest vertical step or stair riser a walking player steps straight up onto without jumping, in metres. 0.35 clears standard stair treads and floor lips smoothly; 0 turns step-up off.")]
+        [Min(0f)] public float StepUpHeight = 0.35f;
+
         [Tooltip("How far the floor may drop away under a walking player before they count as falling, in metres. Keeps feet on the stairs when running down them or over the top of a ramp. At 0.35 a sprint down the spiral stairs (peaking at 10.8 m/s) never left the treads in the lane test. Higher = sticks to bigger drops, but small ledges stop counting as a fall.")]
         public float StepDownSnap = 0.35f;
 

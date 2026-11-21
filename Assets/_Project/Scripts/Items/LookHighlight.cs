@@ -52,10 +52,14 @@ namespace CloseTheDeal.Items
             if (!renderer.HasPropertyBlock())
                 return false;
 
+            Block.Clear();
             renderer.GetPropertyBlock(Block);
             Color drawn = Block.GetColor(BaseColorId);
             Color own = renderer.sharedMaterial.GetColor(BaseColorId);
-            return (drawn - Color.Lerp(own, Color.white, Lift)).maxColorComponent < 0.002f;
+            Color expected = Color.Lerp(own, Color.white, Lift);
+            return Mathf.Abs(drawn.r - expected.r) < 0.002f
+                && Mathf.Abs(drawn.g - expected.g) < 0.002f
+                && Mathf.Abs(drawn.b - expected.b) < 0.002f;
         }
     }
 }

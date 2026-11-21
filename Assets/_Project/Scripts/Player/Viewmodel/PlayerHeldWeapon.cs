@@ -92,6 +92,39 @@ namespace CloseTheDeal.Player
         /// <summary>The furthest the swing may turn the gun away from the aim, in degrees. WHY 12: uncapped, the same strafe reversal turned the muzzle 114 degrees, back toward the player; 50 and then 25 were still too much.</summary>
         const float MaxTurn = 12f;
 
+        /// <summary>
+        /// Wider, slightly tucked-back elbow hint for the F5 body view, in camera space (right, up, forward).
+        /// WHY: the third-person hint (0.45, -1, 0) pulls the forearm across the bottom-right under the crosshair;
+        /// swinging the elbow further out and back keeps the sleeve along the right edge of the frame.
+        /// </summary>
+        static readonly Vector3 BodyViewElbowSide = new(0.85f, -1f, -0.15f);
+
+        /// <summary>
+        /// Asymmetric swing limits in camera space for the F5 body view, metres.
+        /// WHY asymmetric: tight inward (-3 cm) and upward (+3.5 cm) so the arm never crosses the crosshair,
+        /// while generous outward (+10 cm) and downward (-12 cm) so jumps, landings, and strafes still feel goofy and loose.
+        /// </summary>
+        static readonly Vector3 BodyViewSwingMin = new(-0.03f, -0.12f, -0.07f);
+        static readonly Vector3 BodyViewSwingMax = new(0.10f, 0.035f, 0.07f);
+
+        /// <summary>Generous floppy rotation cap in degrees for the F5 body view (double third-person's 12 degrees).</summary>
+        const float BodyViewMaxTurn = 24f;
+
+        /// <summary>Smooth cushion margin in metres around the F5 crosshair keep-out boundaries.</summary>
+        const float BodyViewCushion = 0.04f;
+
+        /// <summary>Central sightline box in camera space (metres) used to deflect an empty left hand out of the lens in F5.</summary>
+        const float LeftArmClearX = 0.24f, LeftArmClearY = 0.22f, LeftArmFrontFade = 0.12f;
+
+        /// <summary>Beyond this distance from the viewer, metres, remote players skip finger curling.</summary>
+        const float RemoteCurlDistance = 12f;
+
+        struct GunCopy
+        {
+            public Transform Gun;
+            public Transform Muzzle;
+        }
+
         PlayerMotor _motor;
         PlayerViewmodel _view;
         ViewmodelProfile _profile;
@@ -108,7 +141,6 @@ namespace CloseTheDeal.Player
         bool _leftArm;
         Transform _leanPivot;
         Transform _gun;
-        Renderer[] _gunRenderers;
         Vector3 _gripPosition;
         Quaternion _gripRotation;
         float _pivotHeight;
@@ -116,20 +148,27 @@ namespace CloseTheDeal.Player
         Vector3 _restOffset;
         /// <summary>The steady part of the gun's turn away from the aimed turn.</summary>
         Quaternion _restTurn = Quaternion.identity;
+        bool _wasBodyView;
+        Vector3 _bodyViewSwing;
+        Quaternion _bodyViewSwingTurn = Quaternion.identity;
+        int _cachedPoseFrame = -1;
+        Vector3 _cachedEye;
+        Quaternion _cachedLook;
+        Vector3 _cachedGunLocal;
+        Quaternion _cachedGunRotation;
+        Vector3 _cachedWrist;
         bool _ready;
         /// <summary>A weapon asked for before <c>Start</c> had found the arm bones; held until then.</summary>
         WeaponHold _waiting;
         bool _hasWaiting;
         /// <summary>
         /// Every weapon copy made so far, by the model it was copied from. A weapon put away is
-        /// switched off and kept, never destroyed. WHY: <see cref="PlayerAnimator"/> lists every
-        /// transform under the hips once, on its first frame, and puts each back to its rest
-        /// pose every frame after; a copy in that list that was destroyed threw on every frame
-        /// (seen in play). Keeping them also means switching back and forth creates nothing.
+        /// switched off and kept, never destroyed, and caches its muzzle transform once.
         /// </summary>
-        readonly Dictionary<Transform, Transform> _copies = new();
-        /// <summary>Whether the weapon is currently drawn as a shadow only, as the owner's own body is.</summary>
-        bool _shadowOnly;
+        readonly Dictionary<Transform, GunCopy> _copies = new();
+
+        /// <summary>The muzzle of the held weapon (child named "Muzzle", or the weapon root if none).</summary>
+        public Transform Muzzle { get; private set; }
 
         /// <summary>
         /// Puts the gun arm on a player's body. Call once, when the player object wakes up.
@@ -225,7 +264,7 @@ namespace CloseTheDeal.Player
             _supportPosition = hold.SupportPosition;
             _supportRotation = hold.SupportRotation;
 
-            if (!_copies.TryGetValue(hold.Model, out _gun) || _gun == null)
+            if (!_copies.TryGetValue(hold.Model, out GunCopy copy) || copy.Gun == null)
             {
                 _gun = Instantiate(hold.Model, _grip.Hand);
                 _gun.name = "HeldWeapon";
@@ -234,28 +273,43 @@ namespace CloseTheDeal.Player
                 _gun.localScale = hold.Model.lossyScale / (boneScale > 0f ? boneScale : 1f);
                 foreach (Transform part in _gun.GetComponentsInChildren<Transform>(true))
                     part.gameObject.layer = gameObject.layer;
-                _copies[hold.Model] = _gun;
+                Renderer[] renderers = _gun.GetComponentsInChildren<Renderer>(true);
+                for (int i = 0; i < renderers.Length; i++)
+                    renderers[i].shadowCastingMode = ShadowCastingMode.On;
+                Transform muzzle = FindMuzzle(_gun);
+                copy = new GunCopy { Gun = _gun, Muzzle = muzzle };
+                _copies[hold.Model] = copy;
+            }
+            else
+            {
+                _gun = copy.Gun;
             }
             _gun.gameObject.SetActive(true);
-            _gunRenderers = _gun.GetComponentsInChildren<Renderer>(true);
-            // The first-person copy casts no shadow (the body casts the player's); this one is the body's.
-            SetShadowOnly(_shadowOnly);
+            Muzzle = copy.Muzzle;
 
             // A different weapon hangs differently; let the steady sag be found again.
             _restOffset = Vector3.zero;
             _restTurn = Quaternion.identity;
+            _bodyViewSwing = Vector3.zero;
+            _bodyViewSwingTurn = Quaternion.identity;
+        }
+
+        static Transform FindMuzzle(Transform model)
+        {
+            if (model == null)
+                return null;
+            foreach (Transform part in model.GetComponentsInChildren<Transform>(true))
+            {
+                if (part.name == "Muzzle")
+                    return part;
+            }
+            return model;
         }
 
         void LateUpdate()
         {
             if (!_ready)
                 return;
-
-            // The owner sees their own body as a shadow only; the weapon in its hand goes with it.
-            // In the body view the owner looks out of this body, so the weapon is drawn too.
-            bool own = PlayerMotor.Local == _motor && !PlayerViewmodel.BodyView;
-            if (own != _shadowOnly)
-                SetShadowOnly(own);
 
             Hold(false);
         }
@@ -273,48 +327,77 @@ namespace CloseTheDeal.Player
             if (!_ready)
                 return;
 
-            // Knocked about or climbing, the arm does what the rest of the body does; the
-            // weapon stays in the hand because it is a child of it.
-            MoveState state = _motor.State;
-            if (state != MoveState.Grounded && state != MoveState.Airborne)
-                return;
-
-            Vector3 up = _leanPivot.up;
-            Vector3 eye = _leanPivot.position + up * (_motor.EyeHeight - _pivotHeight);
-            Vector3 aim = _motor.AimDirection;
-            // Before the first input arrives, and if someone aims straight along the body's up.
-            if (Vector3.Cross(aim, up).sqrMagnitude < 1e-6f)
-                aim = transform.forward;
-            Quaternion look = Quaternion.LookRotation(aim, up);
-
-            // In the body view the owner looks out of this body, and the eye there rides on the
-            // real head, which leans into a run and back out of one. Placing the gun from the
-            // steady point left it sliding down and out of the bottom of that view (seen in
-            // play: gone when backing up). So for the owner in that view the gun is placed from
-            // the eye that is actually looking, and along its look rather than the ticked aim,
-            // which steps at the tick rate and would make the gun judder against a smooth view.
-            PlayerCamera bodyEye = PlayerMotor.Local == _motor && PlayerViewmodel.BodyView ? PlayerCamera.Instance : null;
-            Vector3 rest = _view.RestPosition;
-            if (bodyEye != null)
+            PlayerCamera bodyEye = PlayerMotor.Local == _motor ? PlayerCamera.Instance : null;
+            bool inBodyView = bodyEye != null;
+            if (inBodyView != _wasBodyView)
             {
-                eye = bodyEye.transform.position;
-                look = Quaternion.LookRotation(bodyEye.transform.forward, up);
-                rest += _profile.BodyViewGunShift;
+                _wasBodyView = inBodyView;
+                _restOffset = Vector3.zero;
+                _restTurn = Quaternion.identity;
+                _bodyViewSwing = Vector3.zero;
+                _bodyViewSwingTurn = Quaternion.identity;
+                _cachedPoseFrame = -1;
             }
 
-            Quaternion gunRotation = look * _view.RestTurn;
-            Vector3 gunPosition = eye + look * rest;
+            // Knocked about (or climbing in third person), the arm does what the rest of the body
+            // does; the weapon stays in the hand because it is a child of it. In the F5 body view,
+            // mantling stays guided using the viewmodel's climb drop/tilt so the arm never waves across the lens.
+            MoveState state = _motor.State;
+            if (state != MoveState.Grounded && state != MoveState.Airborne && (!inBodyView || state != MoveState.Mantling))
+                return;
 
-            Vector3 wrist = gunPosition + gunRotation * _gripPosition;
+            Vector3 eye;
+            Quaternion look;
+            Vector3 gunLocal;
+            Quaternion gunRotation;
+            Vector3 wrist;
+            if (afterRagdoll && _cachedPoseFrame == Time.frameCount)
+            {
+                eye = _cachedEye;
+                look = _cachedLook;
+                gunLocal = _cachedGunLocal;
+                gunRotation = _cachedGunRotation;
+                wrist = _cachedWrist;
+            }
+            else
+            {
+                gunLocal = _view.RestPosition;
+                if (inBodyView)
+                {
+                    eye = bodyEye.transform.position;
+                    look = bodyEye.transform.rotation;
+                    gunLocal += _profile.BodyViewGunShift + _view.BodyViewMotionOffset;
+                    gunRotation = look * _view.BodyViewMotionRotation;
+                    Vector3 gunPosition = eye + look * gunLocal;
+                    wrist = gunPosition + gunRotation * _gripPosition;
+                }
+                else
+                {
+                    Vector3 up = _leanPivot.up;
+                    eye = _leanPivot.position + up * (_motor.EyeHeight - _pivotHeight);
+                    Vector3 aim = _motor.AimDirection;
+                    // Before the first input arrives, and if someone aims straight along the body's up.
+                    if (Vector3.Cross(aim, up).sqrMagnitude < 1e-6f)
+                        aim = transform.forward;
+                    look = Quaternion.LookRotation(aim, up);
+                    gunRotation = look * _view.RestTurn;
+                    Vector3 gunPosition = eye + look * gunLocal;
+                    // Hold the gun a little further out than the view does in third person. WHY: the body's real
+                    // shoulder is nearer the gun than the one the view pretends to have, so at the
+                    // view's distance the elbow hung bent.
+                    wrist = gunPosition + gunRotation * _gripPosition + look * (Vector3.forward * _profile.BodyGunForward);
+                }
 
-            // Hold the gun a little further out than the view does. WHY: the body's real
-            // shoulder is nearer the gun than the one the view pretends to have, so at the
-            // view's distance the elbow hung bent.
-            // WHY a fixed distance along the aim and not "until the arm is straight": that was
-            // measured from the ragdoll's shoulder, and the ragdoll's whole torso sways, so the
-            // hand was dragged up to 21 cm about with it (measured) however tight the limits
-            // below were. From the eye, the hand stays put and the elbow takes up the sway.
-            wrist += look * (Vector3.forward * _profile.BodyGunForward);
+                if (!afterRagdoll)
+                {
+                    _cachedEye = eye;
+                    _cachedLook = look;
+                    _cachedGunLocal = gunLocal;
+                    _cachedGunRotation = gunRotation;
+                    _cachedWrist = wrist;
+                    _cachedPoseFrame = Time.frameCount;
+                }
+            }
 
             if (afterRagdoll)
             {
@@ -329,21 +412,68 @@ namespace CloseTheDeal.Player
                 _restOffset = Vector3.Lerp(_restOffset, offset, follow);
                 _restTurn = Quaternion.Slerp(_restTurn, turn, follow);
 
-                float swing = _profile.BodyArmSwing;
-                Vector3 thrownBy = (offset - _restOffset) * swing;
-                thrownBy.x = Mathf.Clamp(thrownBy.x, -MaxSwing.x, MaxSwing.x);
-                thrownBy.y = Mathf.Clamp(thrownBy.y, -MaxSwing.y, MaxSwing.y);
-                thrownBy.z = Mathf.Clamp(thrownBy.z, -MaxSwing.z, MaxSwing.z);
-                wrist += look * thrownBy;
-                (Quaternion.Inverse(_restTurn) * turn).ToAngleAxis(out float thrown, out Vector3 about);
-                // ToAngleAxis gives 0 to 360; past 180 it is the short way round the other side.
-                if (thrown > 180f)
-                    thrown -= 360f;
-                if (!float.IsNaN(about.x) && !float.IsInfinity(about.x))
-                    gunRotation *= Quaternion.AngleAxis(Mathf.Clamp(thrown * swing, -MaxTurn, MaxTurn), about);
+                if (inBodyView)
+                {
+                    float swing = _profile.BodyViewArmSwing;
+                    Vector3 rawPos = (offset - _restOffset) * swing;
+                    Vector3 targetSwing = new Vector3(
+                        SoftClamp(rawPos.x, BodyViewSwingMin.x, BodyViewSwingMax.x),
+                        SoftClamp(rawPos.y, BodyViewSwingMin.y, BodyViewSwingMax.y),
+                        SoftClamp(rawPos.z, BodyViewSwingMin.z, BodyViewSwingMax.z));
+
+                    (Quaternion.Inverse(_restTurn) * turn).ToAngleAxis(out float thrown, out Vector3 about);
+                    if (thrown > 180f)
+                        thrown -= 360f;
+                    Quaternion targetSwingTurn = !float.IsNaN(about.x) && !float.IsInfinity(about.x)
+                        ? Quaternion.AngleAxis(SoftClamp(thrown * swing, -BodyViewMaxTurn, BodyViewMaxTurn), about)
+                        : Quaternion.identity;
+
+                    float smooth = 1f - Mathf.Exp(-Time.deltaTime / Mathf.Max(_profile.BodyViewSwingSmooth, 0.001f));
+                    _bodyViewSwing = Vector3.Lerp(_bodyViewSwing, targetSwing, smooth);
+                    _bodyViewSwingTurn = Quaternion.Slerp(_bodyViewSwingTurn, targetSwingTurn, smooth);
+
+                    gunLocal += _bodyViewSwing;
+                    gunLocal.x = SoftFloor(gunLocal.x, _profile.BodyViewKeepOutRight * (1f - _view.TwoHandBlend), BodyViewCushion);
+                    gunLocal.y = SoftCeiling(gunLocal.y, -_profile.BodyViewKeepOutDown, BodyViewCushion);
+                    gunLocal.z = SoftFloor(gunLocal.z, _profile.BodyViewMinForward, BodyViewCushion);
+
+                    gunRotation *= _bodyViewSwingTurn;
+                    Vector3 gunPosition = eye + look * gunLocal;
+                    wrist = gunPosition + gunRotation * _gripPosition;
+                }
+                else
+                {
+                    float swing = _profile.BodyArmSwing;
+                    Vector3 thrownBy = (offset - _restOffset) * swing;
+                    thrownBy.x = Mathf.Clamp(thrownBy.x, -MaxSwing.x, MaxSwing.x);
+                    thrownBy.y = Mathf.Clamp(thrownBy.y, -MaxSwing.y, MaxSwing.y);
+                    thrownBy.z = Mathf.Clamp(thrownBy.z, -MaxSwing.z, MaxSwing.z);
+                    wrist += look * thrownBy;
+                    (Quaternion.Inverse(_restTurn) * turn).ToAngleAxis(out float thrown, out Vector3 about);
+                    // ToAngleAxis gives 0 to 360; past 180 it is the short way round the other side.
+                    if (thrown > 180f)
+                        thrown -= 360f;
+                    if (!float.IsNaN(about.x) && !float.IsInfinity(about.x))
+                        gunRotation *= Quaternion.AngleAxis(Mathf.Clamp(thrown * swing, -MaxTurn, MaxTurn), about);
+                }
             }
 
-            _grip.Reach(wrist, gunRotation * _gripRotation, look * ElbowSide);
+            bool curlFingers = false;
+            if (afterRagdoll)
+            {
+                if (inBodyView)
+                {
+                    curlFingers = true;
+                }
+                else
+                {
+                    PlayerCamera cam = PlayerCamera.Instance;
+                    curlFingers = cam == null || (transform.position - cam.transform.position).sqrMagnitude <= RemoteCurlDistance * RemoteCurlDistance;
+                }
+            }
+
+            Vector3 elbowHint = inBodyView ? BodyViewElbowSide : ElbowSide;
+            _grip.Reach(wrist, gunRotation * _gripRotation, look * elbowHint, curlFingers);
 
             // Seat the weapon on the hand, not on the point the hand was sent to: looking
             // steeply up or down can put that point out of the arm's reach, and the weapon
@@ -351,20 +481,58 @@ namespace CloseTheDeal.Player
             _gun.SetPositionAndRotation(_grip.Hand.position - gunRotation * _gripPosition, gunRotation);
 
             // Held in both hands, the left hand goes to its seat on the weapon wherever the
-            // right hand ended up carrying it. Held in one, the left arm is left to the clips.
+            // right hand ended up carrying it. Held in one, the left arm is left to the clips
+            // except in F5 where we deflect it only if it enters the central sightline.
             if (_hasSupport && _view.TwoHanded)
             {
-                Vector3 leftElbow = look * new Vector3(-ElbowSide.x, ElbowSide.y, ElbowSide.z);
-                _support.Reach(_gun.position + gunRotation * _supportPosition, gunRotation * _supportRotation, leftElbow);
+                Vector3 leftElbow = look * new Vector3(-elbowHint.x, elbowHint.y, elbowHint.z);
+                _support.Reach(_gun.position + gunRotation * _supportPosition, gunRotation * _supportRotation, leftElbow, curlFingers);
+            }
+            else if (inBodyView && afterRagdoll && _leftArm)
+            {
+                KeepLeftArmClear(eye, look);
             }
         }
 
-        void SetShadowOnly(bool shadowOnly)
+        void KeepLeftArmClear(Vector3 eye, Quaternion look)
         {
-            _shadowOnly = shadowOnly;
-            ShadowCastingMode mode = shadowOnly ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
-            for (int i = 0; i < _gunRenderers.Length; i++)
-                _gunRenderers[i].shadowCastingMode = mode;
+            Vector3 leftLocal = Quaternion.Inverse(look) * (_support.Hand.position - eye);
+            if (leftLocal.z <= 0f || leftLocal.x <= -LeftArmClearX || leftLocal.y <= -LeftArmClearY)
+                return;
+
+            float front = Mathf.SmoothStep(0f, LeftArmFrontFade, leftLocal.z);
+            float pushLeft = leftLocal.x - (-LeftArmClearX);
+            float pushDown = leftLocal.y - (-LeftArmClearY);
+            Vector3 deflected = leftLocal;
+            if (pushLeft < pushDown)
+                deflected.x = Mathf.Lerp(leftLocal.x, -LeftArmClearX, front);
+            else
+                deflected.y = Mathf.Lerp(leftLocal.y, -LeftArmClearY, front);
+
+            Vector3 leftElbow = look * new Vector3(-BodyViewElbowSide.x, BodyViewElbowSide.y, BodyViewElbowSide.z);
+            _support.ReachArm(eye + look * deflected, leftElbow);
+        }
+
+        static float SoftClamp(float value, float min, float max)
+        {
+            if (value < 0f && min < 0f)
+                return min * (float)System.Math.Tanh(value / min);
+            if (value > 0f && max > 0f)
+                return max * (float)System.Math.Tanh(value / max);
+            return value;
+        }
+
+        static float SoftFloor(float value, float floor, float margin)
+        {
+            float above = value - floor;
+            if (above >= margin)
+                return value;
+            return floor + margin * Mathf.Exp((above - margin) / margin);
+        }
+
+        static float SoftCeiling(float value, float ceiling, float margin)
+        {
+            return -SoftFloor(-value, -ceiling, margin);
         }
     }
 }

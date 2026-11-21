@@ -72,12 +72,10 @@ namespace CloseTheDeal.MatchMode
             {
                 FirmMember member = FirmMember.All[i];
                 Vector3 position = member.Position;
-                if (FellOut(member, position) || !running)
+                Arena.Classify(position, Profile.OutsideMargin, out bool sunk, out byte place, out byte paddedPlace, out int floor, out bool onSurface);
+                if (FellOut(member, sunk, paddedPlace) || !running)
                     continue;
 
-                byte place = Arena.PlaceOf(position, 0f);
-                int floor = Arena.FloorOf(position);
-                bool onSurface = Arena.OnFloorSurface(position, floor);
                 StepCheckpoint(member, place, floor, onSurface, position);
 
                 bool carrying = _match.IsCarrying(member) && StepCarrier(member, position, place, floor, onSurface);
@@ -88,10 +86,9 @@ namespace CloseTheDeal.MatchMode
         }
 
         /// <summary>Outside the buildings, plaza and skybridges for long enough, or under the street: back to the firm's checkpoint, without the briefcase.</summary>
-        bool FellOut(FirmMember member, Vector3 position)
+        bool FellOut(FirmMember member, bool sunk, byte paddedPlace)
         {
-            bool sunk = Arena.Sunk(position);
-            if (!sunk && Arena.PlaceOf(position, Profile.OutsideMargin) != MatchArena.Outside)
+            if (!sunk && paddedPlace != MatchArena.Outside)
             {
                 member.OutsideTicks = 0;
                 return false;
@@ -204,10 +201,9 @@ namespace CloseTheDeal.MatchMode
         void StepLoose(Briefcase briefcase, uint tick)
         {
             Vector3 position = briefcase.Position;
-            bool sunk = Arena.Sunk(position);
-            byte place = Arena.PlaceOf(position, 0f);
+            Arena.Classify(position, Profile.OutsideMargin, out bool sunk, out byte place, out byte paddedPlace, out int floor, out bool onSurface);
             if (place == MatchArena.Outside && !sunk)
-                place = Arena.PlaceOf(position, Profile.OutsideMargin); // Lying on a sill still counts as that building.
+                place = paddedPlace; // Lying on a sill still counts as that building.
 
             briefcase.StrayTicks = place == MatchArena.Outside ? briefcase.StrayTicks + 1 : 0;
             if (sunk || briefcase.StrayTicks >= _strayTicks)
@@ -221,8 +217,7 @@ namespace CloseTheDeal.MatchMode
 
             // Knocked loose and lodged on a floor nobody may reach yet (a slab above the open
             // floor): only a carrier could fetch it, and nobody can carry it there. Send it back.
-            int floor = Arena.FloorOf(position);
-            if (floor > _match.OpenFloor && Arena.OnFloorSurface(position, floor) && briefcase.Resting)
+            if (floor > _match.OpenFloor && onSurface && briefcase.Resting)
             {
                 _match.ServerBeginReturn(tick);
                 return;

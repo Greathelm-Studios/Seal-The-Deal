@@ -41,6 +41,8 @@ namespace CloseTheDeal.Narration
                 _records = MatchRecords.Instance;
                 _records.Kill += OnKill;
             }
+            if (_match != null && _records != null)
+                enabled = false;
         }
 
         void OnDestroy()

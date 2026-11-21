@@ -12,7 +12,7 @@
 -->
 # VOICE
 
-**Status:** Target (runs for one player and the mic test has been heard by Harvey in its first form; **the Opus and RNNoise version has not been listened to, and nothing has been tried with two players**) · **Last updated:** 2026-11-15
+**Status:** Target (runs for one player and the mic test has been heard by Harvey in its first form; **the Opus and RNNoise version has not been listened to, and nothing has been tried with two players**) · **Last updated:** 2026-11-21
 
 ## What the player hears
 
@@ -47,13 +47,13 @@ Nothing is predicted or reconciled and no gameplay reads voice. A player with no
 
 ## How a word travels
 
-1. The speaker's machine records the chosen microphone at 48 kHz and cuts it into 20 ms pieces.
-2. Each piece is cleaned by RNNoise, which also says how likely it is to be speech. With an open microphone only speech is sent, and the gate stays open 0.35 s after the last of it so the ends of words are kept. With noise suppression off, or where the RNNoise library is missing, the gate goes by loudness instead. A held push-to-talk key sends everything.
+1. The speaker's machine records the chosen microphone at 48 kHz (or downmixes multi-channel mics and resamples continuously if the device runs at another rate) and cuts it into 20 ms pieces.
+2. Each piece is cleaned by RNNoise, which also says how likely it is to be speech (skipped when an open microphone is muted or push-to-talk is idle). With an open microphone only speech is sent, and the gate stays open 0.35 s after the last of it so the ends of words are kept. With noise suppression off, or where the RNNoise library is missing, the gate goes by loudness instead. A held push-to-talk key sends everything.
 3. The piece is compressed with Opus at 32,000 bits a second and numbered. A packet is about 82 bytes, 50 a second: about 4.1 kB a second while someone talks, nothing while they are quiet. Each packet also carries a small spare copy of the piece before it.
 4. It goes to the host as a `VoiceFrame` broadcast, unreliable.
-5. The host checks its size and the sender's allowance, then sends a `VoiceRelay` (the speaker's client id and the same bytes) to each other player in range.
-6. Each listener throws away a piece that arrives late or twice. If one to three pieces were lost, it fills the gap: the last lost piece is rebuilt from the spare copy in the packet that did arrive, and any before it are filled by carrying the voice on. Then the piece is decompressed and added to that speaker's buffer.
-7. The buffer holds 60 ms before it starts, so uneven arrival does not crackle, and never more than 300 ms, so a voice cannot fall behind the mouth. The sound is heard about a fiftieth of a second after it leaves the buffer.
+5. The host checks its size and the sender's allowance (refilled lazily on arrival), then sends a single `VoiceRelay` broadcast (the speaker's client id and the same bytes) to all other players in range.
+6. Each listener throws away a piece that arrives late or twice, and only advances the speaker's running number after Opus decodes the frame cleanly. If one to three pieces were lost, it fills the gap: the last lost piece is rebuilt from the spare copy in the packet that did arrive, and any before it are filled by carrying the voice on. Then the piece is decompressed and added to that speaker's lock-free ring buffer.
+7. The buffer holds 60 ms before it starts, so uneven arrival does not crackle, and never more than 300 ms, so a voice cannot fall behind the mouth. Idle speakers pause their audio source after short silence and resume when sound arrives. The sound is heard about a fiftieth of a second after it leaves the buffer.
 
 ## Scripts
 
@@ -65,7 +65,7 @@ Nothing is predicted or reconciled and no gameplay reads voice. A player with no
 - [AudioPage.cs](../../Assets/_Project/Scripts/UI/Kit/AudioPage.cs) and [UiKitSettingsBuilder.cs](../../Assets/_Project/Editor/UI/UiKitSettingsBuilder.cs): the four settings rows, and the builder that makes them in `SettingsScreen.prefab`.
 - [InputSystem_Actions.inputactions](../../Assets/InputSystem_Actions.inputactions): a `Voice` action in the Player map, bound to V. It is read from the player's own copy of the actions, so a rebinding is followed.
 
-For UI work: `VoiceChat.Instance.IsSpeaking(clientId)`, `.MicOpen`, `.Transmitting`, `.Available`, `.Devices` and `.CanSuppressNoise`, and `VoiceSettings.Changed`.
+For UI work: `VoiceChat.Instance.IsSpeaking(clientId)`, `.MicOpen`, `.Transmitting`, `.Available`, `.Devices`, `.RefreshDevices()` and `.CanSuppressNoise`, and `VoiceSettings.Changed`.
 
 ## Libraries
 

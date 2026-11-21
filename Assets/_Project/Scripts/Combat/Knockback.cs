@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CloseTheDeal.Glass;
 using CloseTheDeal.Player;
 using CloseTheDeal.Props;
@@ -15,6 +16,14 @@ namespace CloseTheDeal.Combat
     /// </summary>
     public static class Knockback
     {
+        static readonly HashSet<Object> SeenTargets = new();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            SeenTargets.Clear();
+        }
+
         /// <summary>Throws every player and prop within the profile's radius of the point. Returns how many players were hit.</summary>
         public static int Explode(Vector3 point, BlastProfile blast, LayerMask playerMask, LayerMask propMask, Collider[] buffer)
         {
@@ -27,10 +36,18 @@ namespace CloseTheDeal.Combat
             int found = Physics.OverlapSphereNonAlloc(point, blast.Radius, buffer, playerMask | propMask, QueryTriggerInteraction.Ignore);
             int playersHit = 0;
 
-            for (int i = 0; i < found; i++)
+            SeenTargets.Clear();
+            try
             {
-                if (ThrowOne(buffer[i], point, blast, attackerClientId))
-                    playersHit++;
+                for (int i = 0; i < found; i++)
+                {
+                    if (ThrowOne(buffer[i], point, blast, attackerClientId))
+                        playersHit++;
+                }
+            }
+            finally
+            {
+                SeenTargets.Clear();
             }
 
             GlassRegistry.BreakInRadius(point, blast.Radius);
@@ -57,10 +74,17 @@ namespace CloseTheDeal.Combat
         /// <summary>One thing caught in the blast. True when it was a player.</summary>
         static bool ThrowOne(Collider hit, Vector3 point, BlastProfile blast, int attackerClientId)
         {
+            if (hit == null)
+                return false;
+
             PlayerMotor motor = hit.GetComponentInParent<PlayerMotor>();
             Health health = hit.GetComponentInParent<Health>();
             if (motor != null || health != null)
             {
+                Object target = motor != null ? (Object)motor : health;
+                if (!SeenTargets.Add(target))
+                    return false;
+
                 Transform body = motor != null ? motor.transform : health.transform;
                 Vector3 chest = body.position + Vector3.up * blast.PushHeight;
                 Vector3 velocity = ThrowVelocity(point, chest, blast, blast.Speed);
@@ -77,12 +101,13 @@ namespace CloseTheDeal.Combat
             BreakableDoor door = hit.GetComponentInParent<BreakableDoor>();
             if (door != null)
             {
-                door.TakeBlast();
+                if (SeenTargets.Add(door))
+                    door.TakeBlast();
                 return false;
             }
 
             Prop prop = hit.GetComponentInParent<Prop>();
-            if (prop != null)
+            if (prop != null && SeenTargets.Add(prop))
                 prop.Throw(ThrowVelocity(point, hit.bounds.center, blast, blast.PropSpeed));
             return false;
         }

@@ -25,6 +25,7 @@ namespace CloseTheDeal.Profile
 
             _records = MatchRecords.Instance;
             _records.FinalRecord += OnFinalRecord;
+            enabled = false;
         }
 
         void OnDestroy()

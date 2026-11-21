@@ -12,6 +12,8 @@
 //              decoded sound, feeds it to a 3D audio source, and reports whether that
 //              player is speaking.
 // -----------------------------------------------------------------------------
+using System;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -55,11 +57,22 @@ namespace CloseTheDeal.Voice
         /// <summary>Samples in the all-ones clip. Any length works; it loops.</summary>
         const int CarrierSamples = 1024;
 
-        readonly object _lock = new();
+        /// <summary>Power-of-2 ring capacity (about 341 ms at 48 kHz, above MaxDelay).</summary>
+        const int RingCapacity = 16384;
+        const int RingMask = RingCapacity - 1;
+
+        /// <summary>Seconds of empty buffer before pausing the idle AudioSource.</summary>
+        const float PauseSilenceSeconds = 0.5f;
+
+        static AudioClip _sharedCarrier;
+        static int _sharedCarrierRate;
+
         float[] _ring;
-        int _read;
-        int _count;
+        int _writeIndex;
+        int _readIndex;
         bool _started;
+        bool _paused;
+        bool _subscribedAudioConfig;
         int _startSamples;
         int _maxSamples;
         /// <summary>Voice samples to move on for each output sample: 1 when the sound card runs at the voice's rate.</summary>
@@ -67,7 +80,6 @@ namespace CloseTheDeal.Voice
         float _phase;
         int _sampleRate;
         AudioSource _source;
-        AudioClip _carrier;
         float _lastSpeech = float.NegativeInfinity;
 
         /// <summary>True while this player is talking, or was a moment ago.</summary>
@@ -81,9 +93,24 @@ namespace CloseTheDeal.Voice
         {
             get
             {
-                lock (_lock)
-                    return _sampleRate > 0 ? _count / (float)_sampleRate : 0f;
+                int count = Volatile.Read(ref _writeIndex) - Volatile.Read(ref _readIndex);
+                return _sampleRate > 0 ? Mathf.Max(0, count) / (float)_sampleRate : 0f;
             }
+        }
+
+        static AudioClip GetSharedCarrier(int outputRate)
+        {
+            if (_sharedCarrier != null && _sharedCarrierRate == outputRate)
+                return _sharedCarrier;
+            if (_sharedCarrier != null)
+                Destroy(_sharedCarrier);
+            var ones = new float[CarrierSamples];
+            for (int i = 0; i < ones.Length; i++)
+                ones[i] = 1f;
+            _sharedCarrier = AudioClip.Create("Voice carrier", CarrierSamples, 1, outputRate, false);
+            _sharedCarrier.SetData(ones, 0);
+            _sharedCarrierRate = outputRate;
+            return _sharedCarrier;
         }
 
         /// <summary>
@@ -117,21 +144,25 @@ namespace CloseTheDeal.Voice
                 new Keyframe(fullRange / hearRange, 1f, 0f, 0f),
                 new Keyframe(1f, 0f, 0f, 0f)));
 
-            var ones = new float[CarrierSamples];
-            for (int i = 0; i < ones.Length; i++)
-                ones[i] = 1f;
-            _carrier = AudioClip.Create("Voice carrier", CarrierSamples, 1, outputRate, false);
-            _carrier.SetData(ones, 0);
-            _source.clip = _carrier;
+            _source.clip = GetSharedCarrier(outputRate);
             SetSpatial(true);
 
-            // Set last: the audio thread starts calling OnAudioFilterRead as soon as the
-            // source plays, and treats a null ring as "not ready".
-            lock (_lock)
+            if (!_subscribedAudioConfig)
             {
-                _step = sampleRate / (float)outputRate;
-                _ring = new float[sampleRate];
+                _subscribedAudioConfig = true;
+                AudioSettings.OnAudioConfigurationChanged += OnAudioConfigurationChanged;
             }
+
+            _writeIndex = 0;
+            _readIndex = 0;
+            _started = false;
+            _paused = false;
+            _phase = 0f;
+
+            // Published last: the audio thread starts calling OnAudioFilterRead as soon as the
+            // source plays, and treats a null ring as "not ready".
+            Volatile.Write(ref _step, sampleRate / (float)outputRate);
+            Volatile.Write(ref _ring, new float[RingCapacity]);
 
             _source.Play();
         }
@@ -149,38 +180,68 @@ namespace CloseTheDeal.Voice
         /// <param name="samples">How many of <paramref name="sound"/> to add.</param>
         public void Push(float[] sound, int samples)
         {
-            if (samples <= 0 || _ring == null)
+            float[] ring = _ring;
+            if (samples <= 0 || ring == null)
                 return;
 
             double squares = 0.0;
-            lock (_lock)
+            for (int i = 0; i < samples; i++)
             {
-                int capacity = _ring.Length;
-                for (int i = 0; i < samples; i++)
-                {
-                    float value = sound[i];
-                    squares += value * value;
-                    if (_count == capacity)
-                    {
-                        _read = (_read + 1) % capacity;
-                        _count--;
-                    }
-
-                    _ring[(_read + _count) % capacity] = value;
-                    _count++;
-                }
-
-                if (_count > _maxSamples)
-                {
-                    int drop = _count - _startSamples;
-                    _read = (_read + drop) % capacity;
-                    _count -= drop;
-                }
+                float value = sound[i];
+                squares += value * value;
             }
 
-            LastHeard = Time.unscaledTime;
-            if (System.Math.Sqrt(squares / samples) >= SpeechLevel)
-                _lastSpeech = Time.unscaledTime;
+            int read = Volatile.Read(ref _readIndex);
+            int write = _writeIndex;
+            int free = RingCapacity - (write - read);
+            int count = Math.Min(samples, free);
+            for (int i = 0; i < count; i++)
+                ring[(write + i) & RingMask] = sound[i];
+            if (count > 0)
+                Volatile.Write(ref _writeIndex, write + count);
+
+            float now = Time.unscaledTime;
+            LastHeard = now;
+            if (Math.Sqrt(squares / samples) >= SpeechLevel)
+                _lastSpeech = now;
+
+            if (_source != null && (_paused || !_source.isPlaying))
+            {
+                _paused = false;
+                enabled = true;
+                if (!_source.isPlaying)
+                    _source.Play();
+            }
+        }
+
+        void Update()
+        {
+            if (_source == null || _paused)
+                return;
+
+            int buffered = Volatile.Read(ref _writeIndex) - Volatile.Read(ref _readIndex);
+            if (buffered <= 0 && Time.unscaledTime - LastHeard >= PauseSilenceSeconds)
+            {
+                _paused = true;
+                _source.Pause();
+                enabled = false;
+            }
+        }
+
+        void OnAudioConfigurationChanged(bool deviceWasChanged)
+        {
+            if (_sampleRate <= 0 || _source == null)
+                return;
+
+            int outputRate = AudioSettings.outputSampleRate;
+            if (outputRate > 0)
+            {
+                Volatile.Write(ref _step, _sampleRate / (float)outputRate);
+                _source.clip = GetSharedCarrier(outputRate);
+            }
+
+            if (!_paused && !_source.isPlaying)
+                _source.Play();
         }
 
         /// <summary>
@@ -189,55 +250,74 @@ namespace CloseTheDeal.Voice
         /// </summary>
         void OnAudioFilterRead(float[] data, int channels)
         {
-            lock (_lock)
+            float[] ring = Volatile.Read(ref _ring);
+            if (ring == null)
             {
-                if (_ring == null)
-                {
-                    System.Array.Clear(data, 0, data.Length);
-                    return;
-                }
-
-                if (!_started && _count >= _startSamples)
-                    _started = true;
-
-                int capacity = _ring.Length;
-                int frames = data.Length / channels;
-                for (int i = 0; i < frames; i++)
-                {
-                    float voice = 0f;
-                    if (_started && _count > 0)
-                    {
-                        // Between two voice samples when the sound card's rate is not the
-                        // voice's; exactly on one when it is.
-                        float here = _ring[_read];
-                        float next = _count > 1 ? _ring[(_read + 1) % capacity] : here;
-                        voice = here + (next - here) * _phase;
-                        _phase += _step;
-                        while (_phase >= 1f && _count > 0)
-                        {
-                            _phase -= 1f;
-                            _read = (_read + 1) % capacity;
-                            _count--;
-                        }
-                    }
-                    else if (_started)
-                    {
-                        // Ran dry: go quiet and wait for the start delay to fill again.
-                        _started = false;
-                        _phase = 0f;
-                    }
-
-                    int at = i * channels;
-                    for (int c = 0; c < channels; c++)
-                        data[at + c] *= voice;
-                }
+                Array.Clear(data, 0, data.Length);
+                return;
             }
+
+            int write = Volatile.Read(ref _writeIndex);
+            int read = _readIndex;
+            int count = write - read;
+            if (count > _maxSamples)
+            {
+                read += count - _startSamples;
+                count = _startSamples;
+            }
+
+            if (!_started && count >= _startSamples)
+                _started = true;
+
+            float step = Volatile.Read(ref _step);
+            int frames = data.Length / channels;
+            for (int i = 0; i < frames; i++)
+            {
+                float voice = 0f;
+                if (_started && count > 0)
+                {
+                    // Between two voice samples when the sound card's rate is not the
+                    // voice's; exactly on one when it is.
+                    float here = ring[read & RingMask];
+                    float next = count > 1 ? ring[(read + 1) & RingMask] : here;
+                    voice = here + (next - here) * _phase;
+                    _phase += step;
+                    while (_phase >= 1f && count > 0)
+                    {
+                        _phase -= 1f;
+                        read++;
+                        count--;
+                    }
+                }
+                else if (_started)
+                {
+                    // Ran dry: go quiet and wait for the start delay to fill again.
+                    _started = false;
+                    _phase = 0f;
+                }
+
+                int at = i * channels;
+                for (int c = 0; c < channels; c++)
+                    data[at + c] *= voice;
+            }
+
+            Volatile.Write(ref _readIndex, read);
         }
 
         void OnDestroy()
         {
-            if (_carrier != null)
-                Destroy(_carrier);
+            if (_subscribedAudioConfig)
+            {
+                _subscribedAudioConfig = false;
+                AudioSettings.OnAudioConfigurationChanged -= OnAudioConfigurationChanged;
+            }
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            _sharedCarrier = null;
+            _sharedCarrierRate = 0;
         }
     }
 }

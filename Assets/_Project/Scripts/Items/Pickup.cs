@@ -1,10 +1,14 @@
 using System;
+using System.Collections.Generic;
 using CloseTheDeal.Core;
+using CloseTheDeal.Net;
 using CloseTheDeal.Player;
 using CloseTheDeal.Props;
 using CloseTheDeal.Tower;
+using FishNet.Managing.Timing;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
+using FishNet.Transporting;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -66,12 +70,22 @@ namespace CloseTheDeal.Items
         const float ReleaseBlendSeconds = 0.12f;
         const float ShoveLift = 0.25f;
         const float TwoPi = Mathf.PI * 2f;
+        const float ImpactRpcCooldown = 0.1f;
+
+        static readonly List<Pickup> _allServer = new(128);
+        static readonly List<Pickup> _carried = new(16);
+        static readonly List<Pickup> _awayList = new(16);
+        static readonly List<Pickup> _liveList = new(32);
+        static TimeManager _driverTimeManager;
+        static int _sweepIndex;
+        static float _sweepBudget;
 
         readonly SyncVar<NetworkObject> _holder = new();
         readonly SyncVar<bool> _away = new();
 
         Prop _prop;
         Rigidbody _body;
+        NetBody _netBody;
         ItemBehaviour _behaviour;
         Collider[] _colliders;
         int[] _colliderLayers;
@@ -81,6 +95,10 @@ namespace CloseTheDeal.Items
 
         // What this machine is currently showing.
         ItemCarrier _carrier;
+        NetworkObject _appliedHolder;
+        bool _appliedAway;
+        bool _stateApplied;
+        bool _lookedAt;
         bool _shownAway;
         float _blend;
         Vector3 _blendFromPosition;
@@ -99,6 +117,11 @@ namespace CloseTheDeal.Items
         int _lastHolderClientId = -1;
         bool _notThrowable;
         Renderer[] _lookRenderers;
+        float _lastImpactRpcAt = float.NegativeInfinity;
+        int _allServerIndex = -1;
+        int _carriedIndex = -1;
+        int _awayIndex = -1;
+        int _liveIndex = -1;
 
         // A client, after a plain carried thing is let go: its solid part is still where it was
         // taken until the host's new pose arrives, so the drawn item waits where it left the hands.
@@ -171,6 +194,18 @@ namespace CloseTheDeal.Items
         static void ResetStatics()
         {
             ServerThrowLanded = null;
+            if (_driverTimeManager != null)
+            {
+                _driverTimeManager.OnTick -= DriverTick;
+                _driverTimeManager = null;
+            }
+            _allServer.Clear();
+            _carried.Clear();
+            _awayList.Clear();
+            _liveList.Clear();
+            _sweepIndex = 0;
+            _sweepBudget = 0f;
+
             if (_defaultRules != null)
             {
                 DestroyImmediate(_defaultRules);
@@ -181,6 +216,10 @@ namespace CloseTheDeal.Items
         /// <summary>This machine only: brightens the item while the local player's prompt is about it.</summary>
         public void ShowLookedAt(bool on)
         {
+            if (on == _lookedAt)
+                return;
+
+            _lookedAt = on;
             _lookRenderers ??= LookRenderers();
             LookHighlight.Set(_lookRenderers, on);
         }
@@ -198,6 +237,7 @@ namespace CloseTheDeal.Items
         {
             _prop = GetComponent<Prop>();
             _body = GetComponent<Rigidbody>();
+            _netBody = GetComponent<NetBody>();
             _behaviour = GetComponent<ItemBehaviour>();
 
             _notThrowable = GetComponent<CloseTheDeal.Props.NotThrowable>() != null;
@@ -242,13 +282,14 @@ namespace CloseTheDeal.Items
             _thrower = null;
             _returnAt = 0f;
             _lastVelocity = Vector3.zero;
-            TimeManager.OnTick += ServerTick;
+            _lastImpactRpcAt = float.NegativeInfinity;
+            RegisterServerDriver();
         }
 
         public override void OnStopServer()
         {
             base.OnStopServer();
-            TimeManager.OnTick -= ServerTick;
+            UnregisterServerDriver();
         }
 
         public override void OnStartClient()
@@ -264,10 +305,18 @@ namespace CloseTheDeal.Items
         {
             base.OnStopNetwork();
             StopIgnoring();
+            ShowLookedAt(false);
             ItemCarrier old = _carrier;
             _carrier = null;
+            _appliedHolder = null;
+            _appliedAway = false;
+            _stateApplied = false;
             _blend = 0f;
             _awaitingPose = false;
+            _takeLeft = 0f;
+            _swaying = false;
+            _live = false;
+            _lastImpactRpcAt = float.NegativeInfinity;
             // A pooled item may be spawned again: it must come back drawn where it is, not in old hands.
             if (_visual != null)
             {
@@ -295,9 +344,12 @@ namespace CloseTheDeal.Items
                 return false;
 
             _live = false;
+            SetLive(false);
             _lastHolderClientId = carrier.OwnerId;
             _holder.Value = carrier.NetworkObject;
+            SetCarried(true);
             ApplyState();
+            transform.GetPositionAndRotation(out _lastHoldPosition, out _lastHoldRotation);
             if (_behaviour != null)
                 _behaviour.ServerOnTaken(carrier);
             return true;
@@ -306,10 +358,30 @@ namespace CloseTheDeal.Items
         /// <summary>Host only. Lets go from where the hands are, with the given starting velocity in metres per second.</summary>
         public void ServerRelease(ReleaseKind kind, Vector3 velocity)
         {
+            ServerRelease(kind, velocity, Vector3.zero);
+        }
+
+        /// <summary>Host only. Lets go from where the hands are, deriving throw spawn pitch from <paramref name="aimDirection"/> when throwing.</summary>
+        public void ServerRelease(ReleaseKind kind, Vector3 velocity, Vector3 aimDirection)
+        {
             if (!IsServerStarted || _carrier == null)
                 return;
 
-            _carrier.GetHoldPose(Definition, false, out Vector3 position, out Quaternion rotation);
+            Vector3 position;
+            Quaternion rotation;
+            if (kind == ReleaseKind.Thrown)
+            {
+                Vector3 aim = aimDirection.sqrMagnitude > 0.001f ? aimDirection : velocity;
+                if (aim.sqrMagnitude > 0.001f)
+                    _carrier.GetThrowPose(Definition, aim.normalized, out position, out rotation);
+                else
+                    _carrier.GetHoldPose(Definition, false, out position, out rotation);
+            }
+            else
+            {
+                _carrier.GetHoldPose(Definition, false, out position, out rotation);
+            }
+
             ServerReleaseAt(kind, position, rotation, velocity);
         }
 
@@ -325,12 +397,14 @@ namespace CloseTheDeal.Items
             // part starts from the right place (a plain carried thing was left where it was taken).
             ServerTeleport(position, rotation);
             _holder.Value = null;
+            SetCarried(false);
             ApplyState();
             _body.linearVelocity = velocity;
             _body.angularVelocity = kind == ReleaseKind.Thrown ? rotation * Vector3.right * (Definition.ThrowTumble * TwoPi) : Vector3.zero;
             _body.WakeUp();
 
             _live = kind == ReleaseKind.Thrown;
+            SetLive(_live);
             if (_live)
             {
                 _thrower = releasedBy;
@@ -371,7 +445,9 @@ namespace CloseTheDeal.Items
             if (_behaviour != null)
                 _behaviour.ServerOnSentAway(usedUp);
             _live = false;
+            SetLive(false);
             _away.Value = true;
+            SetAway(true);
             ApplyState();
             ServerTeleport(_homePosition, _homeRotation);
             _returnAt = Time.time + returnAfterSeconds;
@@ -379,9 +455,10 @@ namespace CloseTheDeal.Items
 
         void ServerComeBack()
         {
-            ServerTeleport(_homePosition, _homeRotation);
             _away.Value = false;
+            SetAway(false);
             ApplyState();
+            ServerTeleport(_homePosition, _homeRotation);
             _body.linearVelocity = Vector3.zero;
             _body.angularVelocity = Vector3.zero;
             if (_behaviour != null)
@@ -399,6 +476,7 @@ namespace CloseTheDeal.Items
                 return;
 
             _holder.Value = null;
+            SetCarried(false);
             ApplyState();
             if (announce)
                 ObserversReleased(ReleaseKind.Knocked);
@@ -411,41 +489,153 @@ namespace CloseTheDeal.Items
             _body.rotation = rotation;
             // Switchboard counts a sleeping body as at rest and would not send the jump.
             _body.WakeUp();
+            if (_netBody != null)
+                _netBody.ForceSync();
         }
 
-        // ---- Host: every tick -----------------------------------------------------------------
+        // ---- Host: centralized tick driver ---------------------------------------------------
 
-        void ServerTick()
+        void RegisterServerDriver()
         {
-            if (_away.Value)
+            AddTo(_allServer, ref _allServerIndex);
+            SetCarried(_holder.Value != null);
+            SetAway(_away.Value);
+            SetLive(_live);
+
+            TimeManager tm = TimeManager;
+            if (tm != null && _driverTimeManager != tm)
             {
-                if (Time.time >= _returnAt)
-                    ServerComeBack();
+                if (_driverTimeManager != null)
+                    _driverTimeManager.OnTick -= DriverTick;
+                _driverTimeManager = tm;
+                _driverTimeManager.OnTick += DriverTick;
+            }
+        }
+
+        void UnregisterServerDriver()
+        {
+            RemoveFrom(_allServer, ref _allServerIndex);
+            SetCarried(false);
+            SetAway(false);
+            SetLive(false);
+
+            if (_allServer.Count == 0 && _driverTimeManager != null)
+            {
+                _driverTimeManager.OnTick -= DriverTick;
+                _driverTimeManager = null;
+                _sweepIndex = 0;
+                _sweepBudget = 0f;
+            }
+        }
+
+        void SetCarried(bool active)
+        {
+            if (active) AddTo(_carried, ref _carriedIndex);
+            else RemoveFrom(_carried, ref _carriedIndex);
+        }
+
+        void SetAway(bool active)
+        {
+            if (active) AddTo(_awayList, ref _awayIndex);
+            else RemoveFrom(_awayList, ref _awayIndex);
+        }
+
+        void SetLive(bool active)
+        {
+            if (active) AddTo(_liveList, ref _liveIndex);
+            else RemoveFrom(_liveList, ref _liveIndex);
+        }
+
+        void AddTo(List<Pickup> list, ref int index)
+        {
+            if (index >= 0)
                 return;
-            }
+            index = list.Count;
+            list.Add(this);
+        }
 
-            if (_holder.Value != null)
-            {
-                FollowHolder();
+        void RemoveFrom(List<Pickup> list, ref int index)
+        {
+            int idx = index;
+            if (idx < 0)
                 return;
-            }
 
-            // A prop at rest costs one sleep check a tick and nothing else.
-            if (_body.IsSleeping())
+            int last = list.Count - 1;
+            if (idx != last)
             {
-                _live = false;
-                return;
+                Pickup moved = list[last];
+                list[idx] = moved;
+                SetListIndex(list, moved, idx);
             }
+            list.RemoveAt(last);
+            index = -1;
+        }
 
-            if (_live)
+        static void SetListIndex(List<Pickup> list, Pickup item, int index)
+        {
+            if (ReferenceEquals(list, _allServer)) item._allServerIndex = index;
+            else if (ReferenceEquals(list, _carried)) item._carriedIndex = index;
+            else if (ReferenceEquals(list, _awayList)) item._awayIndex = index;
+            else if (ReferenceEquals(list, _liveList)) item._liveIndex = index;
+        }
+
+        static void DriverTick()
+        {
+            float now = Time.time;
+
+            for (int i = _awayList.Count - 1; i >= 0; i--)
             {
-                _lastVelocity = _body.linearVelocity;
-                if (Time.time >= _liveUntil)
-                    _live = false;
+                if (i >= _awayList.Count) continue;
+                Pickup p = _awayList[i];
+                if (now >= p._returnAt)
+                    p.ServerComeBack();
             }
 
-            if (OutOfTheBuilding(_body.position))
-                ServerSendAway(Rules.FallReturnSeconds, false);
+            for (int i = _carried.Count - 1; i >= 0; i--)
+            {
+                if (i >= _carried.Count) continue;
+                _carried[i].FollowHolder();
+            }
+
+            for (int i = _liveList.Count - 1; i >= 0; i--)
+            {
+                if (i >= _liveList.Count) continue;
+                Pickup p = _liveList[i];
+                if (!p._live || p._away.Value || p._holder.Value != null || p._body.IsSleeping() || now >= p._liveUntil)
+                {
+                    p._live = false;
+                    p.SetLive(false);
+                }
+                else
+                {
+                    p._lastVelocity = p._body.linearVelocity;
+                }
+            }
+
+            int total = _allServer.Count;
+            if (total > 0 && _driverTimeManager != null)
+            {
+                _sweepBudget = Mathf.Min(_sweepBudget + total * 4f * (float)_driverTimeManager.TickDelta, total);
+                int checks = (int)_sweepBudget;
+                if (checks > 0)
+                {
+                    _sweepBudget -= checks;
+                    for (int n = 0; n < checks; n++)
+                    {
+                        if (_allServer.Count == 0)
+                            break;
+                        if (_sweepIndex >= _allServer.Count)
+                            _sweepIndex = 0;
+
+                        Pickup p = _allServer[_sweepIndex++];
+                        if (!p._away.Value && p._holder.Value == null && !p._body.isKinematic && !p._body.IsSleeping())
+                        {
+                            if (p.OutOfTheBuilding(p._body.position))
+                                p.ServerSendAway(p.Rules.FallReturnSeconds, false);
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -482,15 +672,19 @@ namespace CloseTheDeal.Items
             {
                 // Left where the hands last were, not where it was picked up.
                 if (!SolidFollowsHands)
+                {
+                    if (_carrier != null)
+                        _carrier.GetHoldPose(Definition, false, out _lastHoldPosition, out _lastHoldRotation);
                     ServerTeleport(_lastHoldPosition, _lastHoldRotation);
+                }
                 ServerDropFromHands(true);
                 return;
             }
 
-            _carrier.GetHoldPose(Definition, false, out _lastHoldPosition, out _lastHoldRotation);
             if (!SolidFollowsHands)
                 return;
 
+            _carrier.GetHoldPose(Definition, false, out _lastHoldPosition, out _lastHoldRotation);
             _body.MovePosition(_lastHoldPosition);
             _body.MoveRotation(_lastHoldRotation);
         }
@@ -519,7 +713,11 @@ namespace CloseTheDeal.Items
                 return;
 
             LandOn(collision, motor, speed);
-            ObserversImpact(speed);
+            if (Time.time >= _lastImpactRpcAt + ImpactRpcCooldown)
+            {
+                _lastImpactRpcAt = Time.time;
+                ObserversImpact(speed);
+            }
         }
 
         /// <summary>Shoves a player it hit and hurts anything that takes damage. One throw lands once: after that it is furniture again.</summary>
@@ -533,6 +731,7 @@ namespace CloseTheDeal.Items
                 return;
 
             _live = false;
+            SetLive(false);
             Rigidbody struck = collision.collider.attachedRigidbody;
             ServerThrowLanded?.Invoke(this, _lastHolderClientId, struck != null ? struck.gameObject : collision.collider.gameObject, Mathf.Max(0f, damage));
         }
@@ -574,7 +773,7 @@ namespace CloseTheDeal.Items
         }
 
         [ObserversRpc(RunLocally = true)]
-        void ObserversImpact(float speed)
+        void ObserversImpact(float speed, Channel channel = Channel.Unreliable)
         {
             PlayImpact(speed);
             Impact?.Invoke(this, speed);
@@ -607,8 +806,16 @@ namespace CloseTheDeal.Items
         void ApplyState()
         {
             NetworkObject holder = _holder.Value;
-            ItemCarrier carrier = holder != null ? holder.GetComponent<ItemCarrier>() : null;
             bool away = _away.Value;
+            if (_stateApplied && holder == _appliedHolder && away == _appliedAway)
+                return;
+
+            ItemCarrier carrier = holder == _appliedHolder
+                ? _carrier
+                : (holder != null ? holder.GetComponent<ItemCarrier>() : null);
+            _appliedHolder = holder;
+            _appliedAway = away;
+            _stateApplied = true;
 
             if (carrier != _carrier)
                 ChangeCarrier(carrier);
@@ -814,7 +1021,7 @@ namespace CloseTheDeal.Items
         /// </summary>
         void ShowInHands(Transform shown)
         {
-            _carrier.GetHoldPose(Definition, true, out Vector3 position, out Quaternion rotation);
+            _carrier.GetHoldPose(Definition, true, _carrier.IsOwner, out Vector3 position, out Quaternion rotation);
             Vector3 targetPosition = position + rotation * _visualRestPosition;
             Quaternion targetRotation = rotation * _visualRestRotation;
 

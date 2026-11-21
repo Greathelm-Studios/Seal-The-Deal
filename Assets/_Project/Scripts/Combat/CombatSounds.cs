@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CloseTheDeal.Glass;
+using CloseTheDeal.Player;
 using UnityEngine;
 
 namespace CloseTheDeal.Combat
@@ -22,11 +23,12 @@ namespace CloseTheDeal.Combat
         const float MagazineOutAt = 0.15f;
         const float MagazineInAt = 0.6f;
         const float ReloadEndAt = 0.85f;
-        const int Voices = 12;
+        const int Voices = 32;
 
         static AudioSource[] _voices;
         static int _next;
         static CombatSounds _glassVoice;
+        static Camera _mainCamera;
         static readonly List<CombatSounds> _active = new();
 
         WeaponHolder _holder;
@@ -95,6 +97,7 @@ namespace CloseTheDeal.Combat
             if (_glassVoice != null)
                 GlassPane.AnyBroken -= _glassVoice.OnPaneBroken;
             _glassVoice = null;
+            _mainCamera = null;
             _active.Clear();
         }
 
@@ -197,13 +200,37 @@ namespace CloseTheDeal.Combat
             if (clip == null || _set == null)
                 return;
 
-            AudioSource voice = NextVoice();
+            bool hasListener = TryListenerPosition(out Vector3 listenerPos);
+            if (hasListener && (point - listenerPos).sqrMagnitude > _set.FarDistance * _set.FarDistance)
+                return;
+
+            AudioSource voice = NextVoice(listenerPos, hasListener);
             voice.transform.position = point;
             voice.outputAudioMixerGroup = _set.Output;
             voice.minDistance = _set.NearDistance;
             voice.maxDistance = _set.FarDistance;
             voice.pitch = vary ? 1f + Random.Range(-_set.PitchVariance, _set.PitchVariance) : 1f;
             voice.PlayOneShot(clip, _set.Volume);
+        }
+
+        static bool TryListenerPosition(out Vector3 position)
+        {
+            if (PlayerCamera.Instance != null)
+            {
+                position = PlayerCamera.Instance.transform.position;
+                return true;
+            }
+
+            if (_mainCamera == null)
+                _mainCamera = Camera.main;
+            if (_mainCamera != null)
+            {
+                position = _mainCamera.transform.position;
+                return true;
+            }
+
+            position = Vector3.zero;
+            return false;
         }
 
         /// <summary>Your own body's sounds: flat, not placed in the world.</summary>
@@ -223,10 +250,37 @@ namespace CloseTheDeal.Combat
             _flat.PlayOneShot(clip, _set.Volume);
         }
 
-        static AudioSource NextVoice()
+        static AudioSource NextVoice(Vector3 listenerPos, bool hasListener)
         {
             if (_voices == null || _voices[0] == null)
                 CreateVoices();
+
+            for (int i = 0; i < Voices; i++)
+            {
+                int idx = (_next + i) % Voices;
+                if (!_voices[idx].isPlaying)
+                {
+                    _next = (idx + 1) % Voices;
+                    return _voices[idx];
+                }
+            }
+
+            if (hasListener)
+            {
+                int farthest = 0;
+                float maxSqr = -1f;
+                for (int i = 0; i < Voices; i++)
+                {
+                    float sqr = (_voices[i].transform.position - listenerPos).sqrMagnitude;
+                    if (sqr > maxSqr)
+                    {
+                        maxSqr = sqr;
+                        farthest = i;
+                    }
+                }
+                _next = (farthest + 1) % Voices;
+                return _voices[farthest];
+            }
 
             AudioSource voice = _voices[_next];
             _next = (_next + 1) % Voices;

@@ -141,6 +141,8 @@ namespace CloseTheDeal.Combat
         const float MovingSpeed = 1f;
         const byte MovingFlag = 1;
         const byte AirborneFlag = 2;
+        const byte HitKilledFlag = 1;
+        const byte HitPrecisionFlag = 2;
 
         static readonly SyncTypeSettings EveryTick = new(0f);
         static readonly SyncTypeSettings OwnerEveryTick = new(WritePermission.ServerOnly, ReadPermission.OwnerOnly, 0f, Channel.Reliable);
@@ -267,6 +269,8 @@ namespace CloseTheDeal.Combat
             _ownerState.OnChange -= OnOwnerStateChanged;
             _health.Died -= OnDied;
             _health.Respawned -= OnRespawned;
+            _input?.Dispose();
+            _input = null;
         }
 
         public override void OnStartServer()
@@ -281,6 +285,9 @@ namespace CloseTheDeal.Combat
             _hostAckSeq = 0;
             _hostReloadsDone = 0;
             _hostReloading = false;
+            _hostReloadDoneTick = 0;
+            _hostReadyTick = 0;
+            _hostLastShotTick = 0;
             _hostBloom = 0f;
             _hostNextShotTime = 0d;
             GiveStartingLoadout();
@@ -559,6 +566,16 @@ namespace CloseTheDeal.Combat
             EyeAndAim(out Vector3 origin, out Vector3 forward);
             uint packedAim = ShotResolver.PackDirection(forward);
             byte stance = Stance();
+
+            // The host's own shot is judged on the spot, against the world exactly as the host sees it now;
+            // skip the duplicate predicted trace and let HostFire raise Fired from its single trace.
+            if (IsServerStarted)
+            {
+                HandleFireRequest((byte)_localActive, _seq, origin, packedAim, ticksSince, _viewTick, stance);
+                RefreshOwnerAmmo();
+                return;
+            }
+
             float spread = NextSpread(ref _bloom, weapon, ticksSince, stance);
             Vector3 direction = ShotResolver.SpreadDirection(ShotResolver.UnpackDirection(packedAim), spread, ShotSeed(_seq));
 
@@ -567,12 +584,7 @@ namespace CloseTheDeal.Combat
             Fired?.Invoke(new ShotInfo(weapon, origin, seen.End, SurfaceOf(seen), true, _shotInBurst));
             RefreshOwnerAmmo();
 
-            // The host's own shot is judged on the spot, against the world exactly as the host sees it now;
-            // sent round through the network it would be judged a tick late, with nothing to rewind for it.
-            if (IsServerStarted)
-                HandleFireRequest((byte)_localActive, _seq, origin, packedAim, ticksSince, _viewTick, stance);
-            else
-                ServerFire((byte)_localActive, _seq, origin, packedAim, ticksSince, _viewTick, stance);
+            ServerFire((byte)_localActive, _seq, origin, packedAim, ticksSince, _viewTick, stance);
         }
 
         /// <summary>
@@ -719,7 +731,9 @@ namespace CloseTheDeal.Combat
             // Shots arrive in order (reliable), so an honest owner always sends the next number.
             // Any other number is refused: the number seeds the spread and must not be chosen.
             bool next = seq == (ushort)(_hostAckSeq + 1);
-            _hostAckSeq = seq;
+            if (next)
+                _hostAckSeq = seq;
+
             WeaponDefinition weapon = slot < SlotCount ? _weapons[slot] : null;
             uint tick = TimeManager.Tick;
 
@@ -760,17 +774,38 @@ namespace CloseTheDeal.Combat
             // but never as rested as the owner claims beyond what the host itself saw.
             uint rested = Math.Min(ticksSince, tick - _hostLastShotTick + TimingSlackTicks);
             _hostLastShotTick = tick;
-            float spread = NextSpread(ref _hostBloom, weapon, rested, stance);
+            byte validatedStance = ValidateStance(stance);
+            float spread = NextSpread(ref _hostBloom, weapon, rested, validatedStance);
+            if (IsOwner)
+                _bloom = _hostBloom;
 
             uint seenTick = SeenTick(viewTick, tick);
             origin = TrustedOrigin(origin, tick - seenTick);
 
             Vector3 direction = ShotResolver.SpreadDirection(ShotResolver.UnpackDirection(packedAim), spread, ShotSeed(seq));
-            ShotResult shot = ShotResolver.Trace(origin, direction, weapon.Range, _solidMask, _health, true, seenTick, weapon.HeadFromHeight);
+            ShotResult shot = ShotResolver.Trace(origin, direction, weapon.Range, _solidMask, _health, true, seenTick, weapon.HeadFromHeight, recordPanes: true);
+
+            if (IsOwner)
+                Fired?.Invoke(new ShotInfo(weapon, origin, shot.End, SurfaceOf(shot), true, _shotInBurst));
 
             ShotResolver.BreakCrossedPanes(shot, direction, OwnerId);
             HostApplyHit(weapon, shot, direction);
             RpcShot(shot.End, (byte)SurfaceOf(shot));
+        }
+
+        /// <summary>Validates client-reported stance flags against the host's motor so a client cannot spoof standing still.</summary>
+        byte ValidateStance(byte clientStance)
+        {
+            if (_motor == null)
+                return 0;
+
+            byte hostStance = Stance();
+            byte clean = (byte)(clientStance & (MovingFlag | AirborneFlag));
+            if ((hostStance & AirborneFlag) != 0 || (clean & AirborneFlag) != 0)
+                return AirborneFlag;
+            if ((hostStance & MovingFlag) != 0)
+                return MovingFlag;
+            return clean;
         }
 
         /// <summary>
@@ -819,22 +854,49 @@ namespace CloseTheDeal.Combat
                 Vector3 shove = Knockback.ShoveVelocity(direction, weapon.HitShove, weapon.ShoveLift);
                 Vector3 killShove = Knockback.ShoveVelocity(direction, weapon.KillShove, weapon.ShoveLift);
                 if (shot.Body.ApplyHit(damage, shot.End, direction, OwnerId, shove, killShove, weapon.HitControlLoss))
-                    ConfirmHit(shot.End, damage, shot.Body.IsDead, shot.Precision);
+                    ConfirmHit(shot.Body.IsDead, shot.Precision);
                 return;
             }
 
-            IDamageable target = shot.Solid != null ? shot.Solid.GetComponentInParent<IDamageable>() : null;
+            if (shot.Solid == null)
+                return;
+
+            if (DoorDamage.TryFind(shot.Solid, out DoorDamage door))
+            {
+                if (door.IsBroken)
+                    return;
+
+                door.ApplyDamage(damage, shot.End, direction, OwnerId);
+                ConfirmHit(false, false);
+                return;
+            }
+
+            IDamageable target = null;
+            if (!shot.Solid.TryGetComponent(out target))
+            {
+                Rigidbody rb = shot.Solid.attachedRigidbody;
+                if (rb != null)
+                    rb.TryGetComponent(out target);
+            }
+
             if (target == null)
                 return;
 
             target.ApplyDamage(damage, shot.End, direction, OwnerId);
-            ConfirmHit(shot.End, damage, false, false);
+            ConfirmHit(false, false);
         }
 
-        void ConfirmHit(Vector3 point, float damage, bool killed, bool precision)
+        void ConfirmHit(bool killed, bool precision)
         {
-            if (Owner.IsValid)
-                TargetHitConfirmed(Owner, point, damage, killed, precision);
+            if (!Owner.IsValid)
+                return;
+
+            byte flags = 0;
+            if (killed)
+                flags |= HitKilledFlag;
+            if (precision)
+                flags |= HitPrecisionFlag;
+            TargetHitConfirmed(Owner, flags);
         }
 
         [ServerRpc]
@@ -910,11 +972,13 @@ namespace CloseTheDeal.Combat
         }
 
         [TargetRpc]
-        void TargetHitConfirmed(NetworkConnection owner, Vector3 point, float damage, bool killed, bool precision)
+        void TargetHitConfirmed(NetworkConnection owner, byte flags)
         {
-            HitConfirmed?.Invoke(point, damage, killed, precision);
+            bool killed = (flags & HitKilledFlag) != 0;
+            bool precision = (flags & HitPrecisionFlag) != 0;
+            HitConfirmed?.Invoke(Vector3.zero, 0f, killed, precision);
             if (killed)
-                KillConfirmed?.Invoke(point);
+                KillConfirmed?.Invoke(Vector3.zero);
         }
 
         // ---- Death and respawn (every machine) -----------------------------------------------

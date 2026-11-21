@@ -69,6 +69,8 @@ namespace CloseTheDeal.Net
                 float score = _scores[slot];
                 if (score < DueScore)
                     continue;
+                if (count == limit && score <= _scores[into[count - 1]])
+                    continue;
 
                 int position = 0;
                 while (position < count && _scores[into[position]] >= score)

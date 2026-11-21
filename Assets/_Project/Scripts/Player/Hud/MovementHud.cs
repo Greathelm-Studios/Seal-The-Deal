@@ -143,6 +143,9 @@ namespace CloseTheDeal.Player.Hud
 
         /// <summary>Set once the player has slid this session; the slide hint never shows again until the game restarts.</summary>
         static bool _hasSlid;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => _hasSlid = false;
         float _sprintFor = -1f;
         float _hintHold;
         float _hintAlpha;

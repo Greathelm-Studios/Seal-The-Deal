@@ -26,8 +26,10 @@ namespace CloseTheDeal.Lobby
 
         PlayableGraph _graph;
         AnimationClipPlayable _clip;
+        Renderer[] _renderers;
         float _length;
         float _time;
+        bool _paused;
 
         void Start()
         {
@@ -40,6 +42,7 @@ namespace CloseTheDeal.Lobby
                 return;
             }
 
+            _renderers = GetComponentsInChildren<Renderer>();
             _animator.avatar = null;
             _animator.applyRootMotion = false;
             _animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
@@ -54,6 +57,8 @@ namespace CloseTheDeal.Lobby
             AnimationPlayableOutput output = AnimationPlayableOutput.Create(_graph, "Idle", _animator);
             output.SetSourcePlayable(_clip);
             _graph.Play();
+            _clip.SetTime(_time);
+            _graph.Evaluate(0f);
         }
 
         void LateUpdate()
@@ -61,9 +66,39 @@ namespace CloseTheDeal.Lobby
             if (!_graph.IsValid())
                 return;
 
+            bool shouldPause = (LobbyRoster.Instance != null && LobbyRoster.Instance.RunInProgress) || !AnyRendererVisible();
+            if (shouldPause)
+            {
+                if (!_paused)
+                {
+                    _paused = true;
+                    _graph.Stop();
+                }
+                return;
+            }
+
+            if (_paused)
+            {
+                _paused = false;
+                _graph.Play();
+            }
+
             _time = (_time + Time.deltaTime * _speed) % _length;
             _clip.SetTime(_time);
             _graph.Evaluate(0f);
+        }
+
+        bool AnyRendererVisible()
+        {
+            if (_renderers == null || _renderers.Length == 0)
+                return true;
+            for (int i = 0; i < _renderers.Length; i++)
+            {
+                if (_renderers[i] != null && _renderers[i].isVisible)
+                    return true;
+            }
+
+            return false;
         }
 
         void OnDestroy()

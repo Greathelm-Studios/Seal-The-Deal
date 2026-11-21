@@ -1,6 +1,7 @@
 using CloseTheDeal.Combat;
 using CloseTheDeal.UI;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Player.Hud
 {
@@ -24,6 +25,20 @@ namespace CloseTheDeal.Player.Hud
         const float KillPulse = 1f;
         const float LandingPulse = 0.3f;
 
+        static CrosshairFeed _instance;
+        static bool _sceneHasNoCrosshair;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            _instance = null;
+            _sceneHasNoCrosshair = false;
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => _sceneHasNoCrosshair = false;
+
         PlayerMotor _motor;
         WeaponHolder _weapons;
         Camera _camera;
@@ -40,20 +55,42 @@ namespace CloseTheDeal.Player.Hud
         /// </summary>
         public static void EnsureInScene()
         {
-            if (FindAnyObjectByType<CrosshairFeed>(FindObjectsInactive.Include) != null)
+            if (_instance != null || _sceneHasNoCrosshair)
                 return;
 
-            foreach (UiCrosshair crosshair in FindObjectsByType<UiCrosshair>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            CrosshairFeed existing = FindAnyObjectByType<CrosshairFeed>(FindObjectsInactive.Include);
+            if (existing != null)
+            {
+                _instance = existing;
+                return;
+            }
+
+            foreach (UiCrosshair crosshair in FindObjectsByType<UiCrosshair>(FindObjectsInactive.Include))
             {
                 if (crosshair.GetComponentInParent<SettingsScreen>(true) != null)
                     continue;
 
                 var feed = crosshair.gameObject.AddComponent<CrosshairFeed>();
                 feed._crosshair = crosshair;
+                _instance = feed;
                 if (feed.isActiveAndEnabled)
                     feed.Bind(PlayerMotor.Local);
                 return;
             }
+
+            _sceneHasNoCrosshair = true;
+        }
+
+        void Awake()
+        {
+            _instance = this;
+            _sceneHasNoCrosshair = false;
+        }
+
+        void OnDestroy()
+        {
+            if (_instance == this)
+                _instance = null;
         }
 
         void OnEnable()
@@ -101,15 +138,19 @@ namespace CloseTheDeal.Player.Hud
                 _crosshair.OpenPixels = 0f;
         }
 
-        /// <summary>A continuously moving visual, so it reads the motor once a frame; it writes only when the whole-pixel gap changes.</summary>
+        /// <summary>A continuously moving visual, so it reads the motor once a frame; writes OpenPixels only when it changes.</summary>
         void Update()
         {
             if (_motor == null || _crosshair == null)
                 return;
 
             float target = Mathf.Max(MovementOpen(), SpreadOpen());
-            _open = Mathf.MoveTowards(_open, target, _motor.Profile.CrosshairOpenRate * Time.unscaledDeltaTime);
-            _crosshair.OpenPixels = _open;
+            float next = Mathf.MoveTowards(_open, target, _motor.Profile.CrosshairOpenRate * Time.unscaledDeltaTime);
+            if (next != _open)
+            {
+                _open = next;
+                _crosshair.OpenPixels = _open;
+            }
         }
 
         float MovementOpen()
@@ -135,7 +176,10 @@ namespace CloseTheDeal.Player.Hud
                 return 0f;
 
             if (_camera == null)
-                _camera = Camera.main;
+            {
+                PlayerCamera pc = PlayerCamera.Instance;
+                _camera = pc != null ? pc.GetComponent<Camera>() : Camera.main;
+            }
             if (_camera == null)
                 return 0f;
 

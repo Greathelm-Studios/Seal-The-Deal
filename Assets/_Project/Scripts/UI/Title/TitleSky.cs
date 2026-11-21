@@ -50,6 +50,10 @@ namespace CloseTheDeal.UI.Title
         RenderTexture _texture;
         bool _showing;
         Quaternion _base;
+        int _lastScreenW;
+        int _lastScreenH;
+        Vector2 _lastSlotSize;
+        float _lastScale;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Install()
@@ -130,9 +134,15 @@ namespace CloseTheDeal.UI.Title
             _image.enabled = show;
             _title.SetLiveBackdrop(show);
             if (show)
+            {
                 TitleSkyOverride.Acquire(_planeEverySeconds);
+                EnsureTexture();
+            }
             else
+            {
                 TitleSkyOverride.Release();
+                ReleaseTexture();
+            }
         }
 
         /// <summary>The render texture matches the slot's size on screen, so the sky is drawn 1:1.</summary>
@@ -142,6 +152,17 @@ namespace CloseTheDeal.UI.Title
             // alike (the canvas scale factor alone came out at 2/3 of the slot in a camera canvas: a soft, upscaled sky).
             if (_canvas == null)
                 _canvas = _title.BackdropSlot.GetComponentInParent<Canvas>().rootCanvas;
+            Vector2 slotSize = _title.BackdropSlot.rect.size;
+            float scale = _canvas.scaleFactor;
+            if (_texture != null && Screen.width == _lastScreenW && Screen.height == _lastScreenH
+                && slotSize == _lastSlotSize && Mathf.Approximately(scale, _lastScale))
+                return;
+
+            _lastScreenW = Screen.width;
+            _lastScreenH = Screen.height;
+            _lastSlotSize = slotSize;
+            _lastScale = scale;
+
             Camera eye = _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _canvas.worldCamera;
             _title.BackdropSlot.GetWorldCorners(_corners);
             Vector2 a = RectTransformUtility.WorldToScreenPoint(eye, _corners[0]);
@@ -150,27 +171,34 @@ namespace CloseTheDeal.UI.Title
             int h = Mathf.Max(16, Mathf.RoundToInt(Mathf.Abs(b.y - a.y)));
             if (_texture != null && _texture.width == w && _texture.height == h)
                 return;
-            if (_texture != null)
-            {
-                _camera.targetTexture = null;
-                _texture.Release();
-                Destroy(_texture);
-            }
+            ReleaseTexture();
             _texture = new RenderTexture(w, h, 16) { name = "Title sky" };
             _camera.targetTexture = _texture;
             _camera.aspect = w / (float)h;
             _image.texture = _texture;
         }
 
-        void OnDestroy()
+        void ReleaseTexture()
         {
-            if (_showing)
-                TitleSkyOverride.Release();
+            if (_camera != null)
+                _camera.targetTexture = null;
+            if (_image != null)
+                _image.texture = null;
             if (_texture != null)
             {
                 _texture.Release();
                 Destroy(_texture);
+                _texture = null;
             }
+            _lastScreenW = 0;
+            _lastScreenH = 0;
+        }
+
+        void OnDestroy()
+        {
+            if (_showing)
+                TitleSkyOverride.Release();
+            ReleaseTexture();
         }
     }
 

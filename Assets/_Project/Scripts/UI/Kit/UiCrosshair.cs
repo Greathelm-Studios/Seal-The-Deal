@@ -55,7 +55,7 @@ namespace CloseTheDeal.UI
                 if (whole == _openShown)
                     return;
                 _openShown = whole;
-                Draw();
+                UpdateArmPositions();
             }
         }
 
@@ -71,9 +71,11 @@ namespace CloseTheDeal.UI
         public bool Tick(float dt)
         {
             _pulse.Step(dt);
-            Draw();
+            UpdateArmPositions();
             return _pulse.Running;
         }
+
+        void Awake() => UiMotion.EnsureSubCanvas(gameObject);
 
         void OnEnable()
         {
@@ -104,13 +106,31 @@ namespace CloseTheDeal.UI
 
             float length = Whole(_armLength * scale, 2f);
             float thickness = Whole(_armThickness * scale, 1f);
-            float pulse = _pulse.Value * length;
-            float start = Whole(_gap * scale, 2f) + Mathf.Round(_open * scale) + Mathf.Round(pulse) + length * 0.5f;
             for (int i = 0; i < 4; i++)
             {
                 Vector2 dir = Directions[i];
                 Vector2 size = dir.x == 0f ? new Vector2(thickness, length) : new Vector2(length, thickness);
-                Place(i < _armOutlines.Length ? _armOutlines[i] : null, i < _arms.Length ? _arms[i] : null, arms, dir * start, size, core, edge);
+                StylePart(i < _armOutlines.Length ? _armOutlines[i] : null, i < _arms.Length ? _arms[i] : null, arms, size, core, edge);
+            }
+
+            UpdateArmPositions();
+        }
+
+        void UpdateArmPositions()
+        {
+            if (_tokens == null || UiSettings.CrosshairStyle == CrosshairStyle.Dot)
+                return;
+            float scale = UiSettings.CrosshairSize / 100f;
+            float length = Whole(_armLength * scale, 2f);
+            float pulse = _pulse.Value * length;
+            float start = Whole(_gap * scale, 2f) + Mathf.Round(_open * scale) + Mathf.Round(pulse) + length * 0.5f;
+            for (int i = 0; i < 4; i++)
+            {
+                Vector2 at = Directions[i] * start;
+                if (i < _arms.Length && _arms[i] != null)
+                    _arms[i].rectTransform.anchoredPosition = at;
+                if (i < _armOutlines.Length && _armOutlines[i] != null)
+                    _armOutlines[i].rectTransform.anchoredPosition = at;
             }
         }
 
@@ -126,10 +146,18 @@ namespace CloseTheDeal.UI
 
         void Place(Image outline, Image core, bool show, Vector2 at, Vector2 size, Color coreColour, Color edgeColour)
         {
+            StylePart(outline, core, show, size, coreColour, edgeColour);
+            if (core != null)
+                core.rectTransform.anchoredPosition = at;
+            if (outline != null)
+                outline.rectTransform.anchoredPosition = at;
+        }
+
+        void StylePart(Image outline, Image core, bool show, Vector2 size, Color coreColour, Color edgeColour)
+        {
             if (core != null)
             {
                 core.enabled = show;
-                core.rectTransform.anchoredPosition = at;
                 core.rectTransform.sizeDelta = size;
                 core.color = coreColour;
             }
@@ -137,7 +165,6 @@ namespace CloseTheDeal.UI
             if (outline != null)
             {
                 outline.enabled = show;
-                outline.rectTransform.anchoredPosition = at;
                 outline.rectTransform.sizeDelta = size + Vector2.one * (_outline * 2f);
                 outline.color = edgeColour;
             }

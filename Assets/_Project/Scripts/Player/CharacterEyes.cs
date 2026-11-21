@@ -27,6 +27,8 @@ namespace CloseTheDeal.Player
         // WHY: the eye opening is far wider than tall, so an idle look up or down travels less
         // than one to the side or it disappears under the lid.
         private const float LookVerticalShare = 0.6f;
+        private const float MaxEyeDistance = 20f;
+        private const float PoseEpsilon = 0.001f;
 
         private static readonly int EyePose = Shader.PropertyToID("_EyePose");
 
@@ -93,6 +95,13 @@ namespace CloseTheDeal.Player
 
         private void LateUpdate()
         {
+            if (!_cards[0].isVisible && !_cards[1].isVisible)
+                return;
+
+            PlayerCamera cam = PlayerCamera.Instance;
+            if (cam != null && (_visualRoot.position - cam.transform.position).sqrMagnitude > MaxEyeDistance * MaxEyeDistance)
+                return;
+
             float dt = Time.deltaTime;
             if (dt <= 0f)
                 return;
@@ -192,7 +201,10 @@ namespace CloseTheDeal.Player
         private void ApplyPose(Mood mood, Lid lid)
         {
             var pose = new Vector4((int)mood, (int)lid, _glance.x, _glance.y);
-            if (pose == _lastPose)
+            if (Mathf.Abs(pose.x - _lastPose.x) < PoseEpsilon &&
+                Mathf.Abs(pose.y - _lastPose.y) < PoseEpsilon &&
+                Mathf.Abs(pose.z - _lastPose.z) < PoseEpsilon &&
+                Mathf.Abs(pose.w - _lastPose.w) < PoseEpsilon)
                 return;
 
             _lastPose = pose;

@@ -30,6 +30,7 @@
 //              can be removed again by deleting one component.
 // -----------------------------------------------------------------------------
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Player
 {
@@ -169,6 +170,12 @@ namespace CloseTheDeal.Player
         /// <summary>A blast closer to a part than this, metres, has no usable direction away from itself; the hit's own direction is used instead. WHY 0.01: the same cut-off <c>Knockback.ThrowVelocity</c> uses.</summary>
         const float MinBlastDistance = 0.01f;
 
+        /// <summary>Distance and floor-height thresholds beyond which remote ragdolls pause simulation, with hysteresis to avoid thrashing.</summary>
+        const float RemoteLodDistance = 25f;
+        const float RemoteLodResumeDistance = 22f;
+        const float RemoteLodFloorDelta = 9f;
+        const float RemoteLodResumeFloorDelta = 8f;
+
         /// <summary>One rigidbody of the ragdoll and the bone it stands for.</summary>
         struct Part
         {
@@ -192,10 +199,39 @@ namespace CloseTheDeal.Player
             /// <summary>Where the body was one physics step ago, for blending between steps.</summary>
             public Vector3 WasPosition;
             public Quaternion WasRotation;
+            /// <summary>Last drive frequency and damping assigned to <see cref="Joint"/>; avoids redundant native PhysX writes.</summary>
+            public float LastDriveHz;
+            public float LastDriveDamping;
+        }
+
+        static int s_staggerCounter;
+        static PhysicsMaterial s_slippery;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            s_slippery = null;
+        }
+
+        static PhysicsMaterial GetSlipperyMaterial()
+        {
+            if (s_slippery == null)
+            {
+                s_slippery = new PhysicsMaterial("Ragdoll")
+                {
+                    dynamicFriction = 0.2f,
+                    staticFriction = 0.2f,
+                    bounciness = 0f,
+                    frictionCombine = PhysicsMaterialCombine.Minimum,
+                    bounceCombine = PhysicsMaterialCombine.Minimum
+                };
+            }
+            return s_slippery;
         }
 
         readonly Part[] _parts = new Part[PartCount];
         GameObject _root;
+        PlayerMotor _motor;
         /// <summary>The neck is not a part: like the upper spine, it keeps the bend the pose gave it on top of the chest part, and the head part hinges on it.</summary>
         Transform _neck, _leftFoot, _rightFoot;
         float _totalMass;
@@ -208,12 +244,13 @@ namespace CloseTheDeal.Player
         float _nextLevelCopy;
         bool _built;
         bool _posed;
+        bool _lodPaused;
         /// <summary>True while any part's joint is still slack from a hit.</summary>
         bool _flinching;
         /// <summary>Seconds a fully slack joint takes to recover from the hits now being felt: the profile's shot or melee recovery, the longer one while both are.</summary>
         float _recover;
-        /// <summary>The parts' usual low-friction surface, and the grippier one they wear while knocked down.</summary>
-        PhysicsMaterial _slippery, _grippy;
+        /// <summary>The grippier surface parts wear while knocked down; created lazily only if KnockDown runs.</summary>
+        PhysicsMaterial _grippy;
         /// <summary>True from a knock-down until the body has lain long enough; then it starts getting up.</summary>
         bool _down;
         /// <summary>Seconds since the knock-down.</summary>
@@ -252,7 +289,32 @@ namespace CloseTheDeal.Player
                 return;
             }
 
+            _motor = GetComponentInParent<PlayerMotor>();
             Build();
+        }
+
+        void OnEnable()
+        {
+            if (!_built || _root == null)
+                return;
+            if (ShouldPauseLod())
+            {
+                _lodPaused = true;
+                return;
+            }
+            _lodPaused = false;
+            _root.SetActive(true);
+            RagdollWorld.Add(this, _root);
+            _posed = false;
+            _nextLevelCopy = 0f;
+        }
+
+        void OnDisable()
+        {
+            if (!_built)
+                return;
+            DeactivateRagdoll();
+            _lodPaused = false;
         }
 
         void OnDestroy()
@@ -262,12 +324,38 @@ namespace CloseTheDeal.Player
             RagdollWorld.Remove(this);
             if (_root != null)
                 Destroy(_root);
-            // WHY: made by this component at spawn and owned by nothing else; left alone, every
-            // player spawned on every machine leaves two behind for the rest of the session.
-            if (_slippery != null)
-                Destroy(_slippery);
             if (_grippy != null)
                 Destroy(_grippy);
+        }
+
+        void DeactivateRagdoll()
+        {
+            if (_root != null)
+            {
+                _root.SetActive(false);
+                if (gameObject.scene.IsValid() && gameObject.scene.isLoaded && _root.scene != gameObject.scene)
+                    SceneManager.MoveGameObjectToScene(_root, gameObject.scene);
+            }
+            RagdollWorld.Remove(this);
+        }
+
+        bool ShouldPauseLod()
+        {
+            if (_motor == null || _motor == PlayerMotor.Local)
+                return false;
+
+            Vector3 viewerPos;
+            if (PlayerCamera.Instance != null)
+                viewerPos = PlayerCamera.Instance.transform.position;
+            else if (PlayerMotor.Local != null)
+                viewerPos = PlayerMotor.Local.transform.position;
+            else
+                return false;
+
+            Vector3 delta = transform.position - viewerPos;
+            float maxDist = _lodPaused ? RemoteLodResumeDistance : RemoteLodDistance;
+            float maxVertical = _lodPaused ? RemoteLodResumeFloorDelta : RemoteLodFloorDelta;
+            return delta.sqrMagnitude > maxDist * maxDist || Mathf.Abs(delta.y) > maxVertical;
         }
 
         /// <summary>Makes the eleven bodies and ten joints from the model's T-pose and moves them into the ragdoll world.</summary>
@@ -284,14 +372,7 @@ namespace CloseTheDeal.Player
 
 
             _root = new GameObject("Ragdoll");
-            var slippery = new PhysicsMaterial("Ragdoll")
-            {
-                dynamicFriction = 0.2f,
-                staticFriction = 0.2f,
-                bounciness = 0f,
-                frictionCombine = PhysicsMaterialCombine.Minimum,
-                bounceCombine = PhysicsMaterialCombine.Minimum
-            };
+            PhysicsMaterial slippery = GetSlipperyMaterial();
 
             Vector3 up = _avatar.transform.up;
             // part, bone, parent, joint position, far end of the collider
@@ -334,21 +415,19 @@ namespace CloseTheDeal.Player
                     Physics.IgnoreCollision(colliders[a], colliders[b]);
             }
 
-            _slippery = slippery;
-            // WHY a second material: upright, the parts must slide off walls and furniture
-            // (low friction, taking the lower of the two surfaces'); lying on the floor the same
-            // slipperiness lets a blasted body skate the length of a room.
-            _grippy = new PhysicsMaterial("Ragdoll (down)")
-            {
-                bounciness = 0f,
-                frictionCombine = PhysicsMaterialCombine.Maximum,
-                bounceCombine = PhysicsMaterialCombine.Minimum
-            };
             _parts[Hips].Body.inertiaTensor *= HipsSteadiness;
             _hipsTargetWas = _parts[Hips].Body.position;
             _playerWas = transform.position;
-            RagdollWorld.Add(this, _root);
             _built = true;
+            if (ShouldPauseLod())
+            {
+                _lodPaused = true;
+                _root.SetActive(false);
+            }
+            else
+            {
+                RagdollWorld.Add(this, _root);
+            }
         }
 
         /// <summary>
@@ -467,6 +546,8 @@ namespace CloseTheDeal.Player
             part.Parent = parent;
             part.TargetPosition = part.WasPosition = joint;
             part.TargetRotation = part.WasRotation = bone.rotation;
+            part.LastDriveHz = -1f;
+            part.LastDriveDamping = -1f;
             if (parent < 0)
                 return;
 
@@ -506,8 +587,35 @@ namespace CloseTheDeal.Player
                 // throw. The real cure is the Editor preference below, not code here.
                 Debug.LogError("[PlayerRagdoll] Lost its body because the code was reloaded during Play; this character stays in its plain pose until Play is restarted. "
                     + "To stop it happening, set Edit > Preferences > General > Script Changes While Playing to Recompile After Finished Playing.", this);
+                RagdollWorld.Remove(this);
                 enabled = false;
                 return;
+            }
+
+            if (ShouldPauseLod())
+            {
+                if (!_lodPaused)
+                {
+                    _lodPaused = true;
+                    if (_down)
+                        EndKnockDownState();
+                    _hold = 1f;
+                    _flinching = false;
+                    DeactivateRagdoll();
+                }
+                return;
+            }
+
+            if (_lodPaused)
+            {
+                _lodPaused = false;
+                if (_root != null)
+                {
+                    _root.SetActive(true);
+                    RagdollWorld.Add(this, _root);
+                }
+                _posed = false;
+                _nextLevelCopy = 0f;
             }
 
             ReadPose(dt, out Quaternion leftFootPose, out Quaternion rightFootPose);
@@ -530,7 +638,9 @@ namespace CloseTheDeal.Player
             // usual refreshes than the copies reach, and would fall through a floor not yet copied.
             if (_hold < 1f || Time.time >= _nextLevelCopy)
             {
-                _nextLevelCopy = Time.time + RagdollWorld.RefreshTime;
+                _nextLevelCopy = _nextLevelCopy <= 0f
+                    ? Time.time + RagdollWorld.RefreshTime + (s_staggerCounter++ & 7) * 0.025f
+                    : Time.time + RagdollWorld.RefreshTime;
                 RagdollWorld.CopyLevelAround(Centre, _solid);
             }
 
@@ -584,6 +694,7 @@ namespace CloseTheDeal.Player
                 part.Body.linearVelocity = Vector3.zero;
                 part.Body.angularVelocity = Vector3.zero;
             }
+            _hipsTargetWas = _parts[Hips].TargetPosition;
             _hipsTargetSpeed = Vector3.zero;
             _playerWas = transform.position;
             _playerSpeed = Vector3.zero;
@@ -599,6 +710,7 @@ namespace CloseTheDeal.Player
             float strength = Brace() * Mathf.Lerp(1f, _profile.LimpShare, limp);
             if (_hold < 1f)
                 strength *= Mathf.Lerp(_hitProfile.DownLimpShare, 1f, Mathf.SmoothStep(0f, 1f, _hold));
+            float damping = _profile.JointDamping;
             for (int i = 1; i < PartCount; i++)
             {
                 ref Part part = ref _parts[i];
@@ -613,6 +725,12 @@ namespace CloseTheDeal.Player
                 // hit, so its motion is exactly what it was before hits existed.
                 if (part.Weak > 0f)
                     hz *= Mathf.Lerp(1f, _hitProfile.FlinchLimpShare, part.Weak);
+
+                if (Mathf.Abs(part.LastDriveHz - hz) < 1e-4f && Mathf.Abs(part.LastDriveDamping - damping) < 1e-4f)
+                    continue;
+
+                part.LastDriveHz = hz;
+                part.LastDriveDamping = damping;
                 float omega = 2f * Mathf.PI * hz;
                 // WHY "use acceleration": the motor then pulls as hard as it takes to swing whatever
                 // is hanging off the joint at the wanted speed, so one strength number means the
@@ -620,7 +738,7 @@ namespace CloseTheDeal.Player
                 part.Joint.slerpDrive = new JointDrive
                 {
                     positionSpring = omega * omega,
-                    positionDamper = 2f * _profile.JointDamping * omega,
+                    positionDamper = 2f * damping * omega,
                     maximumForce = float.MaxValue,
                     useAcceleration = true
                 };
@@ -660,7 +778,7 @@ namespace CloseTheDeal.Player
         /// </example>
         public void Hit(in HitInfo hit)
         {
-            if (!Running || !_posed || _hitProfile == null || hit.Impulse <= 0f)
+            if (!Running || _lodPaused || !_posed || _hitProfile == null || hit.Impulse <= 0f)
                 return;
 
             if (!_down && _hitProfile.KnockDownImpulse > 0f && hit.Impulse >= _hitProfile.KnockDownImpulse
@@ -776,12 +894,32 @@ namespace CloseTheDeal.Player
             _down = true;
             _downTime = 0f;
             _hold = 0f;
+            if (_grippy == null)
+            {
+                _grippy = new PhysicsMaterial("Ragdoll (down)")
+                {
+                    bounciness = 0f,
+                    frictionCombine = PhysicsMaterialCombine.Maximum,
+                    bounceCombine = PhysicsMaterialCombine.Minimum
+                };
+            }
             // Set here, not once at spawn, so the profile value can be tuned while playing.
             _grippy.dynamicFriction = _grippy.staticFriction = _hitProfile.DownFriction;
             for (int i = 0; i < PartCount; i++)
             {
                 _parts[i].Body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
                 _parts[i].Shape.sharedMaterial = _grippy;
+            }
+        }
+
+        void EndKnockDownState()
+        {
+            _down = false;
+            PhysicsMaterial slippery = GetSlipperyMaterial();
+            for (int i = 0; i < PartCount; i++)
+            {
+                _parts[i].Body.collisionDetectionMode = CollisionDetectionMode.Discrete;
+                _parts[i].Shape.sharedMaterial = slippery;
             }
         }
 
@@ -805,12 +943,7 @@ namespace CloseTheDeal.Player
                 bool atRest = _parts[Hips].Body.linearVelocity.sqrMagnitude < settle * settle;
                 if (_downTime < _hitProfile.DownMaxTime && (_downTime < _hitProfile.DownMinTime || !atRest))
                     return;
-                _down = false;
-                for (int i = 0; i < PartCount; i++)
-                {
-                    _parts[i].Body.collisionDetectionMode = CollisionDetectionMode.Discrete;
-                    _parts[i].Shape.sharedMaterial = _slippery;
-                }
+                EndKnockDownState();
             }
             _hold = Mathf.MoveTowards(_hold, 1f, dt / Mathf.Max(_hitProfile.GetUpTime, HitReactionProfile.MinFlinchRecover));
         }

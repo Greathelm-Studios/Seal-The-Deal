@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using CloseTheDeal.Profile;
 using UnityEngine;
 
 namespace CloseTheDeal.Customisation
@@ -52,6 +53,20 @@ namespace CloseTheDeal.Customisation
         }
 
         static string _pathOverride;
+        static bool _hasCached;
+        static OutfitCatalog _cachedCatalog;
+        static OutfitLoadout _cachedLoadout;
+        static int _cachedRunsStarted;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            _pathOverride = null;
+            _hasCached = false;
+            _cachedCatalog = null;
+            _cachedLoadout = default;
+            _cachedRunsStarted = 0;
+        }
 
         public static string FilePath
         {
@@ -67,7 +82,11 @@ namespace CloseTheDeal.Customisation
         {
             FileData data = Read();
             if (data == null)
-                return new Loaded(catalog.Default, 0, false);
+            {
+                var fresh = new Loaded(catalog.Default, 0, false);
+                Cache(catalog, fresh.Loadout, fresh.RunsStarted);
+                return fresh;
+            }
 
             int runs = Mathf.Max(0, data.runsStarted);
             OutfitLoadout loadout = catalog.Default;
@@ -77,23 +96,47 @@ namespace CloseTheDeal.Customisation
                     loadout = Apply(catalog, loadout, choice);
             }
 
-            return new Loaded(catalog.Sanitise(loadout, runs), runs, true);
+            var loaded = new Loaded(catalog.Sanitise(loadout, runs), runs, true);
+            Cache(catalog, loaded.Loadout, loaded.RunsStarted);
+            return loaded;
         }
 
         /// <summary>Writes the outfit, keeping the runs count already on disk.</summary>
         public static void SaveOutfit(OutfitCatalog catalog, OutfitLoadout loadout)
         {
-            FileData existing = Read();
-            Write(catalog, loadout, existing != null ? Mathf.Max(0, existing.runsStarted) : 0);
+            int runs;
+            if (_hasCached && _cachedCatalog == catalog)
+            {
+                runs = _cachedRunsStarted;
+            }
+            else
+            {
+                FileData existing = Read();
+                runs = existing != null ? Mathf.Max(0, existing.runsStarted) : 0;
+            }
+
+            Cache(catalog, loadout, runs);
+            Write(catalog, loadout, runs);
         }
 
-        /// <summary>Adds one to the runs count, keeping the outfit already on disk. Returns the new count.</summary>
+        /// <summary>Adds one to the runs count, keeping the outfit already in memory (loading once if needed). Returns the new count.</summary>
         public static int AddRunStarted(OutfitCatalog catalog)
         {
-            Loaded current = Load(catalog);
-            int runs = current.RunsStarted + 1;
-            Write(catalog, current.Loadout, runs);
+            if (!_hasCached || _cachedCatalog != catalog)
+                Load(catalog);
+
+            int runs = _cachedRunsStarted + 1;
+            _cachedRunsStarted = runs;
+            Write(catalog, _cachedLoadout, runs);
             return runs;
+        }
+
+        static void Cache(OutfitCatalog catalog, OutfitLoadout loadout, int runsStarted)
+        {
+            _hasCached = true;
+            _cachedCatalog = catalog;
+            _cachedLoadout = loadout;
+            _cachedRunsStarted = runsStarted;
         }
 
         // ---- File ----------------------------------------------------------------------------
@@ -121,6 +164,7 @@ namespace CloseTheDeal.Customisation
 
         static FileData Read()
         {
+            BackgroundFileWriter.Flush();
             string path = FilePath;
             if (!File.Exists(path))
                 return null;
@@ -163,21 +207,8 @@ namespace CloseTheDeal.Customisation
             }
 
             string path = FilePath;
-            string temp = path + ".tmp";
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
-                File.WriteAllText(temp, JsonUtility.ToJson(data, true));
-                if (File.Exists(path))
-                    File.Replace(temp, path, null);
-                else
-                    File.Move(temp, path);
-            }
-            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
-            {
-                // The outfit still applies for this session; only keeping it for next launch failed.
-                Debug.LogWarning($"[Outfit] Couldn't save to {path} ({e.Message}). This outfit won't be there next launch.");
-            }
+            string json = JsonUtility.ToJson(data, true);
+            BackgroundFileWriter.Enqueue(path, json, "[Outfit]");
         }
 
         static void KeepCorrupt(string path)

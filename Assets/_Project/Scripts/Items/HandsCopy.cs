@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace CloseTheDeal.Items
@@ -10,6 +11,11 @@ namespace CloseTheDeal.Items
     /// </summary>
     static class HandsCopy
     {
+        static readonly List<Material> Materials = new(8);
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => Materials.Clear();
+
         /// <summary>enabledInPrefab: whether each renderer was on as the prefab made it (its live flag is off while the item is out of play).</summary>
         public static Transform Build(Transform root, Renderer[] renderers, bool[] enabledInPrefab)
         {
@@ -17,6 +23,10 @@ namespace CloseTheDeal.Items
             copy.SetParent(root, false);
 
             Vector3 rootScale = root.lossyScale;
+            float invX = Mathf.Abs(rootScale.x) > 0.0001f ? 1f / rootScale.x : 1f;
+            float invY = Mathf.Abs(rootScale.y) > 0.0001f ? 1f / rootScale.y : 1f;
+            float invZ = Mathf.Abs(rootScale.z) > 0.0001f ? 1f / rootScale.z : 1f;
+
             for (int i = 0; i < renderers.Length; i++)
             {
                 Renderer renderer = renderers[i];
@@ -31,11 +41,13 @@ namespace CloseTheDeal.Items
                 part.transform.SetParent(copy, false);
                 part.transform.SetPositionAndRotation(renderer.transform.position, renderer.transform.rotation);
                 Vector3 scale = renderer.transform.lossyScale;
-                part.transform.localScale = new Vector3(scale.x / rootScale.x, scale.y / rootScale.y, scale.z / rootScale.z);
+                part.transform.localScale = new Vector3(scale.x * invX, scale.y * invY, scale.z * invZ);
 
                 part.AddComponent<MeshFilter>().sharedMesh = filter.sharedMesh;
                 var drawn = part.AddComponent<MeshRenderer>();
-                drawn.sharedMaterials = meshRenderer.sharedMaterials;
+                meshRenderer.GetSharedMaterials(Materials);
+                drawn.SetSharedMaterials(Materials);
+                Materials.Clear();
                 drawn.shadowCastingMode = meshRenderer.shadowCastingMode;
             }
 

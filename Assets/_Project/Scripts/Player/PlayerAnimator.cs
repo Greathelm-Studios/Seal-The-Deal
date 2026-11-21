@@ -30,6 +30,7 @@
 //              is purely visual: the motor is predicted and host-judged, and nothing here may
 //              feed back into it or be sent over the network (AGENTS.md §3).
 // -----------------------------------------------------------------------------
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -216,6 +217,9 @@ namespace CloseTheDeal.Player
         /// </summary>
         const float KnockedTrail = 1.5f, KnockedArmRaise = 0.7f;
 
+        /// <summary>Mixer weights below this snap to zero so inactive clips stop evaluating and calling SetTime.</summary>
+        const float MinClipWeight = 0.001f;
+
         /// <summary>Where each clip plugs into the mixer: idle, then the eight run directions, then sprint, air and landing.</summary>
         const int IdleInput = 0, RunInput = 1, SprintInput = RunInput + AnimationProfile.RunDirections,
             AirInput = SprintInput + 1, LandInput = AirInput + 1, FidgetInput = LandInput + 1,
@@ -286,6 +290,13 @@ namespace CloseTheDeal.Player
         /// reads as an owl; a real look round takes the shoulders a third of the way. Picked by eye.
         /// </summary>
         const float LookChestShare = 0.35f;
+
+        /// <summary>
+        /// Tighter standing head-lead limit when the owner is in the F5 body view, degrees.
+        /// WHY: at the full 50 degrees, turning right while standing twists the right shoulder
+        /// across the camera's sightline before the body follows.
+        /// </summary>
+        const float BodyViewHeadTurnLimit = 15f;
 
         /// <summary>
         /// Below this much stride and this much air the body counts as standing, and may lag
@@ -421,6 +432,8 @@ namespace CloseTheDeal.Player
         readonly AnimationClipPlayable[] _clips = new AnimationClipPlayable[InputCount];
         /// <summary>Each clip's length, seconds, in input order.</summary>
         readonly float[] _clipLengths = new float[InputCount];
+        /// <summary>Last weight written to each mixer input, or -1 before first write.</summary>
+        readonly float[] _clipWeights = new float[InputCount];
         /// <summary>True when the profile had every clip at spawn; false = the procedural pose.</summary>
         bool _usesClips;
         /// <summary>Seconds since the last touchdown, and how much of the landing clip that touchdown earned, 0–1.</summary>
@@ -538,13 +551,22 @@ namespace CloseTheDeal.Player
         /// </remarks>
         void BuildClipGraph()
         {
-            _avatar.avatar = null;
-
-            _skeleton = _hips.T.GetComponentsInChildren<Transform>(true);
+            var bones = new List<Transform>((int)HumanBodyBones.LastBone);
+            for (int i = 0; i < (int)HumanBodyBones.LastBone; i++)
+            {
+                Transform bone = _avatar.GetBoneTransform((HumanBodyBones)i);
+                if (bone != null && !bones.Contains(bone))
+                    bones.Add(bone);
+            }
+            _skeleton = bones.ToArray();
             _skeletonRestPositions = new Vector3[_skeleton.Length];
             _skeletonRestRotations = new Quaternion[_skeleton.Length];
             for (int i = 0; i < _skeleton.Length; i++)
                 _skeleton[i].GetLocalPositionAndRotation(out _skeletonRestPositions[i], out _skeletonRestRotations[i]);
+
+            _avatar.avatar = null;
+            for (int i = 0; i < InputCount; i++)
+                _clipWeights[i] = -1f;
             // WHY: the clips are in place and this component never moves the player. Left on,
             // root motion would let the Animator shift the model under the motor.
             _avatar.applyRootMotion = false;
@@ -687,9 +709,12 @@ namespace CloseTheDeal.Player
                 _velocity = Vector3.Lerp(_velocity, measured, smoothing);
             }
 
-            float yaw = _model.eulerAngles.y;
-            _yawRate = Mathf.Lerp(_yawRate, Mathf.DeltaAngle(_lastYaw, yaw) / dt, smoothing);
-            _lastYaw = yaw;
+            if (!_usesClips)
+            {
+                float yaw = _model.eulerAngles.y;
+                _yawRate = Mathf.Lerp(_yawRate, Mathf.DeltaAngle(_lastYaw, yaw) / dt, smoothing);
+                _lastYaw = yaw;
+            }
 
             _local = _model.InverseTransformDirection(_velocity);
             Vector3 planar = new Vector3(_local.x, 0f, _local.z);
@@ -697,11 +722,14 @@ namespace CloseTheDeal.Player
             if (speed > DirectionMinSpeed)
                 _travel = planar / speed;
 
-            float step = Mathf.Min(dt, MaxSpringStep);
-            _torso.Step(planar, _profile.WobbleSpeed, _profile.WobbleDamping, step);
-            _headSpring.Step(planar, _profile.WobbleSpeed * HeadSpringRatio, _profile.WobbleDamping, step);
-            _turn.Step(new Vector3(_yawRate, 0f, 0f), _profile.WobbleSpeed, _profile.WobbleDamping, step);
-            _land.Step(Vector3.zero, _profile.LandBounce, LandDamping, step);
+            if (!_usesClips)
+            {
+                float step = Mathf.Min(dt, MaxSpringStep);
+                _torso.Step(planar, _profile.WobbleSpeed, _profile.WobbleDamping, step);
+                _headSpring.Step(planar, _profile.WobbleSpeed * HeadSpringRatio, _profile.WobbleDamping, step);
+                _turn.Step(new Vector3(_yawRate, 0f, 0f), _profile.WobbleSpeed, _profile.WobbleDamping, step);
+                _land.Step(Vector3.zero, _profile.LandBounce, LandDamping, step);
+            }
 
             if (!_hasMotor)
             {
@@ -787,8 +815,11 @@ namespace CloseTheDeal.Player
             {
                 // Touchdown: kick the landing spring hard enough to sink the hips by an amount
                 // that grows with how fast the body came down.
-                float dip = Mathf.Min(_fallSpeed * _profile.LandGive, _profile.LandDip);
-                _land.Rate.x += dip * 2f * Mathf.PI * _profile.LandBounce;
+                if (!_usesClips)
+                {
+                    float dip = Mathf.Min(_fallSpeed * _profile.LandGive, _profile.LandDip);
+                    _land.Rate.x += dip * 2f * Mathf.PI * _profile.LandBounce;
+                }
                 _landStrength = Mathf.Clamp01(_fallSpeed / _profile.LandFullSpeed);
                 _landTime = 0f;
                 _fallSpeed = 0f;
@@ -803,9 +834,12 @@ namespace CloseTheDeal.Player
                 if (lost > _profile.ImpactSpeed)
                 {
                     _stagger = Mathf.Clamp01(_stagger + lost / _profile.ImpactFullSpeed);
-                    Vector3 thrown = _travel * (lost * _profile.ImpactKick);
-                    _torso.Rate += thrown;
-                    _headSpring.Rate += thrown;
+                    if (!_usesClips)
+                    {
+                        Vector3 thrown = _travel * (lost * _profile.ImpactKick);
+                        _torso.Rate += thrown;
+                        _headSpring.Rate += thrown;
+                    }
                 }
             }
             _wasOnFloor = onFloor;
@@ -855,8 +889,8 @@ namespace CloseTheDeal.Player
                 _runDirection = Mathf.RoundToInt(Mathf.Repeat(heading, 360f) / RunDirectionStep) % AnimationProfile.RunDirections;
 
             float fidget = Fidget(dt, standingIdle);
-            _mixer.SetInputWeight(IdleInput, standingIdle * (1f - fidget));
-            _mixer.SetInputWeight(FidgetInput, standingIdle * fidget);
+            SetClipWeight(IdleInput, standingIdle * (1f - fidget));
+            SetClipWeight(FidgetInput, standingIdle * fidget);
             // Each direction's share eases toward all or nothing, so a change of direction
             // cross-fades straight from one clip to the other. Every stride clip sits at the same
             // point of its cycle, whatever its length.
@@ -865,29 +899,37 @@ namespace CloseTheDeal.Player
             {
                 float wanted = i == _runDirection ? 1f : 0f;
                 _runShares[i] += (wanted - _runShares[i]) * ease;
-                _mixer.SetInputWeight(RunInput + i, running * _runShares[i]);
-                _clips[RunInput + i].SetTime(_phase * _clipLengths[RunInput + i]);
+                SetClipWeight(RunInput + i, running * _runShares[i]);
+                if (_clipWeights[RunInput + i] > 0f)
+                    _clips[RunInput + i].SetTime(_phase * _clipLengths[RunInput + i]);
                 if (_usesCrouch)
                 {
-                    _mixer.SetInputWeight(CrouchRunInput + i, crouchMoving * _runShares[i]);
-                    _clips[CrouchRunInput + i].SetTime(_phase * _clipLengths[CrouchRunInput + i]);
+                    SetClipWeight(CrouchRunInput + i, crouchMoving * _runShares[i]);
+                    if (_clipWeights[CrouchRunInput + i] > 0f)
+                        _clips[CrouchRunInput + i].SetTime(_phase * _clipLengths[CrouchRunInput + i]);
                 }
             }
             if (_usesCrouch)
             {
-                _mixer.SetInputWeight(CrouchIdleInput, idle - standingIdle);
-                _clips[CrouchIdleInput].SetTime(Mathf.Repeat(_time, _clipLengths[CrouchIdleInput]));
-                _mixer.SetInputWeight(SlideInput, slide);
-                _clips[SlideInput].SetTime(Mathf.Repeat(_time, _clipLengths[SlideInput]));
+                SetClipWeight(CrouchIdleInput, idle - standingIdle);
+                if (_clipWeights[CrouchIdleInput] > 0f)
+                    _clips[CrouchIdleInput].SetTime(Mathf.Repeat(_time, _clipLengths[CrouchIdleInput]));
+                SetClipWeight(SlideInput, slide);
+                if (_clipWeights[SlideInput] > 0f)
+                    _clips[SlideInput].SetTime(Mathf.Repeat(_time, _clipLengths[SlideInput]));
             }
-            _mixer.SetInputWeight(SprintInput, sprinting);
-            _mixer.SetInputWeight(AirInput, _airWeight);
-            _mixer.SetInputWeight(LandInput, land);
+            SetClipWeight(SprintInput, sprinting);
+            SetClipWeight(AirInput, _airWeight);
+            SetClipWeight(LandInput, land);
 
-            _clips[IdleInput].SetTime(Mathf.Repeat(_time, _clipLengths[IdleInput]));
-            _clips[SprintInput].SetTime(_phase * _clipLengths[SprintInput]);
-            _clips[AirInput].SetTime(Mathf.Repeat(_time, _clipLengths[AirInput]));
-            _clips[LandInput].SetTime(landAt);
+            if (_clipWeights[IdleInput] > 0f)
+                _clips[IdleInput].SetTime(Mathf.Repeat(_time, _clipLengths[IdleInput]));
+            if (_clipWeights[SprintInput] > 0f)
+                _clips[SprintInput].SetTime(_phase * _clipLengths[SprintInput]);
+            if (_clipWeights[AirInput] > 0f)
+                _clips[AirInput].SetTime(Mathf.Repeat(_time, _clipLengths[AirInput]));
+            if (_clipWeights[LandInput] > 0f)
+                _clips[LandInput].SetTime(landAt);
 
             // WHY the whole skeleton goes back to its T-pose first: the Animator does not write
             // a bone on a frame when no clip moves it (the lowest spine bone never moves in the
@@ -898,6 +940,16 @@ namespace CloseTheDeal.Player
             _graph.Evaluate();
             TurnHeadFirst(dt);
             Breathe(idle);
+        }
+
+        void SetClipWeight(int input, float weight)
+        {
+            if (weight < MinClipWeight)
+                weight = 0f;
+            if (_clipWeights[input] == weight)
+                return;
+            _clipWeights[input] = weight;
+            _mixer.SetInputWeight(input, weight);
         }
 
         /// <summary>
@@ -984,7 +1036,10 @@ namespace CloseTheDeal.Player
             _lookYaw = look;
 
             bool standing = _moveWeight < StandingToLook && _airWeight < StandingToLook;
-            if (!standing || Mathf.Abs(_bodyBehind) > _profile.HeadTurnLimit)
+            float limit = _hasMotor && PlayerMotor.Local == _motor
+                ? Mathf.Min(_profile.HeadTurnLimit, BodyViewHeadTurnLimit)
+                : _profile.HeadTurnLimit;
+            if (!standing || Mathf.Abs(_bodyBehind) > limit)
                 _bodyTurning = true;
             if (_bodyTurning)
             {

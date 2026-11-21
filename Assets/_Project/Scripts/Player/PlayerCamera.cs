@@ -64,8 +64,10 @@ namespace CloseTheDeal.Player
             _camera = GetComponent<Camera>();
             _restFov = _camera.fieldOfView;
             _authoredNear = _camera.nearClipPlane;
-            int player = 1 << LayerMask.NameToLayer(PlayerLayer);
-            int prop = 1 << LayerMask.NameToLayer(PropLayer);
+            int playerLayer = LayerMask.NameToLayer(PlayerLayer);
+            int propLayer = LayerMask.NameToLayer(PropLayer);
+            int player = playerLayer >= 0 ? 1 << playerLayer : 0;
+            int prop = propLayer >= 0 ? 1 << propLayer : 0;
             _aimMask = ~player;            // Skips all players so you never aim at yourself; the shot from your eye still hits anyone in its path.
             _wallMask = ~(player | prop);  // Only the building stops a lean; furniture doesn't.
         }
@@ -182,20 +184,23 @@ namespace CloseTheDeal.Player
                 Vector3 quick = Vector3.ClampMagnitude(real - _headOffset, _headMaxOffset);
                 head += _headOffset + quick * _headFollow;
             }
-            Vector3 side = Quaternion.Euler(0f, _yaw, 0f) * Vector3.right;
             // In the body view the real head has already leaned with the body; sliding the eye
             // as well would lean it twice. The tilt below still applies.
             float reach = _headBone != null ? 0f : profile.LeanDistance * Mathf.Abs(_shownLean);
-            Vector3 direction = side * Mathf.Sign(_shownLean);
-
-            if (reach > 0.001f && Physics.SphereCast(head, _wallClearance, direction, out RaycastHit wall, reach, _wallMask, QueryTriggerInteraction.Ignore))
-                reach = wall.distance;
+            Vector3 leanOffset = Vector3.zero;
+            if (reach > 0.001f)
+            {
+                Vector3 direction = Quaternion.Euler(0f, _yaw, 0f) * Vector3.right * Mathf.Sign(_shownLean);
+                if (Physics.SphereCast(head, _wallClearance, direction, out RaycastHit wall, reach, _wallMask, QueryTriggerInteraction.Ignore))
+                    reach = wall.distance;
+                leanOffset = direction * reach;
+            }
 
             float roll = Reduced ? 0f : SlideRoll(profile, dt);
             Quaternion rotation = Quaternion.Euler(_pitch, _yaw, -_shownLean * profile.LeanAngle + roll);
             // The movement kick moves the eye along the view's own axes; it never turns the view.
             Vector3 kick = rotation * StepFeedback(profile, dt);
-            transform.SetPositionAndRotation(head + direction * reach + kick, rotation);
+            transform.SetPositionAndRotation(head + leanOffset + kick, rotation);
 
             float atSpeed = Mathf.InverseLerp(profile.WalkSpeed, profile.SprintSpeed, _motor.AnimState.PlanarSpeed);
             float widen = Reduced ? 0f : profile.SpeedFovKick * atSpeed + (_motor.AnimState.Sliding ? profile.SlideFovKick : 0f);

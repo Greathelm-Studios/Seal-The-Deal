@@ -97,7 +97,7 @@ namespace CloseTheDeal.Combat
 
         // ---- Runtime -------------------------------------------------------------------------
 
-        const int HistoryLength = 32;
+        const int HistoryLength = 64;
         const int SafeGroundEveryTicks = 15;
         const float RespawnControlLossSeconds = 0.1f;
         const float KillLift = 0.35f;
@@ -120,11 +120,15 @@ namespace CloseTheDeal.Combat
         readonly uint[] _historyTicks = new uint[HistoryLength];
 
         CapsuleCollider _capsule;
+        float _capsuleRadius;
+        float _capsuleHeight;
+        Vector3 _capsuleCenter;
         Rigidbody _rigidbody;
         PlayerMotor _motor;
         Renderer[] _renderers;
         MaterialPropertyBlock _block;
         Color[] _savedColours;
+        bool[] _hadBlock;
         bool _flashShown;
 
         uint _respawnTick;
@@ -159,10 +163,14 @@ namespace CloseTheDeal.Combat
         void Awake()
         {
             _capsule = GetComponent<CapsuleCollider>();
+            _capsuleRadius = _capsule.radius;
+            _capsuleHeight = _capsule.height;
+            _capsuleCenter = _capsule.center;
             _rigidbody = GetComponent<Rigidbody>();
             _motor = GetComponent<PlayerMotor>();
             _renderers = GetComponentsInChildren<Renderer>(true);
             _savedColours = new Color[_renderers.Length];
+            _hadBlock = new bool[_renderers.Length];
             _block = new MaterialPropertyBlock();
             if (_tipPivot != null)
                 _tipRest = _tipPivot.localRotation;
@@ -185,6 +193,8 @@ namespace CloseTheDeal.Combat
         {
             base.OnStopNetwork();
             All.Remove(this);
+            _flashLeft = 0f;
+            ApplyFlash(false);
         }
 
         public override void OnStartServer()
@@ -249,7 +259,8 @@ namespace CloseTheDeal.Combat
                 _motor.ApplyKnockback(shove, controlLossSeconds);
 
             RaiseDamaged(info);
-            RpcDamaged(amount, point, direction, attackerClientId, shove);
+            sbyte packedAttacker = (sbyte)(attackerClientId < 0 ? -1 : Math.Min(attackerClientId, (int)sbyte.MaxValue));
+            RpcDamaged(amount, point, ShotResolver.PackDirection(direction), packedAttacker);
             return true;
         }
 
@@ -343,20 +354,31 @@ namespace CloseTheDeal.Combat
         /// <summary>Host only. Where this body's feet were on a past tick; now, if that tick is no longer remembered.</summary>
         public Vector3 PositionAt(uint tick)
         {
+            if (tick == 0)
+                return transform.position;
             int slot = (int)(tick % HistoryLength);
             // A tick not remembered (the future, or too long ago) reads as now.
             return _historyTicks[slot] == tick ? _history[slot] : transform.position;
         }
 
         /// <summary>Host only. Whether this body was alive at a past tick, since its last spawn. A shot rewound to before a respawn can't hit it.</summary>
-        public bool WasAliveAt(uint tick) => tick >= _aliveFromTick;
+        public bool WasAliveAt(uint tick) => tick != uint.MaxValue && tick >= _aliveFromTick;
 
         /// <summary>The body's capsule as a segment and a radius, standing at the given feet position.</summary>
         public void CapsuleAt(Vector3 feet, out Vector3 bottom, out Vector3 top, out float radius)
         {
-            radius = _capsule.radius;
-            float half = Mathf.Max(0f, _capsule.height * 0.5f - radius);
-            Vector3 centre = feet + _capsule.center;
+            radius = _capsuleRadius;
+            float height = _capsuleHeight;
+            Vector3 localCenter = _capsuleCenter;
+            if (_motor != null && _motor.Crouch > 0f && _motor.Profile != null)
+            {
+                float crouched = Mathf.Clamp(_motor.Profile.CrouchHeight, radius * 2f, _capsuleHeight);
+                height = Mathf.Lerp(_capsuleHeight, crouched, _motor.Crouch);
+                localCenter = new Vector3(0f, height * 0.5f, 0f);
+            }
+
+            float half = Mathf.Max(0f, height * 0.5f - radius);
+            Vector3 centre = feet + localCenter;
             bottom = centre - Vector3.up * half;
             top = centre + Vector3.up * half;
         }
@@ -364,9 +386,9 @@ namespace CloseTheDeal.Combat
         // ---- Messages to clients -------------------------------------------------------------
 
         [ObserversRpc(ExcludeServer = true)]
-        void RpcDamaged(float amount, Vector3 point, Vector3 direction, int attackerClientId, Vector3 shove, Channel channel = Channel.Unreliable)
+        void RpcDamaged(float amount, Vector3 point, uint packedDirection, sbyte attackerClientId, Channel channel = Channel.Unreliable)
         {
-            RaiseDamaged(new DamageInfo(amount, point, direction, attackerClientId, shove, false));
+            RaiseDamaged(new DamageInfo(amount, point, ShotResolver.UnpackDirection(packedDirection), attackerClientId, Vector3.zero, false));
         }
 
         [ObserversRpc(ExcludeServer = true)]
@@ -389,6 +411,13 @@ namespace CloseTheDeal.Combat
             Flinch(info);
             Damaged?.Invoke(this, info);
             AnyDamaged?.Invoke(this, info);
+            HitFeed.Raise(new HitInfo
+            {
+                Point = info.Point,
+                Direction = info.Direction,
+                Impulse = info.Amount,
+                Type = HitType.Bullet
+            }, transform);
         }
 
         void RaiseDied(DamageInfo info)
@@ -419,9 +448,14 @@ namespace CloseTheDeal.Combat
             if (_flashLeft <= 0f && _tip == tipTarget && !_flinch.IsActive && _flinchAngle == 0f)
                 return;
 
-            _flinchAngle = _flinch.Step(Time.deltaTime, FlinchCurve);
-            if (_flinch.IsActive || _flinchAngle == 0f)
-                ApplyTip();
+            bool tipDirty = false;
+            if (_flinch.IsActive || _flinchAngle != 0f)
+            {
+                float prevFlinch = _flinchAngle;
+                _flinchAngle = _flinch.Step(Time.deltaTime, FlinchCurve);
+                if (_flinchAngle != prevFlinch)
+                    tipDirty = true;
+            }
 
             if (_flashLeft > 0f)
             {
@@ -432,8 +466,11 @@ namespace CloseTheDeal.Combat
             if (_tip != tipTarget)
             {
                 _tip = Mathf.MoveTowards(_tip, tipTarget, Time.deltaTime / _tipSeconds);
-                ApplyTip();
+                tipDirty = true;
             }
+
+            if (tipDirty)
+                ApplyTip();
         }
 
         /// <summary>Rocks the body away from the hit around the axis across the shot. Local looks only.</summary>
@@ -453,7 +490,8 @@ namespace CloseTheDeal.Combat
 
         /// <summary>
         /// Tints every body renderer, keeping whatever else other code has put in its property
-        /// block (the character's eyes use one); ending the flash puts the material's own colour back.
+        /// block (the character's eyes use one); ending the flash puts the material's own colour back
+        /// and clears the block when none was set so URP SRP Batcher eligibility is restored.
         /// </summary>
         void ApplyFlash(bool on)
         {
@@ -467,10 +505,17 @@ namespace CloseTheDeal.Combat
                 if (r == null)
                     continue;
 
+                if (!on && !_hadBlock[i])
+                {
+                    r.SetPropertyBlock(null);
+                    continue;
+                }
+
                 _block.Clear();
                 r.GetPropertyBlock(_block);
                 if (on)
                 {
+                    _hadBlock[i] = !_block.isEmpty;
                     // Remember the colour in force now (another script's, or the material's) to put back after.
                     Material material = r.sharedMaterial;
                     _savedColours[i] = _block.HasColor(BaseColourId) ? _block.GetColor(BaseColourId)

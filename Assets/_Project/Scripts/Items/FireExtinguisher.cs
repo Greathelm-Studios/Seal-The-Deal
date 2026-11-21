@@ -33,11 +33,12 @@ namespace CloseTheDeal.Items
         const float TwoPi = Mathf.PI * 2f;
 
         /// <summary>The tick the smoke stops. 0 while it is not venting.</summary>
-        readonly SyncVar<uint> _ventUntilTick = new();
         readonly SyncVar<bool> _empty = new();
+        readonly SyncVar<uint> _ventUntilTick = new();
 
         float _takeAwayAt;
         bool _sentAwayEmpty;
+        bool _ticking;
         AudioClip _ownLoop;
 
         /// <summary>Every machine. The pin was pulled and the smoke started.</summary>
@@ -75,17 +76,29 @@ namespace CloseTheDeal.Items
         public override void OnStartServer()
         {
             base.OnStartServer();
-            _ventUntilTick.Value = 0;
             _empty.Value = false;
+            _ventUntilTick.Value = 0;
             _sentAwayEmpty = false;
             _takeAwayAt = 0f;
-            TimeManager.OnTick += ServerTick;
+            _ticking = false;
         }
 
         public override void OnStopServer()
         {
             base.OnStopServer();
-            TimeManager.OnTick -= ServerTick;
+            SetServerTick(false);
+        }
+
+        void SetServerTick(bool active)
+        {
+            if (_ticking == active || TimeManager == null)
+                return;
+
+            _ticking = active;
+            if (active)
+                TimeManager.OnTick += ServerTick;
+            else
+                TimeManager.OnTick -= ServerTick;
         }
 
         public override void OnStartClient()
@@ -102,6 +115,7 @@ namespace CloseTheDeal.Items
                 return;
 
             _ventUntilTick.Value = TimeManager.Tick + TimeManager.TimeToTicks(_profile.SmokeSeconds, TickRounding.RoundUp);
+            SetServerTick(true);
         }
 
         /// <summary>Out of play mid-vent (it fell out of the building): it stops venting and comes back full.</summary>
@@ -111,6 +125,7 @@ namespace CloseTheDeal.Items
             // one comes back fresh after its definition's time, as designed.
             _sentAwayEmpty = !usedUp && _empty.Value;
             _ventUntilTick.Value = 0;
+            SetServerTick(false);
         }
 
         public override void ServerOnReturned()
@@ -120,11 +135,13 @@ namespace CloseTheDeal.Items
                 // Back where it started, still empty; it leaves play as an empty one does.
                 _sentAwayEmpty = false;
                 _takeAwayAt = Time.time + _profile.EmptyLingerSeconds;
+                SetServerTick(true);
                 return;
             }
 
-            _ventUntilTick.Value = 0;
             _empty.Value = false;
+            _ventUntilTick.Value = 0;
+            SetServerTick(false);
         }
 
         void ServerTick()
@@ -132,14 +149,19 @@ namespace CloseTheDeal.Items
             uint until = _ventUntilTick.Value;
             if (until == 0)
             {
+                if (!_empty.Value)
+                {
+                    SetServerTick(false);
+                    return;
+                }
                 TakeAwayWhenEmpty();
                 return;
             }
 
             if (TimeManager.Tick >= until)
             {
-                _ventUntilTick.Value = 0;
                 _empty.Value = true;
+                _ventUntilTick.Value = 0;
                 _takeAwayAt = Time.time + _profile.EmptyLingerSeconds;
                 return;
             }
@@ -181,7 +203,7 @@ namespace CloseTheDeal.Items
                 PinPulled?.Invoke(this);
                 _onPinPulled.Invoke();
             }
-            else if (!venting && previous != 0)
+            else if (!venting && previous != 0 && _empty.Value)
             {
                 ItemAudio.PlayAt(Item.Sounds, Item.Sounds?.VentEnd, transform.position);
                 RanEmpty?.Invoke(this);

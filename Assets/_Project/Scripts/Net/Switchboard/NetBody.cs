@@ -28,6 +28,7 @@ namespace CloseTheDeal.Net
         int _poseCount;
         int _poseHead;
         bool _hasNewest;
+        bool _forceSync;
         uint _newestTick;
         Vector3 _spawnPosition;
         Quaternion _spawnRotation;
@@ -36,8 +37,12 @@ namespace CloseTheDeal.Net
         internal Vector3 Position => transform.position;
         internal Quaternion Rotation => transform.rotation;
         internal bool IsSleeping => _body.IsSleeping();
+        internal bool IsKinematic => _body != null && _body.isKinematic;
         internal uint NewestTick => _newestTick;
         internal bool HasNewest => _hasNewest;
+
+        public void ForceSync() { _forceSync = true; }
+        internal bool ConsumeForceSync() { bool v = _forceSync; _forceSync = false; return v; }
 
         void Awake()
         {
@@ -54,6 +59,7 @@ namespace CloseTheDeal.Net
             _poseCount = 0;
             _poseHead = 0;
             _hasNewest = false;
+            _forceSync = false;
 
             if (GetComponent<NetworkTransform>() != null)
             {
@@ -79,6 +85,7 @@ namespace CloseTheDeal.Net
             _poseCount = 0;
             _poseHead = 0;
             _hasNewest = false;
+            _forceSync = false;
             enabled = false;
             base.OnStopNetwork();
         }

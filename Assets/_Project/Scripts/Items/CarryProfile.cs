@@ -127,5 +127,11 @@ namespace CloseTheDeal.Items
         /// Set by the first player's ItemCarrier; null until one exists.
         /// </summary>
         public static CarryProfile Shared { get; internal set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Shared = null;
+        }
     }
 }

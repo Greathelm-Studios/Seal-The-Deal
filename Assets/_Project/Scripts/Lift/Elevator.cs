@@ -10,6 +10,7 @@
 //              the host decides when a ride starts, and every machine works the car's height out
 //              from that one start tick, so the car itself is never sent over the network.
 // -----------------------------------------------------------------------------
+using CloseTheDeal.Player;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using UnityEngine;
@@ -91,8 +92,11 @@ namespace CloseTheDeal.Lift
         [Tooltip("How close to a call spot a player must stand to call the car, in metres.")]
         [Range(0.5f, 4f)] [SerializeField] float _callRadius = 1.5f;
 
+        /// <summary>Seconds between idle cabin/call overlap checks on the host (~10 Hz).</summary>
+        const float PollIntervalSeconds = 0.1f;
+
         readonly SyncVar<LiftRide> _ride = new();
-        readonly Collider[] _hits = new Collider[MaxPlayers];
+        readonly Collider[] _hits = new Collider[MaxPlayers * 2];
         readonly Vector3[] _doorClosed = new Vector3[StopCount * LeavesPerStop];
         /// <summary>Each leaf's fully-open offset from its closed position, metres, in its parent's space. Derived, never written back.</summary>
         readonly Vector3[] _doorOpenOffset = new Vector3[StopCount * LeavesPerStop];
@@ -114,6 +118,8 @@ namespace CloseTheDeal.Lift
         bool _restPlaced;
         /// <summary>Host only: ticks a rider or caller has been waiting.</summary>
         int _dwellTicks;
+        /// <summary>Host only: ticks since the last idle cabin/call overlap check.</summary>
+        int _pollTicks;
 
         /// <summary>The stop the car is at or heading to: 0 lower, 1 upper.</summary>
         public int TargetStop => _ride.Value.Departed ? OtherStop(_ride.Value.FromStop) : _ride.Value.FromStop;
@@ -159,6 +165,9 @@ namespace CloseTheDeal.Lift
             PredictionManager.OnPreReconcile += OnPreReconcile;
             PredictionManager.OnPreReplicateReplay += OnPreReplicateReplay;
             _restPlaced = false;
+            _haveReconciled = false;
+            _localAheadOfHost = 0;
+            _pollTicks = 0;
         }
 
         public override void OnStopNetwork()
@@ -175,6 +184,7 @@ namespace CloseTheDeal.Lift
             // A new session starts with the car waiting at the lower stop, wherever the last one left it.
             _ride.Value = default;
             _dwellTicks = 0;
+            _pollTicks = 0;
         }
 
         void OnRideChanged(LiftRide previous, LiftRide next, bool asServer)
@@ -251,26 +261,46 @@ namespace CloseTheDeal.Lift
             if (ride.Departed && SecondsInto(ride, tick) < _rideSeconds)
             {
                 _dwellTicks = 0;
+                _pollTicks = 0;
                 return;
             }
 
+            int pollInterval = Mathf.Max(1, TicksFor(PollIntervalSeconds));
+            _pollTicks++;
+            if (_pollTicks < pollInterval)
+                return;
+
+            _pollTicks = 0;
+
             int here = TargetStop;
             Vector3 cabin = _car.transform.TransformPoint(_cabinCentre);
-            bool riders = Physics.OverlapBoxNonAlloc(cabin, _cabinSize * 0.5f, _hits, _car.rotation, _playerMask, QueryTriggerInteraction.Ignore) > 0;
+            int cabinHits = Physics.OverlapBoxNonAlloc(cabin, _cabinSize * 0.5f, _hits, _car.rotation, _playerMask, QueryTriggerInteraction.Ignore);
+            bool riders = HasPlayer(cabinHits);
             // Riders win over a caller: the car is theirs until they step out.
-            bool called = !riders && Physics.OverlapSphereNonAlloc(_callPoints[OtherStop(here)].position, _callRadius, _hits, _playerMask, QueryTriggerInteraction.Ignore) > 0;
+            bool called = !riders && HasPlayer(Physics.OverlapSphereNonAlloc(_callPoints[OtherStop(here)].position, _callRadius, _hits, _playerMask, QueryTriggerInteraction.Ignore));
             if (!riders && !called)
             {
                 _dwellTicks = 0;
                 return;
             }
 
-            _dwellTicks++;
+            _dwellTicks += pollInterval;
             if (_dwellTicks < TicksFor(_dwellSeconds))
                 return;
 
             _dwellTicks = 0;
             _ride.Value = new LiftRide { FromStop = (byte)here, DepartTick = tick + (uint)TicksFor(ScheduleLeadSeconds), Departed = true };
+        }
+
+        bool HasPlayer(int hitCount)
+        {
+            for (int i = 0; i < hitCount; i++)
+            {
+                Rigidbody body = _hits[i].attachedRigidbody;
+                if (body != null && body.TryGetComponent<PlayerMotor>(out _))
+                    return true;
+            }
+            return false;
         }
 
         // ---- The ride as a function of the tick ----------------------------------------------

@@ -46,12 +46,18 @@ namespace CloseTheDeal.Onboarding
         MatchDirector _match;
         float _nextShow;
         float _nextReceptionCheck;
+        bool _receptionSeen;
+        string _receptionHintId;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics() => HintShown = null;
 
         void OnEnable()
         {
+            _receptionHintId = _hints != null && _hints.For(HintTrigger.ArrivedInReception) != null
+                ? _hints.For(HintTrigger.ArrivedInReception).Id
+                : null;
+            _receptionSeen = string.IsNullOrEmpty(_receptionHintId) || ProfileStore.Current.HasSeen(_receptionHintId);
             FirmMember.OnNotice += OnNotice;
             Health.AnyDied += OnDied;
             ProfileStore.MatchRecorded += OnRecorded;
@@ -73,7 +79,7 @@ namespace CloseTheDeal.Onboarding
         {
             if (_match == null && MatchDirector.Instance != null)
                 Hook(MatchDirector.Instance);
-            if (Time.unscaledTime >= _nextReceptionCheck)
+            if (!_receptionSeen && Time.unscaledTime >= _nextReceptionCheck)
                 CheckReception();
             if (_queue.Count > 0 && Time.unscaledTime >= _nextShow)
                 ShowNext();
@@ -91,6 +97,11 @@ namespace CloseTheDeal.Onboarding
         void CheckReception()
         {
             _nextReceptionCheck = Time.unscaledTime + _receptionCheckSeconds;
+            if (string.IsNullOrEmpty(_receptionHintId) || ProfileStore.Current.HasSeen(_receptionHintId))
+            {
+                _receptionSeen = true;
+                return;
+            }
             FirmMember me = FirmMember.Local;
             if (me != null && LobbyRoom.Instance != null && LobbyRoom.Instance.Contains(me.Position))
                 Offer(HintTrigger.ArrivedInReception);
@@ -161,6 +172,8 @@ namespace CloseTheDeal.Onboarding
 
             HintShown.Invoke(line);
             ProfileStore.MarkHintSeen(line.Id);
+            if (line.Id == _receptionHintId)
+                _receptionSeen = true;
             _nextShow = Time.unscaledTime + line.Seconds + _hints.GapSeconds;
         }
     }

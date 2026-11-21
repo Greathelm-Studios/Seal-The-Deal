@@ -122,6 +122,7 @@ namespace CloseTheDeal.Items
         MotorSpeedOverride _speed;
         Pickup _held;
         float _canTakeAt;
+        bool _serverTicking;
 
         // Owner only.
         InputAction _interact;
@@ -172,15 +173,27 @@ namespace CloseTheDeal.Items
         public override void OnStartServer()
         {
             base.OnStartServer();
-            TimeManager.OnTick += ServerTick;
+            SetServerTick(_held != null);
         }
 
         public override void OnStopServer()
         {
             base.OnStopServer();
-            TimeManager.OnTick -= ServerTick;
+            SetServerTick(false);
             // Leaving the game, or the host shutting down: whatever is carried stays in the level.
             ServerForceDrop();
+        }
+
+        void SetServerTick(bool active)
+        {
+            if (_serverTicking == active || TimeManager == null)
+                return;
+
+            _serverTicking = active;
+            if (active)
+                TimeManager.OnTick += ServerTick;
+            else
+                TimeManager.OnTick -= ServerTick;
         }
 
         public override void OnStartClient()
@@ -330,22 +343,40 @@ namespace CloseTheDeal.Items
                 return null;
 
             Transform view = cam.transform;
-            if (!Physics.SphereCast(view.position, _profile.LookRadius, view.forward, out RaycastHit hit, _profile.Reach, ItemLayers.LookMask, QueryTriggerInteraction.Ignore))
+            if (Physics.Raycast(view.position, view.forward, out RaycastHit hit, _profile.Reach, ItemLayers.LookMask, QueryTriggerInteraction.Ignore))
             {
-                _lookCollider = null;
-                _lookPickup = null;
+                Pickup direct = PickupFromHit(hit.collider);
+                if (IsPickable(direct))
+                    return direct;
+            }
+
+            if (Physics.SphereCast(view.position, _profile.LookRadius, view.forward, out hit, _profile.Reach, ItemLayers.LookMask, QueryTriggerInteraction.Ignore))
+            {
+                Pickup near = PickupFromHit(hit.collider);
+                if (IsPickable(near))
+                    return near;
                 return null;
             }
 
+            _lookCollider = null;
+            _lookPickup = null;
+            return null;
+        }
+
+        Pickup PickupFromHit(Collider collider)
+        {
             // Looked up again only when the crosshair moves onto a different collider.
-            if (hit.collider != _lookCollider)
+            if (collider != _lookCollider)
             {
-                _lookCollider = hit.collider;
-                _lookPickup = hit.collider.GetComponentInParent<Pickup>();
+                _lookCollider = collider;
+                Rigidbody rb = collider.attachedRigidbody;
+                _lookPickup = rb != null && rb.TryGetComponent(out Pickup p) ? p : null;
             }
 
-            return _lookPickup != null && _lookPickup.State == PickupState.InWorld && _lookPickup.Offered ? _lookPickup : null;
+            return _lookPickup;
         }
+
+        static bool IsPickable(Pickup pickup) => pickup != null && pickup.State == PickupState.InWorld && pickup.Offered;
 
         void UpdatePrompt(Pickup target)
         {
@@ -481,9 +512,15 @@ namespace CloseTheDeal.Items
             Vector3 middle = pickup.Body.worldCenterOfMass;
             if (!Physics.Linecast(eye, middle, out RaycastHit first, ItemLayers.LookMask, QueryTriggerInteraction.Ignore))
                 return true;
-            return first.collider.GetComponentInParent<Pickup>() == pickup
+            return IsPickup(first.collider, pickup)
                 || (Physics.Linecast(eye, nearest + (middle - nearest) * 0.1f, out RaycastHit edge, ItemLayers.LookMask, QueryTriggerInteraction.Ignore)
-                    && edge.collider.GetComponentInParent<Pickup>() == pickup);
+                    && IsPickup(edge.collider, pickup));
+        }
+
+        static bool IsPickup(Collider collider, Pickup pickup)
+        {
+            Rigidbody rb = collider.attachedRigidbody;
+            return rb != null && rb.TryGetComponent(out Pickup hit) && hit == pickup;
         }
 
         /// <summary>An item already in the hands, or the hands shared with something else that holds them.</summary>
@@ -498,9 +535,10 @@ namespace CloseTheDeal.Items
             if (_held == null)
                 return;
 
-            Vector3 direction = aim.sqrMagnitude > 0.25f ? aim.normalized : transform.forward;
+            bool finite = float.IsFinite(aim.x) && float.IsFinite(aim.y) && float.IsFinite(aim.z);
+            Vector3 direction = finite && aim.sqrMagnitude > 0.25f ? aim.normalized : transform.forward;
             Vector3 velocity = direction * _held.Definition.ThrowSpeed + _rigidbody.linearVelocity * _profile.InheritVelocity;
-            _held.ServerRelease(ReleaseKind.Thrown, velocity);
+            _held.ServerRelease(ReleaseKind.Thrown, velocity, direction);
         }
 
         [ServerRpc]
@@ -551,7 +589,13 @@ namespace CloseTheDeal.Items
 
         void ServerTick()
         {
-            if (_held != null && _profile.DropWhenKnocked && _motor.State == MoveState.Knocked)
+            if (_held == null)
+            {
+                SetServerTick(false);
+                return;
+            }
+
+            if (_profile.DropWhenKnocked && _motor.State == MoveState.Knocked)
                 ServerForceDrop();
         }
 
@@ -564,6 +608,12 @@ namespace CloseTheDeal.Items
         /// Either way a wall in front pushes the item back toward the body.
         /// </summary>
         public void GetHoldPose(ItemDefinition item, bool view, out Vector3 position, out Quaternion rotation)
+        {
+            GetHoldPose(item, view, !view || IsOwner, out position, out rotation);
+        }
+
+        /// <summary>Same as above, optionally skipping the wall-pushback cast (used for remote carriers' visuals).</summary>
+        public void GetHoldPose(ItemDefinition item, bool view, bool checkWalls, out Vector3 position, out Quaternion rotation)
         {
             Vector3 eye;
             Quaternion frame;
@@ -580,14 +630,32 @@ namespace CloseTheDeal.Items
                 frame = Quaternion.Euler(0f, body.eulerAngles.y, 0f);
             }
 
+            ComputeHoldPose(item, eye, frame, checkWalls, out position, out rotation);
+        }
+
+        /// <summary>Host only. Spawn pose for a throw, deriving pitch from <paramref name="aimDirection"/>.</summary>
+        internal void GetThrowPose(ItemDefinition item, Vector3 aimDirection, out Vector3 position, out Quaternion rotation)
+        {
+            Vector3 eye = transform.position + Vector3.up * _motor.EyeHeight;
+            float horizontal = Mathf.Sqrt(aimDirection.x * aimDirection.x + aimDirection.z * aimDirection.z);
+            float pitch = -Mathf.Atan2(aimDirection.y, horizontal) * Mathf.Rad2Deg;
+            Quaternion frame = Quaternion.Euler(pitch, transform.eulerAngles.y, 0f);
+            ComputeHoldPose(item, eye, frame, true, out position, out rotation);
+        }
+
+        static void ComputeHoldPose(ItemDefinition item, Vector3 eye, Quaternion frame, bool checkWalls, out Vector3 position, out Quaternion rotation)
+        {
             Vector3 reach = frame * item.HeldOffset;
-            float distance = reach.magnitude;
-            if (distance > 0.001f)
+            if (checkWalls)
             {
-                Vector3 direction = reach / distance;
-                float wall = NearestSolid(eye, item.HoldClearance, direction, distance);
-                if (wall < distance)
-                    reach = direction * wall;
+                float distance = reach.magnitude;
+                if (distance > 0.001f)
+                {
+                    Vector3 direction = reach / distance;
+                    float wall = NearestSolid(eye, item.HoldClearance, direction, distance);
+                    if (wall < distance)
+                        reach = direction * wall;
+                }
             }
 
             position = eye + reach;
@@ -629,8 +697,12 @@ namespace CloseTheDeal.Items
             {
                 RaycastHit hit = HoldHits[i];
                 // A distance of 0 is something the sphere already overlaps at the eye: ignored, as a single cast would.
-                if (hit.distance > 0f && hit.distance < nearest && hit.collider.GetComponentInParent<Pickup>() == null)
-                    nearest = hit.distance;
+                if (hit.distance > 0f && hit.distance < nearest)
+                {
+                    Rigidbody rb = hit.collider.attachedRigidbody;
+                    if (rb == null || !rb.TryGetComponent<Pickup>(out _))
+                        nearest = hit.distance;
+                }
             }
 
             return nearest;
@@ -640,6 +712,8 @@ namespace CloseTheDeal.Items
         internal void NotifyHeld(Pickup pickup)
         {
             _held = pickup;
+            if (IsServerStarted)
+                SetServerTick(true);
             ApplyWeight(pickup.Definition.WeightKg);
             if (IsOwner)
                 HoldFire(true);
@@ -654,6 +728,8 @@ namespace CloseTheDeal.Items
                 return;
 
             _held = null;
+            if (IsServerStarted)
+                SetServerTick(false);
             Load = 0f;
             _speed.Clear();
             if (IsOwner)

@@ -62,12 +62,22 @@ namespace FishySteamworks
         /// <summary>
         /// Pointers for received messages per connection.
         /// </summary>
-        protected IntPtr[] MessagePointers = new IntPtr[MAX_MESSAGES];
+        protected IntPtr[] MessagePointers = null;
         /// <summary>
         /// Buffer used to receive data.
         /// </summary>
         protected byte[] InboundBuffer = null;
+        // Close the Deal patch (FORK.md): reusable persistently-pinned outbound buffer so Send never mutates caller arrays or allocates per packet.
+        private byte[] _outboundBuffer = null;
+        private GCHandle _outboundPinned;
+        private IntPtr _outboundPtr = IntPtr.Zero;
         #endregion
+
+        ~CommonSocket()
+        {
+            if (!Environment.HasShutdownStarted)
+                FreeOutboundBuffer();
+        }
 
         #region Const.
         /// <summary>
@@ -86,10 +96,28 @@ namespace FishySteamworks
         internal virtual void Initialize(Transport t)
         {
             Transport = t;
-            //Get whichever channel has max MTU and resize buffer.
-            int maxMTU = Transport.GetMTU(0);
-            maxMTU = Math.Max(maxMTU, Transport.GetMTU(1));
-            InboundBuffer = new byte[maxMTU];
+        }
+
+        // Close the Deal patch (FORK.md): lazily allocate receive buffers only on sockets that receive Steam messages (skips ClientHostSocket).
+        protected void EnsureReceiveBuffers()
+        {
+            if (MessagePointers == null)
+                MessagePointers = new IntPtr[MAX_MESSAGES];
+
+            if (InboundBuffer == null)
+            {
+                int maxMTU = Transport.GetMTU(0);
+                maxMTU = Math.Max(maxMTU, Transport.GetMTU(1));
+                InboundBuffer = new byte[maxMTU];
+            }
+        }
+
+        protected void FreeOutboundBuffer()
+        {
+            if (_outboundPinned.IsAllocated)
+                _outboundPinned.Free();
+            _outboundPtr = IntPtr.Zero;
+            _outboundBuffer = null;
         }
 
         /// <summary>
@@ -128,31 +156,42 @@ namespace FishySteamworks
         protected EResult Send(HSteamNetConnection steamConnection, ArraySegment<byte> segment, byte channelId)
         {
             /* The channel is packed into the data as a trailing byte, because the receiver
-             * cannot tell otherwise which channel a message came in on. The array is grown
-             * only when it has no room for that byte.
-             * Close the Deal patch (FORK.md, upstream issue 19): the original grew a copy
-             * of the array, wrote the channel byte into the copy, then built the segment
-             * from the original, so a full buffer either threw or sent a stale channel byte. */
-            byte[] array = segment.Array;
-            int end = segment.Offset + segment.Count;
-            if (end >= array.Length)
-                Array.Resize(ref array, end + 1);
-            array[end] = channelId;
-            segment = new ArraySegment<byte>(array, segment.Offset, segment.Count + 1);
+             * cannot tell otherwise which channel a message came in on.
+             * Close the Deal patch (FORK.md): copy into a reusable persistently-pinned buffer
+             * grown on demand, eliminating per-packet GCHandle.Alloc, Array.Resize, and caller-buffer mutation. */
+            int needed = segment.Count + 1;
+            if (_outboundBuffer == null || _outboundBuffer.Length < needed)
+            {
+                int size = _outboundBuffer == null ? 2048 : _outboundBuffer.Length;
+                while (size < needed)
+                    size = size <= int.MaxValue / 2 ? size * 2 : needed;
 
-            GCHandle pinnedArray = GCHandle.Alloc(segment.Array, GCHandleType.Pinned);
-            IntPtr pData = pinnedArray.AddrOfPinnedObject() + segment.Offset;
+                if (_outboundPinned.IsAllocated)
+                    _outboundPinned.Free();
+
+                _outboundBuffer = new byte[size];
+                _outboundPinned = GCHandle.Alloc(_outboundBuffer, GCHandleType.Pinned);
+                _outboundPtr = _outboundPinned.AddrOfPinnedObject();
+            }
+            else if (!_outboundPinned.IsAllocated)
+            {
+                _outboundPinned = GCHandle.Alloc(_outboundBuffer, GCHandleType.Pinned);
+                _outboundPtr = _outboundPinned.AddrOfPinnedObject();
+            }
+
+            if (segment.Count > 0)
+                Buffer.BlockCopy(segment.Array, segment.Offset, _outboundBuffer, 0, segment.Count);
+            _outboundBuffer[segment.Count] = channelId;
 
             int sendFlag = (channelId == (byte)Channel.Unreliable) ? Constants.k_nSteamNetworkingSend_Unreliable : Constants.k_nSteamNetworkingSend_Reliable;
 #if UNITY_SERVER
-            EResult result = SteamGameServerNetworkingSockets.SendMessageToConnection(steamConnection, pData, (uint)segment.Count, sendFlag, out long _);
+            EResult result = SteamGameServerNetworkingSockets.SendMessageToConnection(steamConnection, _outboundPtr, (uint)needed, sendFlag, out long _);
 #else
-            EResult result = SteamNetworkingSockets.SendMessageToConnection(steamConnection, pData, (uint)segment.Count, sendFlag, out long _);
+            EResult result = SteamNetworkingSockets.SendMessageToConnection(steamConnection, _outboundPtr, (uint)needed, sendFlag, out long _);
 #endif
             if (result != EResult.k_EResultOK)
                 Transport.NetworkManager.LogWarning($"Send issue: {result}");
 
-            pinnedArray.Free();
             return result;
         }
 
@@ -186,9 +225,9 @@ namespace FishySteamworks
         /// <returns>False when the message was dropped as malformed; segment and channel are then unset.</returns>
         protected bool GetMessage(IntPtr ptr, byte[] buffer, out ArraySegment<byte> segment, out byte channel)
         {
-            SteamNetworkingMessage_t data = Marshal.PtrToStructure<SteamNetworkingMessage_t>(ptr);
-
-            int packetLength = data.m_cbSize;
+            // Close the Deal patch (FORK.md): read m_pData (offset 0) and m_cbSize (offset IntPtr.Size) directly instead of marshaling the entire SteamNetworkingMessage_t struct.
+            IntPtr pData = Marshal.ReadIntPtr(ptr);
+            int packetLength = Marshal.ReadInt32(ptr, IntPtr.Size);
             /* Close the Deal patch (FORK.md): the original copied any size into the MTU-sized
              * buffer and read the channel from byte packetLength - 1. A peer sending an empty
              * message, or one larger than the buffer (Steam allows reliable messages far above
@@ -221,7 +260,7 @@ namespace FishySteamworks
                 return false;
             }
 
-            Marshal.Copy(data.m_pData, buffer, 0, packetLength);
+            Marshal.Copy(pData, buffer, 0, packetLength);
 
             //data.Release();
             SteamNetworkingMessage_t.Release(ptr);

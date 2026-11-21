@@ -47,7 +47,7 @@ Two screens will show the same player's limbs in different places. Nothing reads
 
 **The ragdoll lives in a physics scene of its own** ([RagdollWorld.cs](../../Assets/_Project/Scripts/Player/RagdollWorld.cs)), stepped by that class at 120 steps a second and by nothing else.
 The game's own physics scene is stepped by FishNet once a tick and re-stepped several times on every reconcile; a ragdoll in it would be simulated many times over and could shove the predicted capsule and the host's props. In its own scene it can do neither.
-The price is that the level's colliders are in the other scene, so the ragdoll scene keeps copies of the solid level geometry within 3 m of each ragdoll.
+The price is that the level's colliders are in the other scene, so the ragdoll scene keeps copies of the solid level geometry within 3 m of each ragdoll (refreshes staggered across ragdolls; disabled-state checks throttled to 0.2 s with last-known bounds cached for disabled colliders). Remote ragdolls beyond 25 m or more than 9 m vertically away pause simulation and leave `RagdollWorld` (re-adding and snapping cleanly when back in range); when no active ragdolls remain, `RagdollWorld` unloads its physics scene and clears its proxy table.
 
 ## Files
 

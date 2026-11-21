@@ -103,6 +103,12 @@ namespace CloseTheDeal.MatchMode
         Camera _uiCamera;
         Camera _camera;
         bool _wired;
+        int _ladderOpen = int.MinValue;
+        int _ladderCheckpoint = int.MinValue;
+        int _ladderCaseFloor = int.MinValue;
+        byte _ladderCaseHolder = byte.MaxValue;
+        bool _clockScaled;
+        bool _noticeShook;
 
         // ---- Lifecycle ---------------------------------------------------------------------------
 
@@ -113,6 +119,11 @@ namespace CloseTheDeal.MatchMode
             _wired = MatchWiring.Complete(this, nameof(_clockWarning), nameof(_markerEdgeImage), nameof(_edgeMarker), nameof(_openSprite), nameof(_shutSprite));
             if (!_wired)
                 return;
+
+            if (_clockPlate != null)
+                UiMotion.EnsureSubCanvas(_clockPlate.gameObject);
+            UiMotion.EnsureSubCanvas(_banner.gameObject);
+            UiMotion.EnsureSubCanvas(_notice.gameObject);
 
             _bannerHome = _banner.anchoredPosition;
             _noticeHome = _notice.anchoredPosition;
@@ -184,6 +195,7 @@ namespace CloseTheDeal.MatchMode
             _root.SetActive(false);
             _bannerUntil = -1f;
             _noticeUntil = -1f;
+            ResetIdleTransforms();
         }
 
         void RefreshAll()
@@ -195,11 +207,28 @@ namespace CloseTheDeal.MatchMode
             _bannerGroup.alpha = 0f;
             _noticeGroup.alpha = 0f;
             _countdownGroup.alpha = 0f;
+            ResetIdleTransforms();
             _capWarning = _match.Phase == MatchPhase.Running && _match.SecondsLeft <= _match.Profile.CapWarningSeconds;
             ShowPrompt(MatchPrompt.None);
             ShowClock(_match.SecondsLeft);
             RebuildLadder();
             RefreshTracker();
+        }
+
+        void ResetIdleTransforms()
+        {
+            if (_clockScaled && _clockPlate != null)
+            {
+                _clockPlate.localScale = Vector3.one;
+                _clockScaled = false;
+            }
+
+            _shake.Snap(0f);
+            if (_noticeShook)
+            {
+                _notice.anchoredPosition = _noticeHome;
+                _noticeShook = false;
+            }
         }
 
         void OnPhaseChanged(MatchPhase previous, MatchPhase next)
@@ -335,6 +364,10 @@ namespace CloseTheDeal.MatchMode
                 _rowLabels[i].text = arena.FloorLabel(i);
             }
 
+            _ladderOpen = int.MinValue;
+            _ladderCheckpoint = int.MinValue;
+            _ladderCaseFloor = int.MinValue;
+            _ladderCaseHolder = byte.MaxValue;
             RefreshLadder();
         }
 
@@ -353,10 +386,53 @@ namespace CloseTheDeal.MatchMode
             FirmMember local = FirmMember.Local;
             int checkpoint = local != null ? _match.CheckpointFloor(local.Firm) : -1;
             int caseFloor = status.State == BriefcaseState.Returning ? -1 : status.Floor;
-            for (int i = 0; i < arena.FloorCount; i++)
-                StyleRow(i, i <= open, i == checkpoint && checkpoint > 0, i == caseFloor);
+            byte holder = status.State == BriefcaseState.Carried ? status.CarrierFirm : MatchDirector.NoFirm;
 
-            _ladderCaption.text = "OPEN TO " + arena.FloorLabel(open).ToUpperInvariant();
+            bool openChanged = open != _ladderOpen;
+            bool checkpointChanged = checkpoint != _ladderCheckpoint;
+            bool caseChanged = caseFloor != _ladderCaseFloor || holder != _ladderCaseHolder;
+            if (!openChanged && !checkpointChanged && !caseChanged)
+                return;
+
+            if (_ladderOpen == int.MinValue)
+            {
+                for (int i = 0; i < arena.FloorCount; i++)
+                    StyleRow(i, i <= open, i == checkpoint && checkpoint > 0, i == caseFloor);
+            }
+            else
+            {
+                if (openChanged)
+                {
+                    int lo = Mathf.Max(0, Mathf.Min(_ladderOpen, open));
+                    int hi = Mathf.Min(arena.FloorCount - 1, Mathf.Max(_ladderOpen, open));
+                    for (int i = lo; i <= hi; i++)
+                        StyleRow(i, i <= open, i == checkpoint && checkpoint > 0, i == caseFloor);
+                }
+
+                if (checkpointChanged)
+                {
+                    if (_ladderCheckpoint > 0 && _ladderCheckpoint < arena.FloorCount)
+                        StyleRow(_ladderCheckpoint, _ladderCheckpoint <= open, false, _ladderCheckpoint == caseFloor);
+                    if (checkpoint > 0 && checkpoint < arena.FloorCount)
+                        StyleRow(checkpoint, checkpoint <= open, true, checkpoint == caseFloor);
+                }
+
+                if (caseChanged)
+                {
+                    if (_ladderCaseFloor >= 0 && _ladderCaseFloor < arena.FloorCount)
+                        StyleRow(_ladderCaseFloor, _ladderCaseFloor <= open, _ladderCaseFloor == checkpoint && checkpoint > 0, _ladderCaseFloor == caseFloor);
+                    if (caseFloor >= 0 && caseFloor < arena.FloorCount)
+                        StyleRow(caseFloor, caseFloor <= open, caseFloor == checkpoint && checkpoint > 0, true);
+                }
+            }
+
+            if (openChanged)
+                _ladderCaption.text = "OPEN TO " + arena.FloorLabel(open).ToUpperInvariant();
+
+            _ladderOpen = open;
+            _ladderCheckpoint = checkpoint;
+            _ladderCaseFloor = caseFloor;
+            _ladderCaseHolder = holder;
         }
 
         void StyleRow(int floor, bool isOpen, bool respawnHere, bool caseHere)
@@ -598,11 +674,13 @@ namespace CloseTheDeal.MatchMode
             {
                 float breathe = 1f + WarnSwell * (0.5f + 0.5f * Mathf.Sin(UiMotion.Now * Mathf.PI * 2f / _tokens.BreathePeriod));
                 _clockPlate.localScale = Vector3.one * breathe;
+                _clockScaled = true;
                 moving = true;
             }
-            else
+            else if (_clockScaled)
             {
                 _clockPlate.localScale = Vector3.one;
+                _clockScaled = false;
             }
 
             _awake = moving;
@@ -644,10 +722,16 @@ namespace CloseTheDeal.MatchMode
             if (!_shake.Settled)
             {
                 _shake.Step(dt, _tokens.ErrorShake);
+                _notice.anchoredPosition = _noticeHome + Vector2.right * _shake.Value;
+                _noticeShook = true;
                 moving = true;
             }
+            else if (_noticeShook)
+            {
+                _notice.anchoredPosition = _noticeHome;
+                _noticeShook = false;
+            }
 
-            _notice.anchoredPosition = _noticeHome + Vector2.right * _shake.Value;
             return moving || _noticeUntil >= 0f;
         }
     }

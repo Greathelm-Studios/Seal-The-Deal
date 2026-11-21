@@ -86,6 +86,10 @@ namespace CloseTheDeal.Player
         [Tooltip("Each finger joint's straight, open-hand turn, in the same order as the three lists above (index, grip fingers, thumb). Read from the model by the greybox tool; leave it alone.")]
         [SerializeField] Quaternion[] _openHand;
 
+        Quaternion[] _curledHand;
+        Vector3 _cachedGripCurl, _cachedTriggerCurl, _cachedThumbCurl;
+        bool _cachedLeft;
+
         /// <summary>True when the three arm bones are assigned, so <see cref="Reach"/> can run.</summary>
         public bool IsRigged => _upperArm != null && _lowerArm != null && _hand != null;
 
@@ -172,6 +176,7 @@ namespace CloseTheDeal.Player
             open = ReadOpen(_triggerFinger, open);
             open = ReadOpen(_gripFingers, open);
             ReadOpen(_thumb, open);
+            _curledHand = null;
             return true;
         }
 
@@ -186,6 +191,7 @@ namespace CloseTheDeal.Player
             _gripCurl = from._gripCurl;
             _triggerCurl = from._triggerCurl;
             _thumbCurl = from._thumbCurl;
+            _curledHand = null;
         }
 
         static Transform[] Joints(Animator humanoid, HumanBodyBones[] bones)
@@ -221,11 +227,40 @@ namespace CloseTheDeal.Player
         /// whole arm about the shoulder onto the target. Ported from NorseFPS. Call it after
         /// whatever poses the skeleton this frame, or that pose overwrites it.
         /// </remarks>
-        public void Reach(Vector3 target, Quaternion targetRotation, Vector3 elbowToward = default)
+        public void Reach(Vector3 target, Quaternion targetRotation, Vector3 elbowToward = default, bool curlFingers = true)
         {
             if (!IsRigged)
                 return;
 
+            SolveArmBones(target, elbowToward);
+
+            _hand.rotation = targetRotation * Quaternion.Inverse(_knuckleFrame);
+
+            if (!curlFingers)
+                return;
+
+            EnsureCurledHand();
+            int open = 0;
+            open = Curl(_triggerFinger, open);
+            open = Curl(_gripFingers, open);
+            Curl(_thumb, open);
+        }
+
+        /// <summary>
+        /// Bends the upper arm and forearm so the wrist reaches <paramref name="target"/>,
+        /// without overriding the hand's rotation or closing the fingers into a grip.
+        /// Used to deflect an empty hand out of the camera's sightline.
+        /// </summary>
+        public void ReachArm(Vector3 target, Vector3 elbowToward = default)
+        {
+            if (!IsRigged)
+                return;
+
+            SolveArmBones(target, elbowToward);
+        }
+
+        void SolveArmBones(Vector3 target, Vector3 elbowToward)
+        {
             Vector3 a = _upperArm.position, b = _lowerArm.position, c = _hand.position;
             float upper = Vector3.Distance(a, b), lower = Vector3.Distance(b, c);
             float reach = Mathf.Clamp(Vector3.Distance(a, target), MinimumReach, (upper + lower) * MaximumReachShare);
@@ -261,46 +296,82 @@ namespace CloseTheDeal.Player
             {
                 _upperArm.rotation = Quaternion.AngleAxis(_elbowSwing * Side, line) * _upperArm.rotation;
             }
-
-            _hand.rotation = targetRotation * Quaternion.Inverse(_knuckleFrame);
-
-            // The fingers close toward the palm, which is a turn about the knuckle line (the
-            // target's up axis); the thumb closes across the palm, about the finger direction.
-            Vector3 knuckleLine = targetRotation * Vector3.up;
-            Vector3 fingerLine = targetRotation * Vector3.forward;
-            int open = 0;
-            open = Curl(_triggerFinger, _triggerCurl, knuckleLine, open);
-            open = Curl(_gripFingers, _gripCurl, knuckleLine, open);
-            Curl(_thumb, _thumbCurl, fingerLine, open);
         }
 
-        /// <summary>
-        /// Sets a run of finger joints (three per finger, base first) from the open hand to a
-        /// curl, each joint turned about one world axis.
-        /// </summary>
-        /// <param name="joints">Joints in threes; may be null or empty.</param>
-        /// <param name="curl">Degrees at the first, second and third joint of each finger.</param>
-        /// <param name="axis">World axis the joints turn about.</param>
-        /// <param name="open">Index into the open-hand list of this run's first joint.</param>
-        /// <returns>The open-hand index after this run.</returns>
-        /// <remarks>
-        /// WHY from the open hand and not on top of the pose underneath: a clip's fingers are
-        /// already partly closed, so adding to them would differ per clip and per frame.
-        /// </remarks>
-        int Curl(Transform[] joints, Vector3 curl, Vector3 axis, int open)
+        void EnsureCurledHand()
+        {
+            if (_openHand == null || _hand == null)
+                return;
+            if (_curledHand != null && _curledHand.Length == _openHand.Length
+                && _cachedGripCurl == _gripCurl
+                && _cachedTriggerCurl == _triggerCurl
+                && _cachedThumbCurl == _thumbCurl
+                && _cachedLeft == _left)
+                return;
+
+            if (_curledHand == null || _curledHand.Length != _openHand.Length)
+                _curledHand = new Quaternion[_openHand.Length];
+            _cachedGripCurl = _gripCurl;
+            _cachedTriggerCurl = _triggerCurl;
+            _cachedThumbCurl = _thumbCurl;
+            _cachedLeft = _left;
+
+            Vector3 knuckleAxis = _knuckleFrame * Vector3.up;
+            Vector3 fingerAxis = _knuckleFrame * Vector3.forward;
+            int open = 0;
+            open = BakeCurl(_triggerFinger, _triggerCurl, knuckleAxis, open);
+            open = BakeCurl(_gripFingers, _gripCurl, knuckleAxis, open);
+            BakeCurl(_thumb, _thumbCurl, fingerAxis, open);
+        }
+
+        int BakeCurl(Transform[] joints, Vector3 curl, Vector3 handAxis, int open)
         {
             if (joints == null || _openHand == null)
                 return open;
 
+            Vector3 axis = handAxis;
             for (int i = 0; i < joints.Length && open < _openHand.Length; i++, open++)
             {
                 Transform joint = joints[i];
-                if (joint == null)
-                    continue;
+                if (i % JointsPerFinger == 0)
+                {
+                    axis = handAxis;
+                    if (joint != null && joint.parent != null && joint.parent != _hand)
+                    {
+                        Quaternion parentToHand = Quaternion.identity;
+                        Transform t = joint.parent;
+                        while (t != null && t != _hand)
+                        {
+                            parentToHand = t.localRotation * parentToHand;
+                            t = t.parent;
+                        }
+                        if (t == _hand)
+                            axis = Quaternion.Inverse(parentToHand) * handAxis;
+                    }
+                }
 
-                // Parent before child, so each joint's turn carries the ones after it.
-                joint.localRotation = _openHand[open];
-                joint.rotation = Quaternion.AngleAxis(-curl[i % JointsPerFinger] * Side, axis) * joint.rotation;
+                Quaternion openRot = _openHand[open];
+                _curledHand[open] = Quaternion.AngleAxis(-curl[i % JointsPerFinger] * Side, axis) * openRot;
+                axis = Quaternion.Inverse(openRot) * axis;
+            }
+
+            return open;
+        }
+
+        /// <summary>
+        /// Writes precomputed curled local rotations onto a run of finger joints without
+        /// round-tripping through world-space <c>Transform.rotation</c>.
+        /// </summary>
+        int Curl(Transform[] joints, int open)
+        {
+            if (joints == null || _curledHand == null)
+                return open;
+
+            for (int i = 0; i < joints.Length && open < _curledHand.Length; i++, open++)
+            {
+                Transform joint = joints[i];
+                if (joint != null)
+                    joint.localRotation = _curledHand[open];
             }
 
             return open;

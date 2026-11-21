@@ -75,7 +75,9 @@ namespace CloseTheDeal.UI
         float _matchHeight;
         bool _matchActionUp;
         bool _refusalShown;
+        bool _dirty = true;
         string _sessionText = string.Empty;
+        UiButton[] _menuButtons;
 
         /// <summary>Given by the UI root: the game menu whose rule this pane follows and whose lobby it reads.</summary>
         internal void Bind(GameMenu menu)
@@ -88,6 +90,7 @@ namespace CloseTheDeal.UI
         {
             base.Awake();
             _firstFocus = _back;
+            _menuButtons = new[] { _back, _invite, _settings, _leave };
             if (_back != null)
                 _back.ConfirmSound = UiSoundEvent.Back;
         }
@@ -95,7 +98,7 @@ namespace CloseTheDeal.UI
         void OnEnable()
         {
             if (_lobby != null)
-                _lobby.OnChanged += Refresh;
+                _lobby.OnChanged += MarkDirty;
             _back.Clicked += OnBack;
             _invite.Clicked += OnInvite;
             _settings.Clicked += OnSettings;
@@ -107,7 +110,7 @@ namespace CloseTheDeal.UI
         protected override void OnDisable()
         {
             if (_lobby != null)
-                _lobby.OnChanged -= Refresh;
+                _lobby.OnChanged -= MarkDirty;
             _back.Clicked -= OnBack;
             _invite.Clicked -= OnInvite;
             _settings.Clicked -= OnSettings;
@@ -130,21 +133,21 @@ namespace CloseTheDeal.UI
             if (LobbyRoster.Instance != _roster)
             {
                 WatchRoster(LobbyRoster.Instance); // spawned after the menu opened
+                MarkDirty();
+            }
+
+            if (_dirty)
+            {
                 Refresh();
                 return;
             }
 
-            if (_matchSlot == null || _matchSlot.childCount == 0)
+            EnsureMatchAction();
+            if (_matchChild == null)
                 return;
-            Transform child = _matchSlot.GetChild(0);
-            if (child != _matchChild)
-            {
-                _matchChild = child;
-                _matchAction = child.GetComponentInChildren<Selectable>(true); // once per section, not per frame
-            }
 
-            bool shown = child.gameObject.activeSelf;
-            float height = shown ? ((RectTransform)child).rect.height : 0f;
+            bool shown = _matchChild.gameObject.activeSelf;
+            float height = shown ? ((RectTransform)_matchChild).rect.height : 0f;
             bool actionUp = _matchAction != null && _matchAction.isActiveAndEnabled;
             if (shown == _matchShown && Mathf.Approximately(height, _matchHeight) && actionUp == _matchActionUp)
                 return;
@@ -154,6 +157,8 @@ namespace CloseTheDeal.UI
             PlaceReception();
             LinkNavigation();
         }
+
+        void MarkDirty() => _dirty = true;
 
         /// <summary>Esc / B: back to the game (the game menu hands the mouse back once the confirm button is up).</summary>
         public override void OnCancel()
@@ -167,14 +172,15 @@ namespace CloseTheDeal.UI
             if (roster == _roster)
                 return;
             if (_roster != null)
-                _roster.OnChanged -= Refresh;
+                _roster.OnChanged -= MarkDirty;
             _roster = roster;
             if (_roster != null)
-                _roster.OnChanged += Refresh;
+                _roster.OnChanged += MarkDirty;
         }
 
         void Refresh()
         {
+            _dirty = false;
             if (_lobby == null || _tokens == null)
                 return;
             WatchRoster(LobbyRoster.Instance);
@@ -290,9 +296,10 @@ namespace CloseTheDeal.UI
         {
             Selectable right = MatchSelectable();
             Selectable previous = null;
-            foreach (UiButton current in new[] { _back, _invite, _settings, _leave })
+            for (int i = 0; i < _menuButtons.Length; i++)
             {
-                if (!current.gameObject.activeSelf)
+                UiButton current = _menuButtons[i];
+                if (current == null || !current.gameObject.activeSelf)
                     continue;
                 var nav = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = previous, selectOnRight = right };
                 current.navigation = nav;
@@ -307,12 +314,27 @@ namespace CloseTheDeal.UI
             }
         }
 
+        void EnsureMatchAction()
+        {
+            if (_matchSlot == null || _matchSlot.childCount == 0)
+            {
+                _matchChild = null;
+                _matchAction = null;
+                return;
+            }
+
+            Transform child = _matchSlot.GetChild(0);
+            if (child != _matchChild)
+            {
+                _matchChild = child;
+                _matchAction = child.GetComponentInChildren<Selectable>(true); // once per section, not per frame
+            }
+        }
+
         Selectable MatchSelectable()
         {
-            if (_matchSlot == null)
-                return null;
-            Selectable found = _matchSlot.GetComponentInChildren<Selectable>(false);
-            return found != null && found.isActiveAndEnabled ? found : null;
+            EnsureMatchAction();
+            return _matchAction != null && _matchAction.isActiveAndEnabled ? _matchAction : null;
         }
 
         void OnFocused(Selectable control, string description)

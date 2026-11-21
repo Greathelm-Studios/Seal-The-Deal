@@ -36,6 +36,7 @@ namespace CloseTheDeal.Items
 
         readonly SyncVar<float> _health = new();
         float _standUpAt;
+        bool _ticking;
 
         /// <summary>Every machine. It was hurt by this many hit points.</summary>
         public event Action<DamageDummy, float> Hurt;
@@ -52,13 +53,25 @@ namespace CloseTheDeal.Items
         {
             base.OnStartServer();
             _health.Value = _maxHealth;
-            TimeManager.OnTick += ServerTick;
+            _ticking = false;
         }
 
         public override void OnStopServer()
         {
             base.OnStopServer();
-            TimeManager.OnTick -= ServerTick;
+            SetServerTick(false);
+        }
+
+        void SetServerTick(bool active)
+        {
+            if (_ticking == active || TimeManager == null)
+                return;
+
+            _ticking = active;
+            if (active)
+                TimeManager.OnTick += ServerTick;
+            else
+                TimeManager.OnTick -= ServerTick;
         }
 
         public override void OnStartClient()
@@ -75,20 +88,37 @@ namespace CloseTheDeal.Items
 
             _health.Value = Mathf.Max(0f, _health.Value - amount);
             if (IsDown)
+            {
                 _standUpAt = Time.time + _standUpSeconds;
+                SetServerTick(true);
+            }
 
+#if UNITY_EDITOR
             Debug.Log($"[Items] {name} took {amount:0.#} from client {attackerClientId}; {_health.Value:0.#} left.");
+#endif
             ObserversHurt(amount);
         }
 
         void ServerTick()
         {
-            if (IsDown && Time.time >= _standUpAt)
+            if (!IsDown)
+            {
+                SetServerTick(false);
+                return;
+            }
+
+            if (Time.time >= _standUpAt)
+            {
                 _health.Value = _maxHealth;
+                SetServerTick(false);
+            }
         }
 
         void OnHealthChanged(float previous, float next, bool asServer)
         {
+            if (asServer && IsClientStarted)
+                return;
+
             Show(next);
             if (next <= 0f && previous > 0f)
                 _onKnockedDown.Invoke();

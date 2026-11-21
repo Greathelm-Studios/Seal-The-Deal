@@ -262,7 +262,7 @@ namespace CloseTheDeal.Editor.Greybox
             support.SetLocalPositionAndRotation(SupportWristPosition, Quaternion.Euler(SupportWristTurn));
             var profile = GreyboxSceneSetup.EnsureAsset<ViewmodelProfile>(ProfileFolder, ProfilePath);
             gunMount.SetLocalPositionAndRotation(profile.GunPosition, Quaternion.Euler(profile.GunTurn));
-            shoulder.localPosition = profile.ShoulderPosition;
+            shoulder.localPosition = new Vector3(0.165f, -0.165f, -0.10f);
 
             // A plain copy, not a nested instance: the arms swap every mesh and drop the eyes,
             // which as prefab overrides would break whenever the character prefab is rebuilt.

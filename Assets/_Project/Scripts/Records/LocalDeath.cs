@@ -49,9 +49,9 @@ namespace CloseTheDeal.Records
 
         MatchRecords _records;
 
-        void OnEnable() => Health.AnyRespawned += OnRespawned;
+        void Awake() => Health.AnyRespawned += OnRespawned;
 
-        void OnDisable()
+        void OnDestroy()
         {
             Health.AnyRespawned -= OnRespawned;
             if (_records != null)
@@ -65,6 +65,7 @@ namespace CloseTheDeal.Records
                 return;
             _records = MatchRecords.Instance;
             _records.Kill += OnKill;
+            enabled = false;
         }
 
         static FirmMember Me => FirmMember.Local;

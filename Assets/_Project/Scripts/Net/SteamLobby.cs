@@ -257,12 +257,22 @@ namespace CloseTheDeal.Net
                 return;
 
             if (InLobby)
+            {
                 SteamMatchmaking.LeaveLobby(LobbyId);
+                LobbyId = CSteamID.Nil;
+            }
             SteamFriends.ClearRichPresence();
         }
 
         void OnDestroy()
         {
+            if (SteamService.IsReady && InLobby)
+            {
+                SteamMatchmaking.LeaveLobby(LobbyId);
+                SteamFriends.ClearRichPresence();
+                LobbyId = CSteamID.Nil;
+            }
+
             if (_net != null)
             {
                 _net.ClientManager.OnClientConnectionState -= OnClientConnectionState;
@@ -377,7 +387,7 @@ namespace CloseTheDeal.Net
             _joiningSteam = false;
 
             // Started is false while still connecting, and that attempt must stop too.
-            if (_multipass.GetConnectionState(false) != LocalConnectionState.Stopped)
+            if (_net.ClientManager.Started || (_multipass != null && _multipass.GetConnectionState(false) != LocalConnectionState.Stopped))
                 _net.ClientManager.StopConnection();
             if (_net.ServerManager.Started)
                 _multipass.StopServerConnection(true, _transportIndex);
@@ -590,6 +600,8 @@ namespace CloseTheDeal.Net
         void OnLinkChanged(SteamNetConnectionStatusChangedCallback_t cb)
         {
             if (IsHosting)
+                return;
+            if (!_hostId.IsValid() || cb.m_info.m_identityRemote.GetSteamID() != _hostId)
                 return;
 
             ESteamNetworkingConnectionState state = cb.m_info.m_eState;

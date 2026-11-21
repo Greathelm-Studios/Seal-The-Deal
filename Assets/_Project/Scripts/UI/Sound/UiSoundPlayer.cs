@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
+using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.UI
 {
@@ -29,6 +30,15 @@ namespace CloseTheDeal.UI
 
         /// <summary>How many sounds were actually started / dropped by the gap and voice rules (for tests).</summary>
         public static int Started, Dropped;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            IgnoreFocus = false;
+            Started = 0;
+            Dropped = 0;
+            Runner.ResetStatic();
+        }
 
         public static void Play(UiSoundEvent e) => Play(e, 1f, 0f);
 
@@ -69,6 +79,7 @@ namespace CloseTheDeal.UI
         sealed class Runner : MonoBehaviour
         {
             static Runner instance;
+            public static void ResetStatic() => instance = null;
             public UiSoundSet set;
             public float lastHover = -99f;
             public int hoverStep;
@@ -106,8 +117,35 @@ namespace CloseTheDeal.UI
             AudioSource bed;
             float nextLook, bedTarget;
             bool atTitle;
+            bool sceneLookedUp;
             GameMenu menu;
             UiRoot root;
+
+            void OnEnable()
+            {
+                SceneManager.sceneLoaded += OnSceneLoaded;
+                sceneLookedUp = false;
+            }
+
+            void OnDisable()
+            {
+                SceneManager.sceneLoaded -= OnSceneLoaded;
+            }
+
+            void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+            {
+                sceneLookedUp = false;
+                ResolveSceneRefs();
+            }
+
+            void ResolveSceneRefs()
+            {
+                if (sceneLookedUp)
+                    return;
+                sceneLookedUp = true;
+                menu = FindAnyObjectByType<GameMenu>();
+                root = FindAnyObjectByType<UiRoot>();
+            }
 
             void Update()
             {
@@ -119,6 +157,12 @@ namespace CloseTheDeal.UI
                 }
                 if (bed == null)
                     return;
+                if (Mathf.Approximately(bed.volume, bedTarget))
+                {
+                    if (bedTarget <= 0f && bed.isPlaying)
+                        bed.Stop();
+                    return;
+                }
                 float step = set.ambienceFade > 0f ? Time.unscaledDeltaTime / set.ambienceFade : 1f;
                 bed.volume = Mathf.MoveTowards(bed.volume, bedTarget, step * Mathf.Max(set.ambienceLevel, 0.0001f));
                 if (bed.volume <= 0f && bedTarget <= 0f && bed.isPlaying)
@@ -127,8 +171,7 @@ namespace CloseTheDeal.UI
 
             void Look()
             {
-                if (menu == null) menu = FindAnyObjectByType<GameMenu>();
-                if (root == null) root = FindAnyObjectByType<UiRoot>();
+                ResolveSceneRefs();
                 bool title = menu != null && menu.OutOfGame && root != null && root.Stack.Count > 0;
                 var roster = CloseTheDeal.Lobby.LobbyRoster.Instance;
                 bool reception = roster != null && !roster.RunInProgress;
@@ -160,6 +203,7 @@ namespace CloseTheDeal.UI
 
             public bool Begin(UiSoundEvent e, UiSoundSet.Entry en, float gain, float semitones)
             {
+                ResolveSceneRefs();
                 float now = Time.realtimeSinceStartup;
                 // Screen sounds (a screen or panel opening, a transition, the title) sit on their own layer: a button that
                 // opens a screen plays its Confirm and the screen its whoosh in the same frame, and both must be heard.

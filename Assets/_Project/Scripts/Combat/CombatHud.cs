@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CloseTheDeal.Player;
 using CloseTheDeal.Records;
 using CloseTheDeal.UI;
@@ -78,14 +79,34 @@ namespace CloseTheDeal.Combat
 
         const string DefaultDownTitle = "YOU HAVE BEEN LET GO";
         const string DefaultDownLine = "BACK ON THIS FLOOR IN";
+        const string EmptySlot0 = "1  —";
+        const string EmptySlot1 = "2  —";
 
         // ---- Runtime -------------------------------------------------------------------------
 
         enum HitKind : byte { Hit, Head, Kill }
 
-        static readonly Vector2[] TickDirections =
+        struct WeaponLabelCache
         {
-            new(-1f, 1f), new(1f, 1f), new(-1f, -1f), new(1f, -1f)
+            public string Upper;
+            public string Slot0;
+            public string Slot1;
+        }
+
+        static readonly Vector2[] TickUnitDirections =
+        {
+            new Vector2(-1f, 1f).normalized,
+            new Vector2(1f, 1f).normalized,
+            new Vector2(-1f, -1f).normalized,
+            new Vector2(1f, -1f).normalized
+        };
+
+        static readonly Quaternion[] TickRotations =
+        {
+            Quaternion.Euler(0f, 0f, 135f),
+            Quaternion.Euler(0f, 0f, 45f),
+            Quaternion.Euler(0f, 0f, -135f),
+            Quaternion.Euler(0f, 0f, -45f)
         };
 
         WeaponHolder _holder;
@@ -93,6 +114,8 @@ namespace CloseTheDeal.Combat
         PlayerMotor _bound;
         Image[] _tickImages;
         Image[] _tickOutlineImages;
+        CanvasGroup _hitGroup;
+        readonly Dictionary<WeaponDefinition, WeaponLabelCache> _weaponLabels = new();
 
         float _hitAge = float.MaxValue;
         float _hitLife;
@@ -120,6 +143,7 @@ namespace CloseTheDeal.Combat
         {
             _tickImages = ImagesOf(_ticks);
             _tickOutlineImages = ImagesOf(_tickOutlines);
+            EnsureSubCanvas();
             ShowHitMarker(false);
             foreach (Image mark in _damageMarks)
             {
@@ -135,6 +159,58 @@ namespace CloseTheDeal.Combat
             _downFade.Snap(0f);
             // Here, not in OnEnable: the HUD is hidden while the menu is open, and a death then still needs its line.
             LocalDeath.Down += OnLocalDeath;
+        }
+
+        void EnsureSubCanvas()
+        {
+            Transform hitRoot = FindHitMarkerRoot();
+            if (hitRoot == null)
+                return;
+
+            if (hitRoot == transform)
+            {
+                var holder = new GameObject("HitMarkerCanvas", typeof(RectTransform));
+                var rt = (RectTransform)holder.transform;
+                rt.SetParent(transform, false);
+                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.anchoredPosition = Vector2.zero;
+                rt.sizeDelta = Vector2.zero;
+                for (int i = 0; i < _tickOutlines.Length; i++)
+                {
+                    if (_tickOutlines[i] != null)
+                        _tickOutlines[i].SetParent(rt, true);
+                }
+                for (int i = 0; i < _ticks.Length; i++)
+                {
+                    if (_ticks[i] != null)
+                        _ticks[i].SetParent(rt, true);
+                }
+                hitRoot = rt;
+            }
+
+            if (!hitRoot.TryGetComponent<Canvas>(out _))
+                hitRoot.gameObject.AddComponent<Canvas>();
+            if (!hitRoot.TryGetComponent(out _hitGroup))
+                _hitGroup = hitRoot.gameObject.AddComponent<CanvasGroup>();
+
+            _hitGroup.blocksRaycasts = false;
+            _hitGroup.interactable = false;
+        }
+
+        Transform FindHitMarkerRoot()
+        {
+            for (int i = 0; i < _ticks.Length; i++)
+            {
+                if (_ticks[i] != null)
+                    return _ticks[i].parent;
+            }
+            for (int i = 0; i < _tickOutlines.Length; i++)
+            {
+                if (_tickOutlines[i] != null)
+                    return _tickOutlines[i].parent;
+            }
+            return null;
         }
 
         void OnDestroy()
@@ -207,6 +283,7 @@ namespace CloseTheDeal.Combat
             _bound = player;
             _holder = player != null ? player.GetComponent<WeaponHolder>() : null;
             _health = player != null ? player.GetComponent<Health>() : null;
+            ResetActiveIndicators();
             if (_holder == null || _health == null)
             {
                 _holder = null;
@@ -227,10 +304,38 @@ namespace CloseTheDeal.Combat
             _health.Respawned += OnRespawned;
 
             // A fresh player: everything as it is now, no leftovers from the last one.
-            _shownAmmo = _shownMagazine = -1;
-            _shownHealth = -1f;
             OnWeaponChanged(_holder.ActiveWeapon, _holder.ActiveSlot);
             OnHealthChanged(_health.Current, _health.Max);
+        }
+
+        void ResetActiveIndicators()
+        {
+            _hitAge = float.MaxValue;
+            _hitLife = 0f;
+            _hitKind = HitKind.Hit;
+            ShowHitMarker(false);
+
+            for (int i = 0; i < _damageAges.Length; i++)
+                _damageAges[i] = float.MaxValue;
+            for (int i = 0; i < _damageMarks.Length; i++)
+            {
+                if (_damageMarks[i] != null)
+                    _damageMarks[i].enabled = false;
+            }
+            _nextDamage = 0;
+
+            _lastHurtTime = float.MinValue;
+            _shownAmmo = _shownMagazine = -1;
+            _shownHealth = -1f;
+            _shownCount = -1;
+            _lastState = WeaponState.Ready;
+            _shownProgress = -1f;
+            _healthFade.Snap(0f);
+            if (_healthGroup != null)
+                _healthGroup.alpha = 0f;
+            _downFade.Snap(0f);
+            if (_downGroup != null)
+                _downGroup.alpha = 0f;
         }
 
         // ---- Hit marker and kill confirm (host-confirmed only) -------------------------------
@@ -248,14 +353,32 @@ namespace CloseTheDeal.Combat
                 UiSound.Play(precision ? UiSoundEvent.HitMarkerHead : UiSoundEvent.HitMarker);
 
             Color core = ColourOf(kind);
+            float length = HitTickLength(kind);
+            Vector2 coreSize = new(length, 2f);
+            Vector2 outlineSize = new(length + 2f, 4f);
             for (int i = 0; i < _tickImages.Length; i++)
             {
                 if (_tickImages[i] != null)
                     _tickImages[i].color = core;
+                if (_ticks[i] != null)
+                {
+                    _ticks[i].sizeDelta = coreSize;
+                    _ticks[i].localRotation = TickRotations[i];
+                }
+                if (i < _tickOutlines.Length && _tickOutlines[i] != null)
+                {
+                    _tickOutlines[i].sizeDelta = outlineSize;
+                    _tickOutlines[i].localRotation = TickRotations[i];
+                }
             }
 
             ShowHitMarker(true);
             PlaceTicks(0f);
+        }
+
+        static float HitTickLength(HitKind kind)
+        {
+            return kind == HitKind.Kill ? 14f : kind == HitKind.Head ? 11f : 8f;
         }
 
         /// <summary>A later hit in the same moment never downgrades a kill marker that is still showing.</summary>
@@ -290,23 +413,23 @@ namespace CloseTheDeal.Combat
 
             float t = _hitAge / _hitLife;
             PlaceTicks(t);
-            float alpha = 1f - t * t;
-            SetAlpha(_tickImages, alpha);
-            SetAlpha(_tickOutlineImages, alpha);
+            if (_hitGroup != null)
+                _hitGroup.alpha = 1f - t * t;
         }
 
         /// <summary>Ticks sit diagonally around the centre and drift outward as they fade; a kill's are longer.</summary>
         void PlaceTicks(float t)
         {
-            float length = _hitKind == HitKind.Kill ? 14f : _hitKind == HitKind.Head ? 11f : 8f;
+            float length = HitTickLength(_hitKind);
             float drift = UiMotion.Reduced ? 0f : _hitSpread * UiMotion.Bezier(_tokens.EaseOut, t);
-            for (int i = 0; i < TickDirections.Length && i < _ticks.Length; i++)
+            float offset = _hitGap + drift + length * 0.5f;
+            for (int i = 0; i < TickUnitDirections.Length && i < _ticks.Length; i++)
             {
-                Vector2 direction = TickDirections[i].normalized;
-                Vector2 centre = direction * (_hitGap + drift + length * 0.5f);
-                float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-                Place(_ticks[i], centre, new Vector2(length, 2f), angle);
-                Place(_tickOutlines[i], centre, new Vector2(length + 2f, 4f), angle);
+                Vector2 pos = TickUnitDirections[i] * offset;
+                if (_ticks[i] != null)
+                    _ticks[i].anchoredPosition = pos;
+                if (i < _tickOutlines.Length && _tickOutlines[i] != null)
+                    _tickOutlines[i].anchoredPosition = pos;
             }
         }
 
@@ -314,26 +437,47 @@ namespace CloseTheDeal.Combat
         {
             SetEnabled(_tickImages, show);
             SetEnabled(_tickOutlineImages, show);
-            if (show)
-            {
-                SetAlpha(_tickImages, 1f);
-                SetAlpha(_tickOutlineImages, 1f);
-            }
+            if (_hitGroup != null)
+                _hitGroup.alpha = show ? 1f : 0f;
         }
 
         // ---- Weapon: ammo, slots, reload, low and empty --------------------------------------
+
+        WeaponLabelCache LabelsFor(WeaponDefinition weapon)
+        {
+            if (_weaponLabels.TryGetValue(weapon, out WeaponLabelCache cached))
+                return cached;
+
+            string upper = weapon.DisplayName.ToUpperInvariant();
+            cached = new WeaponLabelCache
+            {
+                Upper = upper,
+                Slot0 = "1  " + upper,
+                Slot1 = "2  " + upper
+            };
+            _weaponLabels[weapon] = cached;
+            return cached;
+        }
 
         void OnWeaponChanged(WeaponDefinition weapon, int slot)
         {
             if (_holder == null)
                 return;
 
-            _weaponName.text = weapon != null ? weapon.DisplayName.ToUpperInvariant() : "NO WEAPON";
+            _weaponName.text = weapon != null ? LabelsFor(weapon).Upper : "NO WEAPON";
             for (int i = 0; i < WeaponHolder.SlotCount && i < _slotTexts.Length; i++)
             {
                 WeaponDefinition inSlot = _holder.WeaponInSlot(i);
                 bool active = i == _holder.ActiveSlot && inSlot != null;
-                _slotTexts[i].text = inSlot != null ? $"{i + 1}  {inSlot.DisplayName.ToUpperInvariant()}" : $"{i + 1}  —";
+                if (inSlot != null)
+                {
+                    WeaponLabelCache labels = LabelsFor(inSlot);
+                    _slotTexts[i].text = i == 0 ? labels.Slot0 : labels.Slot1;
+                }
+                else
+                {
+                    _slotTexts[i].text = i == 0 ? EmptySlot0 : EmptySlot1;
+                }
                 _slotTexts[i].color = active ? _tokens.Navy : inSlot != null ? _tokens.Ink3 : _tokens.Disabled;
                 _slotBars[i].enabled = active;
             }
@@ -582,34 +726,12 @@ namespace CloseTheDeal.Combat
             return images;
         }
 
-        static void Place(RectTransform rect, Vector2 centre, Vector2 size, float angle)
-        {
-            if (rect == null)
-                return;
-
-            rect.anchoredPosition = centre;
-            rect.sizeDelta = size;
-            rect.localRotation = Quaternion.Euler(0f, 0f, angle);
-        }
-
         static void SetEnabled(Image[] images, bool on)
         {
             foreach (Image image in images)
             {
                 if (image != null)
                     image.enabled = on;
-            }
-        }
-
-        static void SetAlpha(Image[] images, float alpha)
-        {
-            foreach (Image image in images)
-            {
-                if (image == null)
-                    continue;
-                Color c = image.color;
-                c.a = alpha;
-                image.color = c;
             }
         }
     }

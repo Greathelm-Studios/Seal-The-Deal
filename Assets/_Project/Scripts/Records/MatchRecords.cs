@@ -128,6 +128,8 @@ namespace CloseTheDeal.Records
                 HookMatch(MatchDirector.Instance);
             if (IsHostCounting)
                 HostSampleFloors();
+            if (_net != null && _match != null && !IsHostCounting)
+                enabled = false;
         }
 
         void HookNetwork()

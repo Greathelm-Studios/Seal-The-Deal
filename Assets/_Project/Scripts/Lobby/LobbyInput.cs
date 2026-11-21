@@ -89,12 +89,27 @@ namespace CloseTheDeal.Lobby
             _map.actionTriggered += OnTriggered;
         }
 
-        static InputAction Button(string name, params string[] paths)
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
         {
-            InputAction action = _map.AddAction(name, InputActionType.Button);
-            foreach (string path in paths)
-                action.AddBinding(path);
-            return action;
+            if (_map != null)
+            {
+                _map.actionTriggered -= OnTriggered;
+                _map.Disable();
+                _map.Dispose();
+                _map = null;
+            }
+
+            Interact = null;
+            Confirm = null;
+            Cancel = null;
+            HostPanel = null;
+            Rotate = null;
+            RotatePointer = null;
+            UsingGamepad = false;
+#if UNITY_EDITOR
+            EditorForceCaptured = false;
+#endif
         }
 
         static void OnTriggered(InputAction.CallbackContext context)

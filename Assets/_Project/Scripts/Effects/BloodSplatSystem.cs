@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using CloseTheDeal.Player;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Effects
 {
@@ -49,8 +50,8 @@ namespace CloseTheDeal.Effects
 
         const string ShaderName = "Close the Deal/Blood Splat";
 
-        /// <summary>How many surfaces one ray can report. WHY 12: a spray through a cluttered office crosses several props before the wall; the nearest that is not the victim wins.</summary>
-        const int RayBuffer = 12;
+        /// <summary>Beyond this distance from the camera, in metres, blood sprays are skipped.</summary>
+        const float MaxSplatDistance = 60f;
 
         /// <summary>
         /// Where in the box, along its depth, the surface sits: a fifth of the depth in front of the
@@ -62,8 +63,10 @@ namespace CloseTheDeal.Effects
         static readonly int ColorId = Shader.PropertyToID("_Color");
         static readonly int CutColorId = Shader.PropertyToID("_CutColor");
         static readonly int ParamsId = Shader.PropertyToID("_Params");
+        static readonly string[] ExcludedLayers = { "Player", "Ragdoll", "Viewmodel", "UI" };
 
         static BloodSplatSystem instance;
+        static Camera _mainCamera;
 
         sealed class Splat
         {
@@ -78,9 +81,10 @@ namespace CloseTheDeal.Effects
             public bool Settled;
         }
 
-        readonly List<Splat> live = new List<Splat>();
+        Splat[] ring;
+        int ringHead;
+        int ringCount;
         readonly Stack<Splat> pool = new Stack<Splat>();
-        readonly RaycastHit[] hits = new RaycastHit[RayBuffer];
         MaterialPropertyBlock block;
         Material material;
         Mesh cube;
@@ -93,6 +97,7 @@ namespace CloseTheDeal.Effects
         static void ResetStatics()
         {
             instance = null;
+            _mainCamera = null;
         }
 
         /// <summary>Makes the system when a Play Mode or build session has loaded its first scene.</summary>
@@ -140,9 +145,23 @@ namespace CloseTheDeal.Effects
             material = LoadMaterial();
         }
 
-        void OnEnable() => HitFeed.Struck += OnStruck;
+        void OnEnable()
+        {
+            HitFeed.Struck += OnStruck;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
+        }
 
-        void OnDisable() => HitFeed.Struck -= OnStruck;
+        void OnDisable()
+        {
+            HitFeed.Struck -= OnStruck;
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        }
+
+        void OnSceneUnloaded(Scene scene)
+        {
+            _mainCamera = null;
+            ClearLive();
+        }
 
         void OnDestroy()
         {
@@ -193,13 +212,13 @@ namespace CloseTheDeal.Effects
             }
         }
 
-        /// <summary>Everything a ray may hit: the level and its props, but not players (the victim's own body would eat every ray) and not UI or first-person arms.</summary>
+        /// <summary>Everything a ray may hit: the level and its props, but not players/ragdolls (the victim's own body would eat every ray) and not UI or first-person arms.</summary>
         static int BuildSurfaceMask()
         {
             int mask = Physics.DefaultRaycastLayers;
-            foreach (string layer in new[] { "Player", "Viewmodel", "UI" })
+            for (int i = 0; i < ExcludedLayers.Length; i++)
             {
-                int index = LayerMask.NameToLayer(layer);
+                int index = LayerMask.NameToLayer(ExcludedLayers[i]);
                 if (index >= 0)
                     mask &= ~(1 << index);
             }
@@ -247,6 +266,9 @@ namespace CloseTheDeal.Effects
             if (material == null)
                 return;
 
+            if (TryCameraPosition(out Vector3 eyePos) && (hit.Point - eyePos).sqrMagnitude > MaxSplatDistance * MaxSplatDistance)
+                return;
+
             BloodProfile p = Profile;
             bool melee = hit.Type == HitType.Melee;
             float impulse = Mathf.Max(hit.Impulse, 1f);
@@ -272,6 +294,26 @@ namespace CloseTheDeal.Effects
                 Place(floor.point, floor.normal, dir, size * p.FloorSize * Random.Range(1f - p.SizeVariation, 1f + p.SizeVariation), stretch, p);
         }
 
+        static bool TryCameraPosition(out Vector3 position)
+        {
+            if (PlayerCamera.Instance != null)
+            {
+                position = PlayerCamera.Instance.transform.position;
+                return true;
+            }
+
+            if (_mainCamera == null)
+                _mainCamera = Camera.main;
+            if (_mainCamera != null)
+            {
+                position = _mainCamera.transform.position;
+                return true;
+            }
+
+            position = Vector3.zero;
+            return false;
+        }
+
         /// <summary>A random direction within <paramref name="degrees"/> of <paramref name="dir"/>, spread evenly over the cone's circle.</summary>
         static Vector3 InCone(Vector3 dir, float degrees)
         {
@@ -283,25 +325,10 @@ namespace CloseTheDeal.Effects
         /// <summary>Nearest surface along the ray that is not part of the victim.</summary>
         bool Cast(Vector3 origin, Vector3 direction, float reach, Transform victim, out RaycastHit best)
         {
-            best = default;
-            int n = Physics.RaycastNonAlloc(origin, direction, hits, reach, surfaceMask, QueryTriggerInteraction.Ignore);
-            float nearest = float.MaxValue;
-            bool found = false;
-            for (int i = 0; i < n; i++)
-            {
-                RaycastHit h = hits[i];
-                if (h.distance >= nearest)
-                    continue;
-                // A ragdoll part can sit on another layer than the player's root; skip anything of the victim's.
-                if (victim != null && h.collider.transform.IsChildOf(victim))
-                    continue;
+            if (!Physics.Raycast(origin, direction, out best, reach, surfaceMask, QueryTriggerInteraction.Ignore))
+                return false;
 
-                nearest = h.distance;
-                best = h;
-                found = true;
-            }
-
-            return found;
+            return victim == null || !best.collider.transform.IsChildOf(victim);
         }
 
         // ---- Placing and the pool ----
@@ -342,14 +369,44 @@ namespace CloseTheDeal.Effects
             s.Transform.localScale = new Vector3(0.001f, 0.001f, p.Depth);
             s.Renderer.enabled = true;
             Apply(s, 1f, p);
-            live.Add(s);
+
+            int tail = (ringHead + ringCount) % ring.Length;
+            ring[tail] = s;
+            ringCount++;
+        }
+
+        void EnsureRingCapacity(int capacity)
+        {
+            int target = Mathf.Max(4, capacity);
+            if (ring == null)
+            {
+                ring = new Splat[target];
+                return;
+            }
+
+            if (ring.Length >= target)
+                return;
+
+            var grown = new Splat[target];
+            for (int i = 0; i < ringCount; i++)
+                grown[i] = ring[(ringHead + i) % ring.Length];
+            ring = grown;
+            ringHead = 0;
         }
 
         /// <summary>A splat to use: from the pool, new, or the oldest live one when the cap is reached.</summary>
         Splat Acquire(BloodProfile p)
         {
-            while (live.Count >= p.MaxLiveSplats && live.Count > 0)
-                Release(0);
+            int maxLive = Mathf.Max(4, p.MaxLiveSplats);
+            EnsureRingCapacity(maxLive);
+
+            if (ringCount >= maxLive)
+            {
+                Splat evicted = PopOldest();
+                while (ringCount >= maxLive)
+                    ReleaseOldest();
+                return evicted;
+            }
 
             if (pool.Count > 0)
                 return pool.Pop();
@@ -364,16 +421,34 @@ namespace CloseTheDeal.Effects
             r.lightProbeUsage = LightProbeUsage.Off;
             r.reflectionProbeUsage = ReflectionProbeUsage.Off;
             r.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
-            r.allowOcclusionWhenDynamic = false;
+            r.allowOcclusionWhenDynamic = true;
             return new Splat { Transform = go.transform, Renderer = r };
         }
 
-        void Release(int index)
+        Splat PopOldest()
         {
-            Splat s = live[index];
-            live.RemoveAt(index);
+            Splat s = ring[ringHead];
+            ring[ringHead] = null;
+            ringHead = (ringHead + 1) % ring.Length;
+            ringCount--;
+            return s;
+        }
+
+        void ReleaseOldest()
+        {
+            Splat s = PopOldest();
+            if (s == null)
+                return;
+
             s.Renderer.enabled = false;
             pool.Push(s);
+        }
+
+        void ClearLive()
+        {
+            while (ringCount > 0)
+                ReleaseOldest();
+            ringHead = 0;
         }
 
         /// <summary>Writes one splat's look to its renderer. <paramref name="life"/> is 1 fresh, 0 gone.</summary>
@@ -388,20 +463,21 @@ namespace CloseTheDeal.Effects
 
         void Update()
         {
-            if (live.Count == 0)
+            if (ringCount == 0)
                 return;
 
             BloodProfile p = Profile;
             float now = Time.time;
-            for (int i = live.Count - 1; i >= 0; i--)
+            float totalLife = p.Lifetime + p.ShrinkTime;
+
+            // Live splats expire in FIFO order from ringHead.
+            while (ringCount > 0 && now - ring[ringHead].Born >= totalLife)
+                ReleaseOldest();
+
+            for (int i = 0; i < ringCount; i++)
             {
-                Splat s = live[i];
+                Splat s = ring[(ringHead + i) % ring.Length];
                 float age = now - s.Born;
-                if (age >= p.Lifetime + p.ShrinkTime)
-                {
-                    Release(i);
-                    continue;
-                }
 
                 if (!s.Settled)
                 {

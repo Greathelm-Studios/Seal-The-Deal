@@ -104,17 +104,13 @@ namespace CloseTheDeal.Customisation
                 _bobTime = 0f;
         }
 
-        OutfitSlot[] _slotOrder;
-
         /// <summary>Looks up, once, where each category's material names are on the body's renderers.</summary>
         void ResolveMaterials()
         {
-            _slotOrder = new OutfitSlot[_catalog.SlotCount];
             _targets = new Target[_catalog.SlotCount][];
-            for (int s = 0; s < _slotOrder.Length; s++)
+            for (int s = 0; s < _targets.Length; s++)
             {
                 OutfitSlot slot = _catalog.Slot(s);
-                _slotOrder[s] = slot;
                 if (slot == null)
                     continue;
 
@@ -146,17 +142,16 @@ namespace CloseTheDeal.Customisation
         {
             OutfitSlot slot = _catalog.Slot(slotIndex);
             if (slot != null && slot.IsValidOption(optionIndex))
-                Paint(slot, slot.Option(optionIndex));
+                Paint(slotIndex, slot.Option(optionIndex));
         }
 
         /// <summary>Puts one choice's colours on every body material its category covers.</summary>
-        void Paint(OutfitSlot slot, OutfitOption option)
+        void Paint(int slotIndex, OutfitOption option)
         {
             if (_targets == null)
                 ResolveMaterials();
 
-            int slotIndex = System.Array.IndexOf(_slotOrder, slot);
-            Target[] targets = slotIndex >= 0 ? _targets[slotIndex] : null;
+            Target[] targets = slotIndex >= 0 && slotIndex < _targets.Length ? _targets[slotIndex] : null;
             if (targets == null)
                 return;
 
@@ -183,7 +178,7 @@ namespace CloseTheDeal.Customisation
             if (_bodies.Length == 0 || visible == _forcedVisible)
                 return;
 
-            if (visible)
+            if (visible && (_savedShadows == null || _savedShadows.Length != _bodies.Length))
             {
                 _savedShadows = new ShadowCastingMode[_bodies.Length];
                 _savedRenderingOff = new bool[_bodies.Length];

@@ -112,6 +112,7 @@ namespace CloseTheDeal.UI
         {
             if (_group != null)
                 return;
+            UiMotion.EnsureSubCanvas(gameObject);
             _group = GetComponent<CanvasGroup>();
             _group.blocksRaycasts = false;
             _group.interactable = false;
@@ -175,9 +176,14 @@ namespace CloseTheDeal.UI
         {
             if (_pointer != null)
             {
-                _pointer.gameObject.SetActive(!inView);
-                _pointer.anchoredPosition = dir * _pointerDistance;
-                _pointer.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+                bool showPointer = !inView;
+                if (_pointer.gameObject.activeSelf != showPointer)
+                    _pointer.gameObject.SetActive(showPointer);
+                if (showPointer)
+                {
+                    _pointer.anchoredPosition = dir * _pointerDistance;
+                    _pointer.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+                }
             }
 
             if (_tag != null)

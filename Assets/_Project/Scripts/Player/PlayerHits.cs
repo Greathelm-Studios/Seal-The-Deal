@@ -48,6 +48,7 @@ namespace CloseTheDeal.Player
         [Tooltip("This player's ragdoll, which shows the flinch. Set by the tool that adds this part to the player.")]
         [SerializeField] PlayerRagdoll _ragdoll;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         /// <summary>
         /// THROWAWAY (stand-in shooting): how far from the host's idea of the shooter's eye the
         /// shooter's own eye may be, metres, before a stand-in shot is ignored. WHY 1.5: the
@@ -59,6 +60,7 @@ namespace CloseTheDeal.Player
 
         /// <summary>THROWAWAY: room for every collider along a stand-in shot's ray, the shooter's own included.</summary>
         static readonly RaycastHit[] StandInHits = new RaycastHit[16];
+#endif
 
         PlayerMotor _motor;
 
@@ -114,10 +116,13 @@ namespace CloseTheDeal.Player
         /// <remarks>Carries only what the player did, never what it struck: the host casts the ray again itself. Delete with the stand-in input when real weapons arrive.</remarks>
         public void RequestStandInHit(Vector3 eye, Vector3 aim, HitType kind)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (IsOwner)
                 CheckStandInHit(eye, aim, kind);
+#endif
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         /// <summary>THROWAWAY: the host's half of <see cref="RequestStandInHit"/>.</summary>
         /// <remarks>
         /// Ignores a shot whose eye is far from where the host has this player, then casts the
@@ -171,5 +176,6 @@ namespace CloseTheDeal.Player
                 Type = kind
             });
         }
+#endif
     }
 }

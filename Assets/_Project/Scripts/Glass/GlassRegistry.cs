@@ -21,10 +21,13 @@ namespace CloseTheDeal.Glass
     {
         public static GlassRegistry Instance { get; private set; }
 
+        static readonly Collider[] OverlapBuffer = new Collider[128];
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics()
         {
             Instance = null;
+            System.Array.Clear(OverlapBuffer, 0, OverlapBuffer.Length);
         }
 
         [Tooltip("Tuning for breakable glass: what counts as glass, how hard a hit breaks it, the shards. Read at runtime, never written.")]
@@ -148,14 +151,12 @@ namespace CloseTheDeal.Glass
             if (registry == null || !registry.IsServerStarted || radius <= 0f)
                 return;
 
-            float reach = radius * radius;
-            for (int i = 0; i < registry._paneList.Count; i++)
+            int count = Physics.OverlapSphereNonAlloc(point, radius, OverlapBuffer, ~0, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
             {
-                GlassPane pane = registry._paneList[i];
-                if (pane == null || pane.IsBroken)
-                    continue;
-
-                if ((pane.ClosestPoint(point) - point).sqrMagnitude <= reach)
+                Collider col = OverlapBuffer[i];
+                OverlapBuffer[i] = null;
+                if (col != null && GlassPane.TryFind(col, out GlassPane pane) && pane != null && !pane.IsBroken)
                     registry.RequestBreak(pane, pane.Centre - point);
             }
         }
@@ -251,10 +252,16 @@ namespace CloseTheDeal.Glass
                     continue;
                 if (renderer.GetComponentInParent<GlassPane>() != null)
                     continue;
-                if (renderer.GetComponent<Collider>() == null && !AddPaneCollider(renderer))
+                Collider col = renderer.GetComponent<Collider>();
+                if (col == null)
+                    col = AddPaneCollider(renderer);
+                if (col == null)
                     continue;
 
-                renderer.gameObject.AddComponent<GlassPane>();
+                GlassPane.PrepareKnown();
+                var pane = renderer.gameObject.AddComponent<GlassPane>();
+                GlassPane.ClearPrepared();
+                pane.InitKnown(renderer, col);
             }
         }
 
@@ -264,25 +271,27 @@ namespace CloseTheDeal.Glass
         /// parts the mesh is the whole merged floor. Right for panes turned in quarter turns, as
         /// every kit and template pane is; a pane at another angle gets a box a little too big.
         /// </summary>
-        bool AddPaneCollider(Renderer renderer)
+        BoxCollider AddPaneCollider(Renderer renderer)
         {
             // Inactive glass reports no size yet; it stays see-through rather than getting an empty box.
             if (!_profile.SolidifyGlassWithoutCollider || !(renderer is MeshRenderer) || !renderer.gameObject.activeInHierarchy)
-                return false;
+                return null;
 
             Transform pane = renderer.transform;
             Bounds drawn = renderer.bounds;
-            Vector3 size = pane.InverseTransformVector(drawn.size);
-            size = new Vector3(Mathf.Abs(size.x), Mathf.Abs(size.y), Mathf.Abs(size.z));
+            Vector3 worldSize = drawn.size;
 
             // Only a flat pane: a curved piece's box would fill the space it wraps around (a stair cage's treads).
-            if (Mathf.Min(size.x, Mathf.Min(size.y, size.z)) * pane.lossyScale.magnitude > MaxPaneThickness * 1.7320508f)
-                return false;
+            if (Mathf.Min(worldSize.x, Mathf.Min(worldSize.y, worldSize.z)) > MaxPaneThickness)
+                return null;
+
+            Vector3 size = pane.InverseTransformVector(worldSize);
+            size = new Vector3(Mathf.Abs(size.x), Mathf.Abs(size.y), Mathf.Abs(size.z));
 
             var box = renderer.gameObject.AddComponent<BoxCollider>();
             box.center = pane.InverseTransformPoint(drawn.center);
             box.size = size;
-            return true;
+            return box;
         }
 
         bool IsGlass(Material material)

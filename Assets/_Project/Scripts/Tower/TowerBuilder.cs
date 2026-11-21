@@ -55,6 +55,7 @@ namespace CloseTheDeal.Tower
 
         void OnDestroy()
         {
+            DestroyMergedMeshes();
             if (Instance == this)
                 Instance = null;
         }

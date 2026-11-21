@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
+using System.Threading.Tasks;
 using CloseTheDeal.Records;
 using UnityEngine;
 
@@ -146,6 +148,7 @@ namespace CloseTheDeal.Profile
 
         static PlayerProfile Read(DateTime now, out LoadState state)
         {
+            BackgroundFileWriter.Flush();
             string path = FilePath;
             if (!File.Exists(path))
             {
@@ -190,21 +193,8 @@ namespace CloseTheDeal.Profile
                 return;
 
             string path = FilePath;
-            string temp = path + ".tmp";
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
-                File.WriteAllText(temp, JsonUtility.ToJson(_current, true));
-                if (File.Exists(path))
-                    File.Replace(temp, path, null);
-                else
-                    File.Move(temp, path);
-            }
-            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
-            {
-                // The match still counts for this session; only keeping it for next launch failed.
-                Debug.LogWarning($"[Profile] Couldn't save to {path} ({e.Message}). This match won't be there next launch.");
-            }
+            string json = JsonUtility.ToJson(_current, true);
+            BackgroundFileWriter.Enqueue(path, json, "[Profile]");
         }
 
         static void KeepCorrupt(string path)
@@ -235,6 +225,124 @@ namespace CloseTheDeal.Profile
                 return editorPath;
 #endif
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Single serialized background file writer for small JSON saves (profile and outfit).
+    /// JSON serialization stays on the main thread; directory creation and atomic temp+replace run off-thread
+    /// and flush cleanly before quitting or before a synchronous read.
+    /// </summary>
+    internal static class BackgroundFileWriter
+    {
+        readonly struct WriteRequest
+        {
+            public readonly string Path;
+            public readonly string Contents;
+            public readonly string ErrorContext;
+
+            public WriteRequest(string path, string contents, string errorContext)
+            {
+                Path = path;
+                Contents = contents;
+                ErrorContext = errorContext;
+            }
+        }
+
+        static readonly ConcurrentQueue<WriteRequest> Queue = new();
+        static readonly object WorkerLock = new();
+        static Task _worker = Task.CompletedTask;
+        static bool _running;
+        static bool _hooked;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Flush();
+            if (!_hooked)
+            {
+                Application.quitting += Flush;
+                _hooked = true;
+            }
+        }
+
+        public static void Enqueue(string path, string contents, string errorContext)
+        {
+            if (!_hooked)
+            {
+                Application.quitting += Flush;
+                _hooked = true;
+            }
+
+            lock (WorkerLock)
+            {
+                Queue.Enqueue(new WriteRequest(path, contents, errorContext));
+                if (!_running)
+                {
+                    _running = true;
+                    _worker = Task.Run(Drain);
+                }
+            }
+        }
+
+        public static void Flush()
+        {
+            while (true)
+            {
+                Task worker;
+                lock (WorkerLock)
+                {
+                    if (!_running && Queue.IsEmpty)
+                        return;
+                    worker = _worker;
+                }
+
+                try
+                {
+                    worker.Wait();
+                }
+                catch (AggregateException)
+                {
+                }
+            }
+        }
+
+        static void Drain()
+        {
+            while (true)
+            {
+                WriteRequest req;
+                lock (WorkerLock)
+                {
+                    if (!Queue.TryDequeue(out req))
+                    {
+                        _running = false;
+                        return;
+                    }
+                }
+
+                WriteAtomic(req);
+            }
+        }
+
+        static void WriteAtomic(WriteRequest req)
+        {
+            string temp = req.Path + ".tmp";
+            try
+            {
+                string dir = Path.GetDirectoryName(req.Path);
+                if (!string.IsNullOrEmpty(dir))
+                    Directory.CreateDirectory(dir);
+                File.WriteAllText(temp, req.Contents);
+                if (File.Exists(req.Path))
+                    File.Replace(temp, req.Path, null);
+                else
+                    File.Move(temp, req.Path);
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                Debug.LogWarning($"{req.ErrorContext} Couldn't save to {req.Path} ({e.Message}).");
+            }
         }
     }
 }

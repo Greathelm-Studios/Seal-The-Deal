@@ -2,6 +2,7 @@
 using FishNet.Managing;
 using FishNet.Managing.Logging;
 using FishNet.Transporting;
+using FishNet.Utility.Performance;
 using FishySteamworks.Client;
 using Steamworks;
 using System;
@@ -124,6 +125,7 @@ namespace FishySteamworks.Server
         {
             try
             {
+                base.EnsureReceiveBuffers();
                 if (_onRemoteConnectionStateCallback == null)
                 {
 #if UNITY_SERVER
@@ -209,6 +211,21 @@ namespace FishySteamworks.Server
 
                 _socket = HSteamListenSocket.Invalid;
             }
+
+            // Close the Deal patch (FORK.md): close active client connections and clear server state on stop.
+            foreach (HSteamNetConnection conn in _steamConnections.First.Keys)
+            {
+#if UNITY_SERVER
+                SteamGameServerNetworkingSockets.CloseConnection(conn, 0, string.Empty, false);
+#else
+                SteamNetworkingSockets.CloseConnection(conn, 0, string.Empty, false);
+#endif
+            }
+            _steamConnections.Clear();
+            _steamIds.Clear();
+            _cachedConnectionIds.Clear();
+            base.ClearQueue(_clientHostIncoming);
+            base.FreeOutboundBuffer();
 
             _pendingConnectionChanges.Clear();
             if (base.GetLocalConnectionState() == LocalConnectionState.Stopped)
@@ -357,7 +374,8 @@ namespace FishySteamworks.Server
                 return;
 
             _iteratingConnections = true;
-            foreach (HSteamNetConnection conn in _steamConnections.FirstTypes)
+            // Close the Deal patch (FORK.md): iterate Dictionary.KeyCollection directly instead of IEnumerable to avoid 60 Hz enumerator boxing.
+            foreach (HSteamNetConnection conn in _steamConnections.First.Keys)
             {
 #if UNITY_SERVER
                 SteamGameServerNetworkingSockets.FlushMessagesOnConnection(conn);
@@ -389,6 +407,8 @@ namespace FishySteamworks.Server
                 LocalPacket packet = _clientHostIncoming.Dequeue();
                 ArraySegment<byte> segment = new ArraySegment<byte>(packet.Data, 0, packet.Length);
                 base.Transport.HandleServerReceivedDataArgs(new ServerReceivedDataArgs(segment, (Channel)packet.Channel, FishySteamworks.CLIENT_HOST_ID, Transport.Index));
+                // Close the Deal patch (FORK.md): return host-local pooled buffer after dispatch.
+                ByteArrayPool.Store(packet.Data);
             }
 
             foreach (KeyValuePair<HSteamNetConnection, int> item in _steamConnections.First)
@@ -551,7 +571,11 @@ namespace FishySteamworks.Server
         internal void ReceivedFromClientHost(LocalPacket packet)
         {
             if (!_clientHostStarted)
+            {
+                // Close the Deal patch (FORK.md): return pooled buffer when dropping a host-local packet.
+                ByteArrayPool.Store(packet.Data);
                 return;
+            }
 
             _clientHostIncoming.Enqueue(packet);
         }

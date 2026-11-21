@@ -1,6 +1,6 @@
 # SWITCHBOARD
 
-**Status:** Current · **Last updated:** 2026-11-13 · **Verified against:** a headless compile only. **Not yet played, on one machine or two.**
+**Status:** Current · **Last updated:** 2026-11-21 · **Verified against:** a headless compile only (not yet re-compiled after latest perf/sync edits). **Not yet played, on one machine or two.**
 
 Switchboard is the game's own layer on top of FishNet for moving physics objects between players. It does not change who decides anything: the host still simulates every prop (AGENTS.md §3). It changes how the host tells everyone else.
 
@@ -56,8 +56,8 @@ A body's cell comes from its position in the Tower object's local space: the sig
 ### Priority and the budget
 
 Each client has a ledger with one running score per body.
-On every send, each body that is moving (or still owes its resting pose) gains its band's weight: 1 for Near, `Far Weight` (default 0.1) for Far.
-A body is due once its score reaches 1. Due bodies go into the packet highest score first until the client's byte allowance for this send is used, and a sent body's score returns to 0.
+On every send, each body that is moving (or still owes its resting pose, or had `NetBody.ForceSync()` called on the host) gains its band's weight: 1 for Near, `Far Weight` (default 0.1) for Far.
+A body is due once its score reaches 1 (skipped when nothing accrued for a client and no due backlog remains). Due bodies go into the packet highest score first until the client's byte allowance for this send is used, and a sent body's score returns to 0. Each body's 13-byte packed entry is cached once per send tick across all clients.
 So with room to spare a Near body goes every send and a Far body every tenth send; with no room to spare, bodies wait in proportion and none is starved.
 
 The allowance is a token bucket: each send adds `Bytes Per Second Per Player / Sends Per Second` bytes, the bucket holds at most two sends' worth, and one packet never exceeds 1100 bytes (under Steam's unreliable message limit).

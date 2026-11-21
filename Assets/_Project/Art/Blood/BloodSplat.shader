@@ -294,26 +294,42 @@ Shader "Close the Deal/Blood Splat"
                 float depth = SampleSceneDepth(uv);
                 float3 positionWS = ComputeWorldSpacePosition(uv, depth, UNITY_MATRIX_I_VP);
                 float3 positionOS = mul(UNITY_MATRIX_I_M, float4(positionWS, 1.0)).xyz;
+                float2 p = positionOS.xy * 2.0 * SPLAT_SCALE;
+
+                // Screen-space derivatives must be evaluated before any discard so quad helper lanes stay valid.
+                float3 dPdy = ddy(positionWS);
+                float3 dPdx = ddx(positionWS);
+                float aa = max((fwidth(p.x) + fwidth(p.y)) * 0.7, 1e-4);
+
+                // Early clip: reject sky and fragments outside the projection cube before normal, trig, SDF, or shadow math.
+                #if UNITY_REVERSED_Z
+                    bool isSky = depth < 0.000001;
+                #else
+                    bool isSky = depth > 0.999999;
+                #endif
+                float3 outside = abs(positionOS) - 0.5;
+                if (isSky || max(outside.x, max(outside.y, outside.z)) > 0.0)
+                    discard;
 
                 // Which way the surface faces, from how the world position changes across the
                 // screen. Turned to face the camera, because the cross product's sign depends on
                 // the platform. The box's +Z is the way it projects, so a surface square-on to it
                 // has a normal pointing along -Z.
-                float3 normalWS = normalize(cross(ddy(positionWS), ddx(positionWS)));
+                float3 normalWS = normalize(cross(dPdy, dPdx));
                 float3 toCamera = _WorldSpaceCameraPos - positionWS;
                 normalWS *= (dot(normalWS, toCamera) < 0.0) ? -1.0 : 1.0;
                 float3 projectDirWS = normalize(mul((float3x3)UNITY_MATRIX_M, float3(0, 0, 1)));
                 float facing = dot(normalWS, -projectDirWS);
                 float angleFade = smoothstep(_AngleCut, _AngleCut + 0.2, facing);
+                if (angleFade <= 0.0)
+                    discard;
 
-                float2 p = positionOS.xy * 2.0 * SPLAT_SCALE;
-                // One screen pixel in splat space: the width of every anti-aliased edge.
-                // Taken here with the other derivatives, before any discard.
-                float aa = max((fwidth(p.x) + fwidth(p.y)) * 0.7, 1e-4);
+                float4 sp = UNITY_ACCESS_INSTANCED_PROP(Props, _Params);
+                if (sp.w <= 0.0)
+                    discard;
 
                 // The box's own axes in the world, for the pixel grid and for which way is down.
                 float3 axisX = float3(UNITY_MATRIX_M._m00, UNITY_MATRIX_M._m10, UNITY_MATRIX_M._m20);
-                float3 axisY = float3(UNITY_MATRIX_M._m01, UNITY_MATRIX_M._m11, UNITY_MATRIX_M._m21);
                 float boxWidth = max(length(axisX), 1e-4);
 
                 // Pixel grid: snap to squares of a fixed size in the world, so big and small
@@ -323,18 +339,12 @@ Shader "Close the Deal/Blood Splat"
                 if (cell > aa * 1.5)
                     p = (floor(p / cell) + 0.5) * cell;
 
-                // Nothing drawn here (sky): nothing to paint on.
-                #if UNITY_REVERSED_Z
-                    bool isSky = depth < 0.000001;
-                #else
-                    bool isSky = depth > 0.999999;
-                #endif
-                // Outside the box: not ours to paint.
-                float3 outside = abs(positionOS) - 0.5;
-                if (isSky || max(outside.x, max(outside.y, outside.z)) > 0.0 || angleFade <= 0.0)
+                // Bounding-circle reject before trig and SDF loops (max shape extent across all 4 variants is within ~1.28).
+                float maxRadius = 1.28 + aa;
+                if (dot(p, p) > maxRadius * maxRadius)
                     discard;
 
-                float4 sp = UNITY_ACCESS_INSTANCED_PROP(Props, _Params);
+                float3 axisY = float3(UNITY_MATRIX_M._m01, UNITY_MATRIX_M._m11, UNITY_MATRIX_M._m21);
                 float seed = sp.x * 7.31;
 
                 // Turn so +x points along the throw; the cut tone sits on the side facing the floor.

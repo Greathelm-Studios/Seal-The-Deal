@@ -8,8 +8,9 @@ namespace FishySteamworks
         private Dictionary<T1, T2> t1ToT2Dict = new Dictionary<T1, T2>();
         private Dictionary<T2, T1> t2ToT1Dict = new Dictionary<T2, T1>();
 
-        public IEnumerable<T1> FirstTypes => t1ToT2Dict.Keys;
-        public IEnumerable<T2> SecondTypes => t2ToT1Dict.Keys;
+        // Close the Deal patch (FORK.md): return concrete KeyCollection to avoid enumerator boxing.
+        public Dictionary<T1, T2>.KeyCollection FirstTypes => t1ToT2Dict.Keys;
+        public Dictionary<T2, T1>.KeyCollection SecondTypes => t2ToT1Dict.Keys;
 
         public IEnumerator GetEnumerator() => t1ToT2Dict.GetEnumerator();
 
@@ -79,6 +80,13 @@ namespace FishySteamworks
                 t1ToT2Dict.Remove(val);
                 t2ToT1Dict.Remove(key);
             }
+        }
+
+        // Close the Deal patch (FORK.md): clear both maps when stopping the server socket.
+        public void Clear()
+        {
+            t1ToT2Dict.Clear();
+            t2ToT1Dict.Clear();
         }
 
         public T1 this[T2 key]

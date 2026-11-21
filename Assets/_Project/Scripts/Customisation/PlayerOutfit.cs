@@ -65,7 +65,7 @@ namespace CloseTheDeal.Customisation
         public override void OnStartClient()
         {
             base.OnStartClient();
-            if (_view != null && Catalog != null)
+            if (_view != null && Catalog != null && !IsOwner)
                 _view.Show(Catalog.IsValid(Worn) ? Worn : Catalog.Default, false);
 
             if (!IsOwner || Catalog == null)
@@ -73,7 +73,8 @@ namespace CloseTheDeal.Customisation
 
             OutfitSave.Loaded saved = OutfitSave.Load(Catalog);
             _runsStarted = saved.RunsStarted;
-            _view.Show(saved.Loadout, false);
+            if (_view != null)
+                _view.Show(saved.Loadout, false);
             Local = this;
             CmdWear(saved.Loadout.Packed);
             OnLocalSpawned?.Invoke(this);

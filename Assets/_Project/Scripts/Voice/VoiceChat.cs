@@ -149,8 +149,8 @@ namespace CloseTheDeal.Voice
         /// <summary>Most lost pieces in a row a listener fills in. A longer gap is left as a gap: guessing that much speech sounds worse than silence.</summary>
         const int MaxFill = 3;
 
-        /// <summary>Seconds between looks at which microphones are plugged in. Asking Unity for the list is slow and makes garbage.</summary>
-        const float DeviceCheckInterval = 2f;
+        /// <summary>Seconds before retrying Microphone.Start after a failure.</summary>
+        const float MicRetryDelay = 2f;
 
         /// <summary>Metres within which a voice is at full volume: across a desk.</summary>
         const float FullRange = 3f;
@@ -201,22 +201,32 @@ namespace CloseTheDeal.Voice
             public VoiceDecoder Decoder;
         }
 
+        struct Allowance
+        {
+            public float Bytes;
+            public float LastTime;
+        }
+
         readonly Dictionary<int, Heard> _heard = new();
-        readonly Dictionary<int, float> _allowance = new();
+        readonly Dictionary<int, Allowance> _allowance = new();
+        readonly HashSet<NetworkConnection> _relayTargets = new();
         readonly byte[] _packet = new byte[MaxPacketBytes];
         readonly float[] _frame = new float[FrameSamples];
         readonly float[] _decoded = new float[FrameSamples];
-        readonly List<int> _scratchIds = new();
 
         NetworkManager _net;
         AudioClip _mic;
         /// <summary>The microphone being recorded, as Unity names it; null is the system default.</summary>
         string _micDevice;
         float[] _micFrame;
+        int _micFrameSamples;
+        int _micChannels = 1;
+        float _prevMicSample;
         int _micRead;
         bool _warnedMic;
+        float _nextMicRetry = float.NegativeInfinity;
         string[] _devices = Array.Empty<string>();
-        float _nextDeviceCheck = float.NegativeInfinity;
+        bool _devicesKnown;
         VoiceEncoder _encoder;
         VoiceCleaner _cleaner;
         bool _cleanerTried;
@@ -233,19 +243,24 @@ namespace CloseTheDeal.Voice
         /// <summary>True when this machine has a microphone to talk with. Hearing others needs none.</summary>
         public bool Available => Devices.Length > 0;
 
-        /// <summary>The microphones plugged in, as Unity names them. Looked up again every couple of seconds.</summary>
+        /// <summary>The microphones plugged in, as Unity names them. Refreshed on startup, settings change, or mic failure.</summary>
         public string[] Devices
         {
             get
             {
-                if (Time.unscaledTime >= _nextDeviceCheck)
-                {
-                    _nextDeviceCheck = Time.unscaledTime + DeviceCheckInterval;
-                    _devices = Microphone.devices;
-                }
+                if (!_devicesKnown)
+                    RefreshDevices();
 
                 return _devices;
             }
+        }
+
+        /// <summary>Refreshes the cached list of plugged-in microphones.</summary>
+        public string[] RefreshDevices()
+        {
+            _devices = Microphone.devices;
+            _devicesKnown = true;
+            return _devices;
         }
 
         /// <summary>True when the RNNoise library loaded, so noise suppression can run on this machine.</summary>
@@ -285,14 +300,27 @@ namespace CloseTheDeal.Voice
             Instance = host.AddComponent<VoiceChat>();
         }
 
+        void Awake()
+        {
+            RefreshDevices();
+            VoiceSettings.Changed += OnVoiceSettingsChanged;
+        }
+
         void OnDestroy()
         {
+            VoiceSettings.Changed -= OnVoiceSettingsChanged;
             Unhook();
             StopMic();
             _cleaner?.Dispose();
             _cleaner = null;
             if (Instance == this)
                 Instance = null;
+        }
+
+        void OnVoiceSettingsChanged()
+        {
+            RefreshDevices();
+            _nextMicRetry = float.NegativeInfinity;
         }
 
         void Update()
@@ -319,8 +347,6 @@ namespace CloseTheDeal.Voice
 
             ReadKey();
             RunMic(connected);
-            if (_net != null && _net.ServerManager.Started)
-                RefillAllowances();
         }
 
         void LateUpdate()
@@ -429,28 +455,52 @@ namespace CloseTheDeal.Voice
             // The player picked another microphone, or the one in use was unplugged.
             if (_mic != null && WantedDevice() != _micDevice)
                 StopMic();
-            if (_mic == null && !StartMic())
+            if (_mic == null)
             {
+                if (Time.unscaledTime < _nextMicRetry || !StartMic())
+                {
+                    MicOpen = false;
+                    return;
+                }
+            }
+
+            MicOpen = connected && WantsMic();
+            int pos = Microphone.GetPosition(_micDevice);
+            if (pos < 0)
+            {
+                StopMic();
+                RefreshDevices();
+                _nextMicRetry = Time.unscaledTime + MicRetryDelay;
                 MicOpen = false;
                 return;
             }
 
-            MicOpen = connected && WantsMic();
+            bool skipProcessing = !test && (
+                (VoiceSettings.Mode == MicMode.Open && VoiceSettings.Muted) ||
+                (VoiceSettings.Mode == MicMode.PushToTalk && !MicOpen && Time.unscaledTime > _gateOpenUntil));
+            if (skipProcessing)
+            {
+                _micRead = pos;
+                _prevMicSample = 0f;
+                return;
+            }
+
             int length = _mic.samples;
-            int waiting = (Microphone.GetPosition(_micDevice) - _micRead + length) % length;
+            int waiting = (pos - _micRead + length) % length;
             // After a stall (a long frame, a paused editor) only the newest sound is worth
             // sending: skip to it so the voice does not run late.
             if (waiting > length / 2)
             {
-                _micRead = (_micRead + waiting - _micFrame.Length + length) % length;
-                waiting = _micFrame.Length;
+                _micRead = (_micRead + waiting - _micFrameSamples + length) % length;
+                waiting = _micFrameSamples;
+                _prevMicSample = 0f;
             }
 
-            while (waiting >= _micFrame.Length)
+            while (waiting >= _micFrameSamples)
             {
                 _mic.GetData(_micFrame, _micRead);
-                _micRead = (_micRead + _micFrame.Length) % length;
-                waiting -= _micFrame.Length;
+                _micRead = (_micRead + _micFrameSamples) % length;
+                waiting -= _micFrameSamples;
                 HandlePiece(MicOpen, test);
             }
         }
@@ -476,13 +526,19 @@ namespace CloseTheDeal.Voice
                     Debug.LogWarning("[Voice] The microphone could not be started. This player will hear others but not be heard.");
                 }
 
+                RefreshDevices();
+                _nextMicRetry = Time.unscaledTime + MicRetryDelay;
                 return false;
             }
 
             // A device that cannot record at our rate gives its own; the piece is then
-            // stretched or squeezed to ours as it is read.
-            _micFrame = new float[Mathf.Max(1, Mathf.RoundToInt(FrameSamples * (_mic.frequency / (float)SampleRate)))];
-            _micRead = Microphone.GetPosition(_micDevice);
+            // stretched or squeezed to ours as it is read. Multi-channel mics are downmixed to mono.
+            _micChannels = Mathf.Max(1, _mic.channels);
+            _micFrameSamples = Mathf.Max(1, Mathf.RoundToInt(FrameSamples * (_mic.frequency / (float)SampleRate)));
+            _micFrame = new float[_micFrameSamples * _micChannels];
+            int pos = Microphone.GetPosition(_micDevice);
+            _micRead = pos >= 0 ? pos : 0;
+            _prevMicSample = 0f;
             _encoder ??= new VoiceEncoder(SampleRate, Bitrate);
             _encoder.Reset();
             _ = CanSuppressNoise; // loads RNNoise the first time
@@ -506,22 +562,40 @@ namespace CloseTheDeal.Voice
         /// <param name="test">True when the player is listening to themselves.</param>
         void HandlePiece(bool send, bool test)
         {
-            // Bring the piece to our rate. With a microphone already at our rate this is a copy.
-            int source = _micFrame.Length;
+            int source = _micFrameSamples;
+            if (_micChannels > 1)
+            {
+                float invChannels = 1f / _micChannels;
+                for (int i = 0; i < source; i++)
+                {
+                    float sum = 0f;
+                    int baseIndex = i * _micChannels;
+                    for (int c = 0; c < _micChannels; c++)
+                        sum += _micFrame[baseIndex + c];
+                    _micFrame[i] = sum * invChannels;
+                }
+            }
+
+            // Bring the piece to our rate, carrying the previous frame's last sample across boundaries.
             if (source == FrameSamples)
             {
                 Array.Copy(_micFrame, _frame, FrameSamples);
             }
             else
             {
+                float step = source / (float)FrameSamples;
                 for (int i = 0; i < FrameSamples; i++)
                 {
-                    float at = i * (source - 1) / (float)(FrameSamples - 1);
-                    int low = (int)at;
-                    int high = Mathf.Min(low + 1, source - 1);
-                    _frame[i] = Mathf.Lerp(_micFrame[low], _micFrame[high], at - low);
+                    float at = (i + 1) * step - 1f;
+                    int low = Mathf.FloorToInt(at);
+                    float frac = at - low;
+                    float a = low < 0 ? _prevMicSample : _micFrame[low];
+                    int high = low + 1;
+                    float b = high < source ? _micFrame[high] : _micFrame[source - 1];
+                    _frame[i] = a + (b - a) * frac;
                 }
             }
+            _prevMicSample = _micFrame[source - 1];
 
             // Cleaned even when nothing will be sent: RNNoise learns the room's noise as it
             // goes, and a cleaner that only woke on a key press would start each time deaf.
@@ -577,27 +651,32 @@ namespace CloseTheDeal.Voice
 
         // ---- The host passing voices on ------------------------------------------------------
 
-        void RefillAllowances()
-        {
-            float add = BytesPerSecondCap * Time.unscaledDeltaTime;
-            _scratchIds.Clear();
-            foreach (int id in _allowance.Keys)
-                _scratchIds.Add(id);
-            for (int i = 0; i < _scratchIds.Count; i++)
-                _allowance[_scratchIds[i]] = Mathf.Min(BytesPerSecondCap, _allowance[_scratchIds[i]] + add);
-        }
-
         void OnFrame(NetworkConnection sender, VoiceFrame frame, Channel channel)
         {
             ArraySegment<byte> payload = frame.Payload;
             if (!LooksLikeVoice(payload))
                 return;
 
-            if (!_allowance.TryGetValue(sender.ClientId, out float allowance))
-                allowance = BytesPerSecondCap;
-            if (allowance < payload.Count)
+            float now = Time.unscaledTime;
+            if (!_allowance.TryGetValue(sender.ClientId, out Allowance state))
+            {
+                state = new Allowance { Bytes = BytesPerSecondCap, LastTime = now };
+            }
+            else
+            {
+                float elapsed = Mathf.Max(0f, now - state.LastTime);
+                state.Bytes = Mathf.Min(BytesPerSecondCap, state.Bytes + BytesPerSecondCap * elapsed);
+                state.LastTime = now;
+            }
+
+            if (state.Bytes < payload.Count)
+            {
+                _allowance[sender.ClientId] = state;
                 return;
-            _allowance[sender.ClientId] = allowance - payload.Count;
+            }
+
+            state.Bytes -= payload.Count;
+            _allowance[sender.ClientId] = state;
 
             // A player with no body has nowhere to be heard from.
             NetworkObject speakerBody = sender.FirstObject;
@@ -605,7 +684,7 @@ namespace CloseTheDeal.Voice
                 return;
             Vector3 from = speakerBody.transform.position;
 
-            var relay = new VoiceRelay { Speaker = sender.ClientId, Payload = payload };
+            _relayTargets.Clear();
             foreach (NetworkConnection listener in _net.ServerManager.Clients.Values)
             {
                 if (listener == sender || !listener.IsAuthenticated)
@@ -615,7 +694,14 @@ namespace CloseTheDeal.Voice
                     continue;
                 if ((listenerBody.transform.position - from).sqrMagnitude > RelayRange * RelayRange)
                     continue;
-                _net.ServerManager.Broadcast(listener, relay, true, Channel.Unreliable);
+                _relayTargets.Add(listener);
+            }
+
+            if (_relayTargets.Count > 0)
+            {
+                var relay = new VoiceRelay { Speaker = sender.ClientId, Payload = payload };
+                _net.ServerManager.Broadcast(_relayTargets, relay, true, Channel.Unreliable);
+                _relayTargets.Clear();
             }
         }
 
@@ -648,8 +734,6 @@ namespace CloseTheDeal.Voice
             int ahead = fresh ? 1 : (short)(number - heard.LastNumber);
             if (ahead <= 0)
                 return;
-            heard.LastNumber = number;
-            heard.HasNumber = true;
             if (fresh)
                 heard.Decoder.Reset();
 
@@ -663,10 +747,19 @@ namespace CloseTheDeal.Voice
             {
                 for (int i = 0; i < lost - 1; i++)
                     heard.Speaker.Push(_decoded, heard.Decoder.Conceal(_decoded, FrameSamples));
-                heard.Speaker.Push(_decoded, heard.Decoder.Decode(bytes, sound, soundBytes, _decoded, FrameSamples, previous: true));
+                int fecSamples = heard.Decoder.Decode(bytes, sound, soundBytes, _decoded, FrameSamples, previous: true);
+                if (fecSamples <= 0)
+                    return;
+                heard.Speaker.Push(_decoded, fecSamples);
             }
 
-            heard.Speaker.Push(_decoded, heard.Decoder.Decode(bytes, sound, soundBytes, _decoded, FrameSamples));
+            int samples = heard.Decoder.Decode(bytes, sound, soundBytes, _decoded, FrameSamples);
+            if (samples <= 0)
+                return;
+
+            heard.LastNumber = number;
+            heard.HasNumber = true;
+            heard.Speaker.Push(_decoded, samples);
         }
 
         Heard SpeakerFor(int speakerId)
@@ -706,7 +799,7 @@ namespace CloseTheDeal.Voice
             foreach (KeyValuePair<int, Heard> pair in _heard)
             {
                 Heard heard = pair.Value;
-                if (pair.Key == SelfId || heard.Speaker == null)
+                if (pair.Key == SelfId || heard.Speaker == null || !heard.Speaker.Speaking)
                     continue;
 
                 if (heard.Body == null && Time.unscaledTime >= heard.NextSearch)
@@ -740,11 +833,12 @@ namespace CloseTheDeal.Voice
                     return body;
             }
 
-            PlayerMotor[] bodies = FindObjectsByType<PlayerMotor>();
-            for (int i = 0; i < bodies.Length; i++)
+            List<PlayerMotor> bodies = PlayerMotor.All;
+            for (int i = 0; i < bodies.Count; i++)
             {
-                if (bodies[i].OwnerId == clientId)
-                    return bodies[i];
+                PlayerMotor body = bodies[i];
+                if (body != null && body.OwnerId == clientId)
+                    return body;
             }
 
             return null;

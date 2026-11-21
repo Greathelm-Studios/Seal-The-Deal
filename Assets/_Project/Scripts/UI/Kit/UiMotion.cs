@@ -159,6 +159,23 @@ namespace CloseTheDeal.UI
             Active.Remove(item);
         }
 
+        /// <summary>
+        /// Isolates an animated UI subtree on its own sub-Canvas (without adding a GraphicRaycaster)
+        /// so moving or fading it does not rebuild the parent HUD canvas.
+        /// </summary>
+        public static Canvas EnsureSubCanvas(GameObject go)
+        {
+            if (go == null)
+                return null;
+            if (!go.TryGetComponent(out Canvas canvas))
+            {
+                canvas = go.AddComponent<Canvas>();
+                canvas.overrideSorting = false;
+            }
+
+            return canvas;
+        }
+
         /// <summary>Marks that the player did something, which stops idle life until they stop again.</summary>
         public static void NoteInput() => LastInputTime = Now;
 
