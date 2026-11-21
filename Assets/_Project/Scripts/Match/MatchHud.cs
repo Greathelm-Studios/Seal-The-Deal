@@ -192,8 +192,11 @@ namespace CloseTheDeal.MatchMode
 
         void RefreshAll()
         {
-            if (!_match.IsLive)
+            if (!_match.IsLive || _match.Phase == MatchPhase.Waiting)
+            {
+                Hide();
                 return;
+            }
 
             _root.SetActive(true);
             _bannerGroup.alpha = 0f;
@@ -208,6 +211,14 @@ namespace CloseTheDeal.MatchMode
 
         void OnPhaseChanged(MatchPhase previous, MatchPhase next)
         {
+            if (next == MatchPhase.Waiting)
+            {
+                Hide();
+                return;
+            }
+            if (!_root.activeSelf)
+                RefreshAll();
+
             _capWarning = false;
             ShowClock(_match.SecondsLeft);
             RefreshTracker();

@@ -226,6 +226,7 @@ namespace CloseTheDeal.Editor.Lanes
                 // Slot 1 above slot 2, as on the keyboard.
                 float y = 32f + 118f + 10f + (1 - i) * 30f;
                 RectTransform row = Anchored(root, "Slot" + (i + 1), corner, corner, new Vector2(right, y), new Vector2(width, 26f));
+                Solid(row, tokens.Paper);
                 slotTexts[i] = HudText(row, "Text", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(14f, 0f), new Vector2(width - 14f, 26f), tokens.Label, tokens.Ink3, TextAlignmentOptions.MidlineLeft, (i + 1) + "  —");
                 RectTransform bar = Anchored(row, "Bar", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(4f, 20f));
                 slotBars[i] = Solid(bar, tokens.Cobalt);
@@ -1366,6 +1367,7 @@ namespace CloseTheDeal.Editor.Lanes
             // Stopped part-way through by hand: forget the run, or the next Play would pick it up.
             if (change == PlayModeStateChange.EnteredEditMode)
             {
+                PlayerInputReader.ScriptedCapture = false;
                 Routines.Clear();
                 EditorApplication.update -= Step;
                 EditorApplication.playModeStateChanged -= OnPlayModeChanged;
@@ -1383,6 +1385,8 @@ namespace CloseTheDeal.Editor.Lanes
             _out = SessionState.GetString(OutKey, "");
             _failures = 0;
             Application.runInBackground = true;
+            // Batch players cannot lock a real cursor; scripted weapon input needs gameplay capture.
+            PlayerInputReader.ScriptedCapture = true;
             Routines.Clear();
             UsePort();
             Routines.Push(_role == "client" ? ClientRoutine() : _role == "panes" ? PaneCountRoutine() : _role == "hud" ? HudRoutine() : HostRoutine(SessionState.GetBool(WithClientKey, false)));
@@ -1435,6 +1439,7 @@ namespace CloseTheDeal.Editor.Lanes
 
         static void Finish()
         {
+            PlayerInputReader.ScriptedCapture = false;
             EditorApplication.update -= Step;
             EditorApplication.playModeStateChanged -= OnPlayModeChanged;
             Log($"=== {_role} finished: {(_failures == 0 ? "all checks passed" : _failures + " check(s) FAILED")} ===");

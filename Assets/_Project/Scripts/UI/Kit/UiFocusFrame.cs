@@ -108,6 +108,11 @@ namespace CloseTheDeal.UI
             // Adjacent dialog actions share a row. Keep the cue out of their labels during a focus change.
             if (_target != target && target.GetComponentInParent<UiConfirmDialog>() != null)
                 _placed = false;
+            if (_chevron != null)
+            {
+                var button = target.GetComponent<UiButton>();
+                _chevron.gameObject.SetActive(button == null || button.Fx.V3FocusMark == null);
+            }
             _target = target;
             UiMotion.Wake(this);
         }

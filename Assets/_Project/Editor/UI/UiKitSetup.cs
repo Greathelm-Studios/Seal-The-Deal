@@ -205,6 +205,7 @@ namespace CloseTheDeal.Editor.UI
 
             var hint = Instance<UiKeyHint>(UiKitComponents.KeyHint, hud, MenuHintName);
             Pin((RectTransform)hint.transform, new Vector2(0f, 1f), new Vector2(24f, -24f), new Vector2(160f, 40f));
+            Img((RectTransform)hint.transform, UiKitArt.White, Tokens.Paper);
             SetLabelText(hint.transform, "Label", "Menu");
             SetLabelText(hint.transform, "Key", "Esc");
             SetString(hint, "_keyboardText", "Esc");

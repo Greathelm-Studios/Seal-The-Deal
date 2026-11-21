@@ -45,6 +45,8 @@ namespace CloseTheDeal.UI
         public Image Shadow;
         [Tooltip("The main label.")]
         public TMP_Text Label;
+        [Tooltip("The original V3 arrow at the right of a selected menu action. Leave empty for standard kit controls.")]
+        public Image V3FocusMark;
         [Tooltip("Extra marks that take the label's colour (bullets, arrows, a check box).")]
         public Graphic[] Inks;
         [Tooltip("The electric underline on quiet buttons and tabs.")]
@@ -236,6 +238,11 @@ namespace CloseTheDeal.UI
             float hover = _hover.Value;
             float press = Mathf.Clamp01(_press.Value);
             ResolveColours(hover, press, out Color fill, out Color ink, out Color outline);
+            if (V3FocusMark != null)
+            {
+                V3FocusMark.enabled = _focused && _interactable;
+                V3FocusMark.color = ink;
+            }
             ApplyColours(fill, ink, outline);
             ApplyPlate(hover, press, reduced);
             ApplyUnderline(hover, reduced);

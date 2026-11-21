@@ -217,6 +217,8 @@ namespace CloseTheDeal.Editor.UI
             var join = Instance<UiButton>(UiKitComponents.Secondary, column, "JoinOnThisPc");
             var settings = Instance<UiButton>(UiKitComponents.Secondary, column, "Settings");
             var quit = Instance<UiButton>(UiKitComponents.Secondary, column, "QuitToDesktop");
+            foreach (var row in new[] { host, join, settings, quit })
+                AddV3FocusMark(row);
             SetLabel(host, "Host a game");
             SetLabel(join, "Join on this PC");
             SetLabel(settings, "Settings");
@@ -262,9 +264,13 @@ namespace CloseTheDeal.Editor.UI
                 foreach (var row in column.GetComponentsInChildren<UiButton>(true))
                 {
                     if (row.transform.Find("Plate/V3Selected") == null)
+                    {
+                        AddV3FocusMark(row);
                         continue;
+                    }
                     var replacement = Instance<UiButton>(secondary, column, row.name);
                     replacement.transform.SetSiblingIndex(row.transform.GetSiblingIndex());
+                    AddV3FocusMark(replacement);
                     SetLabel(replacement, row.Fx.Label.text);
                     replacement.Description = row.Description;
                     PrefabUtility.RecordPrefabInstancePropertyModifications(replacement);
@@ -284,6 +290,27 @@ namespace CloseTheDeal.Editor.UI
             }
             UiKitArt.Ensure(Tokens);
             ApplyTitleArtwork(root);
+        }
+
+        // The sprite is a 4× export of Menu.svg's original 1.6 px mitered stroke,
+        // centred vertically with the stroke starting 32 px from the right edge.
+        internal static void AddV3FocusMark(UiButton row)
+        {
+            if (row.Fx.V3FocusMark != null)
+                return;
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(KitFolder + "/Sprites/Kit_TitleV3Chevron.png");
+            if (sprite == null)
+                throw new System.InvalidOperationException("Missing V3 menu chevron sprite.");
+            var rect = Node(row.Fx.Plate, "V3FocusMark");
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 0.5f);
+            rect.sizeDelta = new Vector2(12f, 18f);
+            rect.anchoredPosition = new Vector2(-22f, 0f);
+            row.Fx.V3FocusMark = Img(rect, sprite, Color.white);
+            row.Fx.V3FocusMark.enabled = false;
+            var label = row.Fx.Label.rectTransform;
+            label.offsetMax = new Vector2(-44f, label.offsetMax.y);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(row);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(label);
         }
 
         static void ApplyTitleArtwork(RectTransform root)
@@ -458,6 +485,8 @@ namespace CloseTheDeal.Editor.UI
             var stay = Place<UiButton>(UiKitComponents.Primary, actions, "Stay", 1588f, 868f);
             ((RectTransform)stay.transform).sizeDelta = new Vector2(188f, t.SecondaryHeight);
             SetLabel(stay, "Stay");
+            AddV3FocusMark(confirm);
+            AddV3FocusMark(stay);
             confirm.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnRight = stay };
             stay.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnLeft = confirm };
 
