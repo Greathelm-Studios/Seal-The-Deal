@@ -635,44 +635,64 @@ namespace CloseTheDeal.Editor.Lanes
             RectTransform clock = (RectTransform)root.Find("Clock");
             RectTransform tracker = (RectTransform)root.Find("Tracker");
             RectTransform ladder = (RectTransform)root.Find("Ladder");
-            var left = Vector2.up;
-            Anchored(clock, left, new Vector2(24f, -24f), new Vector2(218f, 104f));
-            Anchored(tracker, left, new Vector2(242f, -24f), new Vector2(410f, 104f));
-            Anchored(ladder, left, new Vector2(24f, -140f), new Vector2(302f, 210f));
-
-            // Solid surfaces keep small labels readable against bright glass and dark interiors.
-            MatchSurface(clock, t.CobaltDeep, "Warning");
-            MatchSurface(tracker, t.Paper, "Bar");
+            var top = new Vector2(0.5f, 1f);
+            Anchored(ladder, top, new Vector2(0, -20), new Vector2(580, 66));
+            ladder.SetAsFirstSibling();
             MatchSurface(ladder, t.Paper, "Caption");
-            MatchText(clock, "Caption", 4, 9, 210, 26, 19, t.Paper, TextAlignmentOptions.Center);
-            MatchText(clock, "Time", 4, 34, 210, 62, 43, Color.white, TextAlignmentOptions.Center);
-            clock.Find("Time").GetComponent<TMP_Text>().characterSpacing = 0f;
-            MatchText(tracker, "Caption", 18, 6, 378, 25, 19, t.CobaltDeep);
-            MatchText(tracker, "Holder", 18, 30, 378, 38, 29, t.Navy);
-            MatchText(tracker, "Where", 18, 69, 378, 29, 23, t.Ink2);
-            UiKitAssets.Place((RectTransform)tracker.Find("Bar"), 0, 0, 4, 104);
-
-            MatchText(ladder, "Caption", 14, 7, 274, 29, 19, t.CobaltDeep);
-            UiKitAssets.Place((RectTransform)ladder.Find("Rows"), 14, 42, 274, 0);
+            MatchText(ladder, "Caption", 18, 18, 147, 34, 20, t.Navy);
+            var floorName = ladder.Find("Caption").GetComponent<TMP_Text>();
+            floorName.characterSpacing = 0;
+            floorName.enableAutoSizing = true;
+            floorName.fontSizeMin = 16;
+            floorName.fontSizeMax = 20;
+            UiKitAssets.Place((RectTransform)ladder.Find("Rows"), 20, 52, 156, 10);
             var row = (RectTransform)ladder.Find("Rows/Row");
-            UiKitAssets.Place(row, 0, 0, 274, 32);
-            UiKitAssets.Place((RectTransform)row.Find("Box"), 0, 10, 12, 12);
-            MatchText(row, "Label", 22, 0, 225, 32, 22, t.Navy);
-            UiKitAssets.Place((RectTransform)row.Find("Mark"), 257, 10, 12, 12);
+            UiKitAssets.Place(row, 0, 0, 20, 10);
+            UiKitAssets.Place((RectTransform)row.Find("Box"), 0, 0, 9, 9);
+            UiKitAssets.Place((RectTransform)row.Find("Mark"), 0, -4, 9, 2);
+            row.Find("Label").gameObject.SetActive(false);
+            if (ladder.Find("FloorLabel") == null)
+                UiKitAssets.Label(ladder, "FloorLabel", 18, 3, 180, 22, "OPEN FLOOR", t.Caption, t.CobaltDeep);
+
+            var hud = new SerializedObject(root.GetComponentInParent<MatchHud>(true));
+            hud.FindProperty("_compactFloors").boolValue = true;
+            hud.ApplyModifiedPropertiesWithoutUndo();
+            Anchored(clock, top, new Vector2(-55, -21), new Vector2(120, 60));
+            Anchored(tracker, top, new Vector2(150, -22), new Vector2(278, 60));
+            // The floor plate backs the entire strip. Nested plates would stack their edges and frost.
+            foreach (var pane in new[] { clock, tracker })
+                foreach (var layer in new[] { "Shadow", "Edge", "Surface", "HudFace" })
+                {
+                    Transform face = pane.Find(layer);
+                    if (face != null)
+                        face.gameObject.SetActive(false);
+                }
+            MatchText(clock, "Caption", 0, 1, 120, 18, 12, t.CobaltDeep, TextAlignmentOptions.Center);
+            MatchText(clock, "Time", 0, 12, 120, 48, 31, t.Navy, TextAlignmentOptions.Center);
+            clock.Find("Time").GetComponent<TMP_Text>().characterSpacing = 0f;
+            tracker.Find("Caption").gameObject.SetActive(false);
+            UiKitAssets.Place((RectTransform)tracker.Find("Bar"), 2, 14, 7, 7);
+            ((RectTransform)tracker.Find("Bar")).localRotation = Quaternion.Euler(0, 0, 45);
+            MatchText(tracker, "Holder", 16, 0, 252, 34, 21, t.Navy);
+            MatchText(tracker, "Where", 16, 29, 252, 30, 16, t.CobaltDeep);
+            var where = tracker.Find("Where").GetComponent<TMP_Text>();
+            where.enableAutoSizing = true;
+            where.fontSizeMin = 14;
+            where.fontSizeMax = 16;
 
             var banner = (RectTransform)root.Find("Banner");
-            Anchored(banner, new Vector2(0.5f, 1f), new Vector2(0, -145), new Vector2(670, 60));
+            Anchored(banner, new Vector2(0.5f, 1f), new Vector2(0, -98), new Vector2(670, 60));
             MatchSurface(banner, t.CobaltDeep, "Text");
             MatchText(banner, "Text", 16, 0, 638, 60, 24, Color.white, TextAlignmentOptions.Center);
 
             var notice = (RectTransform)root.Find("Notice");
-            Anchored(notice, new Vector2(0.5f, 0f), new Vector2(0, 150), new Vector2(620, 88));
+            Anchored(notice, new Vector2(0.5f, 0f), new Vector2(0, 54), new Vector2(540, 70));
             MatchSurface(notice, t.Paper, "Line");
             var line = (RectTransform)notice.Find("Line");
-            UiKitAssets.Place(line, 0, 0, 620, 88);
-            UiKitAssets.Place((RectTransform)line.Find("Mark"), 0, 0, 7, 88);
-            UiKitAssets.Place((RectTransform)line.Find("MarkOutline"), 0, 0, 7, 88);
-            MatchText(line, "Text", 18, 4, 584, 80, 22, t.Navy);
+            UiKitAssets.Place(line, 0, 0, 540, 70);
+            UiKitAssets.Place((RectTransform)line.Find("Mark"), 12, 18, 3, 34);
+            UiKitAssets.Place((RectTransform)line.Find("MarkOutline"), 12, 18, 3, 34);
+            MatchText(line, "Text", 26, 2, 498, 66, 20, t.Navy);
         }
 
         static void MatchSurface(RectTransform panel, Color colour, string before)
@@ -684,7 +704,17 @@ namespace CloseTheDeal.Editor.Lanes
                 UiKitAssets.Img(face, null, colour);
                 face.SetSiblingIndex(panel.Find(before).GetSiblingIndex());
             }
-            face.GetComponent<UnityEngine.UI.Image>().color = colour;
+            var image = face.GetComponent<UnityEngine.UI.Image>();
+            image.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_Round16.png");
+            image.type = UnityEngine.UI.Image.Type.Sliced;
+            colour.a = 0.88f;
+            image.color = colour;
+            foreach (var name in new[] { "Surface", "Shadow", "Edge" })
+            {
+                var layer = panel.Find(name);
+                if (layer != null)
+                    layer.gameObject.SetActive(false);
+            }
         }
 
         static void MatchText(Transform parent, string path, float x, float y, float w, float h,

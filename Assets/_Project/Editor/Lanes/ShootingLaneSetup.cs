@@ -205,42 +205,48 @@ namespace CloseTheDeal.Editor.Lanes
             var corner = new Vector2(1f, 0f);
             var round = AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_Round16.png");
             var tab = AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_Round8.png");
-            const float width = 376f;
-            RectTransform weapon = Anchored(root, "WeaponPlate", corner, corner, new Vector2(-24f, 24f), new Vector2(width, 155f));
-            UiKitAssets.Img(weapon, round, tokens.Paper);
+            const float width = 290f;
+            RectTransform weapon = Anchored(root, "WeaponPlate", corner, corner, new Vector2(-24f, 24f), new Vector2(width, 56f));
+            Color frost = tokens.Paper;
+            frost.a = 0.92f;
+            UiKitAssets.Img(weapon, round, frost);
 
-            TMP_Text name = UiKitAssets.Label(weapon, "WeaponName", 18, 10, 184, 39, "PISTOL", tokens.Item, tokens.Navy);
-            name.fontSize = 27f;
-            TMP_Text ammo = UiKitAssets.Label(weapon, "Ammo", 198, 1, 84, 56, "12", tokens.Heading, tokens.Navy, TextAlignmentOptions.MidlineRight);
-            ammo.fontSize = 53f;
+            TMP_Text name = UiKitAssets.Label(weapon, "WeaponName", 16, 3, 137, 50, "PISTOL", tokens.Item, tokens.Navy);
+            name.fontSize = 21f;
+            TMP_Text ammo = UiKitAssets.Label(weapon, "Ammo", 153, 0, 66, 54, "12", tokens.Heading, tokens.Navy, TextAlignmentOptions.MidlineLeft);
+            ammo.fontSize = 42f;
             ammo.characterSpacing = 0f;
             Unclipped(ammo);
-            TMP_Text magazine = UiKitAssets.Label(weapon, "Magazine", 290, 17, 77, 38, "/ 12", tokens.Label, tokens.Ink2);
+            TMP_Text magazine = UiKitAssets.Label(weapon, "Magazine", 219, 14, 65, 36, "/ 12", tokens.Label, tokens.Ink2);
             magazine.fontSize = 22f;
 
-            Image statePlate = UiKitAssets.Box(weapon, "StatusPlate", 14, 55, width - 28, 36, tokens.HoverTint, tab);
-            TMP_Text state = UiKitAssets.Label(weapon, "State", 24, 55, width - 48, 36, "READY", tokens.Label, tokens.Navy);
-            state.fontSize = 21f;
-            RectTransform track = UiKitAssets.At(weapon, "ProgressTrack", 18, 94, width - 36, 4);
-            Solid(track, tokens.Hair);
+            Image statePlate = UiKitAssets.Box(weapon, "StatusPlate", 124, -43, 166, 36, tokens.HoverTint, tab);
+            TMP_Text state = UiKitAssets.Label(weapon, "State", 129, -43, 156, 36, "READY", tokens.Label, tokens.Navy);
+            state.alignment = TextAlignmentOptions.Center;
+            state.enableAutoSizing = true;
+            state.fontSizeMin = 15;
+            state.fontSizeMax = 18;
+            state.fontSize = 18f;
+            RectTransform track = UiKitAssets.At(weapon, "ProgressTrack", 14, 50, width - 28, 2);
+            Solid(track, Color.clear);
             RectTransform fill = Anchored(track, "Fill", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, track.sizeDelta);
             Solid(fill, tokens.Cobalt);
             fill.localScale = new Vector3(0f, 1f, 1f);
 
             var slotTexts = new Object[WeaponHolder.SlotCount];
             var slotBars = new Object[WeaponHolder.SlotCount];
-            float tabWidth = (width - 34f) / WeaponHolder.SlotCount;
+            float tabWidth = 146f;
             for (int i = 0; i < WeaponHolder.SlotCount; i++)
             {
-                RectTransform row = UiKitAssets.At(weapon, "Slot" + (i + 1), 14 + i * (tabWidth + 6), 106, tabWidth, 37);
+                RectTransform row = UiKitAssets.At(weapon, "Slot" + (i + 1), width - tabWidth, -77, tabWidth, 27);
                 slotBars[i] = UiKitAssets.Img(row, tab, tokens.Cobalt);
-                slotTexts[i] = UiKitAssets.Label(row, "Text", 8, 0, tabWidth - 16, 37, (i + 1) + "  —", tokens.Label, tokens.Navy,
+                slotTexts[i] = UiKitAssets.Label(row, "Text", 8, 0, tabWidth - 16, 27, (i + 1) + "  —", tokens.Label, tokens.Navy,
                     TextAlignmentOptions.Center);
-                ((TMP_Text)slotTexts[i]).fontSize = 20f;
+                ((TMP_Text)slotTexts[i]).fontSize = 17f;
             }
 
-            RectTransform health = Anchored(root, "HealthPlate", corner, corner, new Vector2(-24f, 190f), new Vector2(244f, 60f));
-            UiKitAssets.Img(health, round, tokens.Paper);
+            RectTransform health = Anchored(root, "HealthPlate", Vector2.zero, Vector2.zero, new Vector2(24f, 24f), new Vector2(244f, 60f));
+            UiKitAssets.Img(health, round, frost);
             var group = health.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
             group.interactable = false;

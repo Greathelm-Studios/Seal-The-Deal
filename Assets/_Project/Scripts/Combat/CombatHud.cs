@@ -341,7 +341,16 @@ namespace CloseTheDeal.Combat
                 _slotTexts[i].text = inSlot != null ? $"{i + 1}  {inSlot.DisplayName.ToUpperInvariant()}" : $"{i + 1}  —";
                 Color selectedInk = _statePlate != null ? _tokens.Paper : _tokens.Navy;
                 _slotTexts[i].color = active ? selectedInk : inSlot != null ? _tokens.Ink2 : _tokens.Ink3;
-                _slotBars[i].enabled = active;
+                if (_statePlate != null)
+                {
+                    // The equipped weapon already has its name on the ammo strip.
+                    _slotTexts[i].transform.parent.gameObject.SetActive(inSlot != null && !active);
+                    _slotBars[i].color = _tokens.Paper;
+                    _slotBars[i].enabled = true;
+                    _slotTexts[i].color = _tokens.Navy;
+                }
+                else
+                    _slotBars[i].enabled = active;
             }
 
             _shownAmmo = -1;
@@ -407,7 +416,9 @@ namespace CloseTheDeal.Combat
             }
 
             bool busy = _holder.State != WeaponState.Ready;
-            _statePlate.enabled = _holder.ActiveWeapon != null;
+            bool show = _holder.ActiveWeapon != null && (busy || LowAmmo || _empty);
+            _statePlate.enabled = show;
+            _weaponState.enabled = show;
             _statePlate.color = busy ? _tokens.Cobalt : LowAmmo ? _tokens.Amber : _tokens.HoverTint;
             _weaponState.color = busy ? _tokens.Paper : _tokens.Navy;
         }
@@ -417,9 +428,9 @@ namespace CloseTheDeal.Combat
 
         static string EmptyText() => UiGlyphs.Current switch
         {
-            UiDeviceKind.KeyboardMouse => "EMPTY · R TO RELOAD",
-            UiDeviceKind.PlayStation => "EMPTY · TRIANGLE TO RELOAD",
-            _ => "EMPTY · Y TO RELOAD"
+            UiDeviceKind.KeyboardMouse => "RELOAD · R",
+            UiDeviceKind.PlayStation => "RELOAD · TRIANGLE",
+            _ => "RELOAD · Y"
         };
 
         void ShowProgress()

@@ -204,8 +204,8 @@ namespace CloseTheDeal.Editor.UI
                 return false;
 
             var hint = Instance<UiKeyHint>(UiKitComponents.KeyHint, hud, MenuHintName);
-            Pin((RectTransform)hint.transform, Vector2.one, new Vector2(-24f, -24f), new Vector2(160f, 40f));
-            Img((RectTransform)hint.transform, UiKitArt.White, Tokens.Paper);
+            Pin((RectTransform)hint.transform, Vector2.up, new Vector2(24f, -24f), new Vector2(136f, 40f));
+            Img((RectTransform)hint.transform, AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_Round16.png"), Tokens.Paper);
             SetLabelText(hint.transform, "Label", "Menu");
             SetLabelText(hint.transform, "Key", "Esc");
             SetString(hint, "_keyboardText", "Esc");
@@ -228,7 +228,7 @@ namespace CloseTheDeal.Editor.UI
             // The readout hides its text's parent (the plate), so it lives on a holder above the plate: hidden, it can
             // still hear Show network stats come back on.
             RectTransform holder = Node(hud, ReadoutName);
-            Pin(holder, Vector2.zero, new Vector2(24f, 24f), new Vector2(500f, 84f));
+            Pin(holder, Vector2.up, new Vector2(24f, -90f), new Vector2(500f, 84f));
             var plate = Instance<RectTransform>(UiKitComponents.Plate, holder, "Plate");
             Stretch(plate);
             TextMeshProUGUI text = Label(plate, "Text", 16f, 10f, 468f, 64f, string.Empty, Tokens.Caption, Tokens.Navy, TextAlignmentOptions.TopLeft, true);

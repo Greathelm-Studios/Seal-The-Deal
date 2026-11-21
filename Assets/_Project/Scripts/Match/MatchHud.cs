@@ -42,6 +42,8 @@ namespace CloseTheDeal.MatchMode
         [Tooltip("A floor still shut: a hollow square, so open and shut differ in shape as well as colour.")]
         [SerializeField] Sprite _shutSprite;
         [SerializeField] TMP_Text _ladderCaption;
+        [Tooltip("Shows the highest open floor and its progress ticks in the compact clock strip.")]
+        [SerializeField] bool _compactFloors;
         [Tooltip("One floor's row, copied once per floor when the towers are built. Has a Box (Image), a Label (text) and a Mark (Image) child.")]
         [SerializeField] RectTransform _ladderRow;
 
@@ -228,7 +230,7 @@ namespace CloseTheDeal.MatchMode
             RefreshLadder();
             if (next != MatchPhase.Countdown)
                 _countdownGroup.alpha = 0f;
-            if (next == MatchPhase.Running)
+            if (next == MatchPhase.Running && !_compactFloors)
                 Say("The quarter is open. Get the briefcase onto a roof.", UiStatusKind.Info);
         }
 
@@ -339,7 +341,8 @@ namespace CloseTheDeal.MatchMode
 
             float height = _ladderRow.sizeDelta.y;
             // The plate grows with the tower: its header, then one row per floor.
-            _ladderPlate.sizeDelta = new Vector2(_ladderPlate.sizeDelta.x, -_ladder.anchoredPosition.y + count * height + 12f);
+            if (!_compactFloors)
+                _ladderPlate.sizeDelta = new Vector2(_ladderPlate.sizeDelta.x, -_ladder.anchoredPosition.y + count * height + 12f);
             for (int i = 0; i < _rowBoxes.Count; i++)
             {
                 RectTransform row = (RectTransform)_rowBoxes[i].transform.parent;
@@ -349,7 +352,9 @@ namespace CloseTheDeal.MatchMode
                     continue;
 
                 // Roof at the top: floor i sits (count - 1 - i) rows down.
-                row.anchoredPosition = new Vector2(0f, -(count - 1 - i) * height);
+                row.anchoredPosition = _compactFloors
+                    ? new Vector2(i * Mathf.Min(22f, _ladder.rect.width / count), 0)
+                    : new Vector2(0f, -(count - 1 - i) * height);
                 _rowLabels[i].text = arena.FloorLabel(i);
             }
 
@@ -374,7 +379,12 @@ namespace CloseTheDeal.MatchMode
             for (int i = 0; i < arena.FloorCount; i++)
                 StyleRow(i, i <= open, i == checkpoint && checkpoint > 0, i == caseFloor);
 
-            _ladderCaption.text = "OPEN TO " + arena.FloorLabel(open).ToUpperInvariant();
+            if (_compactFloors)
+            {
+                _ladderCaption.text = arena.FloorLabel(open);
+            }
+            else
+                _ladderCaption.text = "OPEN TO " + arena.FloorLabel(open).ToUpperInvariant();
         }
 
         void StyleRow(int floor, bool isOpen, bool respawnHere, bool caseHere)
