@@ -1,3 +1,4 @@
+using CloseTheDeal.Customisation;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -43,6 +44,7 @@ namespace CloseTheDeal.Player
         Camera _baseCamera;
         PlayerAnimator _animator;
         Transform _head;
+        bool _wantActive;
         bool _active;
         bool _bodyViewAttached;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -178,15 +180,16 @@ namespace CloseTheDeal.Player
         void OnDisable()
         {
             PlayerMotor.LocalChanged -= OnLocalChanged;
+            _wantActive = false;
             Hide();
         }
 
         void OnLocalChanged(PlayerMotor local)
         {
-            bool isLocal = _motor != null && local == _motor;
-            if (isLocal && !_active)
+            _wantActive = _motor != null && local == _motor;
+            if (_wantActive && !_active)
                 Show();
-            else if (!isLocal && _active)
+            else if (!_wantActive && _active)
                 Hide();
         }
 
@@ -203,6 +206,9 @@ namespace CloseTheDeal.Player
                     _twoHandVelocity = 0f;
                 }
             }
+
+            if (_wantActive && !_active)
+                Show();
 
             if (!_active)
                 return;
@@ -278,7 +284,8 @@ namespace CloseTheDeal.Player
 
         void OnBeginCameraRendering(ScriptableRenderContext context, Camera rendering)
         {
-            if (_active && _head != null && rendering == _baseCamera && _profile.BodyViewHeadClip > 0f)
+            bool fitting = FittingRoom.Instance != null && FittingRoom.Instance.IsOpen;
+            if (_active && !fitting && _head != null && rendering == _baseCamera && _profile.BodyViewHeadClip > 0f)
             {
                 Vector3 centre = _head.position + _head.up * HeadClipCenterUp;
                 float r = _profile.BodyViewHeadClip;

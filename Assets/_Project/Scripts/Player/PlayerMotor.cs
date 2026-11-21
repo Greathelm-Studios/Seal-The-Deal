@@ -295,7 +295,6 @@ namespace CloseTheDeal.Player
                 return;
 
             Local = this;
-            LocalChanged?.Invoke(this);
             _input.enabled = true;
             if (!IsServerStarted)
             {
@@ -305,6 +304,8 @@ namespace CloseTheDeal.Player
             ShowOwnBody(false);
             if (PlayerCamera.Instance != null)
                 PlayerCamera.Instance.Follow(_cameraTarget, _input, this);
+            // Fire after ShowOwnBody(false) and Camera.Follow so PlayerViewmodel.Show() wins body visibility.
+            LocalChanged?.Invoke(this);
         }
 
         public override void OnStopClient()
