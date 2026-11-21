@@ -191,7 +191,7 @@ Defined in code in `WeaponHolder.WeaponInput`, not in the shared actions asset, 
 | Action | Binding |
 |---|---|
 | Fire | `<Mouse>/leftButton`, `<Gamepad>/rightTrigger` |
-| Reload | `<Keyboard>/r`, `<Gamepad>/buttonNorth` (Y) |
+| Reload | `<Keyboard>/r`, `<Gamepad>/buttonEast` (B / Circle) |
 | Weapon Slot 1 | `<Keyboard>/1`, `<Gamepad>/dpad/left` |
 | Weapon Slot 2 | `<Keyboard>/2`, `<Gamepad>/dpad/right` |
 

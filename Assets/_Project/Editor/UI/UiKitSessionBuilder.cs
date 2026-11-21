@@ -11,7 +11,7 @@ namespace CloseTheDeal.Editor.UI
     /// <summary>
     /// Builds the two panels that sit over the title's middle and right columns (the window and the title lockup
     /// stay): the session panel (hosting, joining, loading, with an honest progress track and Cancel) and the problem
-    /// panel (an amber plate naming what went wrong and the button that fixes it, plus Back). Mockups:
+    /// panel (a paper notice with an amber marker naming what went wrong and the button that fixes it, plus Back). Mockups:
     /// ArtSource/UI/review/01_menu_survey_03_hosting, 04_joining, 07_failed_full, 08_failed_friends. Coordinates are
     /// the title's 1920 x 1080 frame. Both are dialogs without a veil: the title stays readable behind them.
     /// </summary>
@@ -44,7 +44,7 @@ namespace CloseTheDeal.Editor.UI
             for (int i = 0; i < 3; i++)
             {
                 RectTransform chevron = At(progress, "Step" + i, Left + i * 14f, 834f, 12f, 16f);
-                chevrons[i] = Img(chevron, UiKitArt.Pointer, t.Hair);
+                chevrons[i] = Img(chevron, UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_TitleV3Chevron.png"), t.Hair);
                 ((Image)chevrons[i]).preserveAspect = true;
             }
 
@@ -63,6 +63,7 @@ namespace CloseTheDeal.Editor.UI
             reveal.Add(actions.GetComponent<CanvasGroup>());
             var cancel = Place<UiButton>(UiKitComponents.Secondary, actions, "Cancel", Left, 904f);
             ((RectTransform)cancel.transform).sizeDelta = new Vector2(240f, t.SecondaryHeight);
+            AddV3FocusMark(cancel);
             SetLabel(cancel, "Cancel");
             Hint(actions, "CancelHint", Left + 264f, 912f, "Cancel", "UI/Cancel");
             cancel.navigation = new Navigation { mode = Navigation.Mode.Explicit };
@@ -95,23 +96,26 @@ namespace CloseTheDeal.Editor.UI
 
             RectTransform notice = RevealLine(frame, "Notice");
             reveal.Add(notice.GetComponent<CanvasGroup>());
-            Box(notice, "Plate", Left, 760f, Width, 124f, t.Amber);
-            Box(notice, "Keyline", Left, 760f, Width, 124f, t.Navy, UiKitArt.Outline1);
-            Box(notice, "Mark", Left + 24f, 784f, 12f, 12f, t.Navy); // the refusal mark: a navy square on amber
+            Box(notice, "Plate", Left, 760f, Width, 134f, t.Paper);
+            Box(notice, "Keyline", Left, 760f, Width, 134f, t.Hair, UiKitArt.Outline1);
+            Box(notice, "Mark", Left + 24f, 784f, 12f, 12f, t.Amber);
             TextMeshProUGUI headline = Label(notice, "Headline", Left + 52f, 772f, Width - 76f, 36f, "Unable to join. The game is full (8 players).", t.Item, t.Navy);
             headline.fontSize = 22f;
             headline.overflowMode = TextOverflowModes.Ellipsis;
-            TextMeshProUGUI body = Label(notice, "Body", Left + 52f, 812f, Width - 76f, 60f,
+            TextMeshProUGUI body = Label(notice, "Body", Left + 52f, 812f, Width - 76f, 76f,
                 "A seat opens when a player leaves. Try again in a moment, or host your own game.", t.Body, t.Navy, TextAlignmentOptions.TopLeft, true);
 
             RectTransform actions = RevealLine(frame, "Actions");
             reveal.Add(actions.GetComponent<CanvasGroup>());
+            headline.richText = body.richText = false;
             var fix = Place<UiButton>(UiKitComponents.Primary, actions, "Fix", Left, 904f);
             ((RectTransform)fix.transform).sizeDelta = new Vector2(300f, t.SecondaryHeight);
             SetLabel(fix, "Try again");
             var back = Place<UiButton>(UiKitComponents.Secondary, actions, "Back", Left + 324f, 904f);
             ((RectTransform)back.transform).sizeDelta = new Vector2(180f, t.SecondaryHeight);
             SetLabel(back, "Back");
+            AddV3FocusMark(fix);
+            AddV3FocusMark(back);
             Hint(actions, "BackHint", Left + 528f, 912f, "Back", "UI/Cancel");
 
             var panel = root.gameObject.AddComponent<ProblemPanel>();

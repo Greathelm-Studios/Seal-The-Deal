@@ -11,7 +11,7 @@ Looking at the mirror and pressing **F** swings the camera out of first person (
 - **Up / Down** moves between categories and down to **Keep outfit** and **Put back** (kit buttons); the focused row has the kit's highlight, cobalt rule and focus frame.
 - **Mouse, Q / R or the right stick** walks the view round the character.
 - **Enter** (pad A) keeps the outfit; **Backspace** (pad B) puts back what you were wearing. Either swings the camera back into first person (0.35 s).
-- Esc still opens the game menu; the fitting room waits underneath until it closes.
+- The first-person arms and gameplay HUD stay hidden while the camera shows the outfit, including the swing back to first person. Esc opens the game menu over the fitting room, which resumes when the menu closes.
 
 Other players see you standing at the mirror the whole time, and your outfit changes for them only when you keep it.
 The ready board shows you as "In the fitting room", which takes back your ready, so the host can't start the run while anyone is still choosing.

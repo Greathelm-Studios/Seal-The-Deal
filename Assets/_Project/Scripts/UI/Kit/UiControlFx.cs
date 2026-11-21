@@ -310,7 +310,9 @@ namespace CloseTheDeal.UI
             {
                 float t = _tick.Value;
                 ConfirmTick.rectTransform.localScale = reduced ? Vector3.one : new Vector3(t, t, 1f);
-                ConfirmTick.color = UiTokens.WithAlpha(Tokens.Cyan, t);
+                // Confirm is a pulse. The selected style owns persistent state on tabs and toggles.
+                float alpha = Mathf.Clamp01((1f - t) * 4f);
+                ConfirmTick.color = UiTokens.WithAlpha(Tokens.Cyan, t * alpha);
             }
 
             if (RefusalPlate != null)

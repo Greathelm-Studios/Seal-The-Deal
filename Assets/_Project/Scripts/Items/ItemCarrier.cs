@@ -243,7 +243,7 @@ namespace CloseTheDeal.Items
         /// </summary>
         void CreateInput()
         {
-            // Pad north, like the shared actions asset, the briefcase and the lobby (west is Reload there).
+            // Pad north, like the shared actions asset, the briefcase and the lobby.
             _interact = Button("Interact", "<Keyboard>/f", "<Gamepad>/buttonNorth");
             _throw = Button("Throw", "<Mouse>/leftButton", "<Gamepad>/rightTrigger");
             _drop = Button("Drop", "<Keyboard>/g", "<Gamepad>/dpad/down");

@@ -666,6 +666,20 @@ namespace CloseTheDeal.Editor.Lanes
             time.fontSharedMaterial = material;
             ConfigureBriefcaseArrows(root.Find("BriefcaseEdgeMarker"));
 
+            var prompt = (RectTransform)root.Find("Prompt");
+            MatchSurface(prompt, t.Paper, "KeyCap");
+            prompt.Find("HudFace").SetAsFirstSibling();
+            UiKitAssets.Place((RectTransform)prompt.Find("KeyCap"), 12, 5, 48, 30);
+            MatchText(prompt, "Key", 12, 5, 48, 30, 18, t.Navy, TextAlignmentOptions.Center);
+            MatchText(prompt, "Label", 70, 0, 290, 40, 20, t.Navy);
+            foreach (var part in new[] { "KeyCap", "Key", "Label" })
+            {
+                var rect = (RectTransform)prompt.Find(part);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(rect);
+                if (rect.TryGetComponent<TMP_Text>(out var label))
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(label);
+            }
+
             var banner = (RectTransform)root.Find("Banner");
             Anchored(banner, new Vector2(0.5f, 1f), new Vector2(0, -98), new Vector2(670, 60));
             MatchSurface(banner, t.CobaltDeep, "Text");

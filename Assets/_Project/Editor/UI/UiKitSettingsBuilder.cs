@@ -43,9 +43,10 @@ namespace CloseTheDeal.Editor.UI
             RectTransform head = RevealLine(frame, "Heading");
             reveal.Add(head.GetComponent<CanvasGroup>());
             Box(head, "CrumbBullet", 96f, 34f, 8f, 8f, t.Black);
-            TextMeshProUGUI crumb = Label(head, "Breadcrumb", 116f, 26f, 900f, 24f, "SEAL THE DEAL · SETTINGS", t.Micro, t.Ink3);
+            TextMeshProUGUI crumb = Label(head, "Breadcrumb", 116f, 26f, 900f, 28f, "SEAL THE DEAL · SETTINGS", t.Micro, t.Ink2);
+            crumb.fontSize = t.Body.Size;
             Label(head, "Heading", 96f, 78f, 900f, 56f, "SETTINGS", t.Heading, t.Navy);
-            Label(head, "Subline", 96f, 134f, 900f, 20f, "PLAYER PREFERENCES · KEPT ON THIS PC", t.Micro, t.Ink3);
+            Label(head, "Subline", 96f, 134f, 900f, 28f, "PLAYER PREFERENCES · KEPT ON THIS PC", t.Micro, t.Ink2).fontSize = t.Body.Size;
 
             RectTransform tabsLine = RevealLine(frame, "Tabs");
             reveal.Add(tabsLine.GetComponent<CanvasGroup>());
@@ -236,9 +237,9 @@ namespace CloseTheDeal.Editor.UI
                 "How fast the look stick turns the view at full tilt. 100% is the game's tuning.");
 
             RectTransform keys = Fill(pageRoot, "Keys");
-            Label(keys, "ColAction", 112f, y + 8f, 400f, 20f, "ACTION", t.Caption, t.Ink3);
-            Label(keys, "ColKeys", 820f, y + 8f, 180f, 20f, "KEYBOARD", t.Caption, t.Ink3);
-            Label(keys, "ColPad", 1060f, y + 8f, 140f, 20f, "PAD", t.Caption, t.Ink3);
+            Label(keys, "ColAction", 112f, y + 2f, 400f, 28f, "ACTION", t.Caption, t.Ink2).fontSize = t.Body.Size;
+            Label(keys, "ColKeys", 820f, y + 2f, 180f, 28f, "KEYBOARD", t.Caption, t.Ink2).fontSize = t.Body.Size;
+            Label(keys, "ColPad", 1060f, y + 2f, 140f, 28f, "PAD", t.Caption, t.Ink2).fontSize = t.Body.Size;
             y += 32f;
 
             var rows = new List<Selectable> { sensitivity, invert, stick };

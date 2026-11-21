@@ -476,7 +476,7 @@ namespace CloseTheDeal.MatchMode
                     Say($"The roof only counts with the briefcase. It is on {_match.PlaceLabel(status.Place, status.Floor)}.", UiStatusKind.Refusal);
                     break;
                 case MatchNotice.FirstGateRefusal:
-                    Say($"{_match.Arena.FloorLabel(_match.OpenFloor + 1)} is shut. Nobody climbs higher than the briefcase has been. Whoever carries it up there opens the floor for everyone.", UiStatusKind.Refusal);
+                    Say($"{_match.Arena.FloorLabel(_match.OpenFloor + 1)} is shut. Carry the briefcase upstairs to open it for everyone.", UiStatusKind.Refusal);
                     break;
                 case MatchNotice.GateRefused:
                     Say($"{_match.Arena.FloorLabel(_match.OpenFloor + 1)} is shut until the briefcase is carried up.", UiStatusKind.Refusal);
@@ -534,6 +534,17 @@ namespace CloseTheDeal.MatchMode
                 _promptHint.SetKeyText(label);
             else
                 _promptKey.text = label;
+
+            if (_compactFloors)
+            {
+                // Match the paper to this action and actual key width, centred under the crosshair.
+                var words = _promptLabel.rectTransform;
+                float width = Mathf.Ceil(_promptLabel.GetPreferredValues(_promptLabel.text).x);
+                words.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
+                var prompt = (RectTransform)_prompt.transform;
+                float padding = _promptKey.rectTransform.anchoredPosition.x;
+                prompt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, words.anchoredPosition.x + width + padding);
+            }
         }
 
         // ---- Marker (local, per frame while shown) --------------------------------------------------

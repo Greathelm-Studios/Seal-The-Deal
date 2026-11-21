@@ -426,12 +426,12 @@ namespace CloseTheDeal.Combat
         WeaponState _lastState;
         float _shownProgress = -1f;
 
-        static string EmptyText() => UiGlyphs.Current switch
+        static string EmptyText()
         {
-            UiDeviceKind.KeyboardMouse => "RELOAD · R",
-            UiDeviceKind.PlayStation => "RELOAD · TRIANGLE",
-            _ => "RELOAD · Y"
-        };
+            var device = UiGlyphs.Current;
+            string binding = device == UiDeviceKind.KeyboardMouse ? WeaponHolder.ReloadKeyboardBinding : WeaponHolder.ReloadPadBinding;
+            return "RELOAD · " + UiGlyphs.Name(binding, device).ToUpperInvariant();
+        }
 
         void ShowProgress()
         {

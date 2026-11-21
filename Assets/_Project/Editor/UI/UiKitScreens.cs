@@ -484,9 +484,16 @@ namespace CloseTheDeal.Editor.UI
 
             RectTransform words = RevealLine(frame, "Words");
             reveal.Add(words.GetComponent<CanvasGroup>());
-            TextMeshProUGUI title = Label(words, "Question", 1200f, 784f, 580f, 36f, "Quit to desktop?", t.Item, t.Navy);
+            TextMeshProUGUI title = Label(words, "Question", 1200f, 756f, 580f, 66f, "Quit to desktop?", t.Item, t.Navy);
             title.fontSize = 26f;
-            TextMeshProUGUI body = Label(words, "Body", 1200f, 824f, 580f, 28f, "Your settings are saved.", t.Body, t.Ink2);
+            title.richText = false;
+            title.textWrappingMode = TextWrappingModes.Normal;
+            title.enableAutoSizing = true;
+            title.fontSizeMin = t.Item.Size;
+            title.fontSizeMax = 26f;
+            TextMeshProUGUI body = Label(words, "Body", 1200f, 821f, 580f, 46f, "Your settings are saved.", t.Body, t.Ink2);
+            body.richText = false;
+            body.textWrappingMode = TextWrappingModes.Normal;
 
             RectTransform actions = RevealLine(frame, "Actions");
             reveal.Add(actions.GetComponent<CanvasGroup>());

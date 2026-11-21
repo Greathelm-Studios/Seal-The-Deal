@@ -1,4 +1,6 @@
 using System;
+using CloseTheDeal.Combat;
+using CloseTheDeal.MatchMode;
 using CloseTheDeal.UI;
 using TMPro;
 using UnityEngine;
@@ -149,6 +151,9 @@ namespace CloseTheDeal.Player.Hud
 
         void OnSprintChanged(bool sprinting)
         {
+            if (_slideHint == null)
+                return;
+
             _sprintFor = sprinting && !_hasSlid ? 0f : -1f;
             if (sprinting && !_hasSlid)
                 UiMotion.Wake(this);
@@ -234,6 +239,7 @@ namespace CloseTheDeal.Player.Hud
             if (_deviceCaption != null)
                 _deviceCaption.text = pad ? "CONTROLLER" : "KEYBOARD AND MOUSE";
 
+            var device = pad ? UiGlyphs.KindOf(UnityEngine.InputSystem.Gamepad.current) : UiDeviceKind.KeyboardMouse;
             for (int i = 0; i < _rows.Length; i++)
             {
                 HelpRow row = _rows[i];
@@ -241,7 +247,14 @@ namespace CloseTheDeal.Player.Hud
                     continue;
 
                 string action = pad && !string.IsNullOrEmpty(row.PadAction) ? row.PadAction : row.Action;
-                string text = !pad && !string.IsNullOrEmpty(row.KeyboardText) ? row.KeyboardText : _reader.BindingText(action, pad);
+                // These lane-owned actions have fixed bindings independent of the movement actions asset.
+                string text = action switch
+                {
+                    "Reload" => UiGlyphs.Name(pad ? WeaponHolder.ReloadPadBinding : WeaponHolder.ReloadKeyboardBinding, device),
+                    "Interact" => UiGlyphs.Name(pad ? FirmMember.InteractPad : FirmMember.InteractKey, device),
+                    "Throw" => UiGlyphs.Name(pad ? FirmMember.DropPad : FirmMember.DropKey, device),
+                    _ => !pad && !string.IsNullOrEmpty(row.KeyboardText) ? row.KeyboardText : _reader.BindingText(action, pad)
+                };
                 row.Key.text = text;
                 float width = Mathf.Max(KeyCapMinWidth, Mathf.Ceil(row.Key.GetPreferredValues(text).x) + KeyCapPadding);
                 Resize(row.KeyCap, width);

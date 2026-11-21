@@ -208,7 +208,7 @@ namespace CloseTheDeal.Editor.Lanes
             const float width = 290f;
             RectTransform weapon = Anchored(root, "WeaponPlate", corner, corner, new Vector2(-24f, 24f), new Vector2(width, 56f));
             Color frost = tokens.Paper;
-            frost.a = 0.92f;
+            frost.a = 0.78f;
             UiKitAssets.Img(weapon, round, frost);
 
             TMP_Text name = UiKitAssets.Label(weapon, "WeaponName", 16, 3, 137, 50, "PISTOL", tokens.Item, tokens.Navy);
@@ -246,7 +246,7 @@ namespace CloseTheDeal.Editor.Lanes
             }
 
             RectTransform health = Anchored(root, "HealthPlate", Vector2.zero, Vector2.zero, new Vector2(24f, 24f), new Vector2(244f, 60f));
-            UiKitAssets.Img(health, round, frost);
+            UiKitAssets.Img(health, round, UiTokens.WithAlpha(tokens.Paper, 0.92f));
             var group = health.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
             group.interactable = false;

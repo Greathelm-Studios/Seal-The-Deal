@@ -1,4 +1,5 @@
 using System;
+using CloseTheDeal.Combat;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -192,7 +193,7 @@ namespace CloseTheDeal.UI
                     if (keyIndex >= 0)
                         key = UiGlyphs.Name(action.bindings[keyIndex].path, UiDeviceKind.KeyboardMouse);
                     if (row.Action == "Reload")
-                        pad = UiGlyphs.PadName("buttonNorth", UiGlyphs.Current == UiDeviceKind.PlayStation);
+                        pad = UiGlyphs.Name(WeaponHolder.ReloadPadBinding, UiGlyphs.Current);
                 }
                 if (row.Cap != null)
                 {

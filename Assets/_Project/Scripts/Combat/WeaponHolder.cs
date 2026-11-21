@@ -65,6 +65,9 @@ namespace CloseTheDeal.Combat
     [RequireComponent(typeof(Health))]
     public sealed class WeaponHolder : NetworkBehaviour
     {
+        internal const string ReloadKeyboardBinding = "<Keyboard>/r";
+        internal const string ReloadPadBinding = "<Gamepad>/buttonEast";
+
         public const int SlotCount = 2;
 
         /// <summary>
@@ -1096,16 +1099,15 @@ namespace CloseTheDeal.Combat
         sealed class WeaponInput : IDisposable
         {
             readonly InputAction _fire = new("Fire", InputActionType.Button, "<Mouse>/leftButton");
-            readonly InputAction _reload = new("Reload", InputActionType.Button, "<Keyboard>/r");
+            readonly InputAction _reload = new("Reload", InputActionType.Button, ReloadKeyboardBinding);
             readonly InputAction _slot1 = new("Weapon Slot 1", InputActionType.Button, "<Keyboard>/1");
             readonly InputAction _slot2 = new("Weapon Slot 2", InputActionType.Button, "<Keyboard>/2");
 
             public WeaponInput()
             {
-                // Pad: right trigger fires, Y reloads, d-pad left and right pick the slots.
-                // A, B, X and d-pad down belong to jump, crouch, interact and drop.
+                // Right trigger fires, B/Circle reloads, and D-pad left/right select slots.
                 _fire.AddBinding("<Gamepad>/rightTrigger");
-                _reload.AddBinding("<Gamepad>/buttonNorth");
+                _reload.AddBinding(ReloadPadBinding);
                 _slot1.AddBinding("<Gamepad>/dpad/left");
                 _slot2.AddBinding("<Gamepad>/dpad/right");
                 _fire.Enable();

@@ -272,14 +272,16 @@ namespace CloseTheDeal.Player
                 if (groups == null || !groups.Contains(group))
                     continue;
 
-                return binding.isComposite ? CompositeText(action, i) : action.GetBindingDisplayString(i);
+                if (binding.isComposite)
+                    return CompositeText(action, i, gamepad);
+                return gamepad ? UiGlyphs.Name(binding.effectivePath, UiGlyphs.KindOf(Gamepad.current)) : action.GetBindingDisplayString(i);
             }
 
             return string.Empty;
         }
 
         /// <summary>A composite's keys, the first binding of each part only ("W/A/S/D", not every arrow-key alternative too).</summary>
-        static string CompositeText(InputAction action, int compositeIndex)
+        static string CompositeText(InputAction action, int compositeIndex, bool gamepad)
         {
             var bindings = action.bindings;
             var parts = new System.Collections.Generic.List<string>(4);
@@ -288,7 +290,8 @@ namespace CloseTheDeal.Player
             {
                 if (!seen.Add(bindings[i].name))
                     continue;
-                parts.Add(InputControlPath.ToHumanReadableString(bindings[i].effectivePath, InputControlPath.HumanReadableStringOptions.OmitDevice));
+                parts.Add(gamepad ? UiGlyphs.Name(bindings[i].effectivePath, UiGlyphs.KindOf(Gamepad.current))
+                    : InputControlPath.ToHumanReadableString(bindings[i].effectivePath, InputControlPath.HumanReadableStringOptions.OmitDevice));
             }
 
             return string.Join("/", parts);

@@ -81,7 +81,7 @@ namespace CloseTheDeal.UI
         /// <summary>
         /// Frees the mouse for a screen of the owner's own (a fitting room, a host's player list) without opening this
         /// menu. Reference-counted per owner: while any hold exists in a game the cursor is free and visible, the
-        /// player stands still (every input reader reads the cursor lock) and the HUD stays up. Esc still opens this
+        /// player stands still (every input reader reads the cursor lock) and the gameplay HUD is hidden. Esc still opens this
         /// menu over it. Holding twice with the same owner counts once. Leaving the game drops every hold, and an
         /// owner that is destroyed stops counting by itself; release it when its screen closes.
         /// </summary>
@@ -303,7 +303,6 @@ namespace CloseTheDeal.UI
             _open = open;
             OpenInGame = open && _inGame;
             ShowCard();
-            _hudRoot.SetActive(!open && _inGame);
             ApplyCursor();
 
             if (open)
@@ -318,6 +317,8 @@ namespace CloseTheDeal.UI
         void ApplyCursor()
         {
             bool free = _open || !_inGame || CursorHeld;
+            if (_hudRoot.activeSelf == free)
+                _hudRoot.SetActive(!free);
             if (!free && UiInput.SubmitHeld)
             {
                 _lockOnRelease = true;

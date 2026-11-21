@@ -55,6 +55,8 @@ namespace CloseTheDeal.Editor.UI
             var invite = Instance<UiButton>(UiKitComponents.Secondary, column, "InviteFriends");
             var settings = Instance<UiButton>(UiKitComponents.Secondary, column, "Settings");
             var leave = Instance<UiButton>(UiKitComponents.Secondary, column, "LeaveGame");
+            foreach (var action in new[] { back, invite, settings, leave })
+                AddV3FocusMark(action);
             SetLabel(back, "Back to game");
             SetLabel(invite, "Invite friends");
             SetLabel(settings, "Settings");
@@ -154,7 +156,9 @@ namespace CloseTheDeal.Editor.UI
                     string n = firm + "_" + seat;
                     refs.Marks.Add(Box(parent, "SeatMark" + n, x, y + 8f, 10f, 10f, t.Cyan));
                     refs.Rings.Add(Box(parent, "SeatRing" + n, x, y + 8f, 10f, 10f, t.Ink3, UiKitArt.Outline1));
-                    refs.Names.Add(Label(parent, "SeatName" + n, x + 18f, y, colW - 18f, 25f, "Seat available", t.Body, t.Ink3));
+                    var name = Label(parent, "SeatName" + n, x + 18f, y, colW - 18f, 25f, "Seat available", t.Body, t.Ink3);
+                    name.richText = false;
+                    refs.Names.Add(name);
                     refs.States.Add(Label(parent, "SeatState" + n, x + 18f, y + 25f, colW - 18f, 20f, string.Empty, t.Caption, t.Ink2));
                 }
             }

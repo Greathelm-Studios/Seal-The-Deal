@@ -247,8 +247,9 @@ namespace CloseTheDeal.UI
                     return W(JoinCaption, "Unable to join. Steam refused the request" + Code(detail) + ".", "This is usually brief. Try again.",
                         Fix.TryAgain, "Try again", "Ask to join the same game again.");
                 case LobbyProblem.VersionMismatch:
-                    return W(JoinCaption, "Unable to join. " + host + " is on " + (string.IsNullOrEmpty(detail) ? "another version" : "version " + detail) + ", you are on " + Application.version + ".",
-                        "Whoever is behind needs to update. Steam updates the game when it restarts.",
+                    return W(JoinCaption, "Unable to join. Game versions differ.",
+                        "Update Seal the Deal through Steam and try again. Your version: " + Application.version
+                        + ". Host version: " + (string.IsNullOrEmpty(detail) ? "unknown" : detail) + ".",
                         Fix.Quit, "Quit to desktop", "Close the game so Steam can update it.");
                 case LobbyProblem.Unreachable:
                     return W(JoinCaption, "Unable to reach " + host + "'s game.", "They may have left, or the connection failed. Try joining again.",
