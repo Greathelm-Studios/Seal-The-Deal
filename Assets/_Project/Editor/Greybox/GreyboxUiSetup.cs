@@ -173,8 +173,8 @@ namespace CloseTheDeal.Editor.Greybox
             canvas.sortingOrder = 10;
             var scaler = canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
             scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
+            scaler.referenceResolution = new Vector2(1440f, 810f);
+            scaler.screenMatchMode = UnityEngine.UI.CanvasScaler.ScreenMatchMode.Expand;
             canvasGo.AddComponent<UnityEngine.UI.GraphicRaycaster>();
 
             var refs = new MenuRefs();

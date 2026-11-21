@@ -66,6 +66,9 @@ Key: C major pentatonic (C D E G A), so any run of sounds is consonant. Confirms
 | `TransitionPaneSlide` | 280 ms | -7.7 dBFS | -14.0 dB | ui | three glass taps E6 D6 C6 + slide |
 | `TransitionFrameZoom` | 860 ms | -6.1 dBFS | -11.0 dB | sting | rising whoosh landing on C5 G5 C6 E6: the game starts |
 | `TransitionFade` | 130 ms | -7.9 dBFS | -14.0 dB | ui | small puff of air (reduced motion) |
+| `PlayerJoined` | 300 ms | -11.5 dBFS | -24.6 dB | ui | recorded (効果音ラボ decision35): someone joins the reception |
+| `PlayerLeft` | 450 ms | -10.8 dBFS | -24.1 dB | ui | recorded (効果音ラボ decision40): someone leaves the reception |
+| `Tip` | 320 ms | -8.6 dBFS | -21.7 dB | ui | recorded (効果音ラボ decision42): a gameplay hint appears (the slide hint); Notification stays for warnings and prompts |
 
 Combat sounds sit at 2.6 to 4.2 kHz so they cut through gunfire; the tick stays short because full auto fires up to 10 hits a second.
 

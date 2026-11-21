@@ -1,5 +1,6 @@
 using System;
 using CloseTheDeal.Player;
+using CloseTheDeal.UI;
 using FishNet.Connection;
 using FishNet.Object;
 using UnityEngine;
@@ -104,9 +105,19 @@ namespace CloseTheDeal.Items
         public static event Action<bool> UsingPadChanged;
 
         /// <summary>The key or button for each of this lane's actions, as the HUD should print it.</summary>
-        public static string KeyName(ItemAction action) => UsingPad
-            ? action switch { ItemAction.Interact => "Y", ItemAction.Throw => "RT", ItemAction.Drop => "DOWN", _ => "LT" }
-            : action switch { ItemAction.Interact => "F", ItemAction.Throw => "LMB", ItemAction.Drop => "G", _ => "RMB" };
+        public static string KeyName(ItemAction action)
+        {
+            if (!UsingPad)
+                return action switch { ItemAction.Interact => "F", ItemAction.Throw => "LMB", ItemAction.Drop => "G", _ => "RMB" };
+            bool playStation = UiGlyphs.KindOf(Gamepad.current) == UiDeviceKind.PlayStation;
+            return action switch
+            {
+                ItemAction.Interact => UiGlyphs.PadName("buttonNorth", playStation),
+                ItemAction.Throw => UiGlyphs.PadName("rightTrigger", playStation),
+                ItemAction.Drop => "DOWN",
+                _ => UiGlyphs.PadName("leftTrigger", playStation)
+            };
+        }
 
         /// <summary>Owner only. What the crosshair is on changed. The item is null when the kind is None.</summary>
         public event Action<PromptKind, ItemDefinition> PromptChanged;
@@ -232,7 +243,7 @@ namespace CloseTheDeal.Items
         /// </summary>
         void CreateInput()
         {
-            // Pad north, like the shared actions asset, the briefcase and the lobby (west is Reload there).
+            // Pad north, like the shared actions asset, the briefcase and the lobby.
             _interact = Button("Interact", "<Keyboard>/f", "<Gamepad>/buttonNorth");
             _throw = Button("Throw", "<Mouse>/leftButton", "<Gamepad>/rightTrigger");
             _drop = Button("Drop", "<Keyboard>/g", "<Gamepad>/dpad/down");

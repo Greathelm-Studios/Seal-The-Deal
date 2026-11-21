@@ -31,6 +31,7 @@
 //              else, it hangs the first-person arms on the camera, draws them with a camera
 //              of their own so walls cannot cut into them, and adds sway, bob and fire kick.
 // -----------------------------------------------------------------------------
+using CloseTheDeal.Customisation;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -569,13 +570,15 @@ namespace CloseTheDeal.Player
         /// </remarks>
         void OnBeginCameraRendering(ScriptableRenderContext context, Camera rendering)
         {
-            bool ownEye = _appliedBodyView == true && rendering == _baseCamera;
+            // The fitting room uses the same camera to show the whole character from outside.
+            bool fitting = FittingRoom.Instance != null && FittingRoom.Instance.IsOpen;
+            bool ownEye = !fitting && _appliedBodyView == true && rendering == _baseCamera;
             Shader.SetGlobalFloat(BodyViewNearClipId, ownEye ? _profile.BodyViewHeadClip : 0f);
             // The eye sits BodyViewForward in front of the middle of the head, so the middle
             // of the head is that far behind the eye.
             Shader.SetGlobalFloat(BodyViewClipBackId, ownEye ? _profile.BodyViewForward : 0f);
             if (_arms != null)
-                _arms.SetVisible(rendering == _armsCamera && !BodyView);
+                _arms.SetVisible(rendering == _armsCamera && !BodyView && !fitting);
         }
 
         /// <summary>Places the gun for this frame: authored framing, then look lag, walk bob, fire kick and the reload dip on top. The arms prefab then reaches the hand to it.</summary>

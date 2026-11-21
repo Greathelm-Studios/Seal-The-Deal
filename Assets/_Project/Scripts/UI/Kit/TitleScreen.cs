@@ -87,7 +87,7 @@ namespace CloseTheDeal.UI
             _menuShown.Snap(1f);
             _centreShown.Snap(1f);
             base.Awake();
-            string version = "v" + Application.version + " · Early Access";
+            string version = "[ v" + Application.version + " ]";
             foreach (TMP_Text line in _versionLines)
             {
                 if (line != null)
@@ -227,9 +227,14 @@ namespace CloseTheDeal.UI
             }
 
             if (_mode != null)
-                _mode.text = ModeLine(ready, local);
+                _mode.text = ModeLine(ready, local, _joinHint == null);
             if (_status != null && !_refusalShown)
-                _status.Set(_lastStatus, ready ? UiStatusKind.Info : UiStatusKind.Busy);
+            {
+                // Idle and ready, the connection line says enough: the status line only shows while starting or refusing.
+                _status.gameObject.SetActive(!ready);
+                if (!ready)
+                    _status.Set(_lastStatus, UiStatusKind.Busy);
+            }
             LinkNavigation(local);
         }
 
@@ -242,13 +247,21 @@ namespace CloseTheDeal.UI
             return "BUILD " + Application.version + (string.IsNullOrEmpty(id) ? string.Empty : " · " + id);
         }
 
-        static string ModeLine(bool ready, bool local)
+        static string ModeLine(bool ready, bool local, bool includeJoinHint)
         {
             if (!ready)
                 return Starting;
+            if (includeJoinHint)
+            {
+                if (!local)
+                    return "Online · Accept a Steam invite or choose Join Game from a friend's name.";
+                string mode = SteamService.IsReady ? "Local mode" : "Offline";
+                return mode + " · Host in one copy, then choose Join on this PC in the other.";
+            }
             if (local)
-                return SteamService.IsReady ? "Local test mode" : "Local test mode. Steam is not running.";
-            return "Signed in to Steam as " + SteamService.LocalName;
+                return SteamService.IsReady ? "Local mode. You can host or join on this PC only."
+                    : "Offline. Steam isn't running, so you can host or join on this PC only.";
+            return "Online · " + SteamService.LocalName;
         }
 
         /// <summary>Top to bottom, the order the menu reads; a greyed-out Host is skipped by keys and pad.</summary>
@@ -297,6 +310,7 @@ namespace CloseTheDeal.UI
             if (control == null || !control.transform.IsChildOf(transform) || string.IsNullOrEmpty(reason) || _status == null)
                 return;
             _refusalShown = true;
+            _status.gameObject.SetActive(true);
             _status.Set(reason, UiStatusKind.Refusal);
         }
 

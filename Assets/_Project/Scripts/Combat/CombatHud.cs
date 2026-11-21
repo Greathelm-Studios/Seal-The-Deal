@@ -41,6 +41,8 @@ namespace CloseTheDeal.Combat
         [SerializeField] TMP_Text _magazineText;
         [SerializeField] TMP_Text _weaponName;
         [SerializeField] TMP_Text _weaponState;
+        [Tooltip("The action strip behind the weapon status. It changes colour for reloads and ammo warnings.")]
+        [SerializeField] Image _statePlate;
         [Tooltip("The thin bar under the ammo that fills during a reload or a draw.")]
         [SerializeField] RectTransform _progressFill;
         [Tooltip("The two slot rows, slot 1 first: their text and the bar that marks the gun in hand.")]
@@ -160,8 +162,11 @@ namespace CloseTheDeal.Combat
             _downLine.text = string.IsNullOrEmpty(report.ComesBackOn) ? DefaultDownLine : "BACK ON " + report.ComesBackOn.ToUpperInvariant() + " IN";
         }
 
+        void OnEnable() => UiGlyphs.Changed += ShowState;
+
         void OnDisable()
         {
+            UiGlyphs.Changed -= ShowState;
             Bind(null);
         }
 
@@ -334,8 +339,18 @@ namespace CloseTheDeal.Combat
                 WeaponDefinition inSlot = _holder.WeaponInSlot(i);
                 bool active = i == _holder.ActiveSlot && inSlot != null;
                 _slotTexts[i].text = inSlot != null ? $"{i + 1}  {inSlot.DisplayName.ToUpperInvariant()}" : $"{i + 1}  —";
-                _slotTexts[i].color = active ? _tokens.Navy : inSlot != null ? _tokens.Ink3 : _tokens.Disabled;
-                _slotBars[i].enabled = active;
+                Color selectedInk = _statePlate != null ? _tokens.Paper : _tokens.Navy;
+                _slotTexts[i].color = active ? selectedInk : inSlot != null ? _tokens.Ink2 : _tokens.Ink3;
+                if (_statePlate != null)
+                {
+                    // The equipped weapon already has its name on the ammo strip.
+                    _slotTexts[i].transform.parent.gameObject.SetActive(inSlot != null && !active);
+                    _slotBars[i].color = _tokens.Paper;
+                    _slotBars[i].enabled = true;
+                    _slotTexts[i].color = _tokens.Navy;
+                }
+                else
+                    _slotBars[i].enabled = active;
             }
 
             _shownAmmo = -1;
@@ -357,18 +372,16 @@ namespace CloseTheDeal.Combat
             _ammoText.SetText("{0}", inMagazine);
             _magazineText.SetText("/ {0}", magazineSize);
             _empty = magazineSize > 0 && inMagazine == 0;
-            _ammoText.color = AmmoColour(inMagazine, magazineSize);
+            if (magazineSize == 0 && _statePlate != null)
+            {
+                _ammoText.text = "—";
+                _magazineText.text = string.Empty;
+            }
+            _ammoText.color = _statePlate != null ? _tokens.Navy : _empty ? _tokens.Amber : LowAmmo ? _tokens.Electric : _tokens.Navy;
             ShowState();
         }
 
-        /// <summary>Navy normally; Electric when low; Amber (a warning) when empty.</summary>
-        Color AmmoColour(int inMagazine, int magazineSize)
-        {
-            if (_empty)
-                return _tokens.Amber;
-            bool low = magazineSize > 0 && inMagazine <= magazineSize * _lowAmmo;
-            return low ? _tokens.Electric : _tokens.Navy;
-        }
+        bool LowAmmo => _shownMagazine > 0 && _shownAmmo <= _shownMagazine * _lowAmmo;
 
         void OnDryFired()
         {
@@ -393,21 +406,31 @@ namespace CloseTheDeal.Combat
             {
                 case WeaponState.Reloading: _weaponState.text = "RELOADING"; break;
                 case WeaponState.Equipping: _weaponState.text = "DRAWING"; break;
-                default: _weaponState.text = _empty ? EmptyText() : _holder.ActiveWeapon == null ? string.Empty : "READY"; break;
+                default: _weaponState.text = _empty ? EmptyText() : _holder.ActiveWeapon == null ? string.Empty : LowAmmo ? "LOW AMMO" : "READY"; break;
             }
 
-            _weaponState.color = _empty && _holder.State == WeaponState.Ready ? _tokens.Amber : _tokens.Ink3;
+            if (_statePlate == null)
+            {
+                _weaponState.color = _empty && _holder.State == WeaponState.Ready ? _tokens.Amber : _tokens.Ink3;
+                return;
+            }
+
+            bool busy = _holder.State != WeaponState.Ready;
+            bool show = _holder.ActiveWeapon != null && (busy || LowAmmo || _empty);
+            _statePlate.enabled = show;
+            _weaponState.enabled = show;
+            _statePlate.color = busy ? _tokens.Cobalt : LowAmmo ? _tokens.Amber : _tokens.HoverTint;
+            _weaponState.color = busy ? _tokens.Paper : _tokens.Navy;
         }
 
         WeaponState _lastState;
         float _shownProgress = -1f;
 
-        /// <summary>The empty hint names the button the player last used: R on a keyboard, Y on a pad.</summary>
         static string EmptyText()
         {
-            var pad = UnityEngine.InputSystem.Gamepad.current;
-            bool onPad = pad != null && pad.lastUpdateTime > (UnityEngine.InputSystem.Keyboard.current?.lastUpdateTime ?? 0d);
-            return onPad ? "EMPTY · Y TO RELOAD" : "EMPTY · R TO RELOAD";
+            var device = UiGlyphs.Current;
+            string binding = device == UiDeviceKind.KeyboardMouse ? WeaponHolder.ReloadKeyboardBinding : WeaponHolder.ReloadPadBinding;
+            return "RELOAD · " + UiGlyphs.Name(binding, device).ToUpperInvariant();
         }
 
         void ShowProgress()

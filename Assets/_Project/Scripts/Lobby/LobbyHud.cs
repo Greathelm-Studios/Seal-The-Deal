@@ -50,6 +50,7 @@ namespace CloseTheDeal.Lobby
         readonly StringBuilder _builder = new(256);
         readonly StringBuilder _names = new(96);
         string _shownPrompt;
+        string _interactKey;
         float _shownFill = -2f;
         float _subtitleUntil = -1f;
         bool _boardDirty = true;
@@ -77,11 +78,30 @@ namespace CloseTheDeal.Lobby
             _subtitle.alpha = 0f;
         }
 
-        void OnEnable() => Secretary.LineSpoken += OnLine;
-        void OnDisable() => Secretary.LineSpoken -= OnLine;
+        void OnEnable()
+        {
+            Secretary.LineSpoken += OnLine;
+            UiGlyphs.Changed += RefreshInput;
+            RefreshInput();
+        }
+
+        void OnDisable()
+        {
+            Secretary.LineSpoken -= OnLine;
+            UiGlyphs.Changed -= RefreshInput;
+        }
+
+        void RefreshInput()
+        {
+            _interactKey = LobbyInput.Interact == null ? null : UiGlyphs.For(LobbyInput.Interact, UiGlyphs.Current);
+            _shownPrompt = null;
+            _boardDirty = true;
+        }
 
         void Update()
         {
+            if (_interactKey == null && LobbyInput.Interact != null)
+                RefreshInput();
             Hook();
             bool inReception = _roster != null && PlayerMotor.Local != null && LobbyInput.Captured
                 && (_interactor == null || !_interactor.Blocked);
@@ -185,7 +205,7 @@ namespace CloseTheDeal.Lobby
                 case LobbyStep.WaitForOthers:
                     return "Ready. Waiting for " + NotReadyNames() + ".";
                 case LobbyStep.StartRun:
-                    return "Everyone is ready. Hold F at the desk to start the run.";
+                    return "Everyone is ready. Hold " + _interactKey + " at the desk to start the run.";
                 case LobbyStep.StartShortHanded:
                     return ShortHandedLine(rules);
                 case LobbyStep.WaitForHost:
@@ -201,7 +221,7 @@ namespace CloseTheDeal.Lobby
             string why = problem == StartBlock.NeedBothFirms
                 ? rules.FirmName(_roster.SmallerFirm()) + " has nobody"
                 : "The firms are uneven";
-            return "Everyone is ready. " + why + ", but you can still start: hold F at the desk, then hold it again to confirm.";
+            return "Everyone is ready. " + why + ". Hold " + _interactKey + " at the desk twice to start anyway.";
         }
 
         /// <summary>"A, B and C": the players who have not readied up yet (or are in the fitting room).</summary>
@@ -226,7 +246,7 @@ namespace CloseTheDeal.Lobby
         void UpdatePrompt(bool inReception)
         {
             LobbyInteractable target = inReception && _interactor != null ? _interactor.Target : null;
-            string line = target != null ? target.Prompt(LobbyInput.UsingGamepad) : null;
+            string line = target != null ? target.Prompt(UiGlyphs.OnPad) : null;
             Fade(_prompt, line != null);
 
             if (line != null && !ReferenceEquals(line, _shownPrompt))
@@ -234,7 +254,7 @@ namespace CloseTheDeal.Lobby
                 _shownPrompt = line;
                 // Prompts read "F   Ready up": the key goes on the key cap, the rest beside it. Split on change only.
                 int gap = line.IndexOf("   ", System.StringComparison.Ordinal);
-                _promptKey.text = gap > 0 ? line.Substring(0, gap) : string.Empty;
+                _promptKey.text = gap > 0 ? _interactKey : string.Empty;
                 _promptText.text = gap > 0 ? line.Substring(gap + 3) : line;
                 _promptKey.transform.parent.gameObject.SetActive(gap > 0); // The cap and its text.
             }

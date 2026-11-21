@@ -31,13 +31,14 @@ Your own moves show the instant you press them. The host is still the judge: if 
 | LookStick | — | Right stick | `LookStick` (rate; dead zone `Look Stick Dead Zone` on the profile) | camera |
 | Sprint | Left Shift | Left stick press | `Sprint` | motor |
 | Jump | Space | South (A / Cross) | `JumpHeld`, `Consume(Jump)` | motor |
-| Crouch / slide | Left Ctrl, C | East (B / Circle) | `Crouch` | motor |
+| Crouch / slide | Left Ctrl, C | Right stick press (R3) | `Crouch` | motor |
 | Lean | Q / E | LB / RB | `Lean` (−1, 0, +1) | motor |
 | Attack | Left mouse | Right trigger | `Consume(Attack)`, `Held(Attack)` | weapons (movement never reads it) |
 | AltFire | Right mouse | Left trigger | `Consume(AltFire)`, `Held(AltFire)` | weapons (shooting lane) |
 | Interact | F | North (Y / Triangle) | `Consume(Interact)` | pickups and doors |
-| Throw / drop | G | Right stick press | `Consume(Throw)` | pickups and furniture |
-| Reload | R | West (X / Square) | `Consume(Reload)` | weapons |
+| Drop held item or briefcase | G | D-pad down | Item or briefcase drop input | pickups and match |
+| Throw held item | Left mouse | Right trigger | Item throw input | pickups |
+| Reload | R | East (B / Circle) | Weapon input | weapons |
 | Weapon slots 1–4 | 1, 2, 3, 4 | D-pad up, right, down, left | `ConsumeWeaponSlot()` (1–4, 0 = none) | weapons |
 | Help | F1 | View (Select / Share) | `Pressed(PlayerPress.Help)` | movement's controls card |
 | Menu | Esc | Start | read by `GameMenu` directly | menu |
@@ -146,7 +147,7 @@ For help text, the real bindings come from the actions asset: read them with `In
 Built from the UI kit's prefabs by `Close the Deal > Lanes > Add Movement HUD To Open Scene` (also run by `Set Up Movement`), under the game menu's `Hud`; it only adds what is missing. Script: `Player/Hud/MovementHud.cs`.
 
 - **Refusal line:** a kit `StatusLine` at the bottom centre. When the local player presses jump at something they can't climb it says why ("Can't climb that: it's above your reach." / "...there's no room on top."), with the kit's refusal mark (amber square, navy keyline) and the `Error` sound; it fades in at the kit's hover timing, holds 2.2 s (`Refusal Seconds`), and fades out. A second refusal restarts the hold.
-- **Controls card:** a kit `Plate` of `KeyHint` lines, opened and closed with Help (F1, pad View), sliding in from the left at the kit's panel timing with `PanelOpen` / `PanelClose`; with Reduce motion it only fades. Every key is read from the player's own copy of the actions (`PlayerInputReader.BindingText`), so rebinding shows, and the card switches between keyboard and controller labels as soon as the player touches the other device (`PlayerInputReader.DeviceChanged`). Opening the game menu hides the HUD and closes the card; it never comes back open on its own.
+- **Controls card:** a kit `Plate` of `KeyHint` lines, opened and closed with Help (F1, pad View), sliding in from the left at the kit's panel timing with `PanelOpen` / `PanelClose`; with Reduce motion it only fades. Movement hints read the player's own action bindings. Pickup, drop and reload use their lane's actual fixed controls, and the card switches between keyboard and controller labels as soon as the player touches the other device (`PlayerInputReader.DeviceChanged`). Opening the game menu hides the HUD and closes the card; it never comes back open on its own.
 - **Crosshair:** one crosshair, the UI kit's `UiCrosshair` (its shape, colour and size are the player's settings, lane 5's). Movement's `CrosshairFeed` sits on it and sets its `OpenPixels` gap every frame: open by speed above walking (`Crosshair Open Per Speed`, 1.2 px per m/s) plus `Crosshair Open In Air` (6 px) while airborne, capped at 16 px, or by the gun's own spread (`WeaponHolder.CurrentSpreadDegrees` turned into screen pixels at the current field of view) when that is wider, never both added, because the spread already grows when moving or airborne. It eases toward that at 80 px/s. A landing faster than 8 m/s, a hit, a precision hit and a kill each `Pulse` it outward and back (0.3, 0.5, 0.8, 1.0). Shooting draws its own hit marker. All values at 100% crosshair size on a 1080p screen, on `MovementProfile` under Crosshair.
 
 ## Scripts

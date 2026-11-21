@@ -127,6 +127,12 @@ namespace CloseTheDeal.Lobby
         /// <summary>Every machine: someone new arrived after we did.</summary>
         public event Action<LobbyMember> OnArrived;
 
+        /// <summary>
+        /// Every machine: someone left after we arrived (one member removed, not the whole list cleared). On the host the
+        /// member passed can be empty (FishNet has already removed it there): use it for timing, not for who left.
+        /// </summary>
+        public event Action<LobbyMember> OnDeparted;
+
         /// <summary>Every machine: someone's ready state changed (true = now ready).</summary>
         public event Action<LobbyMember, bool> OnReadyChanged;
 
@@ -652,12 +658,18 @@ namespace CloseTheDeal.Lobby
             OnChanged?.Invoke();
         }
 
-        /// <summary>Turns a list change into the moments the secretary and sound care about: an arrival, a ready or un-ready.</summary>
+        /// <summary>Turns a list change into the moments the secretary and sound care about: an arrival, a departure, a ready or un-ready.</summary>
         void ReportMoment(SyncListOperation op, LobbyMember previous, LobbyMember next)
         {
             if (op == SyncListOperation.Add)
             {
                 OnArrived?.Invoke(next);
+                return;
+            }
+
+            if (op == SyncListOperation.RemoveAt)
+            {
+                OnDeparted?.Invoke(previous);
                 return;
             }
 

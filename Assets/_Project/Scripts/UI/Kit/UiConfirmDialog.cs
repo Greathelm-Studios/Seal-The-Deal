@@ -5,7 +5,7 @@ using UnityEngine;
 namespace CloseTheDeal.UI
 {
     /// <summary>
-    /// A yes / no question over the current screen, on a frosted pane behind a paper veil. The safe choice (Stay)
+    /// A yes / no question over the current screen, on the v3 title’s white plate above a paper veil. The safe choice (Stay)
     /// has focus when it opens and is what Esc / the pad's B does; the other choice runs the caller's action.
     /// One prefab serves every confirm: Configure sets its words and action before Push.
     /// </summary>

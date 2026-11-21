@@ -44,9 +44,10 @@ namespace CloseTheDeal.Editor.UI
             RectTransform head = RevealLine(frame, "Heading");
             reveal.Add(head.GetComponent<CanvasGroup>());
             Box(head, "CrumbBullet", 96f, 34f, 8f, 8f, t.Black);
-            TextMeshProUGUI crumb = Label(head, "Breadcrumb", 116f, 26f, 900f, 24f, "SEAL THE DEAL · SETTINGS", t.Micro, t.Ink3);
+            TextMeshProUGUI crumb = Label(head, "Breadcrumb", 116f, 26f, 900f, 28f, "SEAL THE DEAL · SETTINGS", t.Micro, t.Ink2);
+            crumb.fontSize = t.Body.Size;
             Label(head, "Heading", 96f, 78f, 900f, 56f, "SETTINGS", t.Heading, t.Navy);
-            Label(head, "Subline", 96f, 134f, 900f, 20f, "PLAYER PREFERENCES · KEPT ON THIS PC", t.Micro, t.Ink3);
+            Label(head, "Subline", 96f, 134f, 900f, 28f, "PLAYER PREFERENCES · KEPT ON THIS PC", t.Micro, t.Ink2).fontSize = t.Body.Size;
 
             RectTransform tabsLine = RevealLine(frame, "Tabs");
             reveal.Add(tabsLine.GetComponent<CanvasGroup>());
@@ -76,17 +77,16 @@ namespace CloseTheDeal.Editor.UI
             var back = Place<UiButton>(UiKitComponents.Secondary, footer, "Back", 344f, 964f);
             ((RectTransform)back.transform).sizeDelta = new Vector2(140f, t.SecondaryHeight);
             SetLabel(back, "Back");
-            back.Description = "Back to the title. Everything here is already saved.";
+            back.Description = "Return to the previous menu. Your settings are saved.";
             UiKitScreens.Hint(footer, "PreviousTabHint", 1424f, 972f, string.Empty, keyboard: "Q", padControl: "leftShoulder", width: 60f);
             UiKitScreens.Hint(footer, "NextTabHint", 1484f, 972f, "Switch tab", keyboard: "E", padControl: "rightShoulder", width: 180f);
             UiKitScreens.Hint(footer, "BackHint", 1688f, 972f, "Back", "UI/Cancel", width: 120f);
-            Label(footer, "Microtype", 96f, 1040f, 1400f, 20f, "SETTINGS ARE KEPT ON THIS PC AS SOON AS YOU CHANGE THEM.", t.Micro, t.Ink3);
 
             RectTransform changesLine = RevealLine(frame, "Changes");
             reveal.Add(changesLine.GetComponent<CanvasGroup>());
             RectTransform changes = Fill(changesLine, "Block"); // its own group: the reveal drives the line's
             changes.gameObject.AddComponent<CanvasGroup>();
-            Box(changes, "ChangesBullet", 96f, 676f, 8f, 8f, t.Black);
+            Box(changes, "ChangesBullet", 96f, 716f, 8f, 8f, t.Black);
             TextMeshProUGUI changesHeading = Label(changes, "ChangesHeading", 112f, 708f, 700f, 24f, "\u00a7 CHANGED ON THIS TAB \u00b7 0", t.Caption, t.Navy);
             Box(changes, "ChangesRule", 96f, 736f, 1120f, 1f, t.Hair); // below six rows (300 + 6 x 64)
             TextMeshProUGUI changesBody = Label(changes, "ChangesBody", 112f, 752f, 1088f, 180f,
@@ -128,7 +128,8 @@ namespace CloseTheDeal.Editor.UI
                 "Motion, the crosshair and the network readout.",
             };
             UiKitScreens.Hint(parent, "PreviousTab", 96f, 172f, string.Empty, keyboard: "Q", padControl: "leftShoulder", width: 48f);
-            RectTransform bar = At(parent, "TabBar", 144f, 164f, 4 * 236f, t.SecondaryHeight);
+            const float barLeft = 216f; // leave room between the shoulder keycap and the focus chevrons
+            RectTransform bar = At(parent, "TabBar", barLeft, 164f, 4 * 236f, t.SecondaryHeight);
             var tabs = new UiButton[names.Length];
             for (int i = 0; i < names.Length; i++)
             {
@@ -148,7 +149,7 @@ namespace CloseTheDeal.Editor.UI
                 };
             }
 
-            UiKitScreens.Hint(parent, "NextTab", 144f + 4 * 236f + 8f, 172f, string.Empty, keyboard: "E", padControl: "rightShoulder", width: 64f);
+            UiKitScreens.Hint(parent, "NextTab", barLeft + 4 * 236f + 8f, 172f, string.Empty, keyboard: "E", padControl: "rightShoulder", width: 64f);
             Box(parent, "TabHairline", 96f, 220f, 1120f, 1f, t.Hair);
             rule = Node(bar, "Rule");
             rule.anchorMin = rule.anchorMax = new Vector2(0f, 1f);
@@ -255,9 +256,9 @@ namespace CloseTheDeal.Editor.UI
                 "How fast the look stick turns the view at full tilt. 100% is the game's tuning.");
 
             RectTransform keys = Fill(pageRoot, "Keys");
-            Label(keys, "ColAction", 112f, y + 8f, 400f, 20f, "ACTION", t.Caption, t.Ink3);
-            Label(keys, "ColKeys", 820f, y + 8f, 180f, 20f, "KEYBOARD", t.Caption, t.Ink3);
-            Label(keys, "ColPad", 1060f, y + 8f, 140f, 20f, "PAD", t.Caption, t.Ink3);
+            Label(keys, "ColAction", 112f, y + 2f, 400f, 28f, "ACTION", t.Caption, t.Ink2).fontSize = t.Body.Size;
+            Label(keys, "ColKeys", 820f, y + 2f, 180f, 28f, "KEYBOARD", t.Caption, t.Ink2).fontSize = t.Body.Size;
+            Label(keys, "ColPad", 1060f, y + 2f, 140f, 28f, "PAD", t.Caption, t.Ink2).fontSize = t.Body.Size;
             y += 32f;
 
             var rows = new List<Selectable> { sensitivity, invert, stick };
@@ -408,7 +409,7 @@ namespace CloseTheDeal.Editor.UI
             var test = Place<UiButton>(UiKitComponents.Secondary, pageRoot, "TestSound", RightX, 528f);
             ((RectTransform)test.transform).sizeDelta = new Vector2(260f, t.SecondaryHeight);
             SetLabel(test, "Play test sound");
-            test.Description = "Plays one interface sound through every level above.";
+            test.Description = "Preview the Master and Interface volume levels.";
 
             // Voice chat, under the volumes. Nine rows in all: the page hides its changes summary to make room.
             UiStepper microphone = Row<UiStepper>(pageRoot, UiKitComponents.Stepper, "Microphone", "Microphone", ref y,

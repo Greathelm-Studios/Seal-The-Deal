@@ -1,0 +1,55 @@
+{
+  "UI_HoverMove.wav": {
+    "end": 0.2,
+    "fade_out_ms": 20
+  },
+  "UI_Focus.wav": {
+    "end": 0.2,
+    "fade_out_ms": 20,
+    "gain_db": -4
+  },
+  "UI_Select.wav": {
+    "end": 1.0,
+    "fade_out_ms": 300
+  },
+  "UI_Confirm.wav": {
+    "end": 0.86,
+    "fade_out_ms": 80
+  },
+  "UI_TransitionFrameZoom.wav": {
+    "end": 1.75,
+    "fade_out_ms": 200
+  },
+  "UI_PanelOpen.wav": {
+    "end": 0.8,
+    "fade_out_ms": 120
+  },
+  "UI_Transition.wav": {
+    "end": 1.2,
+    "fade_out_ms": 400
+  },
+  "UI_TabChange.wav": {
+    "end": 0.48,
+    "fade_out_ms": 60
+  },
+  "UI_Notification.wav": {
+    "end": 1.25,
+    "fade_out_ms": 150
+  },
+  "UI_PlayerJoined.wav": {
+    "end": 0.3,
+    "fade_out_ms": 60
+  },
+  "UI_PlayerLeft.wav": {
+    "end": 0.45,
+    "fade_out_ms": 80
+  },
+  "UI_Tip.wav": {
+    "end": 0.32,
+    "fade_out_ms": 60
+  },
+  "UI_Back.wav": {
+    "end": 0.46,
+    "fade_out_ms": 60
+  }
+}

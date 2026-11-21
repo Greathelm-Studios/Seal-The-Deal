@@ -42,6 +42,8 @@ namespace CloseTheDeal.MatchMode
         [Tooltip("A floor still shut: a hollow square, so open and shut differ in shape as well as colour.")]
         [SerializeField] Sprite _shutSprite;
         [SerializeField] TMP_Text _ladderCaption;
+        [Tooltip("Shows the highest open floor and its progress ticks in the compact clock strip.")]
+        [SerializeField] bool _compactFloors;
         [Tooltip("One floor's row, copied once per floor when the towers are built. Has a Box (Image), a Label (text) and a Mark (Image) child.")]
         [SerializeField] RectTransform _ladderRow;
 
@@ -97,11 +99,14 @@ namespace CloseTheDeal.MatchMode
         float _bannerUntil = -1f;
         float _noticeUntil = -1f;
         bool _capWarning;
+        Color _clockInk, _clockCaptionInk;
         bool _showingRefusal;
         bool _awake;
         RectTransform _canvasRect;
         Camera _uiCamera;
         Camera _camera;
+        MatchPrompt _visiblePrompt;
+        UiKeyHint _promptHint;
         bool _wired;
 
         // ---- Lifecycle ---------------------------------------------------------------------------
@@ -114,6 +119,9 @@ namespace CloseTheDeal.MatchMode
             if (!_wired)
                 return;
 
+            _clockInk = _clockText.color;
+            _clockCaptionInk = _clockCaption.color;
+            _promptHint = _prompt.GetComponent<UiKeyHint>();
             _bannerHome = _banner.anchoredPosition;
             _noticeHome = _notice.anchoredPosition;
             _ladderRow.gameObject.SetActive(false);
@@ -140,6 +148,7 @@ namespace CloseTheDeal.MatchMode
             _match.OnBriefcaseChanged += OnBriefcaseChanged;
             _match.OnCheckpointSaved += OnCheckpointSaved;
             _match.OnBriefcasePickedUp += OnPickedUp;
+            _match.OnBriefcaseDropped += OnDropped;
             _match.OnBriefcaseStolen += OnStolen;
             _match.OnBriefcaseReturning += OnReturning;
             _match.OnFloorOpened += OnFloorOpened;
@@ -147,6 +156,7 @@ namespace CloseTheDeal.MatchMode
             FirmMember.OnLocalChanged += RefreshAll;
             FirmMember.OnNotice += OnNotice;
             FirmMember.OnPromptChanged += ShowPrompt;
+            UiGlyphs.Changed += RefreshPromptKey;
 
             if (_match.IsLive)
                 RefreshAll();
@@ -168,6 +178,7 @@ namespace CloseTheDeal.MatchMode
             _match.OnBriefcaseChanged -= OnBriefcaseChanged;
             _match.OnCheckpointSaved -= OnCheckpointSaved;
             _match.OnBriefcasePickedUp -= OnPickedUp;
+            _match.OnBriefcaseDropped -= OnDropped;
             _match.OnBriefcaseStolen -= OnStolen;
             _match.OnBriefcaseReturning -= OnReturning;
             _match.OnFloorOpened -= OnFloorOpened;
@@ -175,6 +186,7 @@ namespace CloseTheDeal.MatchMode
             FirmMember.OnLocalChanged -= RefreshAll;
             FirmMember.OnNotice -= OnNotice;
             FirmMember.OnPromptChanged -= ShowPrompt;
+            UiGlyphs.Changed -= RefreshPromptKey;
             UiMotion.Sleep(this);
             _awake = false;
         }
@@ -188,8 +200,11 @@ namespace CloseTheDeal.MatchMode
 
         void RefreshAll()
         {
-            if (!_match.IsLive)
+            if (!_match.IsLive || _match.Phase == MatchPhase.Waiting)
+            {
+                Hide();
                 return;
+            }
 
             _root.SetActive(true);
             _bannerGroup.alpha = 0f;
@@ -204,13 +219,21 @@ namespace CloseTheDeal.MatchMode
 
         void OnPhaseChanged(MatchPhase previous, MatchPhase next)
         {
+            if (next == MatchPhase.Waiting)
+            {
+                Hide();
+                return;
+            }
+            if (!_root.activeSelf)
+                RefreshAll();
+
             _capWarning = false;
             ShowClock(_match.SecondsLeft);
             RefreshTracker();
             RefreshLadder();
             if (next != MatchPhase.Countdown)
                 _countdownGroup.alpha = 0f;
-            if (next == MatchPhase.Running)
+            if (next == MatchPhase.Running && !_compactFloors)
                 Say("The quarter is open. Get the briefcase onto a roof.", UiStatusKind.Info);
         }
 
@@ -220,12 +243,12 @@ namespace CloseTheDeal.MatchMode
         {
             _clockText.text = FormatClock(secondsLeft);
             // Warned by an amber plate, never amber text: Navy reads at 8:1 on amber, amber at 1.7:1 on white.
-            _clockText.color = _tokens.Navy;
-            _clockCaption.color = _capWarning ? _tokens.Navy : _tokens.Ink2;
+            _clockText.color = _capWarning ? _tokens.Navy : _clockInk;
+            _clockCaption.color = _capWarning ? _tokens.Navy : _clockCaptionInk;
             if (_clockWarning != null)
                 _clockWarning.enabled = _capWarning;
             // Said in words as well as colour.
-            _clockCaption.text = _capWarning ? "QUARTER CLOSING" : "QUARTER";
+            _clockCaption.text = _capWarning ? "QUARTER CLOSING" : _compactFloors ? string.Empty : "QUARTER";
             // A returning case's own countdown ticks with the clock rather than every frame.
             if (_match.IsLive && _match.CaseStatus.State == BriefcaseState.Returning)
                 RefreshTracker();
@@ -289,14 +312,14 @@ namespace CloseTheDeal.MatchMode
             {
                 case BriefcaseState.Carried:
                     if (local != null && status.CarrierId == local.ObjectId)
-                        return "You have the briefcase";
+                        return "Carry it to a roof";
                     if (local != null)
-                        return status.CarrierFirm == local.Firm ? "Your firm has it" : "The rival firm has it";
+                        return status.CarrierFirm == local.Firm ? "Protect your carrier" : "Stop the rival carrier";
                     return _match.FirmName(status.CarrierFirm) + " has it";
                 case BriefcaseState.Returning:
-                    return "It left the buildings";
+                    return "Briefcase returning";
                 default:
-                    return "Nobody has the briefcase";
+                    return "Collect the briefcase";
             }
         }
 
@@ -321,7 +344,8 @@ namespace CloseTheDeal.MatchMode
 
             float height = _ladderRow.sizeDelta.y;
             // The plate grows with the tower: its header, then one row per floor.
-            _ladderPlate.sizeDelta = new Vector2(_ladderPlate.sizeDelta.x, -_ladder.anchoredPosition.y + count * height + 12f);
+            if (!_compactFloors)
+                _ladderPlate.sizeDelta = new Vector2(_ladderPlate.sizeDelta.x, -_ladder.anchoredPosition.y + count * height + 12f);
             for (int i = 0; i < _rowBoxes.Count; i++)
             {
                 RectTransform row = (RectTransform)_rowBoxes[i].transform.parent;
@@ -331,7 +355,9 @@ namespace CloseTheDeal.MatchMode
                     continue;
 
                 // Roof at the top: floor i sits (count - 1 - i) rows down.
-                row.anchoredPosition = new Vector2(0f, -(count - 1 - i) * height);
+                row.anchoredPosition = _compactFloors
+                    ? new Vector2(i * Mathf.Min(22f, _ladder.rect.width / count), 0)
+                    : new Vector2(0f, -(count - 1 - i) * height);
                 _rowLabels[i].text = arena.FloorLabel(i);
             }
 
@@ -356,7 +382,12 @@ namespace CloseTheDeal.MatchMode
             for (int i = 0; i < arena.FloorCount; i++)
                 StyleRow(i, i <= open, i == checkpoint && checkpoint > 0, i == caseFloor);
 
-            _ladderCaption.text = "OPEN TO " + arena.FloorLabel(open).ToUpperInvariant();
+            if (_compactFloors)
+            {
+                _ladderCaption.text = arena.FloorLabel(open);
+            }
+            else
+                _ladderCaption.text = "OPEN TO " + arena.FloorLabel(open).ToUpperInvariant();
         }
 
         void StyleRow(int floor, bool isOpen, bool respawnHere, bool caseHere)
@@ -365,7 +396,7 @@ namespace CloseTheDeal.MatchMode
             _rowBoxes[floor].color = isOpen ? _tokens.Cobalt : _tokens.Ink3;
             _rowLabels[floor].color = isOpen ? _tokens.Navy : _tokens.Ink3;
             string label = _match.Arena.FloorLabel(floor);
-            _rowLabels[floor].text = respawnHere ? label + "  · you respawn here" : label;
+            _rowLabels[floor].text = respawnHere ? label + " · Respawn" : label;
             _rowMarks[floor].enabled = caseHere;
             if (caseHere)
                 _rowMarks[floor].color = _trackerBar.color;
@@ -403,10 +434,19 @@ namespace CloseTheDeal.MatchMode
         void OnPickedUp(int firm)
         {
             FirmMember local = FirmMember.Local;
-            if (local == null || _match.IsCarrying(local))
+            if (local == null)
                 return;
-
+            if (_match.IsCarrying(local))
+            {
+                Say("Carry the briefcase to a roof.", UiStatusKind.Info);
+                return;
+            }
             Say(firm == local.Firm ? "Your firm has the briefcase. Keep them climbing." : "The rival firm has the briefcase. Take it off them.", UiStatusKind.Info);
+        }
+
+        void OnDropped(int firm)
+        {
+            Say("Briefcase dropped. Collect it.", UiStatusKind.Info);
         }
 
         void OnStolen(int byFirm, int fromFirm)
@@ -437,7 +477,7 @@ namespace CloseTheDeal.MatchMode
                     Say($"The roof only counts with the briefcase. It is on {_match.PlaceLabel(status.Place, status.Floor)}.", UiStatusKind.Refusal);
                     break;
                 case MatchNotice.FirstGateRefusal:
-                    Say($"{_match.Arena.FloorLabel(_match.OpenFloor + 1)} is shut. Nobody climbs higher than the briefcase has been. Whoever carries it up there opens the floor for everyone.", UiStatusKind.Refusal);
+                    Say($"{_match.Arena.FloorLabel(_match.OpenFloor + 1)} is shut. Carry the briefcase upstairs to open it for everyone.", UiStatusKind.Refusal);
                     break;
                 case MatchNotice.GateRefused:
                     Say($"{_match.Arena.FloorLabel(_match.OpenFloor + 1)} is shut until the briefcase is carried up.", UiStatusKind.Refusal);
@@ -472,16 +512,39 @@ namespace CloseTheDeal.MatchMode
 
         void ShowPrompt(MatchPrompt prompt)
         {
+            _visiblePrompt = prompt;
             _prompt.SetActive(prompt != MatchPrompt.None);
-            if (prompt == MatchPrompt.PickUpBriefcase)
+            if (prompt == MatchPrompt.None)
+                return;
+
+            _promptLabel.text = prompt == MatchPrompt.PickUpBriefcase ? "Pick up the briefcase" : "Drop the briefcase";
+            RefreshPromptKey();
+        }
+
+        void RefreshPromptKey()
+        {
+            if (_visiblePrompt == MatchPrompt.None)
+                return;
+
+            bool pickup = _visiblePrompt == MatchPrompt.PickUpBriefcase;
+            string path = UiGlyphs.OnPad
+                ? (pickup ? FirmMember.InteractPad : FirmMember.DropPad)
+                : (pickup ? FirmMember.InteractKey : FirmMember.DropKey);
+            string label = UiGlyphs.Name(path, UiGlyphs.Current);
+            if (_promptHint != null)
+                _promptHint.SetKeyText(label);
+            else
+                _promptKey.text = label;
+
+            if (_compactFloors)
             {
-                _promptKey.text = FirmMember.InteractKeyLabel;
-                _promptLabel.text = "Pick up the briefcase";
-            }
-            else if (prompt == MatchPrompt.DropBriefcase)
-            {
-                _promptKey.text = FirmMember.DropKeyLabel;
-                _promptLabel.text = "Drop the briefcase";
+                // Match the paper to this action and actual key width, centred under the crosshair.
+                var words = _promptLabel.rectTransform;
+                float width = Mathf.Ceil(_promptLabel.GetPreferredValues(_promptLabel.text).x);
+                words.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
+                var prompt = (RectTransform)_prompt.transform;
+                float padding = _promptKey.rectTransform.anchoredPosition.x;
+                prompt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, words.anchoredPosition.x + width + padding);
             }
         }
 

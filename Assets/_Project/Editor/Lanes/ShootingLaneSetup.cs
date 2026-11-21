@@ -116,7 +116,7 @@ namespace CloseTheDeal.Editor.Lanes
 
             BuildHitMarker(root, tokens, so);
             BuildDamageMarks(root, so);
-            BuildWeaponColumn(root, tokens, plate, so);
+            BuildWeaponColumn(root, tokens, so);
             BuildDownCard(root, tokens, plate, so);
             so.ApplyModifiedPropertiesWithoutUndo();
             Debug.Log("[Shooting Lane] Added the combat HUD under the game menu's Hud.");
@@ -199,54 +199,70 @@ namespace CloseTheDeal.Editor.Lanes
             SetObjects(so, "_damageMarks", marks);
         }
 
-        /// <summary>Bottom right, from the bottom up: the weapon plate (ammo, name, state, progress), the two slots, health while hurt.</summary>
-        static void BuildWeaponColumn(RectTransform root, UiTokens tokens, GameObject plate, SerializedObject so)
+        /// <summary>One weapon card: live magazine, action feedback and two loadout tabs. Health appears above it only while hurt.</summary>
+        static void BuildWeaponColumn(RectTransform root, UiTokens tokens, SerializedObject so)
         {
             var corner = new Vector2(1f, 0f);
-            const float right = -32f, width = 320f;
+            var round = AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_Round16.png");
+            var tab = AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_Round8.png");
+            const float width = 290f;
+            RectTransform weapon = Anchored(root, "WeaponPlate", corner, corner, new Vector2(-24f, 24f), new Vector2(width, 56f));
+            Color frost = tokens.Paper;
+            frost.a = 0.78f;
+            UiKitAssets.Img(weapon, round, frost);
 
-            RectTransform weapon = PlateAt(root, plate, "WeaponPlate", corner, corner, new Vector2(right, 32f), new Vector2(width, 118f));
-            TMP_Text ammo = HudText(weapon, "Ammo", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -4f), new Vector2(130f, 70f), tokens.Heading, tokens.Navy, TextAlignmentOptions.BottomLeft, "12");
-            ammo.fontSize = 52f;
+            TMP_Text name = UiKitAssets.Label(weapon, "WeaponName", 16, 3, 137, 50, "PISTOL", tokens.Item, tokens.Navy);
+            name.fontSize = 21f;
+            TMP_Text ammo = UiKitAssets.Label(weapon, "Ammo", 153, 0, 66, 54, "12", tokens.Heading, tokens.Navy, TextAlignmentOptions.MidlineLeft);
+            ammo.fontSize = 42f;
+            ammo.characterSpacing = 0f;
             Unclipped(ammo);
-            TMP_Text magazine = HudText(weapon, "Magazine", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(140f, -46f), new Vector2(90f, 26f), tokens.Label, tokens.Ink3, TextAlignmentOptions.BottomLeft, "/ 12");
-            TMP_Text name = HudText(weapon, "WeaponName", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -16f), new Vector2(140f, 24f), tokens.Label, tokens.Navy, TextAlignmentOptions.TopRight, "PISTOL");
-            TMP_Text state = HudText(weapon, "State", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(20f, 24f), new Vector2(width - 40f, 22f), tokens.Caption, tokens.Ink3, TextAlignmentOptions.MidlineLeft, "READY");
-            state.fontSize = Mathf.Max(state.fontSize, MinHudCaption);
-            RectTransform track = Anchored(weapon, "ProgressTrack", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(20f, 14f), new Vector2(width - 40f, 3f));
-            Solid(track, tokens.Hair);
-            RectTransform fill = Anchored(track, "Fill", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(width - 40f, 3f));
+            TMP_Text magazine = UiKitAssets.Label(weapon, "Magazine", 219, 14, 65, 36, "/ 12", tokens.Label, tokens.Ink2);
+            magazine.fontSize = 22f;
+
+            Image statePlate = UiKitAssets.Box(weapon, "StatusPlate", 124, -43, 166, 36, tokens.HoverTint, tab);
+            TMP_Text state = UiKitAssets.Label(weapon, "State", 129, -43, 156, 36, "READY", tokens.Label, tokens.Navy);
+            state.alignment = TextAlignmentOptions.Center;
+            state.enableAutoSizing = true;
+            state.fontSizeMin = 15;
+            state.fontSizeMax = 18;
+            state.fontSize = 18f;
+            RectTransform track = UiKitAssets.At(weapon, "ProgressTrack", 14, 50, width - 28, 2);
+            Solid(track, Color.clear);
+            RectTransform fill = Anchored(track, "Fill", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, track.sizeDelta);
             Solid(fill, tokens.Cobalt);
             fill.localScale = new Vector3(0f, 1f, 1f);
 
-            var slotTexts = new Object[2];
-            var slotBars = new Object[2];
-            for (int i = 0; i < 2; i++)
+            var slotTexts = new Object[WeaponHolder.SlotCount];
+            var slotBars = new Object[WeaponHolder.SlotCount];
+            float tabWidth = 146f;
+            for (int i = 0; i < WeaponHolder.SlotCount; i++)
             {
-                // Slot 1 above slot 2, as on the keyboard.
-                float y = 32f + 118f + 10f + (1 - i) * 30f;
-                RectTransform row = Anchored(root, "Slot" + (i + 1), corner, corner, new Vector2(right, y), new Vector2(width, 26f));
-                slotTexts[i] = HudText(row, "Text", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(14f, 0f), new Vector2(width - 14f, 26f), tokens.Label, tokens.Ink3, TextAlignmentOptions.MidlineLeft, (i + 1) + "  —");
-                RectTransform bar = Anchored(row, "Bar", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(4f, 20f));
-                slotBars[i] = Solid(bar, tokens.Cobalt);
+                RectTransform row = UiKitAssets.At(weapon, "Slot" + (i + 1), width - tabWidth, -77, tabWidth, 27);
+                slotBars[i] = UiKitAssets.Img(row, tab, tokens.Cobalt);
+                slotTexts[i] = UiKitAssets.Label(row, "Text", 8, 0, tabWidth - 16, 27, (i + 1) + "  —", tokens.Label, tokens.Navy,
+                    TextAlignmentOptions.Center);
+                ((TMP_Text)slotTexts[i]).fontSize = 17f;
             }
 
-            RectTransform health = PlateAt(root, plate, "HealthPlate", corner, corner, new Vector2(right, 32f + 118f + 10f + 60f + 12f), new Vector2(width, 48f));
+            RectTransform health = Anchored(root, "HealthPlate", Vector2.zero, Vector2.zero, new Vector2(24f, 24f), new Vector2(244f, 60f));
+            UiKitAssets.Img(health, round, UiTokens.WithAlpha(tokens.Paper, 0.92f));
             var group = health.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
             group.interactable = false;
-            HudText(health, "Label", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20f, 6f), new Vector2(120f, 22f), tokens.Caption, tokens.Ink3, TextAlignmentOptions.MidlineLeft, "HEALTH").fontSize = Mathf.Max(tokens.Caption.Size, MinHudCaption);
-            TMP_Text number = HudText(health, "Number", new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-20f, 6f), new Vector2(80f, 22f), tokens.Label, tokens.Navy, TextAlignmentOptions.MidlineRight, "100");
-            RectTransform healthTrack = Anchored(health, "Track", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(20f, 10f), new Vector2(width - 40f, 4f));
-            Solid(healthTrack, tokens.Hair);
-            RectTransform healthFill = Anchored(healthTrack, "Fill", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(width - 40f, 4f));
-            Image healthFillImage = Solid(healthFill, tokens.Cobalt);
+            UiKitAssets.Label(health, "Label", 16, 6, 160, 28, "HEALTH", tokens.Label, tokens.Navy).fontSize = 21f;
+            TMP_Text number = UiKitAssets.Label(health, "Number", 170, 4, 58, 30, "100", tokens.Item, tokens.Navy, TextAlignmentOptions.MidlineRight);
+            RectTransform healthTrack = UiKitAssets.At(health, "Track", 16, 39, 212, 8);
+            UiKitAssets.Img(healthTrack, tab, tokens.Hair);
+            RectTransform healthFill = Anchored(healthTrack, "Fill", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, healthTrack.sizeDelta);
+            Image healthFillImage = UiKitAssets.Img(healthFill, tab, tokens.Cobalt);
 
             so.FindProperty("_weaponPlate").objectReferenceValue = weapon;
             so.FindProperty("_ammoText").objectReferenceValue = ammo;
             so.FindProperty("_magazineText").objectReferenceValue = magazine;
             so.FindProperty("_weaponName").objectReferenceValue = name;
             so.FindProperty("_weaponState").objectReferenceValue = state;
+            so.FindProperty("_statePlate").objectReferenceValue = statePlate;
             so.FindProperty("_progressFill").objectReferenceValue = fill;
             SetObjects(so, "_slotTexts", slotTexts);
             SetObjects(so, "_slotBars", slotBars);
@@ -1366,6 +1382,7 @@ namespace CloseTheDeal.Editor.Lanes
             // Stopped part-way through by hand: forget the run, or the next Play would pick it up.
             if (change == PlayModeStateChange.EnteredEditMode)
             {
+                PlayerInputReader.ScriptedCapture = false;
                 Routines.Clear();
                 EditorApplication.update -= Step;
                 EditorApplication.playModeStateChanged -= OnPlayModeChanged;
@@ -1383,6 +1400,8 @@ namespace CloseTheDeal.Editor.Lanes
             _out = SessionState.GetString(OutKey, "");
             _failures = 0;
             Application.runInBackground = true;
+            // Batch players cannot lock a real cursor; scripted weapon input needs gameplay capture.
+            PlayerInputReader.ScriptedCapture = true;
             Routines.Clear();
             UsePort();
             Routines.Push(_role == "client" ? ClientRoutine() : _role == "panes" ? PaneCountRoutine() : _role == "hud" ? HudRoutine() : HostRoutine(SessionState.GetBool(WithClientKey, false)));
@@ -1435,6 +1454,7 @@ namespace CloseTheDeal.Editor.Lanes
 
         static void Finish()
         {
+            PlayerInputReader.ScriptedCapture = false;
             EditorApplication.update -= Step;
             EditorApplication.playModeStateChanged -= OnPlayModeChanged;
             Log($"=== {_role} finished: {(_failures == 0 ? "all checks passed" : _failures + " check(s) FAILED")} ===");

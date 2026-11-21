@@ -80,10 +80,15 @@ namespace CloseTheDeal.UI
             }
             set
             {
-                PlayerPrefs.SetInt(WidthKey, value.x);
-                PlayerPrefs.SetInt(HeightKey, value.y);
+                SaveResolution(value);
                 ApplyDisplay();
             }
+        }
+
+        internal static void SaveResolution(Vector2Int size)
+        {
+            PlayerPrefs.SetInt(WidthKey, size.x);
+            PlayerPrefs.SetInt(HeightKey, size.y);
         }
 
         public static bool HasSavedResolution => PlayerPrefs.HasKey(WidthKey);
@@ -111,8 +116,7 @@ namespace CloseTheDeal.UI
 
             PlayerPrefs.DeleteKey(WidthKey);
             PlayerPrefs.DeleteKey(HeightKey);
-            if (!Application.isEditor)
-                Screen.SetResolution(size.x, size.y, Modes[Mode]); // the size it was really running at
+            ApplySize(size);
         }
 
         /// <summary>Back to following the desktop's resolution.</summary>
@@ -175,12 +179,12 @@ namespace CloseTheDeal.UI
             Application.targetFrameRate = VSync ? -1 : Caps[FrameCap];
         }
 
-        static void ApplyDisplay()
+        static void ApplyDisplay() => ApplySize(Resolution);
+
+        internal static void ApplySize(Vector2Int size)
         {
-            if (Application.isEditor)
-                return;
-            Vector2Int size = Resolution;
-            Screen.SetResolution(size.x, size.y, Modes[Mode]);
+            if (!Application.isEditor)
+                Screen.SetResolution(size.x, size.y, Modes[Mode]);
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

@@ -45,6 +45,8 @@ namespace CloseTheDeal.UI
         public Image Shadow;
         [Tooltip("The main label.")]
         public TMP_Text Label;
+        [Tooltip("The original V3 arrow at the right of a selected menu action. Leave empty for standard kit controls.")]
+        public Image V3FocusMark;
         [Tooltip("Extra marks that take the label's colour (bullets, arrows, a check box).")]
         public Graphic[] Inks;
         [Tooltip("The electric underline on quiet buttons and tabs.")]
@@ -239,6 +241,11 @@ namespace CloseTheDeal.UI
             float hover = _hover.Value;
             float press = Mathf.Clamp01(_press.Value);
             ResolveColours(hover, press, out Color fill, out Color ink, out Color outline);
+            if (V3FocusMark != null)
+            {
+                V3FocusMark.enabled = _focused && _interactable;
+                V3FocusMark.color = ink;
+            }
             ApplyColours(fill, ink, outline);
             ApplyPlate(hover, press, reduced);
             ApplyUnderline(hover, reduced);
@@ -306,7 +313,9 @@ namespace CloseTheDeal.UI
             {
                 float t = _tick.Value;
                 ConfirmTick.rectTransform.localScale = reduced ? Vector3.one : new Vector3(t, t, 1f);
-                ConfirmTick.color = UiTokens.WithAlpha(Tokens.Cyan, t);
+                // Confirm is a pulse. The selected style owns persistent state on tabs and toggles.
+                float alpha = Mathf.Clamp01((1f - t) * 4f);
+                ConfirmTick.color = UiTokens.WithAlpha(Tokens.Cyan, t * alpha);
             }
 
             if (RefusalPlate != null)
@@ -340,12 +349,16 @@ namespace CloseTheDeal.UI
             }
         }
 
+        static readonly Color PrimaryHover = new(0.86f, 0.89f, 0.96f);
+        static readonly Color PrimaryPress = new(0.62f, 0.67f, 0.80f);
+
         void ResolveColours(float hover, float press, out Color fill, out Color ink, out Color outline)
         {
             UiTokens t = Tokens;
             if (!_interactable)
             {
-                fill = Variant == UiVariant.Quiet ? Color.clear : t.Paper;
+                // The primary's fill is the signature gradient sprite, tinted: faded rather than painted paper.
+                fill = Variant == UiVariant.Quiet ? Color.clear : Variant == UiVariant.Primary ? UiTokens.WithAlpha(Color.white, 0.35f) : t.Paper;
                 ink = t.Disabled;
                 outline = Color.clear;
                 return;
@@ -354,7 +367,8 @@ namespace CloseTheDeal.UI
             switch (Variant)
             {
                 case UiVariant.Primary:
-                    fill = Color.Lerp(Color.Lerp(t.Cobalt, t.CobaltDeep, hover), t.Navy, press * 0.6f);
+                    // The fill sprite carries the cobalt-to-electric gradient; the tint only deepens it on hover and press.
+                    fill = Color.Lerp(Color.Lerp(Color.white, PrimaryHover, hover), PrimaryPress, press * 0.6f);
                     ink = t.Paper;
                     outline = Color.clear;
                     return;
@@ -380,7 +394,7 @@ namespace CloseTheDeal.UI
                 default:
                     fill = Color.Lerp(Color.Lerp(t.Paper, t.HoverTint, hover), t.Silver, press);
                     ink = t.Navy;
-                    outline = t.Navy;
+                    outline = UiTokens.WithAlpha(t.Navy, Mathf.Lerp(0.16f, 0.4f, hover));   // the bevel and shadow carry the shape
                     return;
             }
         }

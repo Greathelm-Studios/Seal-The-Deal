@@ -109,6 +109,7 @@ namespace CloseTheDeal.UI
                 _subscribed.Saved -= OnSaved;
             _subscribed = _tabs.CurrentPage;
             _subscribed.Saved += OnSaved;
+            _status.Set(KeptLine, UiStatusKind.Info);
             string title = _subscribed.Title;
             if (_breadcrumb != null)
                 _breadcrumb.text = "SEAL THE DEAL · SETTINGS · " + title.ToUpperInvariant();
@@ -129,7 +130,11 @@ namespace CloseTheDeal.UI
             UiSettingsPage page = _tabs.CurrentPage;
             if (page == null)
                 return;
-            _reset.interactable = !page.AtDefaults;
+            EventSystem events = EventSystem.current;
+            bool canReset = !page.AtDefaults;
+            if (!canReset && events != null && events.currentSelectedGameObject == _reset.gameObject)
+                events.SetSelectedGameObject(_back.gameObject);
+            _reset.interactable = canReset;
             Selectable footer = _reset.interactable ? _reset : (Selectable)_back;
             UiButton tab = _tabs.CurrentTab;
             page.LinkRows(tab, footer);

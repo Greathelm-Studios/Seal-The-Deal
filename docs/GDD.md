@@ -142,6 +142,7 @@ Each team starts in its company's reception area.
 ## Art and sound direction
 
 All art is original. No asset-store packs ship in the game (decided 2026-10-03). Packs may still stand in during greybox work and are replaced before the store page screenshots are taken.
+Exception for sound (decided 2026-11-15): UI and system sounds from 効果音ラボ (soundeffect-lab.info) may ship, under its terms (free commercial use, credit optional, edits allowed, no redistribution of the files on their own). Each one used gets a row in `ArtSource/Audio/LICENCES.md`.
 
 The look itself is not yet set. It is the owner's call and is listed under open questions. Whatever it is, it has to:
 

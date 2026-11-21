@@ -1,6 +1,6 @@
 # MATCH
 
-**Status:** Current · **Last updated:** 2026-11-13 · **Verified against:** the floor gate commit on the game mode lane
+**Status:** Current · **Last updated:** 2026-11-21
 
 ## What happens in the game
 
@@ -24,7 +24,7 @@ Standing on a checkpoint floor in your own tower (at or below the open floor) mo
 
 At **15:00** the quarter closes: the firm holding the briefcase wins; if it lies loose, the firm that carried it last; if nobody ever picked it up, no winner.
 
-The result opens the menu: who sealed the deal and how. The host gets **Rematch**: fresh towers from a new seed, everyone back in reception, the briefcase back on the plaza.
+The result opens the menu for everyone and explains who sealed the deal and how. The host sees **Rematch**. Other players see the result and the instruction to wait for the host. A rematch starts with fresh towers from a new seed, everyone back in reception and the briefcase on the plaza.
 
 ## Who owns what (AGENTS.md §3)
 
@@ -128,7 +128,7 @@ Defined in code in `FirmMember` until the shared actions asset takes them:
 
 | Action | Keyboard | Pad |
 |---|---|---|
-| Interact (pick up) | **F** | North button |
+| Interact (pick up) | **F** | Y (Xbox), Triangle (PlayStation) |
 | Drop | **G** | D-pad down |
 
 The owner asked for **E**; E is lean-right in the shared actions asset, and the asset's own `Interact` action is already F. Carried items use the same two keys; the briefcase and an item share the hands, so G only ever drops one thing ([INTEGRATION.md](INTEGRATION.md)).
@@ -147,8 +147,8 @@ Under [Assets/_Project/Scripts/Match/](../../Assets/_Project/Scripts/Match/), na
 - `MatchCrossings.cs`: on the Match object; builds the plaza and a skybridge on each checkpoint floor locally after every tower build.
 - `FirmMember.cs`: on `Player.prefab`; firm, slot, the two keys, host teleport, notices.
 - `Briefcase.cs`: on `Prefabs/Match/Briefcase.prefab`; shows the state, eases into the hand, tints by holder.
-- `MatchHud.cs`: the in-match HUD, built from the UI kit (Plate, StatusLine and KeyHint prefabs, `UiTokens`, `UiMotion`): the clock (an amber plate with Navy text and "QUARTER CLOSING", and a slow swell, once the cap warning fires), the briefcase tracker (holder in words, where, a bar in the holder's colour, the return countdown), the open-floor ladder (filled squares for open floors, hollow for shut, a mark on the briefcase's floor, "you respawn here" on your checkpoint), the countdown (pop), the floor-opened banner (slides in under the clock, names the opening firm), one line for notices and refusals (the kit's status line: amber mark and shake for a refusal; a floor opening clears a showing refusal), the F / G key prompt, and the UI kit's edge marker on the briefcase (over it on screen; pinned to the screen edge with a chevron and the distance when it is off screen or behind; a diamond while your firm holds it, a triangle for the rival, a square when loose; it pops when the case is stolen). Without the kit marker it falls back to its own square, on screen only.
-- `MatchMenuPanel.cs`: the match's section on the game menu card, on a kit plate: headline, the result sentence (`MatchDirector.ReasonLine`) as a status line, and the kit's primary button: Start before the first match, Rematch after a result. Everyone sees it; only the host can press it, and anyone else is told why (the kit's refusal). Its words are per-scene Inspector values. Lane 5's results screen replaces this section once it lands; lane 11's `MatchRecords` holds the per-player stats it will show.
+- `MatchHud.cs` shows the match HUD from countdown onward. The standalone clock stays at the top edge. Possession changes briefly announce the next objective. A pair of v3 chevrons frames the briefcase in view and a single chevron points towards it off screen. A brief notice announces a new respawn checkpoint. The clock turns amber at the cap warning. The countdown sits above the crosshair. A cobalt banner names the firm that opens a floor. Notices use a cobalt mark on paper at lower centre. A refusal uses amber and a shake, and clears when the floor opens. Pickup and drop prompts fit the active keyboard or controller glyph and centre the action below the crosshair on translucent paper. The briefcase edge marker shows distance and direction off screen, using a square for a loose case, a diamond for the player’s firm, and a triangle for the rival. A steal flashes the marker. Older setups without the kit marker fall back to an on-screen square.
+- `MatchMenuPanel.cs`: the match's section on the game menu card, on a kit plate: headline, the result sentence (`MatchDirector.ReasonLine`) as a status line, and the kit's primary button: Start before the first match, Rematch after a result. Only the host sees the button. Other players see the ready-up or rematch instruction in the status line. Its words are per-scene Inspector values. Lane 5's results screen replaces this section once it lands; lane 11's `MatchRecords` holds the per-player stats it will show.
 - `MatchProfile.cs`, `FirmDefinition.cs`, `MatchTypes.cs`.
 
 Outside the folder: `Tower/TeamSpawner.cs` (balanced teams, a spawn hook and override, `AssignTeam` for a lobby, seats freed on leave), `Tower/TowerBuilder.cs` (`Rebuild()`, floor queries, building roots, clients follow a new seed), `UI/GameMenu.cs` (`Open()`).
