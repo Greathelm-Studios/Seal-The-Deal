@@ -7,16 +7,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// URP (Render Graph) renderer feature: copies the camera colour after the opaque scene and sky, blurs it at
-    /// quarter resolution (down, down, gaussian H, gaussian V) into a PERSISTENT texture and publishes it as the
-    /// global _UiGlassBlurTex for CloseTheDeal/UI/Glass. Because the texture outlives the render graph, both
-    /// Screen Space - Camera canvases (drawn in the transparent pass, after this) and Screen Space - Overlay canvases
-    /// (drawn after the camera) can sample it. Cost: see docs/systems/UI_GLASS.md.
-    /// Runs only for scene cameras: not overlay cameras in a stack, not cameras that draw nothing of the scene
-    /// (culling mask 0, e.g. the title's sky camera), not while a UI backdrop (UiGlassBackdrop) feeds the glass,
-    /// not with quality "No blur", and not while no pane is alive.
-    /// </summary>
+    /// <summary>URP Render Graph feature producing persistent quarter-res _UiGlassBlurTex for CloseTheDeal/UI/Glass.</summary>
     public class UiGlassBlurFeature : ScriptableRendererFeature
     {
         [SerializeField] Shader shader;

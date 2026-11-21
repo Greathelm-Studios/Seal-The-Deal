@@ -1,13 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-15
-#  Prompt    : Alex: make the trim sheet in Substance Painter
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Writes the fill sources the Painter layer script uses: 8x8 colour swatches per trim material and grey
-#              values for roughness/metal (script-made Painter projects are legacy colour, so fills take bitmaps,
-#              not colour values), plus a brushed-metal roughness map that tiles along U.
-# -----------------------------------------------------------------------------
 """python make_swatches.py  ->  ./swatches/*.png"""
 import os
 import random

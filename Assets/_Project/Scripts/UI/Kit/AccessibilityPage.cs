@@ -2,10 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// Settings › Accessibility: Reduce motion, the crosshair's style, colour and size (the right column shows it live
-    /// over sun, sky and a dark room), and Show network stats. Values live in UiSettings.
-    /// </summary>
+    /// <summary>Settings Accessibility tab: reduced motion, crosshair options, and network stats toggle.</summary>
     [AddComponentMenu("Close the Deal/UI/Settings Page - Accessibility")]
     public sealed class AccessibilityPage : UiSettingsPage
     {

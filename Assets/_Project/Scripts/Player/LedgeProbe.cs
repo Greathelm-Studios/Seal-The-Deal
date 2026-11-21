@@ -49,11 +49,9 @@ namespace CloseTheDeal.Player
     public static class LedgeProbe
     {
         const float Inset = 0.05f;
-        /// <summary>How far past the near face the top is sampled, metres. Thinner than the thinnest thing in the level (the 0.2 m sill).</summary>
         const float EdgeInset = 0.1f;
         const float SlopeLimit = 50f;
         const float GlancingDot = 0.5f;
-        /// <summary>How far the top may step up or down under the landing point and still count as the same surface, metres.</summary>
         const float SameSurface = 0.15f;
 
         public static LedgeResult Find(in LedgeQuery q)
@@ -84,10 +82,6 @@ namespace CloseTheDeal.Player
             return new LedgeResult { Found = true, Kind = deep ? MantleKind.Climb : MantleKind.Vault, Target = over };
         }
 
-        /// <summary>
-        /// Sweeps the body forward with its bottom lifted to the lowest climbable height, so
-        /// anything it could simply walk over is ignored and a desk top is caught as surely as a wall.
-        /// </summary>
         static bool FindFace(in LedgeQuery q, out float faceDistance)
         {
             faceDistance = 0f;

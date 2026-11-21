@@ -1,13 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-15
-#  Prompt    : Alex: Aero office props on one Painter trim sheet
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Review only: wires the Painter export (albedo, metallic/smoothness, normal, emission) into Trim_Aero in a
-#              copy of a prop's .blend, so the skill's contact sheet shows the sheet on the model. Not used for export.
-#  Run       : blender -b <piece>.trim.blend --factory-startup -P preview_trim.py -- <out.blend>
-# -----------------------------------------------------------------------------
 import os
 import sys
 

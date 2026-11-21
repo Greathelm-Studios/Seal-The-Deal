@@ -1,9 +1,6 @@
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// What the UI sound hub (UiSound, Scripts/UI/Kit) needs from whatever makes the noise. The sound lane's
-    /// UiSoundPlayer implements it through UiSoundPlayerAdapter and registers itself before the first scene loads.
-    /// </summary>
+    /// <summary>Playback backend registered on UiSound.Player by the UI sound system.</summary>
     public interface IUiSoundPlayer
     {
         /// <summary>Play e, pitched up by semitones. False if it was dropped (gap, voices, unfocused) or has no clip.</summary>

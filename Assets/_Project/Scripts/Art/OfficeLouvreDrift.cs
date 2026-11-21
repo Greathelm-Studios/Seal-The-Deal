@@ -1,9 +1,3 @@
-// AI-GENERATED SOURCE FILE
-// Generator : Codex (GPT-6)
-// Generated : 2026-11-15
-// Prompt    : REQUEST_ANIM.md; slowly drifting louvre shadows, visual only on every client.
-// Reviewed : NOT YET REVIEWED BY A HUMAN
-// Summary   : Drives URP's cookie offset from an authored rest position; no networking or transform writes.
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -34,8 +28,6 @@ namespace CloseTheDeal.Art
         bool wroteOffset;
 
         /// <summary>Assigns a newly created effect; its resting offset is read from the sun when Play starts.</summary>
-        /// <param name="target">The directional sun's URP light data.</param>
-        /// <param name="generatedCookie">The cookie this component is allowed to move.</param>
         public void Configure(UniversalAdditionalLightData target, Texture generatedCookie)
         {
             sunData = target;
@@ -44,7 +36,7 @@ namespace CloseTheDeal.Art
 
         void OnEnable()
         {
-            // WHY: editing/building the scene must never move its lighting, including with domain reload disabled.
+            // Never mutate scene lighting outside Play Mode (including with domain reload disabled).
             ready = false;
             wroteOffset = false;
             if (!Application.isPlaying || sunData == null || cookie == null)
@@ -55,7 +47,6 @@ namespace CloseTheDeal.Art
                 return;
             }
             cachedSun = sunData.GetComponent<Light>();
-            // WHY: the sun's Inspector remains authoritative even if tuned after the editor rig was generated.
             authoredOffsetMetres = sunData.lightCookieOffset;
             runtimeOffsetMetres = authoredOffsetMetres;
             ready = cachedSun != null && cachedSun.type == LightType.Directional;
@@ -66,8 +57,7 @@ namespace CloseTheDeal.Art
             if (!ready || sunData == null || cachedSun == null || cachedSun.cookie != cookie ||
                 swaySeconds <= 0f || swayMetres < 0f)
                 return;
-            // WHY: URP's cookie offset is in projection metres, not normalized texture coordinates.
-            // One analytic local sway needs no material mutation, network state, or per-frame allocation.
+            // URP cookie offset is in projection metres, not normalized UVs.
             float phase = (float)(Time.timeAsDouble % swaySeconds) * Tau / swaySeconds;
             Vector2 next = authoredOffsetMetres + Vector2.up * (Mathf.Sin(phase) * swayMetres);
             if (runtimeOffsetMetres == next)
@@ -79,7 +69,7 @@ namespace CloseTheDeal.Art
 
         void OnDisable()
         {
-            // WHY: restore only the property still carrying our last value; never undo another lighting tool's edit.
+            // Restore only if no other tool overwrote our last runtime offset.
             if (wroteOffset && sunData != null && cachedSun != null && cachedSun.cookie == cookie &&
                 sunData.lightCookieOffset == runtimeOffsetMetres)
                 sunData.lightCookieOffset = authoredOffsetMetres;

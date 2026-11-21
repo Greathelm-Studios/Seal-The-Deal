@@ -6,13 +6,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Glass
 {
-    /// <summary>
-    /// One pane of breakable glass: a window, a glass-room wall, a stair-cage panel. Bullets
-    /// pass through and break it, blasts break it, and a heavy thing or a thrown player
-    /// hitting it fast enough goes through. Once broken it stays broken for the match and
-    /// blocks nothing. The pane itself is not networked: the host's GlassRegistry holds which
-    /// panes are broken and every machine hides its own copy. Design: docs/systems/GLASS.md.
-    /// </summary>
+    /// <summary>One pane of breakable glass; state is driven locally by GlassRegistry.</summary>
     [DisallowMultipleComponent]
     public sealed class GlassPane : MonoBehaviour, IDamageable
     {

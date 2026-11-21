@@ -212,7 +212,7 @@ namespace FishySteamworks.Server
                 _socket = HSteamListenSocket.Invalid;
             }
 
-            // Close the Deal patch (FORK.md): close active client connections and clear server state on stop.
+            // Fork patch: close active client connections and clear server state on stop (see FORK.md).
             foreach (HSteamNetConnection conn in _steamConnections.First.Keys)
             {
 #if UNITY_SERVER
@@ -374,7 +374,7 @@ namespace FishySteamworks.Server
                 return;
 
             _iteratingConnections = true;
-            // Close the Deal patch (FORK.md): iterate Dictionary.KeyCollection directly instead of IEnumerable to avoid 60 Hz enumerator boxing.
+            // Fork patch: iterate Dictionary.KeyCollection directly to avoid 60 Hz enumerator boxing (see FORK.md).
             foreach (HSteamNetConnection conn in _steamConnections.First.Keys)
             {
 #if UNITY_SERVER
@@ -407,7 +407,7 @@ namespace FishySteamworks.Server
                 LocalPacket packet = _clientHostIncoming.Dequeue();
                 ArraySegment<byte> segment = new ArraySegment<byte>(packet.Data, 0, packet.Length);
                 base.Transport.HandleServerReceivedDataArgs(new ServerReceivedDataArgs(segment, (Channel)packet.Channel, FishySteamworks.CLIENT_HOST_ID, Transport.Index));
-                // Close the Deal patch (FORK.md): return host-local pooled buffer after dispatch.
+                // Fork patch: return host-local pooled buffer after dispatch (see FORK.md).
                 ByteArrayPool.Store(packet.Data);
             }
 
@@ -426,7 +426,7 @@ namespace FishySteamworks.Server
                 {
                     for (int i = 0; i < messageCount; i++)
                     {
-                        // Close the Deal patch (FORK.md): skip a message GetMessage dropped as malformed.
+                        // Fork patch: skip malformed message dropped by GetMessage (see FORK.md).
                         if (!base.GetMessage(base.MessagePointers[i], InboundBuffer, out ArraySegment<byte> segment, out byte channel))
                             continue;
                         base.Transport.HandleServerReceivedDataArgs(new ServerReceivedDataArgs(segment, (Channel)channel, connectionId, Transport.Index));
@@ -572,7 +572,7 @@ namespace FishySteamworks.Server
         {
             if (!_clientHostStarted)
             {
-                // Close the Deal patch (FORK.md): return pooled buffer when dropping a host-local packet.
+                // Fork patch: return pooled buffer when dropping host-local packet (see FORK.md).
                 ByteArrayPool.Store(packet.Data);
                 return;
             }

@@ -3,13 +3,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The one door every UI sound goes through: UiSound.Play(UiSoundEvent.Confirm). Lanes never load a clip.
-    /// The sound lane registers the thing that makes the noise (Player: clips, mixer bus, rate limits, the
-    /// hover run's pitch); until it does, every call is silent and is still raised on Played, so logs and
-    /// checks can see what would have sounded. Presentation only: nothing here touches game state.
-    /// Event names and when each fires: docs/systems/UI_KIT.md "Sound".
-    /// </summary>
+    /// <summary>Central UI sound dispatch hub forwarding calls to the registered IUiSoundPlayer.</summary>
     public static class UiSound
     {
         /// <summary>What actually plays sounds. Set once by the sound lane before the first scene loads.</summary>

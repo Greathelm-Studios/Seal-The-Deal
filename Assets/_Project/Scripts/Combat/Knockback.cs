@@ -7,13 +7,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Combat
 {
-    /// <summary>
-    /// Turns a blast at a point into knockback (and, if the profile says so, damage) on every
-    /// player, throw on every prop, a hit on every locked door and a break on every pane of
-    /// glass in range. Also the one place a shove along a shot is worked out, so guns and
-    /// blasts throw bodies the same way. Host only: PlayerMotor.ApplyKnockback, Health.ApplyHit,
-    /// Prop.Throw, BreakableDoor.TakeBlast and the glass ignore the call anywhere else.
-    /// </summary>
+    /// <summary>Host-only blast impulse/damage resolution and shared shot shove velocity math.</summary>
     public static class Knockback
     {
         static readonly HashSet<Object> SeenTargets = new();

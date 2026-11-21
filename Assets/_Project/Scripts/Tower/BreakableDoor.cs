@@ -4,11 +4,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Tower
 {
-    /// <summary>
-    /// A locked door across the spiral stairs. Blasts wear it down; when it breaks it vanishes
-    /// and the way up is open. The host owns the hit count; everyone hides the door once it
-    /// reaches the limit. Spawned by the host at a PropMarker like furniture. Design: docs/systems/TOWER.md.
-    /// </summary>
+    /// <summary>Locked stairwell door broken by host-counted blasts. Design: docs/systems/TOWER.md.</summary>
     [DisallowMultipleComponent]
     public sealed class BreakableDoor : NetworkBehaviour
     {

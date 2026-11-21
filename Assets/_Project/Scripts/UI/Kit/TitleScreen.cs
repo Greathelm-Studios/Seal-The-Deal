@@ -5,13 +5,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The title and main menu in the window-frame "Survey" layout: sky inside the window frame above, the title,
-    /// status and menu low on paper. Host game / Join on this PC (local only) / Settings / Quit to desktop call the
-    /// same SteamLobby actions the playtest card did. Host stays greyed out with its reason until the network is
-    /// ready. Esc asks before quitting. The sky is a static fallback until the title lane's live backdrop goes
-    /// into BackdropSlot (SetLiveBackdrop hides the fallback). Text changes only on lobby events.
-    /// </summary>
+    /// <summary>Main title screen and menu driving SteamLobby actions and live sky backdrop.</summary>
     [AddComponentMenu("Close the Deal/UI/Title Screen")]
     public sealed class TitleScreen : UiScreen, IBackdropScreen
     {
@@ -66,17 +60,13 @@ namespace CloseTheDeal.UI
 
         public RectTransform BackdropSlot => _backdropSlot;
 
-        /// <summary>
-        /// The title lane calls this with true once its live sky is in BackdropSlot. A scene with no sky material has
-        /// nothing for the live view to draw, so the flat fallback stays over it there.
-        /// </summary>
+        /// <summary>Switches between the live sky backdrop and static fallback (kept when scene has no skybox).</summary>
         public void SetLiveBackdrop(bool live)
         {
             if (_staticSky != null)
                 _staticSky.SetActive(!(live && RenderSettings.skybox != null));
         }
 
-        /// <summary>Given by the UI root before the title first shows: the game menu whose lobby this screen drives.</summary>
         internal void Bind(GameMenu menu)
         {
             _lobby = menu != null ? menu.Lobby : null;
@@ -142,7 +132,6 @@ namespace CloseTheDeal.UI
             Refresh();
         }
 
-        /// <summary>A dialog in the menu's place fades the menu column out; it fades back when the dialog closes.</summary>
         protected override void OnCovered(bool covered)
         {
             Fade(ref _menuShown, !covered);
@@ -150,10 +139,7 @@ namespace CloseTheDeal.UI
                 MakeRoom(false);
         }
 
-        /// <summary>
-        /// A wide panel (hosting, joining, a problem) takes the middle and right columns: true fades the status and
-        /// the button explanation out, false brings them back. The menu column follows OnCovered.
-        /// </summary>
+        /// <summary>Fades middle-column status and focus text out when a wide panel (session/problem) opens.</summary>
         public void MakeRoom(bool wide)
         {
             _wide = wide;
@@ -193,7 +179,6 @@ namespace CloseTheDeal.UI
             group.blocksRaycasts = shown > 0.5f;
         }
 
-        /// <summary>Esc / B at the title asks before quitting; Stay has focus.</summary>
         public override void OnCancel() => OnQuit();
 
         void OnStatus(string text)
@@ -233,7 +218,6 @@ namespace CloseTheDeal.UI
             LinkNavigation(local);
         }
 
-        /// <summary>Version and where this copy came from: the build's id in a build, EDITOR in the Editor.</summary>
         static string BuildLine()
         {
             string id = Application.isEditor ? "EDITOR" : Application.buildGUID;
@@ -251,7 +235,6 @@ namespace CloseTheDeal.UI
             return "Signed in to Steam as " + SteamService.LocalName;
         }
 
-        /// <summary>Top to bottom, the order the menu reads; a greyed-out Host is skipped by keys and pad.</summary>
         void LinkNavigation(bool local)
         {
             Selectable[] order = local
@@ -318,7 +301,7 @@ namespace CloseTheDeal.UI
             Stack.Push(_quitDialog);
         }
 
-        /// <summary>Closes the game (leaves Play Mode in the Editor). The one quit path every screen uses.</summary>
+        /// <summary>Exits the application (or Play Mode in the Editor).</summary>
         public static void QuitToDesktop()
         {
 #if UNITY_EDITOR

@@ -12,14 +12,7 @@ using Object = UnityEngine.Object;
 
 namespace CloseTheDeal.Editor.Lanes
 {
-    /// <summary>
-    /// Sees the title's live sky and the screen transitions running in Play Mode, in the integration scene.
-    /// Batch only: -executeMethod CloseTheDeal.Editor.Lanes.TitleLanePlayCheck.RunFromCommandLine [-titleOut folder]
-    /// It checks: the live sky attaches and renders while the title shows; its view moves over time; every
-    /// transition plays, covers and finishes within a frame or two of its stated length; a call made during one
-    /// waits; reduced motion turns a wipe into the short fade and stills the sky; hiding the title stops the sky
-    /// camera and puts the game's own sky back. Writes frame strips and play_check.txt. Nothing is saved.
-    /// </summary>
+    /// <summary>Batch Play Mode verification for TitleSky and UiTransition timing in Lane_Integration.unity.</summary>
     public static class TitleLanePlayCheck
     {
         const string ScenePath = "Assets/_Project/Scenes/Lanes/Lane_Integration.unity";

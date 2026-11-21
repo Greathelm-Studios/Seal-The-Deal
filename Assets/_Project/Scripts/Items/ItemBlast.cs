@@ -4,10 +4,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Items
 {
-    /// <summary>
-    /// The damage half of an item's explosion. Combat/Knockback throws players and props;
-    /// this hurts whatever can be hurt. Host only: the caller is always a host-side item.
-    /// </summary>
+    /// <summary>Host-only radial explosion damage against IDamageable targets.</summary>
     public static class ItemBlast
     {
         static readonly Collider[] Buffer = new Collider[256];

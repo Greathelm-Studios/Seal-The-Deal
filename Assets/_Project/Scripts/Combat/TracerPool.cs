@@ -4,11 +4,7 @@ using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Combat
 {
-    /// <summary>
-    /// Draws shot tracers and takes them away again. Local visuals only, never networked.
-    /// Lines are reused, so a full-auto burst allocates nothing once the pool has warmed up.
-    /// Makes itself on first use and lives for the whole session.
-    /// </summary>
+    /// <summary>Pooled local shot tracer LineRenderer manager.</summary>
     public sealed class TracerPool : MonoBehaviour
     {
         enum FadeMode : byte

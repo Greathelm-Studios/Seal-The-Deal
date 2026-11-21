@@ -5,10 +5,7 @@ using UnityEngine.Audio;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// Maps every UiSoundEvent to its clip, volume and pitch variance, plus the voice-limiting rules.
-    /// One asset: Assets/_Project/Resources/UI/UiSoundSet.asset, built by Close the Deal > UI > Set Up Sound.
-    /// </summary>
+    /// <summary>ScriptableObject mapping UiSoundEvent values to clips, throttling rules, and menu ambience.</summary>
     [CreateAssetMenu(menuName = "Close the Deal/UI Sound Set", fileName = "UiSoundSet")]
     public sealed class UiSoundSet : ScriptableObject
     {

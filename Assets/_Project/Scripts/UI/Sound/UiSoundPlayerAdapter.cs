@@ -2,9 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// Plugs UiSoundPlayer into the UI sound hub (UiSound, Scripts/UI/Kit): registered before the first scene loads.
-    /// </summary>
+    /// <summary>Registers UiSoundPlayer as the active UiSound.Player before the first scene loads.</summary>
     public sealed class UiSoundPlayerAdapter : IUiSoundPlayer
     {
         public bool Play(UiSoundEvent e, float semitones) => UiSoundPlayer.Play(e, semitones);

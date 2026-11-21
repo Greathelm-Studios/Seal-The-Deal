@@ -1,14 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Fable 5.2 (Claude Code, blender-modeling skill)
-#  Generated : 2026-11-13
-#  Prompt    : Alex: "set up an fps viewmodel ... rn we can use a pistol"
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : The source of Assets/_Project/Art/Weapons/Models/Pistol.fbx: a plain, chunky
-#              stand-in pistol for the first-person viewmodel. It is a script so every size is
-#              a named number an artist can change and rebuild; the FBX is only its output.
-#              Build: node <skill>/scripts/mdl.mjs build ArtSource/Weapons/pistol.py --out <dir>/Pistol.blend
-# -----------------------------------------------------------------------------
 """Stand-in pistol. Muzzle points at -Y (the kit's "front"), Z is up.
 
 The origin is the middle of the grip, where the palm closes round it, so the game can hang the

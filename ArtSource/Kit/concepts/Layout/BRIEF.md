@@ -1,15 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-15
-  Prompt    : Alex: "change the structure and placement of the scene, it's too confusing, things feel randomly
-              placed with no believability ... research level design and levels from other games that match our
-              design, and speak with Codex to generate some layouts"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : The research-backed brief for re-planning the office floor. It turns real office planning and
-              multiplayer level-design practice into rules a layout can be checked against, and is the brief
-              Codex draws layout options from. Concept work only: no scene or kit is changed by it.
--->
 # Office floor layout: brief
 
 **From:** Alex, drafted by Claude · **Date:** 2026-11-15 · **For:** Codex layout options (round L1)

@@ -5,13 +5,7 @@ using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The player behind the UI sound hub (UiSound in Scripts/UI/Kit, lane 5): clips, mixer bus, voice limits, hover-run pitch.
-    /// Callers use UiSound.Play(UiSoundEvent.Confirm); the hub forwards here.
-    /// Plays through the mixer's UI bus, never while the game is unfocused, never louder than the set says,
-    /// and a burst of the same event (rapid hovers) is thinned by a per-event minimum gap and a voice cap.
-    /// Sound is a presentation effect only: nothing here touches game state or the network.
-    /// </summary>
+    /// <summary>Mixer-routed UI sound player with voice pooling, per-event throttling, and menu ambient bed.</summary>
     public static class UiSoundPlayer
     {
         /// <summary>The set in use. Loaded from Resources/UI/UiSoundSet on first use.</summary>
@@ -111,9 +105,6 @@ namespace CloseTheDeal.UI
 
             void Start() => UiAudio.ApplySaved();
 
-            // ---- Ambient bed and the title sting -------------------------------------------------------------
-            // Looked at four times a second, not every frame: is the player at the menus (the title and its screens
-            // before a game) or in the lobby reception before the run starts? Reaching the title plays TitleAppear once.
             AudioSource bed;
             float nextLook, bedTarget;
             bool atTitle;

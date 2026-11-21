@@ -6,10 +6,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// A kit slider with a number field: uGUI's Slider (drag, click on the track, left / right steps) with the
-    /// kit's look, focus answers and a tick per step whose pitch follows the value. Always whole steps.
-    /// </summary>
+    /// <summary>Whole-step kit slider with live number readout and pitch-scaled tick audio.</summary>
     [AddComponentMenu("Close the Deal/UI/Slider")]
     public sealed class UiSlider : Slider
     {

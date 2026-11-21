@@ -1,19 +1,3 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Opus 5.5 (Claude Code)
-//  Generated : 2026-11-15
-//  Prompt    : Alex on the office props: "still off" (shapes too simple, surface/render look flat, not Aero enough)
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : The office props' moulded-plastic surface. The concept sheets read as glossy product renders: a lacquer
-//              clearcoat over the colour, a soft light-to-cool gradient from top to underside, and a pale rim where the
-//              form turns away. URP Lit gives a flat, even response, so this shader is URP's own physically based
-//              lighting (shadows, probes, SSAO and fog all as Lit) with those three additions.
-// -----------------------------------------------------------------------------
-//
-// Trade-off: the extras reuse fields of URP Lit's material buffer that this shader never reads for their own purpose
-// (_SpecColor for the rim, the two detail-map scales for rim tightness and gradient strength). The alternative, adding
-// new fields, changes the buffer layout from Lit's, which would mean copying LitInput.hlsl and every pass that includes
-// it; without that, the SRP batcher stops batching these props. Reusing the fields keeps all of URP's passes as they are.
 Shader "Close the Deal/Aero Plastic"
 {
     Properties
@@ -33,6 +17,7 @@ Shader "Close the Deal/Aero Plastic"
         _ClearCoatMask("Lacquer amount: a second glossy layer over the colour (0 = none)", Range(0, 1)) = 1
         _ClearCoatSmoothness("Lacquer gloss (higher = smaller, sharper highlights)", Range(0, 1)) = 0.93
 
+        // Reuses URP Lit's _SpecColor and _Detail*Scale slots below to preserve LitInput.hlsl SRP Batcher layout.
         [Header(Studio look)]
         _SpecColor("Rim colour where the form turns away (alpha = strength)", Color) = (0.86, 0.97, 1, 0.35)
         _DetailAlbedoMapScale("Rim tightness (higher = thinner rim, only at the very edge)", Range(1, 8)) = 3.5
@@ -72,7 +57,6 @@ Shader "Close the Deal/Aero Plastic"
             #pragma shader_feature_local _NORMALMAP
             #pragma shader_feature_local_fragment _EMISSION
             #pragma shader_feature_local_fragment _METALLICSPECGLOSSMAP
-            // WHY always on: every prop surface gets the lacquer; its amount is the _ClearCoatMask slider.
             #define _CLEARCOAT 1
 
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
@@ -110,9 +94,6 @@ Shader "Close the Deal/Aero Plastic"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
 
-            /// The underside colour the gradient fades toward at full strength: a soft cool grey, as the concept sheets'
-            /// studio renders shade the undersides of white plastic. WHY not darker: the bible wants "real shadow depth
-            /// rather than dirty black halos"; the light already darkens what faces away.
             #define AERO_UNDERSIDE half3(0.80, 0.85, 0.92)
 
             void AeroFragment(
@@ -143,14 +124,11 @@ Shader "Close the Deal/Aero Plastic"
 
                 InitializeBakedGIData(input, inputData);
 
-                // Studio gradient: full colour on top, toward a soft cool grey underneath.
                 half up = saturate(inputData.normalWS.y * 0.5h + 0.5h);
                 surfaceData.albedo *= lerp(lerp(half3(1, 1, 1), AERO_UNDERSIDE, _DetailNormalMapScale), half3(1, 1, 1), up);
 
                 half4 color = UniversalFragmentPBR(inputData, surfaceData);
 
-                // Rim: a pale edge where the surface turns from the eye, scaled by the ambient light there so it reads
-                // as the room's light wrapping the form, never as a glow in the dark.
                 half facing = saturate(dot(inputData.normalWS, inputData.viewDirectionWS));
                 half rim = pow(1.0h - facing, _DetailAlbedoMapScale) * _SpecColor.a;
                 half ambient = saturate(Luminance(SampleSH(inputData.normalWS)));
@@ -167,7 +145,6 @@ Shader "Close the Deal/Aero Plastic"
             ENDHLSL
         }
 
-        // The other passes are URP Lit's own, on the same material buffer (so the SRP batcher still batches them).
         Pass
         {
             Name "ShadowCaster"

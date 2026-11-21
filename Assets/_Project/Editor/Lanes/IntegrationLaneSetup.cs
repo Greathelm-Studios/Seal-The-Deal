@@ -27,16 +27,7 @@ using Object = UnityEngine.Object;
 
 namespace CloseTheDeal.Editor.Lanes
 {
-    /// <summary>
-    /// Builds the one scene where every lane plays together: the game mode's towers, plaza,
-    /// skybridges and floor gates, shooting and breaking glass, the pickups, and the lobby's
-    /// reception at street level beside the towers, joined by the glue in Scripts/Integration.
-    /// It calls each lane's own builder rather than copying it, and only adds: an asset that
-    /// exists is never changed (AGENTS.md §4). Design: docs/systems/INTEGRATION.md.
-    ///
-    /// Menu: Close the Deal > Lanes > Set Up Integration (asks before rebuilding the scene).
-    /// Shell: -executeMethod CloseTheDeal.Editor.Lanes.IntegrationLaneSetup.SetUpFromCommandLine
-    /// </summary>
+    /// <summary>Additive setup assembling Lane_Integration.unity from all lane builders (docs/systems/INTEGRATION.md).</summary>
     public static class IntegrationLaneSetup
     {
         internal const string ScenePath = "Assets/_Project/Scenes/Lanes/Lane_Integration.unity";
@@ -49,25 +40,15 @@ namespace CloseTheDeal.Editor.Lanes
         const string PropPrefabs = "Assets/_Project/Prefabs/Props/";
         const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player.prefab";
 
-        /// <summary>
-        /// The reception stands at street level past the towers' +X end, its glass front looking
-        /// back down the street at both towers' bases. The lobby's own builder lays it out from
-        /// its window edge (X along the glass, -Z into the room); turned a quarter left, the room
-        /// runs 16 m along +X and 24 m along Z, centred on the street. Clear of the 28 m towers.
-        /// </summary>
         static readonly Vector3 ReceptionAt = new(20f, 0f, -12f);
         const float ReceptionYaw = -90f;
         static readonly Vector3 FirmStandA = new(6.5f, 0f, -8.5f);
         static readonly Vector3 FirmStandB = new(17.5f, 0f, -8.5f);
 
-        /// <summary>The kit window has no collider above its sill: an unseen pane keeps players waiting in the room.</summary>
         static readonly Vector3 WindowGuardCentre = new(12f, 2.25f, 0.25f);
         static readonly Vector3 WindowGuardSize = new(24f, 4.5f, 0.2f);
 
-        /// <summary>Clear of the game mode's prompt chip just under the crosshair.</summary>
         static readonly Vector2 ItemPromptOffset = new(0f, -140f);
-
-        // ---- Menu ----------------------------------------------------------------------------
 
         [MenuItem("Close the Deal/Lanes/Set Up Integration")]
         public static void SetUpFromMenu()
@@ -137,8 +118,6 @@ namespace CloseTheDeal.Editor.Lanes
             return true;
         }
 
-        // ---- Assets (only created when missing) ----------------------------------------------
-
         static void EnsureGunMap()
         {
             if (AssetDatabase.LoadAssetAtPath<GunPickupMap>(GunMapPath) != null)
@@ -162,7 +141,6 @@ namespace CloseTheDeal.Editor.Lanes
             entry.FindPropertyRelative("Pickup").objectReferenceValue = AssetDatabase.LoadAssetAtPath<NetworkObject>(ItemPrefabs + pickup + ".prefab");
         }
 
-        /// <summary>Floors 1–3 of each tower: a gun, a gadget and a piece of furniture on each; none in the lobby.</summary>
         static void EnsureLootTable()
         {
             if (AssetDatabase.LoadAssetAtPath<FloorLootTable>(LootPath) != null)
@@ -196,7 +174,6 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log("[Integration] Created " + LootPath);
         }
 
-        /// <summary>The lobby lane's own asset steps, run before the scene is made (they may create assets).</summary>
         static void EnsureLobbyAssets()
         {
             LobbyLaneSetup.EnsureFolders();
@@ -207,12 +184,6 @@ namespace CloseTheDeal.Editor.Lanes
             AddOutfitIfMissing(character);
         }
 
-        /// <summary>
-        /// The player prefab is add-only here (AGENTS.md §4): the outfit goes on only when the
-        /// player has none. The lobby's patch re-seats an existing outfit (it removes an earlier
-        /// figure and re-points the view), which would undo what a person or another tool set,
-        /// so a player that already wears an outfit is reported and left alone.
-        /// </summary>
         static void AddOutfitIfMissing(GameObject character)
         {
             var player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
@@ -229,10 +200,6 @@ namespace CloseTheDeal.Editor.Lanes
                 : "[Integration] Player.prefab has PlayerOutfit with no view. Left as it is: set its view on the prefab, or run the lobby lane's own setup to seat one.");
         }
 
-        /// <summary>
-        /// Runs one lane's step and says if it changed Player.prefab. This tool never rewrites the
-        /// player; a lane step that does is named here so its owner can make it add-only.
-        /// </summary>
         static void Watching(string step, Action run)
         {
             string before = File.Exists(PlayerPrefabPath) ? File.ReadAllText(PlayerPrefabPath) : null;
@@ -254,9 +221,6 @@ namespace CloseTheDeal.Editor.Lanes
             };
         }
 
-        // ---- Scene ---------------------------------------------------------------------------
-
-        /// <summary>Everyone starts with the pistol only; the AR-15 is found on floor 2. Added before the shooting lane's step, which then keeps it.</summary>
         static void AddStartingLoadout()
         {
             if (Object.FindAnyObjectByType<StartingLoadout>() != null)
@@ -273,7 +237,6 @@ namespace CloseTheDeal.Editor.Lanes
                 ((RectTransform)prompt.transform).anchoredPosition = ItemPromptOffset;
         }
 
-        /// <summary>The lobby lane's reception, desk, firm stands and fitting room, its roster and its screens, from its own builder.</summary>
         static Transform[] BuildReception(LobbyAssets lobby)
         {
             LobbyLaneSetup.LoadMaterials();
@@ -333,7 +296,6 @@ namespace CloseTheDeal.Editor.Lanes
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>The lobby desk starts the match here, so the menu button says it skips the desk (handy alone, where the desk needs both firms).</summary>
         static void RewordMatchMenu()
         {
             MatchMenuPanel panel = Object.FindAnyObjectByType<MatchMenuPanel>(FindObjectsInactive.Include);
@@ -362,17 +324,7 @@ namespace CloseTheDeal.Editor.Lanes
         }
     }
 
-    /// <summary>
-    /// Plays Lane_Integration by script and writes what happened to a report, like the lanes'
-    /// own check runs. Solo: one machine hosting with its own player, every join and edge case.
-    /// Host and client: two copies of the game on this computer over the local connection.
-    /// Requests go through the same calls the keys make; F and G are also pressed on a made-up
-    /// keyboard where the check is about the keys. Nothing here is Steam or a second computer.
-    ///
-    /// Unity -batchmode -nographics -projectPath (project) -local
-    ///       -executeMethod CloseTheDeal.Editor.Lanes.IntegrationLaneRun.RunFromShell
-    ///       -integrationRole solo|host|client -integrationOut (folder)
-    /// </summary>
+    /// <summary>Batch Play Mode integration test runner for Lane_Integration.unity (solo, host, client).</summary>
     public static class IntegrationLaneRun
     {
         const string ActiveKey = "IntegrationLaneRun.Active";
@@ -429,8 +381,6 @@ namespace CloseTheDeal.Editor.Lanes
                 EditorApplication.update += Pump;
         }
 
-        /// <summary>Back in edit mode with the check still marked active means someone pressed Stop
-        /// part-way: drop it, or the next ordinary Play in any scene would run the script again.</summary>
         static void OnPlayModeChanged(PlayModeStateChange state)
         {
             if (state != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool(ActiveKey, false))
@@ -443,8 +393,6 @@ namespace CloseTheDeal.Editor.Lanes
             CleanupInputAndState();
             Debug.Log("[IntegrationRun] Stopped before the check finished; it will not resume on the next Play.");
         }
-
-        // ---- The stepper ---------------------------------------------------------------------
 
         static void Pump()
         {
@@ -615,8 +563,6 @@ namespace CloseTheDeal.Editor.Lanes
 
         static string V(Vector3 v) => $"({v.x:0.0}, {v.y:0.0}, {v.z:0.0})";
 
-        // ---- Reading the game ----------------------------------------------------------------
-
         static FirmMember Me => FirmMember.Local;
         static ItemCarrier MyHands => ItemCarrier.Local;
         static WeaponHolder MyGuns => Me != null ? Me.GetComponent<WeaponHolder>() : null;
@@ -643,7 +589,6 @@ namespace CloseTheDeal.Editor.Lanes
             TowerBuilder.Instance.OnBuilt += () => _builds++;
         }
 
-        /// <summary>The nearest loose pickup of this item to a point, or null.</summary>
         static Pickup NearestLoose(string itemName, Vector3 from)
         {
             Pickup best = null;
@@ -671,7 +616,6 @@ namespace CloseTheDeal.Editor.Lanes
 
         static Vector3 FloorCentre(int tower, int floor) => Match.Arena.FloorPoint(tower, floor, new Vector3(0f, 0f, -7f));
 
-        /// <summary>Floor under the probe and room for a whole player standing there.</summary>
         static bool Fits(Vector3 probe, out Vector3 feet)
         {
             int solid = ~(LayerMask.GetMask("Player") | LayerMask.GetMask("Prop"));
@@ -683,7 +627,6 @@ namespace CloseTheDeal.Editor.Lanes
             return !Physics.CheckCapsule(feet + Vector3.up * 0.45f, feet + Vector3.up * 1.45f, 0.35f, ~LayerMask.GetMask("Player"), QueryTriggerInteraction.Ignore);
         }
 
-        /// <summary>A place a player fits on a ring around a point, with a clear line from their eye to it; the point itself in a pinch.</summary>
         static Vector3 StandBeside(Vector3 target, float radius)
         {
             int solid = ~(LayerMask.GetMask("Player") | LayerMask.GetMask("Prop"));
@@ -697,7 +640,6 @@ namespace CloseTheDeal.Editor.Lanes
             return target + Vector3.up * 0.1f;
         }
 
-        /// <summary>An open spot on a floor of a tower, well away from the stairwell.</summary>
         static Vector3 OpenSpot(int tower, int floor)
         {
             for (float x = -8f; x <= 8f; x += 2f)
@@ -734,7 +676,6 @@ namespace CloseTheDeal.Editor.Lanes
             LobbyInput.EditorForceCaptured = captured;
         }
 
-        /// <summary>A key down for a few frames, then up, on the check's own keyboard.</summary>
         static IEnumerator Press(Key key)
         {
             InputSystem.QueueStateEvent(_keyboard, new KeyboardState(key));
@@ -774,14 +715,11 @@ namespace CloseTheDeal.Editor.Lanes
             }, 120f, "the client to join");
         }
 
-        /// <summary>Two copies agree on a start time: the next half-minute at least six seconds away.</summary>
         static DateTime SharedStart()
         {
             long seconds = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds() + 6;
             return DateTimeOffset.FromUnixTimeSeconds((seconds / 30 + 1) * 30).UtcDateTime;
         }
-
-        // ---- Solo ------------------------------------------------------------------------------
 
         static IEnumerator SoloScript()
         {
@@ -813,7 +751,6 @@ namespace CloseTheDeal.Editor.Lanes
             yield return new Until(() => LobbyRoster.Instance != null && LobbyRoster.Instance.TryGetLocal(out _), 10f, "this player on the ready board");
         }
 
-        /// <summary>The desk needs both firms by the lobby's rules; alone, the run uses a runtime copy that does not. The asset is untouched.</summary>
         static void AllowOneFirmStart()
         {
             LobbyRoster roster = LobbyRoster.Instance;
@@ -843,7 +780,6 @@ namespace CloseTheDeal.Editor.Lanes
             Check("desk: the ready board stands down outside the lobby", LobbyInteractor.Instance.Blocked);
         }
 
-        /// <summary>Takes a pickup by the same call the F key makes, from a spot beside it.</summary>
         static IEnumerator TakeFromBeside(Pickup pickup)
         {
             Teleport(Me, StandBeside(pickup.Body.worldCenterOfMass, 1f));
@@ -965,7 +901,6 @@ namespace CloseTheDeal.Editor.Lanes
             yield return new Until(() => Match.IsCarrying(Me), 3f, "the briefcase");
         }
 
-        /// <summary>The other way round: a chair in the hands, the briefcase in reach.</summary>
         static IEnumerator ChairBlocksBriefcase(Pickup chair)
         {
             MyHands.LocalTake(chair);
@@ -1049,7 +984,6 @@ namespace CloseTheDeal.Editor.Lanes
             Check("after the result: the ready board is back", !LobbyInteractor.Instance.Blocked);
         }
 
-        /// <summary>The desk's start and the menu's rematch in the same frame, then both again during the countdown: one match.</summary>
         static IEnumerator BothStartPaths()
         {
             ReceptionDesk desk = Object.FindAnyObjectByType<ReceptionDesk>();
@@ -1072,7 +1006,6 @@ namespace CloseTheDeal.Editor.Lanes
             Check("next match: back to the starting pistol only, full magazine (match 1 ended with two guns)", Slots(MyGuns) == "Pistol / empty" && MyGuns.AmmoInMagazine == MyGuns.ActiveWeapon.MagazineSize, Slots(MyGuns));
         }
 
-        /// <summary>The real rematch path: a result, back to reception, ready, the desk starts the next match.</summary>
         static IEnumerator DeskRematch()
         {
             yield return new Until(() => Match.Phase == MatchPhase.Running, 15f, "the second match to run");
@@ -1097,7 +1030,6 @@ namespace CloseTheDeal.Editor.Lanes
             Check("desk rematch: back in this firm's tower reception with the starting pistol and full health", Match.Arena.PlaceOf(Me.Position, 0f) == Me.Firm && Slots(MyGuns) == "Pistol / empty" && health.Current >= health.Max,
                 $"{V(Me.Position)}, {Slots(MyGuns)}, health {health.Current:0}");
         }
-        // ---- Host and client (two copies on one computer, local connection) --------------------
 
         static IEnumerator HostScript()
         {

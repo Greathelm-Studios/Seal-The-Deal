@@ -1,36 +1,8 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-13
-//  Prompt    : Alex: "set up an fps viewmodel with the characters model we are using"
-//  Modified  : Claude Fable 5.2, 2026-11-13 — framing and posing taken from the NorseFPS
-//              project at Alex's request ("steal the viewmodel framing and posing from the
-//              norsefps project"): the gun is placed in the view and the arm reaches to it.
-//  Modified  : Claude Fable 5.2, 2026-11-14 — Harvey: the view is "super unrefined", make
-//              it "in line with the movement and more clean". Added movement weight, sprint
-//              carry, climbing, idle breathing, and roll and shift on the look sway.
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : The designer's tuning panel for the first-person arms: where the gun sits on
-//              screen, how it lags behind the look, bobs with the stride, kicks on a shot and
-//              dips for a reload. Its own asset so the feel can be tuned without touching
-//              the player prefab.
-// -----------------------------------------------------------------------------
 using UnityEngine;
 
 namespace CloseTheDeal.Player
 {
-    /// <summary>
-    /// Designer-owned tuning for the first-person arms and the weapon they hold.
-    /// Runtime only reads it (AGENTS.md §4).
-    /// </summary>
-    /// <remarks>
-    /// The framing numbers start from NorseFPS's hand cannon (holder 0.18, -0.12, 0.70 m at a
-    /// 62 degree lens, 4 degrees muzzle-up, 9 degrees turned in), pulled in to 0.32 m because
-    /// this character's arm is 0.43 m long and has to reach the grip. The gun keeps the same
-    /// direction from the eye, so it sits at the same place on screen.
-    /// WHY one profile for every weapon: slice 1 has one pistol. When weapons carry their own
-    /// kick and reload, those parts move to the weapon's data asset; the framing and sway stay.
-    /// </remarks>
+    /// <summary>Designer-owned tuning for held-weapon framing, sway, kick, reload, and true-POV body view.</summary>
     [CreateAssetMenu(menuName = "Close the Deal/Viewmodel Profile", fileName = "ViewmodelProfile")]
     public sealed class ViewmodelProfile : ScriptableObject
     {

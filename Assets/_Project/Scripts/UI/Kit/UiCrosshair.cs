@@ -3,13 +3,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The crosshair, drawn from the player's saved settings: Dot, Cross or Cross + Dot, in Paper White, Cyan or
-    /// Electric Blue, 50–200% size, always with a 1 px Near Black outline so it reads over white walls, sky and
-    /// dark rooms. Redraws only when a setting changes. The HUD's crosshair and the settings screen's live
-    /// preview tiles are the same component. Sizes are whole pixels at 1920 x 1080. Movement and shooting open
-    /// the arms through OpenPixels (speed, air time, spread) and flash it through Pulse.
-    /// </summary>
+    /// <summary>HUD and settings-preview crosshair driven by UiSettings, spread (OpenPixels), and hit pulses.</summary>
     [AddComponentMenu("Close the Deal/UI/Crosshair")]
     public sealed class UiCrosshair : MonoBehaviour, IUiAnimated
     {
@@ -41,10 +35,7 @@ namespace CloseTheDeal.UI
         int _openShown;
         UiTween _pulse;
 
-        /// <summary>
-        /// Extra gap between the centre and the arms, in pixels at 100% size (movement and weapon spread feed it).
-        /// Redraws only when the whole-pixel value changes, so setting it every frame costs nothing.
-        /// </summary>
+        /// <summary>Extra spread gap in 100%-scale pixels; only redraws when whole-pixel rounded value changes.</summary>
         public float OpenPixels
         {
             get => _open;

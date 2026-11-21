@@ -3,13 +3,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The UI kit's canvas in a scene. Shows the title screen whenever the game menu is at the title (not hosting,
-    /// joining or playing), closes its screens when the game takes over, and in a game shows the in-game menu pane
-    /// while the game menu is open; the game menu keeps owning the rule menu open = mouse free = player idle. Also
-    /// reads the device the player is on each frame (before the EventSystem runs) and passes Esc / the pad's B to the
-    /// top screen (in a game, Start closes the whole menu). Built by Close the Deal > Lanes > Set Up UI.
-    /// </summary>
+    /// <summary>Kit canvas root: syncs screen stack with GameMenu/SteamLobby state and routes UI navigation/cancel.</summary>
     [DefaultExecutionOrder(-200)]
     [AddComponentMenu("Close the Deal/UI/UI Root")]
     public sealed class UiRoot : MonoBehaviour
@@ -76,10 +70,7 @@ namespace CloseTheDeal.UI
                 Sync();
         }
 
-        /// <summary>
-        /// The first screen opens here, not in OnEnable: this runs early (order -200), before the EventSystem and the
-        /// focus marks are enabled, and the title needs both to take focus and draw its marks on top.
-        /// </summary>
+        // Delay first screen push until Start (order -200 runs before EventSystem and UiFocusFrame enable).
         void Start()
         {
             _started = true;
@@ -124,10 +115,6 @@ namespace CloseTheDeal.UI
                 _stack.Cancel();
         }
 
-        /// <summary>
-        /// Whether the kit's screens take Esc, B and focus now: out of a game (not while the window zooms into one), and
-        /// in a game while the menu is open. While it is closed those keys are the game's (Esc opens the menu there).
-        /// </summary>
         bool Ours()
         {
             if (_menu == null)
@@ -143,13 +130,6 @@ namespace CloseTheDeal.UI
 
         public ProblemPanel Problem => _problem;
 
-        /// <summary>
-        /// Keeps the screens in step with the game menu and the lobby. Out of a game: the title, with the session
-        /// panel over it while the lobby is busy and the problem panel when it reports one (a problem persists in
-        /// the lobby, so this lands on Title then Problem whatever order the events come in). Into a game: the
-        /// window closes over the view (lane 8's frame zoom) and the screens clear under it. Runs on the menu's and
-        /// the stack's events, never per frame.
-        /// </summary>
         void Sync()
         {
             if (!_menu.OutOfGame)
@@ -212,11 +192,6 @@ namespace CloseTheDeal.UI
             return problem ? _problem : null;
         }
 
-        /// <summary>
-        /// In a game: the first time, the window closes over the view and the title's screens clear under it. After
-        /// that the in-game menu pane follows the game menu: open while it is open, gone (with every screen opened from
-        /// it) when it closes.
-        /// </summary>
         void SyncInGame()
         {
             if (!_inGameView)
@@ -239,7 +214,6 @@ namespace CloseTheDeal.UI
             _menu.KitMenuUp = _stack.Count > 0;
         }
 
-        /// <summary>A player of ours is in the world: close the window over the view, then clear the screens under it.</summary>
         void EnterGame()
         {
             if (_stack.Count == 0)

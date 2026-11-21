@@ -2,16 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Net
 {
-    /// <summary>
-    /// Packs a pose into 10 bytes and back. Position: three unsigned 16-bit numbers,
-    /// little-endian, X then Y then Z, each the fraction of the way across the box
-    /// (clamped to the box). Rotation: one unsigned 32-bit number, little-endian, smallest
-    /// three: the top 2 bits are the index of the largest component (0 = x, 1 = y, 2 = z,
-    /// 3 = w), then the other three components in x, y, z, w order at 10 bits each, each
-    /// mapped from [-1/sqrt(2), +1/sqrt(2)]. The quaternion is negated first if its largest
-    /// component is negative, so the dropped one is always positive.
-    /// Pure and allocation-free. Design: docs/systems/SWITCHBOARD.md.
-    /// </summary>
+    /// <summary>Packs and unpacks a Tower-local position and quaternion into 10 bytes with zero allocation.</summary>
     public static class PoseCodec
     {
         public const int PoseBytes = 10;

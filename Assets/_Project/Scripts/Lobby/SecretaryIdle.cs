@@ -5,13 +5,7 @@ using UnityEngine.Playables;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// Plays the player character's idle clip on a placed figure, such as the secretary, who has
-    /// no motor for PlayerAnimator to read. Visual and local only. The clip is bone animation
-    /// already fitted to this skeleton, so, as PlayerAnimator does, the Animator's humanoid
-    /// avatar is taken off and the clip is written to the bones as it is; the clock is stepped
-    /// by hand so the idle loops.
-    /// </summary>
+    /// <summary>Plays the idle animation clip on the reception secretary via PlayableGraph, pausing off-screen or mid-run.</summary>
     [DisallowMultipleComponent]
     public sealed class SecretaryIdle : MonoBehaviour
     {

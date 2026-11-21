@@ -14,14 +14,7 @@ using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Editor.Lanes
 {
-    /// <summary>
-    /// Builds the movement lane's test scene: a two-floor slice of a tower built to the floor
-    /// convention (spiral stairs, 0.6 m window sill, a slab edge), a street outside the
-    /// windows, and a small course of things to climb, vault, duck under and be refused by. Like the greybox tools it only adds what is missing and
-    /// never rebuilds something already in the scene, so anything moved by hand stays moved.
-    /// The other entry points run the scripted movement check (PlayerMovementSession) from
-    /// the shell; nothing here runs unless invoked.
-    /// </summary>
+    /// <summary>Additive setup for movement test scene, crosshair feed, movement HUD, and sound set.</summary>
     public static class MovementLaneSetup
     {
         const string SceneFolder = "Assets/_Project/Scenes/Lanes";
@@ -85,13 +78,6 @@ namespace CloseTheDeal.Editor.Lanes
             return scene;
         }
 
-        /// <summary>
-        /// A lobby floor, the floor above it and the spiral flight between them, to the numbers
-        /// in docs/systems/TOWER.md and GreyboxTowerSetup (28 m wide, 0.6 m sill, treads from
-        /// 0.8 to 2.6 m around the column, one turn per floor), plus the street the lobby
-        /// windows open onto. Built here rather than from the floor templates because the
-        /// committed templates still hold the older straight-ramp stairs.
-        /// </summary>
         static void EnsureSlice(TowerProfile tower)
         {
             if (GameObject.Find("Slice") != null)
@@ -122,14 +108,12 @@ namespace CloseTheDeal.Editor.Lanes
             BuildStairs(slice, tower, centre);
         }
 
-        /// <summary>Where the stairwell stands: centred across the floor, a walkway's width in front of the spine.</summary>
         static Vector3 StairCentre(TowerProfile tower)
         {
             float outer = StairRadius + CageGap;
             return new Vector3(0f, 0f, Mathf.Min(-tower.MainDepth + outer + StairBackClearance, -outer - 1f));
         }
 
-        /// <summary>The slab above, with a squared-off hole over the treads whose corners are filled at 45°.</summary>
         static void BuildUpperFloor(Transform slice, TowerProfile tower, Vector3 c)
         {
             Transform upper = new GameObject("Upper floor").transform;
@@ -181,14 +165,12 @@ namespace CloseTheDeal.Editor.Lanes
             flight.AddComponent<MeshCollider>().sharedMesh = mesh;
         }
 
-        /// <summary>Unit spoke from the column: 0° toward the windows (+Z), clockwise from above, the way the flight climbs.</summary>
         static Vector3 Spoke(float degrees)
         {
             float rad = degrees * Mathf.Deg2Rad;
             return new Vector3(Mathf.Sin(rad), 0f, Mathf.Cos(rad));
         }
 
-        /// <summary>One flight: a solid helical ramp from the column to the outer radius, one full turn rising one floor.</summary>
         static void FillFlightMesh(Mesh mesh, float rise)
         {
             var vertices = new List<Vector3>();
@@ -221,7 +203,6 @@ namespace CloseTheDeal.Editor.Lanes
             mesh.RecalculateBounds();
         }
 
-        /// <summary>Adds a quad as two triangles, wound so its face points along the given side.</summary>
         static void Quad(List<Vector3> vertices, List<int> triangles, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 outward)
         {
             int start = vertices.Count;
@@ -236,11 +217,6 @@ namespace CloseTheDeal.Editor.Lanes
                 : new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
         }
 
-        /// <summary>
-        /// Things to test the body against, in the lobby and clear of its stairwell and spawns.
-        /// The sizes are the cases the movement doc quotes: a desk, the tallest ledge the
-        /// profile allows, a wall beyond it, a gap only a crouch fits, stepped stairs, and a ramp to slide down.
-        /// </summary>
         static void EnsureCourse(TowerProfile tower)
         {
             if (GameObject.Find("Course") != null)
@@ -295,14 +271,11 @@ namespace CloseTheDeal.Editor.Lanes
             return block;
         }
 
-        // ---- Movement HUD ----------------------------------------------------------------------
-
         const string KitFolder = "Assets/_Project/UI/Kit";
         const float CardWidth = 560f;
         const float CardTop = 92f;
         const float RowHeight = 44f;
 
-        /// <summary>Line, keyboard action, pad action (empty = same), keyboard text override (empty = the binding).</summary>
         static readonly (string Label, string Action, string PadAction, string KeyboardText)[] HelpLines =
         {
             ("Move", "Move", "", ""),
@@ -329,10 +302,7 @@ namespace CloseTheDeal.Editor.Lanes
                 EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         }
 
-        /// <summary>
-        /// Puts movement's crosshair feed on the HUD's crosshair (the UI kit's), so speed, air
-        /// time, spread, hits and kills move the one crosshair. Only adds when missing.
-        /// </summary>
+        /// <summary>Adds CrosshairFeed to the HUD's UiCrosshair when missing.</summary>
         public static bool EnsureCrosshairFeed()
         {
             var menu = UnityEngine.Object.FindAnyObjectByType<CloseTheDeal.UI.GameMenu>(FindObjectsInactive.Include);
@@ -355,7 +325,6 @@ namespace CloseTheDeal.Editor.Lanes
             return true;
         }
 
-        /// <summary>Adds a slide line to a controls card built before it had one: a new line at the bottom, the card grown to fit. Only adds.</summary>
         static bool EnsureSlideCardLine(MovementHud hud)
         {
             var so = new SerializedObject(hud);
@@ -393,7 +362,6 @@ namespace CloseTheDeal.Editor.Lanes
             return true;
         }
 
-        /// <summary>Adds the slide hint line to a movement HUD built before it existed. Only adds when missing.</summary>
         static bool EnsureSlideHint(MovementHud hud)
         {
             var so = new SerializedObject(hud);
@@ -421,18 +389,12 @@ namespace CloseTheDeal.Editor.Lanes
             return true;
         }
 
-        // ---- Movement sounds ------------------------------------------------------------------
-
         const string SoundSetPath = "Assets/_Project/Profiles/MovementSounds.asset";
         const string MovementProfilePath = "Assets/_Project/Profiles/DefaultMovement.asset";
         const string MovementAudioFolder = "Assets/_Project/Audio/Movement";
         const string MixerPath = "Assets/_Project/Audio/UI/GameMixer.mixer";
 
-        /// <summary>
-        /// Makes the movement sound set when missing, gives it the game mixer's SFX bus and any
-        /// Move_*.wav clips in Audio/Movement for slots that are empty, and links it from the
-        /// movement profile when that link is empty. Never overwrites a filled slot (AGENTS.md §4).
-        /// </summary>
+        /// <summary>Creates MovementSounds.asset when missing and links empty clip slots from Audio/Movement.</summary>
         [MenuItem("Close the Deal/Lanes/Set Up Movement Sounds")]
         public static void SetUpMovementSounds()
         {
@@ -486,7 +448,6 @@ namespace CloseTheDeal.Editor.Lanes
                 slot.objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(MovementAudioFolder + "/" + clipName + ".wav");
         }
 
-        /// <summary>Fills an empty variation list with every clip whose name starts with the given name (Move_Footstep_Walk_1.wav and so on).</summary>
         static void FillClips(SerializedObject so, string field, string clipPrefix)
         {
             SerializedProperty list = so.FindProperty(field);
@@ -505,11 +466,7 @@ namespace CloseTheDeal.Editor.Lanes
                 list.GetArrayElementAtIndex(i).objectReferenceValue = found[i];
         }
 
-        /// <summary>
-        /// Adds movement's HUD (the refusal line and the controls help card, from the UI kit's
-        /// prefabs) under the game menu's HUD in the open scene. Only adds when missing; returns
-        /// whether it added. Needs the UI kit (Close the Deal > Lanes > Set Up UI) to have run.
-        /// </summary>
+        /// <summary>Adds movement's HUD (refusal line and controls card) under GameMenu's HUD when missing.</summary>
         public static bool EnsureMovementHud()
         {
             var menu = UnityEngine.Object.FindAnyObjectByType<CloseTheDeal.UI.GameMenu>(FindObjectsInactive.Include);
@@ -613,14 +570,7 @@ namespace CloseTheDeal.Editor.Lanes
             return true;
         }
 
-        // ---- Scripted check, run from the shell ----------------------------------------------
-
-        /// <summary>
-        /// Opens the lane scene and presses Play; PlayerMovementSession takes it from there when
-        /// the editor was started with -movementSession. Shell use, with graphics so it can capture:
-        ///   Unity -batchmode -projectPath &lt;repo&gt; -executeMethod CloseTheDeal.Editor.Lanes.MovementLaneSetup.RunSession
-        ///         -movementSession solo -sessionOut &lt;folder&gt; -local
-        /// </summary>
+        /// <summary>Batch entry point that opens the lane scene and enters Play Mode for PlayerMovementSession.</summary>
         public static void RunSession()
         {
             // -sessionScene opens another scene instead (the tower check uses the greybox tower); it is only read, never saved.
@@ -636,10 +586,7 @@ namespace CloseTheDeal.Editor.Lanes
             EditorApplication.EnterPlaymode();
         }
 
-        /// <summary>
-        /// Builds a development player of the lane scene alone, to be the second instance in a
-        /// host and client check. Shell use: -executeMethod ...MovementLaneSetup.BuildSessionPlayer -sessionBuild &lt;path.app&gt;
-        /// </summary>
+        /// <summary>Builds a development player of the movement lane scene for two-instance host/client checks.</summary>
         public static void BuildSessionPlayer()
         {
             string[] args = Environment.GetCommandLineArgs();

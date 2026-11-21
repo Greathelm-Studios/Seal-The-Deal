@@ -10,17 +10,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Integration
 {
-    /// <summary>
-    /// Host only. Joins the lobby to the briefcase match:
-    /// - the desk's start (everyone ready) starts the match with the firms chosen at the stands;
-    /// - anyone arriving before a match or after a result appears in the lobby, anyone arriving
-    ///   mid-match appears where the match puts them;
-    /// - a while after a result, everyone is walked back to the lobby and the desk reopens;
-    /// - every match starts level: starting guns, full health.
-    /// The match itself moves everyone into their firm's reception when it starts.
-    /// Owner: host. Synced: nothing of its own (positions ride the bodies, the lobby and match
-    /// sync their own state). Design: docs/systems/INTEGRATION.md.
-    /// </summary>
+    /// <summary>Host-only bridge connecting the reception lobby desk to MatchDirector runs and post-match return. Design: docs/systems/INTEGRATION.md.</summary>
     [DisallowMultipleComponent]
     public sealed class LobbyRunFlow : MonoBehaviour
     {
@@ -72,15 +62,12 @@ namespace CloseTheDeal.Integration
 
         bool IsHost => _match != null && _match.IsServerStarted;
 
-        // ---- Lobby start → match -----------------------------------------------------------------
-
         void OnRunStartRequested(IReadOnlyList<RunEntrant> entrants)
         {
             if (!IsHost)
                 return;
 
             StartsRequested++;
-            // Lobby firm 0 / 1 is the match's building A / B: both index the firm by the building it climbs.
             if (_match.HostStartRun(LobbyRoster.ToFirmMap(entrants)))
             {
                 StartsTaken++;
@@ -88,14 +75,11 @@ namespace CloseTheDeal.Integration
                 return;
             }
 
-            // A match is already counting down or running (the host's menu got there first):
-            // reopen the desk rather than leave the lobby saying a run is starting.
+            // Match already active (e.g. host menu shortcut ran first); reopen desk rather than leaving lobby stuck.
             Debug.Log("[Integration] The lobby asked for a start while a match was already on; the desk is open again.");
             if (LobbyRoster.Instance != null)
                 LobbyRoster.Instance.ServerReturnToLobby();
         }
-
-        // ---- Phases --------------------------------------------------------------------------------
 
         void OnPhaseChanged(MatchPhase previous, MatchPhase next)
         {
@@ -111,11 +95,6 @@ namespace CloseTheDeal.Integration
             }
         }
 
-        /// <summary>
-        /// Every match starts level, however it was started (desk or menu): the scene's starting
-        /// guns with full magazines, full health, and anyone dead when the match moved them comes
-        /// back where they were moved to, not where they died last match.
-        /// </summary>
         static void FreshStart()
         {
             StartingLoadout loadout = StartingLoadout.Instance;
@@ -192,9 +171,6 @@ namespace CloseTheDeal.Integration
             return _lobbySpawns[(firm * PlacesPerFirm + slot) % _lobbySpawns.Length];
         }
 
-        // ---- Arrivals ------------------------------------------------------------------------------
-
-        /// <summary>Before a match and after a result, a joiner appears in the lobby; mid-match the match's own spawn stands.</summary>
         void OnPlayerSpawning(NetworkObject player, NetworkConnection connection, int firm, int slot)
         {
             if (_lobbySpawns.Length == 0)

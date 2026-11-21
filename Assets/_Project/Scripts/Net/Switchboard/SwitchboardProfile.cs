@@ -2,10 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Net
 {
-    /// <summary>
-    /// Designer-owned tuning for the prop stream. Runtime only reads it (AGENTS.md §4).
-    /// Design: docs/systems/SWITCHBOARD.md.
-    /// </summary>
+    /// <summary>Designer-owned tuning for the Switchboard prop stream.</summary>
     [CreateAssetMenu(menuName = "Close the Deal/Switchboard Profile", fileName = "SwitchboardProfile")]
     public sealed class SwitchboardProfile : ScriptableObject
     {

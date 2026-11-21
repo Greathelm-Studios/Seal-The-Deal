@@ -86,13 +86,7 @@ namespace CloseTheDeal.Lobby
         }
     }
 
-    /// <summary>
-    /// Who is in reception, which firm they signed in with and whether they are ready.
-    /// Host-owned: clients ask (sign in, ready, fitting room, start) and the host decides,
-    /// then the list reaches every player, late joiners included. Starting raises the one
-    /// host event RunStartRequested with the player-to-firm list; the match flow listens to it.
-    /// Owns / synced / rate: docs/systems/LOBBY.md.
-    /// </summary>
+    /// <summary>Host-authoritative reception roster, firm balance, ready state, and run-start gate. Design: docs/systems/LOBBY.md.</summary>
     [DisallowMultipleComponent]
     public sealed class LobbyRoster : NetworkBehaviour
     {
@@ -109,10 +103,7 @@ namespace CloseTheDeal.Lobby
             LocalRemovedByHost = null;
         }
 
-        /// <summary>
-        /// The run's players as client id to firm index (0 = first firm, 1 = second), the shape the
-        /// match flow's start call takes (MatchDirector.HostStartRun). Allocates; call once per run.
-        /// </summary>
+        /// <summary>Converts entrants to a clientId-to-firm map for MatchDirector.HostStartRun (allocates once per run).</summary>
         public static Dictionary<int, int> ToFirmMap(IReadOnlyList<RunEntrant> entrants)
         {
             var map = new Dictionary<int, int>(entrants.Count);
@@ -195,7 +186,7 @@ namespace CloseTheDeal.Lobby
             NetworkManager.SceneManager.OnClientLoadedStartScenes += OnClientLoaded;
             ServerManager.OnRemoteConnectionState += OnRemoteConnectionState;
 
-            // Anyone already in (the host's own client can load before this object starts).
+            // Host client can load start scenes before LobbyRoster.OnStartServer runs.
             foreach (NetworkConnection conn in ServerManager.Clients.Values)
             {
                 if (conn.LoadedStartScenes(true))
@@ -215,9 +206,7 @@ namespace CloseTheDeal.Lobby
         public override void OnStartClient()
         {
             base.OnStartClient();
-            // From here on, additions are arrivals. Everything before was already in the room.
-            // FishNet can replay the initial list just after this call, so arrivals count from
-            // a moment later; someone joining in that moment simply isn't greeted.
+            // Wait InitialSyncSeconds before treating SyncList additions as new arrivals.
             _listening = false;
             _listenAfter = Time.unscaledTime + InitialSyncSeconds;
             _nameSent = false;
@@ -231,7 +220,6 @@ namespace CloseTheDeal.Lobby
             _listening = false;
         }
 
-        /// <summary>Our Steam name replaces the default once our entry exists. Local test mode keeps "Associate N".</summary>
         void SendNameOnce()
         {
             if (_nameSent || !SteamService.IsReady || !TryGetLocal(out _))
@@ -240,8 +228,6 @@ namespace CloseTheDeal.Lobby
             _nameSent = true;
             CmdSetName(SteamService.LocalName);
         }
-
-        // ---- Reading -------------------------------------------------------------------------
 
         public int IndexOf(int clientId)
         {
@@ -291,12 +277,7 @@ namespace CloseTheDeal.Lobby
             }
         }
 
-        /// <summary>
-        /// The start rule (a proposal): every player ready and nobody in the fitting room, then at
-        /// least one per firm and the firms within the fairness limit. When only the firm check
-        /// fails and Rules.AllowShortHandedStart is on, the host may still start after a second
-        /// hold (NeedsConfirm).
-        /// </summary>
+        /// <summary>Evaluates whether the host can start directly, needs a short-handed confirm, or is blocked.</summary>
         public StartState Evaluate(out StartBlock reason)
         {
             reason = StartBlock.None;
@@ -339,7 +320,7 @@ namespace CloseTheDeal.Lobby
         /// <summary>The smaller firm (the one a new sign-in would help), or 0 on a tie.</summary>
         public int SmallerFirm() => FirmSize(1) < FirmSize(0) ? 1 : 0;
 
-        /// <summary>The player's next step, for the guidance line. Cheap; call on roster changes, not per frame.</summary>
+        /// <summary>Local player's next guidance step; call on roster changes.</summary>
         public LobbyStep StepFor(LobbyMember me, bool isHost)
         {
             if (_runInProgress.Value)
@@ -356,8 +337,6 @@ namespace CloseTheDeal.Lobby
                 return LobbyStep.WaitForHost;
             return state == StartState.Ready ? LobbyStep.StartRun : LobbyStep.StartShortHanded;
         }
-
-        // ---- Requests (any player) -----------------------------------------------------------
 
         public void RequestFirm(int firm) => CmdChooseFirm((byte)firm);
         public void RequestReady(bool ready) => CmdSetReady(ready);
@@ -381,9 +360,9 @@ namespace CloseTheDeal.Lobby
             Debug.Log($"[Lobby] The host removed {name} (client {clientId}).");
             RpcKicked(name);
             TargetYouWereRemoved(target);
-            // Off the board at once: the transport's own "stopped" can lag behind a host-side disconnect.
+            // Remove from board immediately; transport disconnect lags behind.
             _members.RemoveAt(index);
-            // A moment's grace so the "you were removed" message reaches them before the line drops.
+            // Brief grace so TargetYouWereRemoved arrives before disconnecting.
             StartCoroutine(DisconnectSoon(target));
         }
 
@@ -479,7 +458,7 @@ namespace CloseTheDeal.Lobby
 
             LobbyMember member = _members[index];
             if (fitting && _runInProgress.Value)
-                return; // A fitting request that lands after the start would never be cleared.
+                return; // Ignore late Fitting=true requests once the run has started.
             MemberState next = fitting ? MemberState.Fitting : MemberState.Browsing;
             if (member.State == next)
                 return;
@@ -518,10 +497,7 @@ namespace CloseTheDeal.Lobby
             RunStartRequested?.Invoke(entrants);
         }
 
-        /// <summary>
-        /// Host only: a run has started (whether from the lobby desk or the match menu).
-        /// Marks the lobby as in-progress so reception commands stay locked mid-match.
-        /// </summary>
+        /// <summary>Host only. Marks the lobby run as active so reception actions stay locked.</summary>
         public void ServerBeginRun()
         {
             if (!IsServerStarted)
@@ -530,10 +506,7 @@ namespace CloseTheDeal.Lobby
             _runInProgress.Value = true;
         }
 
-        /// <summary>
-        /// Host only: the run is over and everyone is back in reception. Clears every ready so the
-        /// next start is a fresh decision. The match flow calls this; nothing in this lane does.
-        /// </summary>
+        /// <summary>Host only. Clears ready/fitting states and reopens the desk after a run.</summary>
         public void ServerReturnToLobby()
         {
             if (!IsServerInitialized)
@@ -544,13 +517,11 @@ namespace CloseTheDeal.Lobby
             {
                 LobbyMember member = _members[i];
                 if (member.State == MemberState.Browsing)
-                    continue; // Ready and Fitting both go back to Browsing: a fresh decision, and nobody stuck in a fitting room they left.
+                    continue;
                 member.State = MemberState.Browsing;
                 _members[i] = member;
             }
         }
-
-        // ---- Replies -------------------------------------------------------------------------
 
         [TargetRpc]
         void TargetFirmChosen(NetworkConnection target, byte firm) => OnFirmChosen?.Invoke(firm);
@@ -566,8 +537,6 @@ namespace CloseTheDeal.Lobby
 
         [ObserversRpc]
         void RpcRunStarting() => OnRunStarting?.Invoke();
-
-        // ---- Host bookkeeping ----------------------------------------------------------------
 
         void OnClientLoaded(NetworkConnection conn, bool asServer)
         {
@@ -601,7 +570,6 @@ namespace CloseTheDeal.Lobby
             });
         }
 
-        /// <summary>"Associate 3": used until (or unless) the player's Steam name arrives.</summary>
         string DefaultName()
         {
             int number = 1;
@@ -623,7 +591,7 @@ namespace CloseTheDeal.Lobby
             if (string.IsNullOrEmpty(name))
                 return string.Empty;
 
-            // No rich-text tags from other players on our screens.
+            // Strip rich-text tags from remote player names.
             var chars = new System.Text.StringBuilder(Mathf.Min(name.Length, MaxNameLength));
             for (int i = 0; i < name.Length && chars.Length < MaxNameLength; i++)
             {
@@ -635,11 +603,9 @@ namespace CloseTheDeal.Lobby
             return chars.ToString().Trim();
         }
 
-        // ---- Change events -------------------------------------------------------------------
-
         void OnMembersChange(SyncListOperation op, int index, LobbyMember previous, LobbyMember next, bool asServer)
         {
-            // The host hears every change twice; UI and the secretary act once, on the client side.
+            // Host fires OnChange twice; UI and secretary react once on the client side.
             if (asServer)
                 return;
 
@@ -652,7 +618,6 @@ namespace CloseTheDeal.Lobby
             OnChanged?.Invoke();
         }
 
-        /// <summary>Turns a list change into the moments the secretary and sound care about: an arrival, a ready or un-ready.</summary>
         void ReportMoment(SyncListOperation op, LobbyMember previous, LobbyMember next)
         {
             if (op == SyncListOperation.Add)

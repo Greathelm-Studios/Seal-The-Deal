@@ -6,12 +6,7 @@ using UnityEngine.InputSystem;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// Settings › Controls: look sensitivity, invert and stick speed (shown once the camera reads InputPrefs), and the
-    /// key list: every action with its key and pad button. Once the input reader applies custom keys, each key is a
-    /// button: press it, press the new key (Esc cancels); a key another action uses asks before moving it there.
-    /// Rebinds are kept as binding-override JSON in InputPrefs. The actions asset itself is never changed.
-    /// </summary>
+    /// <summary>Settings Controls tab: look preferences and key binding overrides stored in InputPrefs.</summary>
     [AddComponentMenu("Close the Deal/UI/Settings Page - Controls")]
     public sealed class ControlsPage : UiSettingsPage
     {
@@ -61,7 +56,6 @@ namespace CloseTheDeal.UI
 
         public bool Listening => _operation != null;
 
-        /// <summary>The pad's B cancels a key capture too (the capture itself only listens to keys and the mouse).</summary>
         void Update()
         {
             if (_operation != null && Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame)
@@ -141,7 +135,6 @@ namespace CloseTheDeal.UI
 
         public override void Hidden() => CancelListening();
 
-        /// <summary>The look rows and the key list fill this tab: no room for the changes summary.</summary>
         public override bool ShowsChanges => false;
 
         void OnSensitivity(int percent) { InputPrefs.LookSensitivity = percent / 100f; RaiseSaved(); }
@@ -150,9 +143,6 @@ namespace CloseTheDeal.UI
 
         void OnStickSpeed(int percent) { InputPrefs.StickLookSpeed = percent / 100f; RaiseSaved(); }
 
-        // ---- The key list ---------------------------------------------------------------------
-
-        /// <summary>Pad names follow the pad in use; not while a row is listening, which would wipe its prompt.</summary>
         void OnDeviceChanged()
         {
             if (_operation == null)
@@ -196,14 +186,12 @@ namespace CloseTheDeal.UI
             }
         }
 
-        /// <summary>The keyboard binding, or the mouse one for actions on a mouse button (Fire, Aim).</summary>
         static int KeyIndex(InputAction action, string part)
         {
             int index = BindingIndex(action, part, "<Keyboard>");
             return index >= 0 ? index : BindingIndex(action, part, "<Mouse>");
         }
 
-        /// <summary>The binding of this action (or this side of a two-way action) on the given device, or -1.</summary>
         static int BindingIndex(InputAction action, string part, string device)
         {
             for (int i = 0; i < action.bindings.Count; i++)
@@ -230,7 +218,6 @@ namespace CloseTheDeal.UI
             return string.IsNullOrEmpty(path) ? "—" : UiGlyphs.Name(path, UiDeviceKind.KeyboardMouse);
         }
 
-        /// <summary>The pad button as printed on the player's pad: PlayStation names on a PlayStation pad, Xbox names otherwise.</summary>
         static string PadName(InputAction action, int index)
         {
             if (index < 0)
@@ -238,8 +225,6 @@ namespace CloseTheDeal.UI
             UiDeviceKind kind = UiGlyphs.Current == UiDeviceKind.PlayStation ? UiDeviceKind.PlayStation : UiDeviceKind.Xbox;
             return UiGlyphs.Name(action.bindings[index].effectivePath, kind);
         }
-
-        // ---- Rebinding ------------------------------------------------------------------------
 
         void StartListening(BindingRow row)
         {
@@ -317,10 +302,6 @@ namespace CloseTheDeal.UI
             return false;
         }
 
-        /// <summary>
-        /// The key belongs to something this page can't give a new key (moving, help, the slots): taking it would leave
-        /// that with no key and no row to restore it, so the press is refused and nothing changes.
-        /// </summary>
         void RefuseFixedKey(string path, InputAction other, int otherIndex)
         {
             LoadWorking();
@@ -330,10 +311,6 @@ namespace CloseTheDeal.UI
             UiSound.Play(UiSoundEvent.Error);
         }
 
-        /// <summary>
-        /// Another binding already on this key. One held by an action with no row here (moving, Help, the slots) is
-        /// found first, so the press is refused rather than offered.
-        /// </summary>
         bool FindClash(InputAction action, int index, string path, out InputAction other, out int otherIndex)
         {
             other = null;
@@ -429,7 +406,7 @@ namespace CloseTheDeal.UI
 
         string LabelOf(BindingRow row) => NameOfAction(row.Action, row.Part);
 
-        /// <summary>The name a player reads for an action (the Player map's names are code names).</summary>
+        /// <summary>Display label for a Player-map action.</summary>
         public static string NameOfAction(string action, string part)
         {
             switch (action)

@@ -1,9 +1,3 @@
-// AI-GENERATED SOURCE FILE
-// Generator : Codex (GPT-6)
-// Generated : 2026-11-12
-// Prompt    : Give the STDMC player character animated 2D eye cards.
-// Reviewed  : NOT YET REVIEWED BY A HUMAN
-// Summary   : Flat eye artwork with an independently moving iris and cutout depth.
 Shader "Close the Deal/Character Eye Card"
 {
     Properties
@@ -19,7 +13,7 @@ Shader "Close the Deal/Character Eye Card"
         Tags { "RenderPipeline" = "UniversalPipeline" "RenderType" = "TransparentCutout" "Queue" = "AlphaTest" }
         Cull Back
         ZWrite On
-        // WHY: keep the closely fitted cards clear of skin at distance, with normal depth occlusion by hair.
+        // Keep fitted eye cards clear of face skin at distance while preserving hair occlusion.
         Offset 0, -1
 
         HLSLINCLUDE
@@ -32,12 +26,11 @@ Shader "Close the Deal/Character Eye Card"
             float4 _EyePose;
         CBUFFER_END
 
-        // The same per-camera near clip as CharacterToon.shader: in the body view a player's
-        // own eye cards are not drawn for their own eye. 0 for every other camera.
-        float _BodyViewNearClip;
-        float _BodyViewClipBack;
+        // The same per-camera world-space head sphere as CharacterToon.shader: xyz = head centre,
+        // w = radius^2 for the owner's own camera, 0 for mirrors, shadows and other players.
+        float4 _BodyViewHeadSphere;
 
-        // WHY: these atlas dimensions and card proportions are the artist contract in CHARACTER_EYES.md.
+        // Must match CHARACTER_EYES.md atlas layout and card aspect ratio.
         static const float2 AtlasGrid = float2(3.0, 4.0);
         static const float EyeHalves = 2.0;
         static const float CardWidthToHeight = 52.0 / 40.0;
@@ -57,12 +50,14 @@ Shader "Close the Deal/Character Eye Card"
             float2 uv : TEXCOORD0;
             float2 atlasUV : TEXCOORD1;
             half3 normalWS : TEXCOORD2;
+            float3 positionWS : TEXCOORD3;
         };
 
         Varyings Vert(Attributes input)
         {
             Varyings output;
-            output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+            output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
+            output.positionCS = TransformWorldToHClip(output.positionWS);
             output.normalWS = TransformObjectToWorldNormal(input.normalOS);
             output.uv = input.uv;
             float2 cell = float2(_EyePose.y + (input.uv.x + input.eye.x) / EyeHalves,
@@ -73,11 +68,12 @@ Shader "Close the Deal/Character Eye Card"
 
         half4 Cutout(Varyings input)
         {
-            // The same ball around the owner's head as CharacterToon.shader's ClipNearOwnEye.
-            float2 fromCentre = abs(input.positionCS.xy / _ScaledScreenParams.xy * 2.0 - 1.0);
-            float2 sideways = fromCentre * input.positionCS.w / float2(UNITY_MATRIX_P[0][0], abs(UNITY_MATRIX_P[1][1]));
-            float ahead = input.positionCS.w + _BodyViewClipBack;
-            clip(dot(sideways, sideways) + ahead * ahead - _BodyViewNearClip * _BodyViewNearClip);
+            // The same world-space head sphere as CharacterToon.shader's ClipNearOwnEye.
+            if (_BodyViewHeadSphere.w > 0.0)
+            {
+                float3 toHead = input.positionWS - _BodyViewHeadSphere.xyz;
+                clip(dot(toHead, toHead) - _BodyViewHeadSphere.w);
+            }
             half4 lids = SAMPLE_TEXTURE2D(_Lids, sampler_Lids, input.atlasUV);
             clip(lids.a - Cutoff);
             return lids;

@@ -1,36 +1,3 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Sonnet 5.5 (Claude Code)
-//  Generated : 2026-11-15
-//  Prompt    : Harvey: "create a blood splatter shader that fits in within the games artstyle
-//              that paints around objects and ontop of them when hit by these attacks."
-//  Modified  : Claude Fable 5.2, 2026-11-15 — restyled to the art bible: spiked shape, cooler
-//              colours, lit and shaded tones from the main light, no rim (Harvey: "it looks
-//              very out of place versus the rest of the games art style").
-//  Modified  : Claude Fable 5.2, 2026-11-15 — four kinds of splat picked by the seed (splash,
-//              slash, spray, blot with drips) and a subtle world-size pixel grid (Harvey: "Add
-//              more splatter variety ... and make it a little more pixelated").
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : A flat, cartoon blood splat drawn onto whatever geometry is inside a box. The
-//              box is a plain cube; each pixel of it looks up the scene depth behind it, works
-//              out where that surface is in the box's own space, and paints the splat there, so
-//              the splat wraps over floors, walls, desks and props instead of lying on a quad.
-// -----------------------------------------------------------------------------
-//
-// WHY this and not the URP Decal feature: the Decal renderer feature is not enabled in this
-// project and the renderer assets are not ours to edit, so this does the same job on its own.
-// It needs the camera depth texture (on in PC_RPAsset).
-//
-// Look: the art bible's characters are one base colour plus one hard-edged cut colour, no
-// gradients. Blood follows: one deep cool crimson where the main light reaches the surface, one
-// colder, darker cut tone where it is in shade, no outline (the rim is off by default), every
-// edge a hard edge with one pixel of anti-aliasing. The shape is one sharp spiked splash, not a
-// blob with many droplets (bible §20: one memorable shape; no thick outlines; cool palette).
-// The shape is generated here from a per-splat seed, so no two look alike and no texture exists.
-//
-// Known trade-offs (also in docs/systems/BLOOD.md): it paints on anything inside the box that
-// writes depth, including a moving character; and the surface direction comes from depth
-// derivatives, which is noisy on the one-pixel edge of a depth jump.
 Shader "Close the Deal/Blood Splat"
 {
     Properties
@@ -64,14 +31,10 @@ Shader "Close the Deal/Blood Splat"
             Tags { "LightMode" = "UniversalForward" }
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
-            // WHY front faces are culled and the depth test is off: the box is only a volume to
-            // find surfaces in. Drawing its back faces with no depth test fills the screen area
-            // of the box even when the camera is inside it, and the depth texture lookup below
-            // decides what actually gets painted.
+            // Cull front faces with depth test off so projection still works when the camera is inside the box.
             Cull Front
             ZTest Always
-            // Skips pixels a character covers: CharacterToon.shader sets bit 8 there. Without
-            // this a body walking through a splat's box would wear the splat.
+            // Skip pixels marked with stencil bit 8 by CharacterToon.shader.
             Stencil { Ref 8 ReadMask 8 Comp NotEqual }
 
             HLSLPROGRAM
@@ -102,11 +65,8 @@ Shader "Close the Deal/Blood Splat"
                 UNITY_DEFINE_INSTANCED_PROP(float4, _Params)
             UNITY_INSTANCING_BUFFER_END(Props)
 
-            /// Where the box is thinner than this (as a fraction of its depth) the splat fades, so a surface right at the back of the box does not cut off hard.
             #define DEPTH_FADE 0.12
-            /// The most spikes a splash can have; about a quarter are left out of each.
             #define SPIKES 7
-            /// Everything is drawn inside a circle of this radius in splat space; the box edge is at 1.
             #define SPLAT_SCALE 1.1
 
             struct Attributes

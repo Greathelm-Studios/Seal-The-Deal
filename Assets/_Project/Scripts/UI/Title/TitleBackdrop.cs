@@ -2,13 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI.Title
 {
-    /// <summary>
-    /// The title screen's live set: a white window frame seen from inside and slightly below, dividing the
-    /// game's own sky into panes. This component only adds the idle life: the camera pivot breathes a few
-    /// centimetres, the sun slowly shifts, and the sky plays planes more often than in the game.
-    /// It moves the pivot and the sun it is given, never the authored scene objects, and puts the skybox
-    /// back when it is disabled so nothing leaks into a gameplay scene. Design: docs/systems/UI_TITLE.md.
-    /// </summary>
+    /// <summary>Drives idle camera rig breathing, sun swing, and plane cadence on the title backdrop.</summary>
     public sealed class TitleBackdrop : MonoBehaviour
     {
         [Header("Camera breathing")]
@@ -44,8 +38,7 @@ namespace CloseTheDeal.UI.Title
 
         void Awake() => CacheBase();
 
-        // WHY lazily as well: Awake does not run on a component in an edit-mode scene, and the capture tool
-        // poses it there; without the cache the pivot would be driven from the origin.
+        // Awake does not run in edit-mode scenes when capture tools pose this; cache lazily too.
         void CacheBase()
         {
             if (_hasBase) return;
@@ -86,10 +79,7 @@ namespace CloseTheDeal.UI.Title
         }
     }
 
-    /// <summary>
-    /// Where the title screen leaves room for the UI lane's lockup and menu. All rectangles are fractions of
-    /// the screen, measured from the top left, inside a centred 16:9 frame so they hold on 21:9.
-    /// </summary>
+    /// <summary>Normalized 16:9-framed safe rectangles for title lockup and sky window.</summary>
     public static class TitleSafeAreas
     {
         /// <summary>Calm white lower band: the title lockup and the menu go here and nowhere above it.</summary>

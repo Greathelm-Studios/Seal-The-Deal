@@ -9,15 +9,7 @@ using UnityEngine.Rendering;
 
 namespace CloseTheDeal.Editor.Greybox
 {
-    /// <summary>
-    /// Builds the greybox floor template prefabs, the spiral stair mesh, the locked door prefab
-    /// and the tower profile, and places the Tower object in the scene. Templates follow the
-    /// shell in docs/systems/TOWER.md and read their dimensions from the tower profile, so
-    /// change the profile and rebuild rather than editing the prefabs. "Rebuild Floor
-    /// Templates" is the one deliberate overwrite, and only of files the tool still owns:
-    /// a floor someone has edited is left alone (GeneratedAssetGuard). The tower profile is
-    /// the designer's: the tool only fills a template slot that is empty.
-    /// </summary>
+    /// <summary>Generates greybox floor template prefabs, spiral stair mesh, locked door prefab, and Tower object.</summary>
     public static class GreyboxTowerSetup
     {
         const string FloorFolder = "Assets/_Project/Floors";
@@ -33,8 +25,7 @@ namespace CloseTheDeal.Editor.Greybox
 
         const float Slab = 0.2f;
         const float Wall = 0.2f;
-        /// <summary>Façade sill height, metres. 0.6 since 2026-11-12 (Alex: taller glass); must match the kit's SILL.</summary>
-        const float SillHeight = 0.6f;
+        const float SillHeight = 0.6f; // Must match art kit SILL height.
         const float PillarWidth = 0.4f;
         const float PillarSpacing = 4f;
         const float DoorWidth = 1.2f;
@@ -75,11 +66,7 @@ namespace CloseTheDeal.Editor.Greybox
             GreyboxSceneSetup.SetUpScene();
         }
 
-        /// <summary>
-        /// Rebuilds the floor templates the tool still owns, and nothing else: no scene is opened
-        /// or saved. For lanes and integration branches that must not touch Greybox.unity.
-        /// Templates a person has edited are skipped and listed in the log.
-        /// </summary>
+        /// <summary>Rebuilds tool-owned floor templates only (does not open or save Greybox.unity).</summary>
         [MenuItem("Close the Deal/Greybox/Rebuild Floor Templates Only")]
         public static void RebuildFloorTemplatesOnly()
         {
@@ -96,8 +83,6 @@ namespace CloseTheDeal.Editor.Greybox
             EnsureTowerObject(profile);
         }
 
-        // ---- Profile and templates -----------------------------------------------------------
-
         static TowerProfile EnsureProfile()
         {
             var profile = AssetDatabase.LoadAssetAtPath<TowerProfile>(TowerProfilePath);
@@ -113,7 +98,6 @@ namespace CloseTheDeal.Editor.Greybox
             return profile;
         }
 
-        /// <summary>The shared pieces every template references: stair mesh, materials, the door prefab.</summary>
         struct StairKit
         {
             public Mesh Flight;
@@ -164,7 +148,6 @@ namespace CloseTheDeal.Editor.Greybox
                 slot.objectReferenceValue = template;
         }
 
-        /// <summary>Writes one floor prefab. Saving over an existing path keeps its GUID.</summary>
         static FloorTemplate BuildTemplate(TowerProfile profile, string name, FloorKind kind, int variant, bool overwrite, GreyboxPropSetup.PropSet props, StairKit kit)
         {
             string path = $"{FloorFolder}/Floor_{name}.prefab";
@@ -191,7 +174,6 @@ namespace CloseTheDeal.Editor.Greybox
             return prefab.GetComponent<FloorTemplate>();
         }
 
-        /// <summary>Everything the tool builds into a floor stands still, so all of it is batched. Loose furniture and the door are spawned separately.</summary>
         static Transform[] StillParts(Transform floor)
         {
             var groups = new List<Transform>();
@@ -204,8 +186,6 @@ namespace CloseTheDeal.Editor.Greybox
 
             return groups.ToArray();
         }
-
-        // ---- Shell ---------------------------------------------------------------------------
 
         static void BuildShell(Transform floor, TowerProfile p, FloorKind kind)
         {
@@ -240,11 +220,6 @@ namespace CloseTheDeal.Editor.Greybox
             }
         }
 
-        /// <summary>
-        /// The main-floor slab around a square opening over the stairwell, with the opening's
-        /// corners filled by 45° boxes so what is left is close to the circle of the treads.
-        /// The gaps that remain are under 0.35 m, narrower than a player.
-        /// </summary>
         static void BuildSlabWithStairwell(Transform shell, TowerProfile p)
         {
             float half = p.Width * 0.5f;
@@ -267,7 +242,6 @@ namespace CloseTheDeal.Editor.Greybox
             }
         }
 
-        /// <summary>The rival-facing side: a sill and pillars, open above the sill so sightlines always line up.</summary>
         static void BuildWindowWall(Transform shell, TowerProfile p)
         {
             float half = p.Width * 0.5f;
@@ -281,14 +255,6 @@ namespace CloseTheDeal.Editor.Greybox
             }
         }
 
-        /// <summary>
-        /// One breakable pane in each window bay, from the sill to the slab above, in their own
-        /// "Windows" group so the tower never merges them (a merged mesh can't vanish when it
-        /// breaks). The glass registry numbers them by building, floor and order, so every
-        /// machine breaks the same pane. The middle bay of the lobby and of each checkpoint floor
-        /// is left open as a doorway: the briefcase match's plaza and skybridges meet the towers
-        /// there (MATCH.md). The roof has a parapet, not windows.
-        /// </summary>
         static void BuildWindowPanes(Transform floor, TowerProfile p, FloorKind kind, Material glass)
         {
             if (kind == FloorKind.Roof)
@@ -318,14 +284,12 @@ namespace CloseTheDeal.Editor.Greybox
             }
         }
 
-        /// <summary>The first material the glass profile counts as glass: what the kit's windows use.</summary>
         static Material WindowGlassMaterial()
         {
             var profile = AssetDatabase.LoadAssetAtPath<GlassProfile>(GlassProfilePath);
             return profile != null && profile.GlassMaterials != null && profile.GlassMaterials.Length > 0 ? profile.GlassMaterials[0] : null;
         }
 
-        /// <summary>The wall between main floor and spine with a door per room, and the walls between rooms.</summary>
         static void BuildSpinePartitions(Transform shell, TowerProfile p)
         {
             float h = p.FloorHeight;
@@ -347,14 +311,6 @@ namespace CloseTheDeal.Editor.Greybox
             }
         }
 
-        // ---- Spiral stairs -------------------------------------------------------------------
-
-        /// <summary>
-        /// The open spiral in the middle of the floor. Every floor but the roof has a flight up
-        /// and its column. Floors with a locked door also get a glass cage around the treads,
-        /// open only where the flight from below arrives, so the door can't be stepped around.
-        /// The lobby flight has no door: the run starts open.
-        /// </summary>
         static void BuildStairs(Transform floor, TowerProfile p, FloorKind kind, StairKit kit)
         {
             if (kind == FloorKind.Roof)
@@ -387,7 +343,6 @@ namespace CloseTheDeal.Editor.Greybox
             marker.AddComponent<PropMarker>().Prefab = kit.Door;
         }
 
-        /// <summary>Glass panels from floor to ceiling around the treads, leaving the arrival side open.</summary>
         static void BuildCage(Transform stairs, TowerProfile p, Material glass)
         {
             float step = 360f / CagePanels;
@@ -416,7 +371,6 @@ namespace CloseTheDeal.Editor.Greybox
             column.transform.localScale = new Vector3(ColumnRadius * 2f, height * 0.5f, ColumnRadius * 2f);
         }
 
-        /// <summary>Where the stairwell stands: centred across the floor, set back so a walkway stays behind it.</summary>
         static Vector3 StairCentre(TowerProfile p)
         {
             float outer = StairRadius + CageGap;
@@ -424,18 +378,12 @@ namespace CloseTheDeal.Editor.Greybox
             return new Vector3(0f, 0f, Mathf.Min(z, -outer - 1f));
         }
 
-        /// <summary>Clockwise from above, 0° toward the rival tower (+Z), 90° toward +X.</summary>
         static Vector3 Direction(float degrees)
         {
             float rad = degrees * Mathf.Deg2Rad;
             return new Vector3(Mathf.Sin(rad), 0f, Mathf.Cos(rad));
         }
 
-        /// <summary>
-        /// One flight: a solid helical tread from the column to the outer radius, one full turn
-        /// rising exactly one floor. Saved as an asset so the templates and their colliders
-        /// share it; rebuilding updates it in place and keeps its GUID.
-        /// </summary>
         static Mesh EnsureFlightMesh(TowerProfile p, bool overwrite)
         {
             var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(FlightMeshPath);
@@ -495,7 +443,6 @@ namespace CloseTheDeal.Editor.Greybox
             mesh.RecalculateBounds();
         }
 
-        /// <summary>Adds a quad as two triangles, wound so its face points along the given side.</summary>
         static void Quad(List<Vector3> vertices, List<int> triangles, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 outward)
         {
             int start = vertices.Count;
@@ -546,11 +493,6 @@ namespace CloseTheDeal.Editor.Greybox
             return door;
         }
 
-        /// <summary>
-        /// The networked locked door: a slab across the treads from the column to the outer
-        /// edge, and up to just under the flight above, so it can't be jumped or mantled.
-        /// Pivot at the bottom centre; spawned by the host at the template's door marker.
-        /// </summary>
         static NetworkObject EnsureDoorPrefab(TowerProfile p, bool overwrite)
         {
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(DoorPrefabPath);
@@ -583,13 +525,6 @@ namespace CloseTheDeal.Editor.Greybox
             return prefab.GetComponent<NetworkObject>();
         }
 
-        // ---- Contents ------------------------------------------------------------------------
-
-        /// <summary>
-        /// Static set dressing as boxes, loose furniture as prop markers. Each floor stays well
-        /// under the 16-prop cap in PROPS.md (the locked door counts as one). Everything keeps
-        /// clear of the stairwell in the middle-back of the floor.
-        /// </summary>
         static void BuildContents(Transform floor, TowerProfile p, FloorKind kind, int variant, GreyboxPropSetup.PropSet props)
         {
             Transform contents = Group(floor, "Contents");
@@ -616,7 +551,6 @@ namespace CloseTheDeal.Editor.Greybox
             }
         }
 
-        /// <summary>The board table to one side of the stairwell, three chairs down each long side.</summary>
         static void BuildBoardroom(Transform contents, TowerProfile p, GreyboxPropSetup.PropSet props)
         {
             float midZ = -p.MainDepth * 0.5f;
@@ -631,11 +565,6 @@ namespace CloseTheDeal.Editor.Greybox
             }
         }
 
-        /// <summary>
-        /// Three greybox office layouts: desk rows (12 props), two glass rooms (4), an open plan
-        /// with a lounge (7). Positions are fractions of the floor, so a bigger footprint gives
-        /// wider aisles rather than a crowd in the middle.
-        /// </summary>
         static void BuildOffice(Transform contents, TowerProfile p, int variant, GreyboxPropSetup.PropSet props)
         {
             float half = p.Width * 0.5f;
@@ -670,7 +599,6 @@ namespace CloseTheDeal.Editor.Greybox
             }
         }
 
-        /// <summary>A 4 × 3 m room with three walls, open toward the windows, a fixed table and two loose chairs. Greybox: solid walls.</summary>
         static void GlassRoom(Transform contents, Vector3 centre, GreyboxPropSetup.PropSet props)
         {
             const float roomW = 4f, roomD = 3f, glassH = 2.5f;
@@ -709,8 +637,6 @@ namespace CloseTheDeal.Editor.Greybox
             return points;
         }
 
-        // ---- Scene ---------------------------------------------------------------------------
-
         static void EnsureTowerObject(TowerProfile profile)
         {
             TowerBuilder builder = Object.FindAnyObjectByType<TowerBuilder>();
@@ -730,8 +656,6 @@ namespace CloseTheDeal.Editor.Greybox
             if (builder.GetComponent<PropSpawner>() == null)
                 builder.gameObject.AddComponent<PropSpawner>();
         }
-
-        // ---- Helpers -------------------------------------------------------------------------
 
         struct RoomBounds
         {

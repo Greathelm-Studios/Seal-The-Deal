@@ -1,15 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Fable 5.2 (Claude Code)
-#  Generated : 2026-11-13
-#  Prompt    : Alex: "set up an fps viewmodel with the characters model we are using"
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Run between the character-animation skill's `retarget` and `export` steps.
-#              After an FBX round trip Blender holds this character's armature at object
-#              scale 0.01; exported like that, every bone imports into Unity 100 times out.
-#              This applies the scale and rescales the bone location keys to match. Same
-#              recipe the body clips (STDMC_Moves.fbx) were made with; see README.md here.
-# -----------------------------------------------------------------------------
 #
 # Usage:
 #   blender -b <work.blend> --python unit_scale.py -- <out.blend> <skill scripts dir>

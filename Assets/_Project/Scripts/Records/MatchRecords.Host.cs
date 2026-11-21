@@ -9,10 +9,6 @@ using UnityEngine;
 
 namespace CloseTheDeal.Records
 {
-    /// <summary>
-    /// The host's half: counts every player's match from host-side events only, while the match
-    /// is Running, and sends each change out. Nothing here runs on a client.
-    /// </summary>
     public sealed partial class MatchRecords
     {
         struct LastHit
@@ -36,8 +32,6 @@ namespace CloseTheDeal.Records
 
         bool IsHost => _net != null && _net.IsServerStarted;
         bool IsHostCounting => IsHost && _running;
-
-        // ---- Hooks -------------------------------------------------------------------------------
 
         void HostHookNetwork(NetworkManager net)
         {
@@ -94,7 +88,7 @@ namespace CloseTheDeal.Records
             UnwatchThrows();
         }
 
-        /// <summary>Pickups used up without a release (a gun taken into a slot) never unsubscribe themselves.</summary>
+        // Unhook consumed pickups (e.g. guns taken into slots) that never fire Released.
         void UnwatchThrows()
         {
             foreach (Pickup pickup in _watchedThrows)
@@ -121,8 +115,6 @@ namespace CloseTheDeal.Records
             match.OnFloorOpened -= HostFloorOpened;
             match.OnClosed -= HostClosed;
         }
-
-        // ---- Phase -------------------------------------------------------------------------------
 
         void HostPhaseChanged(MatchPhase previous, MatchPhase next)
         {
@@ -215,8 +207,6 @@ namespace CloseTheDeal.Records
             }
         }
 
-        // ---- Players -----------------------------------------------------------------------------
-
         void HostRosterChanged()
         {
             if (IsHostCounting)
@@ -254,7 +244,6 @@ namespace CloseTheDeal.Records
 
         readonly List<int> _forget = new();
 
-        /// <summary>Drops the hits this player took and the window-kill credit they held on others.</summary>
         void ForgetHits(int clientId)
         {
             _lastHit.Remove(clientId);
@@ -280,7 +269,6 @@ namespace CloseTheDeal.Records
                 _net.ServerManager.Broadcast(connection, new MatchLineBroadcast { MatchKey = _hostKey, Line = line });
         }
 
-        /// <summary>The player's line so far, made (and their start time noted) on first use.</summary>
         MatchLine HostLine(FirmMember member)
         {
             int id = member.Owner.ClientId;
@@ -316,8 +304,6 @@ namespace CloseTheDeal.Records
 
         static ushort Seconds(float seconds) => (ushort)Mathf.Clamp(Mathf.FloorToInt(seconds), 0, ushort.MaxValue);
         static ushort Add(ushort value) => value == ushort.MaxValue ? value : (ushort)(value + 1);
-
-        // ---- Deaths and falls --------------------------------------------------------------------
 
         void HostDamaged(Health health, DamageInfo info)
         {
@@ -377,7 +363,6 @@ namespace CloseTheDeal.Records
 
         static bool IsDead(FirmMember member) => member.TryGetComponent(out Health health) && health.IsDead;
 
-        /// <summary>The attacker's player if they are on the other firm; null for the world, yourself or a teammate.</summary>
         static FirmMember Rival(FirmMember victim, int attackerClientId)
         {
             if (attackerClientId < 0)
@@ -391,8 +376,6 @@ namespace CloseTheDeal.Records
             var entry = new KillEntry { VictimClientId = victim, KillerClientId = killer != null ? killer.Owner.ClientId : -1, Kind = kind };
             _net.ServerManager.Broadcast(new KillBroadcast { Entry = entry });
         }
-
-        // ---- Briefcase ---------------------------------------------------------------------------
 
         void HostBriefcaseChanged(BriefcaseStatus previous, BriefcaseStatus next)
         {
@@ -455,8 +438,6 @@ namespace CloseTheDeal.Records
             HostPut(line);
         }
 
-        // ---- Throws ------------------------------------------------------------------------------
-
         void HostItemTaken(ItemCarrier carrier, Pickup pickup)
         {
             if (!IsHostCounting)
@@ -497,9 +478,6 @@ namespace CloseTheDeal.Records
             HostPut(line);
         }
 
-        // ---- Climb -------------------------------------------------------------------------------
-
-        /// <summary>Host, while Running, a few times a second: notes each player's highest floor. Sends only when one rises.</summary>
         void HostSampleFloors()
         {
             if (Time.time < _nextFloorCheck || _match == null)

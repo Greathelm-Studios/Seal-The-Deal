@@ -1,14 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-12
-  Prompt    : Alex on round 4: "keep the aero glossy, no bubbles. not carpet. still doesnt feel right.
-              more glass, shiny, more abstract feel. remember its designed for a game"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Round-5 brief to Codex. Round 4 still read as a realistic matte office with graphics; this
-              moves it to a glossy, glass-heavy, abstract game space. Overrides FEEDBACK_03, FEEDBACK_02,
-              FEEDBACK_01 and REQUEST.md where they differ.
--->
 # Kit detail, round 5: glossy, glass, abstract, built for a game
 
 **From:** Alex, drafted by Claude · **Date:** 2026-11-12 · Read with [FEEDBACK_03.md](FEEDBACK_03.md) and [README_r4.md](README_r4.md). This brief wins where they differ.

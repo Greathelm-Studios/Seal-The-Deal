@@ -8,16 +8,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Customisation
 {
-    /// <summary>
-    /// The fitting room: the local player steps out of first person into a framed view of
-    /// their own character and flicks through outfit choices, each shown at once. Keep saves
-    /// it and sends it to the host; put back restores what they wore. Other players see them
-    /// standing at the mirror the whole time, and the ready board shows them as "In the
-    /// fitting room" (which takes back their ready, so a run can't start without them).
-    /// The cursor stays captured throughout: the game menu frees it, and a freed cursor means
-    /// the menu is open. Keys and pad drive the screen; the mouse only turns the view.
-    /// Local only; the outfit sync is PlayerOutfit's. Design: docs/systems/CUSTOMISATION.md.
-    /// </summary>
+    /// <summary>Local fitting-room camera orbit, preview state, and UI screen controller. Design: docs/systems/CUSTOMISATION.md.</summary>
     [DisallowMultipleComponent]
     public sealed class FittingRoom : MonoBehaviour
     {
@@ -144,8 +135,6 @@ namespace CloseTheDeal.Customisation
                 Instance = null;
         }
 
-        // ---- Enter / leave -------------------------------------------------------------------
-
         public void Enter(FittingRoomMirror mirror)
         {
             if (_screen == null || _phase != Phase.Closed || PlayerOutfit.Local == null || PlayerMotor.Local == null || PlayerCamera.Instance == null)
@@ -179,17 +168,15 @@ namespace CloseTheDeal.Customisation
             OnEntered?.Invoke();
         }
 
-        /// <summary>Hands the controls and the camera over to the fitting room. Finish gives them back.</summary>
         void TakeControls()
         {
             if (LobbyInteractor.Instance != null)
                 LobbyInteractor.Instance.Block();
             if (_input != null)
-                _input.enabled = false; // Its map goes off with it: the body stands still, no lean or jump.
-            _camera.enabled = false;    // Stops it placing itself at the eye every frame.
+                _input.enabled = false;
+            _camera.enabled = false;
         }
 
-        /// <summary>Where the first-person eye is, relative to the body, so the swing back lands on it.</summary>
         void RememberFirstPerson()
         {
             Transform cam = _camera.transform;
@@ -202,11 +189,10 @@ namespace CloseTheDeal.Customisation
             _waitForInteractRelease = true;
         }
 
-        /// <summary>Keep (true) saves and wears the browsed outfit; false puts back what was worn.</summary>
         void Leave(bool keep)
         {
             if (_phase != Phase.Open)
-                return; // A second keep (the button and the Enter shortcut on one press) or a press mid-swing.
+                return;
             if (keep && !_outfit.Catalog.IsWearable(_working, _outfit.RunsStarted))
             {
                 _screen.ShowLockedNotice();
@@ -228,7 +214,6 @@ namespace CloseTheDeal.Customisation
             _screen.Close(keep ? "Outfit kept." : "Outfit put back.");
         }
 
-        /// <summary>Hands everything back to first person. Safe to call with the player gone.</summary>
         void Finish()
         {
             GameMenu.ReleaseCursor(this);
@@ -248,13 +233,12 @@ namespace CloseTheDeal.Customisation
             OnExited?.Invoke(_kept);
         }
 
-        /// <summary>The player left the game or the run started mid-fitting: put everything back now, no swing.</summary>
         void Abort()
         {
             if (_outfit != null)
                 _outfit.Revert();
             if (LobbyRoster.Instance != null)
-                LobbyRoster.Instance.RequestFitting(false); // Or the board keeps showing "In the fitting room" and the desk refuses a ready.
+                LobbyRoster.Instance.RequestFitting(false);
             _kept = false;
             _screen.Close();
             Finish();
@@ -262,15 +246,13 @@ namespace CloseTheDeal.Customisation
 
         void OnRunStarting()
         {
-            // With a match flow, a run counts when its countdown really begins (OnMatchPhase): a
-            // desk start the match refuses must not count, and the host's menu start must.
+            // With MatchDirector, count runs only on Countdown entry so refused desk starts don't increment.
             if (MatchDirector.Instance == null && PlayerOutfit.Local != null)
                 PlayerOutfit.Local.RecordRunStarted();
             if (_phase != Phase.Closed)
                 Abort();
         }
 
-        /// <summary>The match's countdown began, however it was started (desk or the host's menu): count the run and leave the fitting room.</summary>
         void OnMatchPhase(MatchPhase from, MatchPhase to)
         {
             if (to != MatchPhase.Countdown || from == MatchPhase.Countdown)
@@ -280,8 +262,6 @@ namespace CloseTheDeal.Customisation
             if (_phase != Phase.Closed)
                 Abort();
         }
-
-        // ---- Frame ---------------------------------------------------------------------------
 
         void Update()
         {
@@ -346,7 +326,6 @@ namespace CloseTheDeal.Customisation
             ReadTurn();
         }
 
-        /// <summary>Jumps the eased view to the focused category's own view (on entering).</summary>
         void SnapViewToSlot()
         {
             OutfitSlot slot = _outfit.Catalog.Slot(_slot);
@@ -360,11 +339,10 @@ namespace CloseTheDeal.Customisation
             _punch = 0f;
         }
 
-        /// <summary>Mouse, keys or stick spin the view round the character; the spin stays until another category is focused.</summary>
         void ReadTurn()
         {
             float turn = LobbyInput.Rotate.ReadValue<float>() * _turnSpeed * Time.deltaTime;
-            // The mouse is free for the form, so it turns the character only while the right button drags.
+            // Allow mouse orbit only while captured or right-dragging over the form.
             if (LobbyInput.Captured || (Mouse.current != null && Mouse.current.rightButton.isPressed))
                 turn += LobbyInput.RotatePointer.ReadValue<float>() * _mouseTurn;
             if (!_waitForInteractRelease && !Mathf.Approximately(turn, 0f))
@@ -374,18 +352,16 @@ namespace CloseTheDeal.Customisation
             }
         }
 
-        /// <summary>The form's focus moved to a category's row.</summary>
         void FocusSlotAt(int slot)
         {
             if (_phase == Phase.Closed || slot == _slot)
                 return;
             _slot = slot;
-            _returnOrbit = true; // Turn back from wherever the player spun it, to show this category.
+            _returnOrbit = true;
             Refresh();
             OnSlotFocused?.Invoke(_slot);
         }
 
-        /// <summary>The player stepped a category's choice on the form: show it on the character at once.</summary>
         void ChooseOption(int slot, int option)
         {
             if (_phase == Phase.Closed)
@@ -422,14 +398,13 @@ namespace CloseTheDeal.Customisation
                 Finish();
         }
 
-        /// <summary>Between the first-person eye and the framed view, by the current blend, eased at both ends so the swing never jolts.</summary>
         void PlaceCamera()
         {
             EaseView(Time.deltaTime);
             Vector3 eye = _player.position + _savedOffset;
             Framed(out Vector3 framed, out Quaternion framedRotation);
 
-            // Entering goes eye → framed; leaving goes framed → eye, so flip the blend instead of the ends.
+            // Flip blend weight on exit rather than swapping endpoints.
             float t = _blend * _blend * (3f - 2f * _blend);
             float towardFramed = _phase == Phase.Leaving ? 1f - t : t;
             _camera.transform.SetPositionAndRotation(
@@ -437,7 +412,6 @@ namespace CloseTheDeal.Customisation
                 Quaternion.Slerp(_savedRotation, framedRotation, towardFramed));
         }
 
-        /// <summary>Eases the view to the focused category's angle, distance and height, lets a spin the player made return, and settles the push after a change.</summary>
         void EaseView(float dt)
         {
             OutfitSlot slot = _outfit.Catalog.Slot(_slot);

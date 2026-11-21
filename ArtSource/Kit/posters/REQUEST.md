@@ -1,13 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-15
-  Prompt    : Alex: satirical motivational posters on the walls and pitch-room presentations flicking slides; "for
-              animations, get codex to do them"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Brief to Codex for the posters' textless imagery and the pitch-room slide display, so text stays exact (set
-              by the scene session) and the animation stays in Codex's KitOfficeAnimation.
--->
 # Satirical posters and pitch-room slides: request to Codex
 
 **From:** Alex, drafted by Claude · **Date:** 2026-11-15 · **Status:** Waiting for Codex

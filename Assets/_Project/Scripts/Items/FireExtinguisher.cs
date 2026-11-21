@@ -6,13 +6,7 @@ using UnityEngine.Events;
 
 namespace CloseTheDeal.Items
 {
-    /// <summary>
-    /// The fire extinguisher: pull the pin and it pours smoke that blocks sight, and it
-    /// cannot be stopped. In the hands it lays smoke where the carrier walks; let go, the
-    /// escaping gas drives it skittering round the floor into whoever is in the way.
-    /// The host owns the timing and the motion; the smoke itself is drawn locally by every
-    /// machine from the one synced tick, so no smoke is ever sent over the network.
-    /// </summary>
+    /// <summary>Host-timed venting smoke gadget that skitters across the floor when dropped. Design: docs/systems/ITEMS.md.</summary>
     public sealed class FireExtinguisher : ItemBehaviour
     {
         [Tooltip("Smoke time and how hard the gas pushes it about. Read at runtime, never written.")]
@@ -32,7 +26,6 @@ namespace CloseTheDeal.Items
 
         const float TwoPi = Mathf.PI * 2f;
 
-        /// <summary>The tick the smoke stops. 0 while it is not venting.</summary>
         readonly SyncVar<bool> _empty = new();
         readonly SyncVar<uint> _ventUntilTick = new();
 
@@ -63,10 +56,7 @@ namespace CloseTheDeal.Items
             ItemAudio.Configure(_audio, Item.Sounds);
         }
 
-        /// <summary>
-        /// Despawned (the match ended and the towers were rebuilt), or this machine left the game:
-        /// the smoke and the loop stop here, whatever the last synced state said.
-        /// </summary>
+        /// <summary>Stops smoke and loop audio when despawned or leaving the network.</summary>
         public override void OnStopNetwork()
         {
             base.OnStopNetwork();
@@ -106,8 +96,6 @@ namespace CloseTheDeal.Items
             base.OnStartClient();
             ShowVenting(IsVenting);
         }
-
-        // ---- Host ----------------------------------------------------------------------------
 
         public override void ServerUse(ItemCarrier user)
         {
@@ -170,14 +158,12 @@ namespace CloseTheDeal.Items
                 Skitter();
         }
 
-        /// <summary>An empty one lingers as something to throw, then leaves play once nobody is holding it.</summary>
         void TakeAwayWhenEmpty()
         {
             if (_empty.Value && Item.State == PickupState.InWorld && Time.time >= _takeAwayAt)
                 Item.ServerUseUp();
         }
 
-        /// <summary>The gas leaves the nozzle at the front, so the body is pushed backwards and spun.</summary>
         void Skitter()
         {
             Rigidbody body = Item.Body;
@@ -186,8 +172,6 @@ namespace CloseTheDeal.Items
                 body.AddForce(-transform.forward * _profile.Thrust, ForceMode.Acceleration);
             body.AddTorque(Vector3.up * (_profile.Spin * TwoPi), ForceMode.Acceleration);
         }
-
-        // ---- Every machine -------------------------------------------------------------------
 
         void OnVentChanged(uint previous, uint next, bool asServer)
         {

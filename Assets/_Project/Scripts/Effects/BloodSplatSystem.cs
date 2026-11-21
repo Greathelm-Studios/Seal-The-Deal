@@ -1,15 +1,3 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Sonnet 5.5 (Claude Code)
-//  Generated : 2026-11-15
-//  Prompt    : Harvey: "create a blood splatter shader that fits in within the games artstyle
-//              that paints around objects and ontop of them when hit by these attacks."
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : Listens for bodies being struck and throws cartoon blood onto the surfaces behind
-//              them and the floor under them, using the "Close the Deal/Blood Splat" projector
-//              shader. A pool of boxes, a cap on how many exist, a pop-in and a shrink-away.
-//              It creates itself; no scene or prefab needs to know about it.
-// -----------------------------------------------------------------------------
 using System.Collections.Generic;
 using CloseTheDeal.Player;
 using UnityEngine;
@@ -18,46 +6,13 @@ using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Effects
 {
-    /// <summary>
-    /// Pooled blood splat spawner. Hears <see cref="HitFeed.Struck"/> and, for bullets and melee
-    /// hits, paints blood on the level behind and under the struck body.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>Ownership (AGENTS.md §3):</b> purely cosmetic and local. Every machine hears the hit
-    /// from <see cref="HitFeed"/> and draws its own splats; nothing is networked, no splat has a
-    /// collider and nothing reads one back. Splats are not the same on two machines (the random
-    /// seeds differ), which is fine because nothing depends on them.
-    /// </para>
-    /// <para>
-    /// Each splat is a plain cube drawn with the projector shader, which paints whatever surface
-    /// is inside the cube. WHY a cube and not a flat quad: the splat then wraps over the floor
-    /// and desk in front of a wall instead of floating in front of it.
-    /// </para>
-    /// <para>
-    /// Created by <see cref="Boot"/> as a hidden object that survives scene loads. Tuning is in
-    /// <see cref="BloodProfile"/>; the profile and material are loaded from a Resources folder
-    /// and fall back to defaults in code when missing.
-    /// </para>
-    /// </remarks>
+    /// <summary>Pooled local blood splat projector listening to HitFeed.Struck.</summary>
     public sealed class BloodSplatSystem : MonoBehaviour
     {
-        /// <summary>Resources name of the material; <c>Close the Deal &gt; Art &gt; Build Blood Assets</c> writes it.</summary>
         const string MaterialResource = "BloodSplat";
-
-        /// <summary>Resources name of the profile; the same menu item writes it.</summary>
         const string ProfileResource = "BloodProfile";
-
         const string ShaderName = "Close the Deal/Blood Splat";
-
-        /// <summary>Beyond this distance from the camera, in metres, blood sprays are skipped.</summary>
         const float MaxSplatDistance = 60f;
-
-        /// <summary>
-        /// Where in the box, along its depth, the surface sits: a fifth of the depth in front of the
-        /// wall, the rest behind it. WHY: the box needs room in front for desks and legs that
-        /// stand off the wall, and a margin behind for depth-buffer error.
-        /// </summary>
         const float SurfaceOffsetFraction = 0.2f;
 
         static readonly int ColorId = Shader.PropertyToID("_Color");
@@ -228,8 +183,6 @@ namespace CloseTheDeal.Effects
 
         static Mesh BuildCube()
         {
-            // WHY borrow a primitive's mesh: it is the one unit cube every build is sure to have,
-            // and the primitive itself (with its collider) is thrown away at once.
             GameObject primitive = GameObject.CreatePrimitive(PrimitiveType.Cube);
             Mesh mesh = primitive.GetComponent<MeshFilter>().sharedMesh;
             Destroy(primitive);
@@ -258,8 +211,6 @@ namespace CloseTheDeal.Effects
             _ownsMaterial = true;
             return new Material(shader) { name = "BloodSplat (runtime)", enableInstancing = true, hideFlags = HideFlags.HideAndDontSave };
         }
-
-        // ---- Spraying ----
 
         void Spray(in HitInfo hit, Transform victim)
         {
@@ -330,8 +281,6 @@ namespace CloseTheDeal.Effects
 
             return victim == null || !best.collider.transform.IsChildOf(victim);
         }
-
-        // ---- Placing and the pool ----
 
         void Place(Vector3 point, Vector3 normal, Vector3 throwDir, float size, float stretch, BloodProfile p)
         {

@@ -2,11 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Combat
 {
-    /// <summary>
-    /// Put one in a scene to hand every player these guns the moment they spawn, and again on
-    /// each respawn. The host reads it; a scene without one starts players empty-handed, and
-    /// guns then come from pickups calling WeaponHolder.Equip.
-    /// </summary>
+    /// <summary>Scene component defining starting weapons given by the host on spawn and respawn.</summary>
     [DisallowMultipleComponent]
     public sealed class StartingLoadout : MonoBehaviour
     {

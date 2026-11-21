@@ -1,58 +1,15 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-13
-//  Prompt    : Alex: "set up an fps viewmodel with the characters model we are using"
-//  Modified  : Claude Fable 5.2, 2026-11-13 — rebuilt on the NorseFPS approach at Alex's
-//              request: the gun is placed in the view and the right arm is bent to reach it
-//              (two-bone solve ported from NorseFPS's ViewmodelArms.Solve); the left arm is
-//              folded away. Replaces the first version, which played full-body clips and
-//              hung the gun off the hand.
-//  Modified  : Claude Fable 5.2, 2026-11-13 — the fingers are closed round the grip by
-//              this component (Alex: the hand "doesnt wrap around the gun well"); the clip's
-//              loose pistol hand was authored for a different gun and hung under ours.
-//  Modified  : Claude Fable 5.2, 2026-11-14 — the arm solve and finger closing moved to
-//              HandGrip so the body other players see holds the gun with the same code
-//              (Harvey: "have the actual playermodel follow the first person view model").
-//  Modified  : Claude Fable 5.2, 2026-11-14 — the left arm can now hold the weapon too, for
-//              a two-handed hold (Harvey: "add a left and right hand system and a two handed
-//              system").
-//  Modified  : Claude Fable 5.2, 2026-11-14 — the held model can be swapped while playing, for
-//              weapon code to drive (Harvey: "Take the best option and get it ready").
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : Sits on the first-person arms prefab. Owns the rig side of the viewmodel:
-//              where the gun mount and shoulder are, and bending the arm so the hand stays on
-//              the grip. Separate from PlayerViewmodel so the prefab can be posed and
-//              previewed by itself: this half knows the skeleton, that half knows the player.
-// -----------------------------------------------------------------------------
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
 namespace CloseTheDeal.Player
 {
-    /// <summary>
-    /// The first-person arm: a copy of the character's own skeleton with only the arm geometry,
-    /// its right hand held on the grip of whatever sits in the gun mount.
-    /// </summary>
-    /// <remarks>
-    /// <para>Each frame, after the idle clip has posed the skeleton: the whole rig is slid so
-    /// the right shoulder sits on the shoulder anchor, the left arm is folded to nothing, and
-    /// the right arm is bent so its wrist lands on the grip target with the hand turned to
-    /// match it. Whatever moves the gun mount (sway, kick, reload) therefore moves the hand
-    /// with it, and the hand can never drift off the gun.</para>
-    /// <para>Local to the owning client and never synced (AGENTS.md §3).</para>
-    /// <para>The bending itself is <see cref="HandGrip"/>, shared with the body.</para>
-    /// <para>WHY one-handed: NorseFPS settled on it after trying two hands; a support hand
-    /// needs a second target fitted to every weapon, and any loose prop can be held later.</para>
-    /// </remarks>
+    /// <summary>Arms prefab template component holding weapon mount, shoulder anchor, and <see cref="HandGrip"/> settings.</summary>
     [DisallowMultipleComponent]
-    // WHY: PlayerViewmodel (default order) moves the gun mount in its LateUpdate; the arm has
-    // to be solved after that or the hand trails the gun by a frame.
     [DefaultExecutionOrder(SolveOrder)]
     public sealed class ViewmodelArms : MonoBehaviour
     {
-        /// <summary>After default-order scripts, which place the gun mount for the frame.</summary>
+        // Runs after PlayerViewmodel (50) places the gun mount for the frame.
         const int SolveOrder = 100;
 
         [Header("Mounts (moved by PlayerViewmodel every frame)")]
@@ -95,9 +52,7 @@ namespace CloseTheDeal.Player
         PlayableGraph _graph;
         Renderer[] _renderers;
         bool _visible = true;
-        /// <summary>The model put in the mount by <see cref="Equip"/>; null while the prefab's own is still there.</summary>
         Transform _equipped;
-        /// <summary>False when the equipped model has no place for the left hand.</summary>
         bool _supportSeated = true;
 
         /// <summary>The gun arm's settings. The body other players see copies its finger curls and elbow swing.</summary>
@@ -161,12 +116,7 @@ namespace CloseTheDeal.Player
                 _graph.Destroy();
         }
 
-        /// <summary>
-        /// Swaps what is in the gun mount for a copy of another model and moves the hand seats
-        /// onto it. Not for every frame: it creates and destroys objects.
-        /// </summary>
-        /// <param name="hold">The model and where each hand sits on it.</param>
-        /// <returns>The copy now in the mount, or null when there is no mount or no model.</returns>
+        /// <summary>Swaps the weapon in the gun mount and moves the hand seats onto it (spawns/destroys; not for per-frame use).</summary>
         public Transform Equip(in WeaponHold hold)
         {
             if (_gunMount == null || hold.Model == null)
@@ -207,11 +157,7 @@ namespace CloseTheDeal.Player
             return _equipped;
         }
 
-        /// <summary>Places the gun mount and the shoulder for this frame.</summary>
-        /// <param name="gunPosition">Gun mount position relative to this object (the eye), in metres.</param>
-        /// <param name="gunRotation">Gun mount rotation relative to this object.</param>
-        /// <param name="shoulderPosition">Shoulder anchor position relative to this object, in metres.</param>
-        /// <remarks>Call before this component's LateUpdate (any default-order Update or LateUpdate), or follow it with <see cref="SolveArm"/>.</remarks>
+        /// <summary>Places the gun mount and shoulder anchor relative to the eye for this frame.</summary>
         public void SetPose(Vector3 gunPosition, Quaternion gunRotation, Vector3 shoulderPosition)
         {
             if (_gunMount != null)
@@ -237,12 +183,7 @@ namespace CloseTheDeal.Player
             SolveArm();
         }
 
-        /// <summary>
-        /// Puts the right shoulder on its anchor and bends the right arm onto the grip. Held in
-        /// both hands, the left arm is bent onto its seat as well; held in one, it is folded
-        /// away. Runs every frame from LateUpdate; public so an editor preview can pose the
-        /// prefab without playing.
-        /// </summary>
+        /// <summary>Pins the shoulder and solves the right (and optional support) arm onto the grip targets.</summary>
         public void SolveArm()
         {
             if (_rig == null || !_grip.IsRigged)
@@ -250,9 +191,7 @@ namespace CloseTheDeal.Player
 
             bool both = _twoHanded && _supportSeated && _supportTarget != null && _supportGrip.IsRigged;
 
-            // WHY every frame: the Animator rewrites the bones from the clip before this runs.
-            // WHY set to one as well as zero: the clip does not key the arm's scale, so once
-            // folded it would stay folded.
+            // Clip rewrites bones and does not key arm scale, so re-assert scale every frame.
             if (_foldedUpperArm != null)
                 _foldedUpperArm.localScale = both ? Vector3.one : Vector3.zero;
 

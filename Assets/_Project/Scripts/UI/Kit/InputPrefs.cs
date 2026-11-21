@@ -3,13 +3,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The player's own control preferences, kept on this PC: look sensitivity and stick speed as multipliers of the
-    /// designer's MovementProfile values (the profile itself is never written, AGENTS.md §4), invert look, the look
-    /// stick's dead zone, and key binding overrides. The movement code reads these; it sets the Hooked flags when it
-    /// does, and the settings screen only shows a row whose flag is set, so no row ever changes nothing.
-    /// Contract agreed with the movement lane (AgentHub #461-#465). Changed fires once per change.
-    /// </summary>
+    /// <summary>Local control preferences (look multipliers, dead zone, binding overrides) stored in PlayerPrefs.</summary>
     public static class InputPrefs
     {
         const string SensitivityKey = "input.lookSensitivity";
@@ -80,7 +74,7 @@ namespace CloseTheDeal.UI
             Save();
         }
 
-        /// <summary>Forgets the cache so the next read comes from disk (the relaunch check).</summary>
+        /// <summary>Clears cached values so the next read loads from PlayerPrefs.</summary>
         public static void Reload()
         {
             _loaded = false;

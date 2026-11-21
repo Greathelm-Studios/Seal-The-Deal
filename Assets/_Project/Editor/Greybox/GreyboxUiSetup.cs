@@ -9,12 +9,7 @@ using UnityEngine.InputSystem.UI;
 
 namespace CloseTheDeal.Editor.Greybox
 {
-    /// <summary>
-    /// Builds the playtest menu and HUD (docs/systems/MENU_AND_HUD.md) as one "GameUI" canvas.
-    /// Set Up Scene creates it when missing; "Rebuild Game UI" deletes it and builds it fresh,
-    /// so change this file rather than the scene. Greybox look: flat dark card, amber primary
-    /// actions, white text with a muted grey for secondary lines (both above 7:1 on the card).
-    /// </summary>
+    /// <summary>Builds the playtest GameUI canvas and hands off to UiKitSetup.EnsureInOpenScene.</summary>
     public static class GreyboxUiSetup
     {
         const string ScenePath = "Assets/_Project/Scenes/Greybox.unity";
@@ -67,9 +62,7 @@ namespace CloseTheDeal.Editor.Greybox
             SaveScene();
         }
 
-        /// <summary>Called by Set Up Scene. Builds the UI only when there is none, with two tool-generated
-        /// exceptions it replaces: the pre-TextMeshPro LobbyCanvas, whose script no longer exists, and a
-        /// menu from before lobby codes were removed, which still carries the code widgets.</summary>
+        /// <summary>Adds GameUI when missing, replacing legacy LobbyCanvas/JoinCodeGroup setups, and ensures UI kit.</summary>
         public static void Ensure(SteamLobby lobby)
         {
             GameMenu existing = Object.FindAnyObjectByType<GameMenu>();
@@ -90,7 +83,7 @@ namespace CloseTheDeal.Editor.Greybox
             CloseTheDeal.Editor.UI.UiKitSetup.EnsureInOpenScene();
         }
 
-        /// <summary>TextMeshPro's essential resources (default font, shaders, settings), imported silently.</summary>
+        /// <summary>Imports TextMeshPro essential resources into Assets/TextMesh Pro.</summary>
         [MenuItem("Close the Deal/Greybox/Import TextMeshPro Essentials")]
         public static void ImportTextMeshProEssentials()
         {
@@ -106,11 +99,7 @@ namespace CloseTheDeal.Editor.Greybox
 
         static double _importDeadline;
 
-        /// <summary>
-        /// Shell-only variant. Package imports finish on later editor ticks, so this must be run
-        /// with the Editor binary directly and WITHOUT -quit; it exits by itself when done:
-        ///   Unity.exe -batchmode -projectPath &lt;repo&gt; -executeMethod CloseTheDeal.Editor.Greybox.GreyboxUiSetup.ImportTextMeshProEssentialsAndExit
-        /// </summary>
+        /// <summary>Headless batch entry point for importing TMP essentials (run without -quit).</summary>
         public static void ImportTextMeshProEssentialsAndExit()
         {
             if (TextMeshProReady())
@@ -149,9 +138,7 @@ namespace CloseTheDeal.Editor.Greybox
             EditorApplication.Exit(2);
         }
 
-        // ---- Build ---------------------------------------------------------------------------
-
-        /// <summary>TMP_Settings throws rather than returning null when its settings asset doesn't exist yet.</summary>
+        // TMP_Settings throws instead of returning null when its settings asset is missing.
         static bool TextMeshProReady()
         {
             return Resources.Load<TMP_Settings>("TMP Settings") != null && TMP_Settings.defaultFontAsset != null;
@@ -201,8 +188,6 @@ namespace CloseTheDeal.Editor.Greybox
             public TMP_Text JoinHint, InviteHint, Players;
         }
 
-        // ---- HUD -----------------------------------------------------------------------------
-
         static GameObject BuildHud(Transform canvas, out TMP_Text readout)
         {
             GameObject hud = Stretch(canvas, "Hud");
@@ -216,7 +201,6 @@ namespace CloseTheDeal.Editor.Greybox
             return hud;
         }
 
-        /// <summary>HUD text on a dark translucent chip, so it reads over bright walls and sky alike.</summary>
         static TMP_Text Chip(Transform parent, string name, string content, float size, Vector2 corner, Vector2 offset, Vector2 chipSize)
         {
             var chip = new GameObject(name, typeof(RectTransform));
@@ -230,8 +214,6 @@ namespace CloseTheDeal.Editor.Greybox
             Fill(text.rectTransform, 14f);
             return text;
         }
-
-        // ---- Menu ----------------------------------------------------------------------------
 
         static GameObject BuildMenu(Transform canvas, MenuRefs r)
         {
@@ -296,7 +278,6 @@ namespace CloseTheDeal.Editor.Greybox
             r.Leave = Button(s, "LeaveButton", "Leave game", primary: false, ControlHeight);
         }
 
-        /// <summary>A muted two-line note under a button, wrapping rather than clipping.</summary>
         static TMP_Text Hint(Transform parent, string name, string content)
         {
             TMP_Text hint = Label(parent, name, content, 18, Muted);
@@ -324,8 +305,6 @@ namespace CloseTheDeal.Editor.Greybox
             GreyboxSceneSetup.SetReference(so, "_leaveButton", r.Leave);
             so.ApplyModifiedPropertiesWithoutUndo();
         }
-
-        // ---- Controls ------------------------------------------------------------------------
 
         static UnityEngine.UI.Button Button(Transform parent, string name, string label, bool primary, float height, float width = -1f)
         {
@@ -355,7 +334,6 @@ namespace CloseTheDeal.Editor.Greybox
             return button;
         }
 
-        /// <summary>Resting slightly darker than the base colour so hover and keyboard focus visibly brighten it.</summary>
         static UnityEngine.UI.ColorBlock Tints()
         {
             return new UnityEngine.UI.ColorBlock
@@ -369,8 +347,6 @@ namespace CloseTheDeal.Editor.Greybox
                 fadeDuration = 0.08f
             };
         }
-
-        // ---- Layout helpers ------------------------------------------------------------------
 
         static TMP_Text Label(Transform parent, string name, string content, float size, Color color)
         {
@@ -466,7 +442,6 @@ namespace CloseTheDeal.Editor.Greybox
             rect.offsetMax = new Vector2(-inset, 0f);
         }
 
-        /// <summary>Anchors and pivots to the same screen corner, then offsets from it.</summary>
         static void Pin(RectTransform rect, Vector2 corner, Vector2 offset, Vector2 size)
         {
             rect.anchorMin = rect.anchorMax = rect.pivot = corner;
@@ -483,8 +458,6 @@ namespace CloseTheDeal.Editor.Greybox
             image.raycastTarget = false;
             Pin((RectTransform)go.transform, new Vector2(0.5f, 0.5f), Vector2.zero, size);
         }
-
-        // ---- Scene helpers -------------------------------------------------------------------
 
         static void EnsureEventSystem()
         {

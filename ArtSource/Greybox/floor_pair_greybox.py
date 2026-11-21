@@ -1,15 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code, blender-modeling skill)
-#  Generated : 2026-11-11
-#  Prompt    : "First-pass greybox from the 3D modeller brief, built to the repo's floor dimensions"
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : A Blender review scene of the current game floor (TOWER.md, DefaultTower.asset):
-#              two facing towers, three office floors each, central spiral stairs, glass meeting
-#              room, opaque service spine and player-sized stand-ins. It exists so environment
-#              art can be judged at eye height and across the gap before a modular kit is cut.
-#              It is a review scene, not a Unity export: nothing here replaces a floor template.
-# -----------------------------------------------------------------------------
 """Floor-pair greybox for Close the Deal.
 
 Build:  node <skill>/scripts/mdl.mjs build ArtSource/Greybox/floor_pair_greybox.py --out ArtSource/Greybox/floor_pair_greybox.blend

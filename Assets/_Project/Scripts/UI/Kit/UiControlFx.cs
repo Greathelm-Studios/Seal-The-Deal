@@ -18,12 +18,7 @@ namespace CloseTheDeal.UI
         Tab = 3
     }
 
-    /// <summary>
-    /// The look and motion every kit control shares: hover lift with closing corner brackets, the press stamp,
-    /// the release spring, the confirm tick, the refusal shake with its amber plate, and the disabled dashed
-    /// outline. Driven by UiMotion on unscaled time; every value comes from UiTokens. Feel table §2.2.
-    /// The references are filled by the kit's prefab builder; a missing one is simply not drawn.
-    /// </summary>
+    /// <summary>Shared look and motion controller for kit controls, driven by UiMotion on unscaled time.</summary>
     [Serializable]
     public sealed class UiControlFx : IUiAnimated
     {

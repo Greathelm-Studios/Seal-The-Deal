@@ -10,16 +10,7 @@ using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Editor.Lanes
 {
-    /// <summary>
-    /// The title lane's editor tools.
-    /// Close the Deal > Lanes > Set Up Title Screen builds Scenes/Lanes/Lane_Title.unity: a white window
-    /// frame of kit pieces seen from inside and slightly below, dividing the game's own sky (Office Look)
-    /// into panes, with the TitleBackdrop idle on it. It only replaces a scene this tool made (its root is
-    /// named "Title backdrop"); a scene a person has made at that path is left alone.
-    /// Close the Deal > Lanes > Capture Title Screen writes stills (1080p, 720p, 21:9, with the safe areas
-    /// drawn) and transition frame strips to ArtSource/UI/passes/c_sky/title/.
-    /// Design: docs/systems/UI_TITLE.md.
-    /// </summary>
+    /// <summary>Builds Lane_Title.unity (guarded by "Title backdrop" root) and renders title/transition captures.</summary>
     public static class TitleLaneSetup
     {
         const string ScenePath = "Assets/_Project/Scenes/Lanes/Lane_Title.unity";
@@ -133,8 +124,6 @@ namespace CloseTheDeal.Editor.Lanes
             return t;
         }
 
-        // ---- Capture ---------------------------------------------------------------------------
-
         [MenuItem("Close the Deal/Lanes/Capture Title Screen")]
         public static void CaptureFromMenu()
         {
@@ -205,7 +194,7 @@ namespace CloseTheDeal.Editor.Lanes
             cam.targetTexture = rt;
             cam.aspect = w / (float)h;
             cam.scene = cam.gameObject.scene;
-            // WHY two renders: a fresh camera's first frame over just-loaded objects comes out wrong (KitOfficeScene saw it too).
+            // Fresh camera's first frame over newly loaded scene objects renders stale state.
             cam.Render();
             cam.Render();
             cam.targetTexture = previous;

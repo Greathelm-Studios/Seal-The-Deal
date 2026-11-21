@@ -7,12 +7,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace CloseTheDeal.Editor.UI
 {
-    /// <summary>
-    /// Builds the UI glass assets: the four preset materials (Resources/UiGlass) and, only when asked, adds the
-    /// blur renderer feature to a renderer asset (a graphics-settings change: name it in the commit subject).
-    /// Shell: Unity -batchmode -quit -projectPath <worktree> -executeMethod CloseTheDeal.Editor.UI.UiGlassSetup.BuildMaterialsFromCommandLine
-    /// Re-running is safe: materials are updated in place, the feature is added once.
-    /// </summary>
+    /// <summary>Editor setup for UI glass preset materials, URP blur feature, and kit GlassPane/Plate wiring.</summary>
     public static class UiGlassSetup
     {
         const string Dir = "Assets/_Project/UI/Glass";
@@ -58,8 +53,7 @@ namespace CloseTheDeal.Editor.UI
             Debug.Log("UiGlassSetup: materials built in " + ResDir);
         }
 
-        /// <summary>One-off: labels the presets already in the repo (written by this tool before it used the guard) as
-        /// tool-made, so Build Glass Materials may keep updating them. Run once; hand edits after that are respected.</summary>
+        /// <summary>Labels existing preset materials with GeneratedAssetGuard so BuildMaterials can update them.</summary>
         public static void MarkExistingPresetsFromCommandLine()
         {
             foreach (var p in Presets)
@@ -99,11 +93,6 @@ namespace CloseTheDeal.Editor.UI
         }
 
         const string KitPane = "Assets/_Project/UI/Kit/GlassPane.prefab";
-
-        /// <summary>Wires lane 5's two kit surfaces to the glass: GlassPane.prefab (menus, confirm) to GlassFrosted.mat
-        /// and Plate.prefab (every HUD plate) to GlassHudChip.mat. Each gets the material in its UiGlassPane slot and on
-        /// its surface Image, and a UiGlass (Owns Material off) so the shader gets its size and the blur runs.
-        /// Agreed with lane 5 (AgentHub #469, #542): this takes both prefabs over from lane 5's generator.</summary>
         const string KitPlate = "Assets/_Project/UI/Kit/Plate.prefab";
 
         [MenuItem("Close the Deal/UI/Wire Kit Glass Pane")]

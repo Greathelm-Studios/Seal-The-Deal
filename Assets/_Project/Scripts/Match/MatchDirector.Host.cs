@@ -6,27 +6,15 @@ using UnityEngine;
 
 namespace CloseTheDeal.MatchMode
 {
-    /// <summary>
-    /// The host's half of the match: starting and ending it, and every briefcase and
-    /// checkpoint outcome. Nothing here runs on a client; clients only see the synced result.
-    /// </summary>
     public sealed partial class MatchDirector
     {
-        /// <summary>The player body the spawn checks make room for, in metres (PLAYER_MOVEMENT.md: a 1.8 m capsule, 0.35 m radius).</summary>
         const float PlayerHeight = 1.8f;
         const float PlayerRadius = 0.35f;
-
-        /// <summary>How far from a checkpoint spot the next player is placed when the spot is taken, in metres.</summary>
         const float SpawnRing = 1f;
         const int SpawnRingPoints = 6;
-
-        /// <summary>How far ahead of the carrier a dropped briefcase leaves the hand, in metres: just clear of their body.</summary>
         const float DropReach = 0.7f;
-
-        /// <summary>How far above its return spot a returning briefcase appears, in metres, so it settles rather than clips.</summary>
         const float ReturnHeight = 0.3f;
 
-        /// <summary>Where the briefcase sits in Building A's reception when the scene has no plaza: on the reception desk, metres from the window edge.</summary>
         static readonly Vector3 ReceptionDeskFallback = new(8.4f, 1.15f, -9.1f);
 
         MatchReferee _referee;
@@ -34,13 +22,11 @@ namespace CloseTheDeal.MatchMode
         bool _gatherOnBuild;
         bool _countdownOnBuild;
 
-        // ---- Lifecycle -----------------------------------------------------------------------
-
         public override void OnStartServer()
         {
             base.OnStartServer();
             if (!_live)
-                return; // No profile; OnStartNetwork has said so.
+                return; // No profile; OnStartNetwork already logged and disabled.
 
             _referee = new MatchReferee(this);
             _gatherOnBuild = false;
@@ -48,7 +34,7 @@ namespace CloseTheDeal.MatchMode
             TeamSpawner.SpawnOverride = ChooseJoinSpawn;
             _snapshot.Value = new MatchSnapshot { Phase = MatchPhase.Waiting, Winner = NoFirm };
 
-            // The tower may have built before this object started; if not, OnTowerBuilt does this.
+            // Towers may already be built before OnStartServer; otherwise OnTowerBuilt calls this.
             if (_tower != null && _tower.IsBuilt)
                 ServerPrepareRound();
         }
@@ -61,40 +47,33 @@ namespace CloseTheDeal.MatchMode
             _referee = null;
         }
 
-        // ---- Starting and ending -------------------------------------------------------------
-
-        /// <summary>True when this machine is the host and the match is waiting in reception.</summary>
+        /// <summary>True when hosting and waiting in reception.</summary>
         public bool CanHostStart => IsServerStarted && _arena.Ready && Phase == MatchPhase.Waiting;
 
-        /// <summary>True when this machine is the host and a result is in.</summary>
+        /// <summary>True when hosting and a match result is in.</summary>
         public bool CanHostRematch => IsServerStarted && _arena.Ready && Phase == MatchPhase.Ended;
 
-        /// <summary>Host only. Starts the first match with the firms as the host assigned them on join.</summary>
+        /// <summary>Host only. Starts the first match with current joiner firms.</summary>
         public void HostStart()
         {
             if (CanHostStart)
                 ServerNewMatch();
         }
 
-        /// <summary>Host only. After a result: fresh towers, everyone back to reception, countdown.</summary>
+        /// <summary>Host only. Rebuilds towers and starts a fresh rematch after a result.</summary>
         public void HostRematch()
         {
             if (CanHostRematch)
                 ServerNewMatch();
         }
 
-        /// <summary>
-        /// Host only. The entry point for a lobby that has already decided the firms: puts each
-        /// listed player in the given firm (client id → firm 0 or 1), then starts a run as Start
-        /// does. Players not listed keep the firm they have. Works while waiting or after a
-        /// result; returns false and changes nothing otherwise.
-        /// </summary>
+        /// <summary>Host only. Applies lobby firm assignments and starts a match run.</summary>
         public bool HostStartRun(IReadOnlyDictionary<int, int> firmByClientId)
         {
             if (!(CanHostStart || CanHostRematch) || firmByClientId == null)
                 return false;
 
-            // All seats move at once, so players swapping firms never share a spawn point.
+            // Move all seats at once so swapping firms never shares a spawn point.
             TeamSpawner spawner = TeamSpawner.Instance;
             if (spawner != null)
                 spawner.AssignTeams(firmByClientId);
@@ -112,7 +91,6 @@ namespace CloseTheDeal.MatchMode
             return true;
         }
 
-        /// <summary>Rebuilding the towers puts the locked doors and furniture back and changes the layout; the rest follows in ServerPrepareRound once they stand.</summary>
         void ServerNewMatch()
         {
             _gatherOnBuild = true;
@@ -120,7 +98,6 @@ namespace CloseTheDeal.MatchMode
             _tower.Rebuild();
         }
 
-        /// <summary>The towers stand (first build or a rebuild): the briefcase on its spawn, progress wiped, and the round begun if one was asked for.</summary>
         void ServerPrepareRound()
         {
             _referee.ResetRound();
@@ -160,7 +137,6 @@ namespace CloseTheDeal.MatchMode
             _countdownOnBuild = false;
         }
 
-        /// <summary>One briefcase for as long as the host runs: spawned once, then only ever moved.</summary>
         Briefcase EnsureBriefcase(Vector3 spawn)
         {
             if (Briefcase.Current != null)
@@ -210,9 +186,6 @@ namespace CloseTheDeal.MatchMode
             Debug.Log($"[Match] Ended: winner {(winner == NoFirm ? "none" : FirmName(winner))}, {reason}, after {seconds:0} s.");
         }
 
-        // ---- Briefcase outcomes --------------------------------------------------------------
-
-        /// <summary>A player pressed interact. If the loose briefcase is in their reach, it is theirs. Requests are handled one at a time, so of two in the same tick the first to arrive wins.</summary>
         internal void ServerTryPickUp(FirmMember member)
         {
             if (!IsServerStarted || Phase != MatchPhase.Running || member.Knocked || !CanGrab(member))
@@ -229,10 +202,9 @@ namespace CloseTheDeal.MatchMode
             _briefcase.Value = status;
         }
 
-        /// <summary>The carrier lets go, whatever the reason. Does nothing if they carry nothing.</summary>
         internal void ServerDrop(FirmMember member, DropCause cause)
         {
-            // Briefcase.Current is gone already when the host is shutting down: nothing left to drop.
+            // Briefcase.Current may already be destroyed during host shutdown.
             if (!IsServerStarted || !IsCarrying(member) || Briefcase.Current == null)
                 return;
 
@@ -246,7 +218,7 @@ namespace CloseTheDeal.MatchMode
             }
             else
             {
-                // Knocked loose: it leaves from above the head, so it never starts inside the body.
+                // Spawn above head on knock/disconnect so the case never starts inside the player collider.
                 position = member.Position + Vector3.up * (member.BodyHeight + 0.2f);
                 velocity = member.Velocity * 0.6f + Vector3.up * _profile.DropTossLift;
             }
@@ -256,7 +228,6 @@ namespace CloseTheDeal.MatchMode
                 member.Notify(MatchNotice.BriefcaseKnockedLoose);
         }
 
-        /// <summary>Just ahead of the carrier's chest, pulled back if a wall is closer than that.</summary>
         Vector3 HandOffPoint(FirmMember member, Vector3 forward)
         {
             Vector3 chest = member.Chest;
@@ -266,13 +237,11 @@ namespace CloseTheDeal.MatchMode
             return chest + forward * reach;
         }
 
-        /// <summary>A player's body is leaving the game; if they carry the briefcase it stays, where they stood.</summary>
         internal void ServerMemberLeft(FirmMember member)
         {
             ServerDrop(member, DropCause.LeftTheGame);
         }
 
-        /// <summary>The carrier vanished without a word: the briefcase goes down where they were last seen.</summary>
         internal void ServerDropOrphan()
         {
             ServerPutDown(Briefcase.Current.LastCarrierPosition + Vector3.up, Quaternion.identity, Vector3.zero);
@@ -293,14 +262,13 @@ namespace CloseTheDeal.MatchMode
             _briefcase.Value = status;
         }
 
-        /// <summary>The briefcase left the buildings: it goes away, and comes back after the delay.</summary>
         internal void ServerBeginReturn(uint tick)
         {
             Briefcase briefcase = Briefcase.Current;
             briefcase.ServerPark();
             briefcase.ReturnAtTick = tick + TimeManager.TimeToTicks(_profile.ReturnDelaySeconds, TickRounding.RoundUp);
 
-            // Where it will be is known now, so the clock never credits a floor it has left.
+            // Set destination floor/place immediately so clock never credits the out-of-bounds floor.
             BriefcaseStatus status = _briefcase.Value;
             status.State = BriefcaseState.Returning;
             status.CarrierId = -1;
@@ -317,7 +285,6 @@ namespace CloseTheDeal.MatchMode
             ServerPutDown(spot, _arena.Facing(0), Vector3.zero);
         }
 
-        /// <summary>Host only. The carrier stood on a floor above the open floor: it opens, in both towers, for the rest of the match.</summary>
         internal void ServerOpenFloor(int floor, int byFirm)
         {
             if (floor <= _openFloor.Value.Floor)
@@ -327,7 +294,6 @@ namespace CloseTheDeal.MatchMode
             ApplyGates();
         }
 
-        /// <summary>Host only. Keeps where-it-is up to date, writing only when something changed. The return floor only ever rises, and never above the open floor.</summary>
         internal void ServerTrackBriefcase(byte place, int floor)
         {
             BriefcaseStatus status = _briefcase.Value;
@@ -344,21 +310,17 @@ namespace CloseTheDeal.MatchMode
             _briefcase.Value = status;
         }
 
-        /// <summary>A player stood on a checkpoint floor of their own tower: their firm comes back to that spot after a fall.</summary>
         internal void ServerSaveCheckpoint(int firm, int floor, Vector3 spot)
         {
             _checkpointSpot[firm] = spot;
             SetCheckpoint(firm, floor);
         }
 
-        // ---- Places --------------------------------------------------------------------------
-
         Vector3 SpawnPosition()
         {
             return _crossings != null ? _crossings.Spawn : _arena.FloorPoint(0, 0, ReceptionDeskFallback);
         }
 
-        /// <summary>The skybridge of that checkpoint floor, or the spawn when there is none.</summary>
         Vector3 ReturnPosition(int floor)
         {
             if (floor > 0 && _crossings != null && _crossings.TryGetBridgeCentre(floor, out Vector3 centre))
@@ -366,7 +328,6 @@ namespace CloseTheDeal.MatchMode
             return SpawnPosition();
         }
 
-        /// <summary>Puts a player back at their firm's last checkpoint, or in reception if there is none yet.</summary>
         internal void ServerRespawn(FirmMember member)
         {
             int firm = member.Firm;
@@ -380,7 +341,6 @@ namespace CloseTheDeal.MatchMode
                 member.ServerTeleport(position);
         }
 
-        /// <summary>A player joining a running match starts at their firm's checkpoint; before one is saved, in reception as usual.</summary>
         bool ChooseJoinSpawn(int team, int slot, out Vector3 position, out Quaternion rotation)
         {
             position = default;
@@ -393,7 +353,6 @@ namespace CloseTheDeal.MatchMode
             return true;
         }
 
-        /// <summary>The spot itself, or the first free place on a ring around it, starting from a different one per slot so two players never land on each other.</summary>
         Vector3 FreeSpotNear(Vector3 spot, int slot)
         {
             for (int i = 0; i <= SpawnRingPoints; i++)
@@ -409,7 +368,6 @@ namespace CloseTheDeal.MatchMode
             return spot;
         }
 
-        /// <summary>Floor underfoot and room for a whole body, with nobody and nothing already there.</summary>
         bool Standable(Vector3 feet)
         {
             if (!Physics.Raycast(feet + Vector3.up * 0.5f, Vector3.down, 0.8f, _solidMask, QueryTriggerInteraction.Ignore))

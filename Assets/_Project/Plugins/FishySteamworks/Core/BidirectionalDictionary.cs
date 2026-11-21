@@ -8,7 +8,7 @@ namespace FishySteamworks
         private Dictionary<T1, T2> t1ToT2Dict = new Dictionary<T1, T2>();
         private Dictionary<T2, T1> t2ToT1Dict = new Dictionary<T2, T1>();
 
-        // Close the Deal patch (FORK.md): return concrete KeyCollection to avoid enumerator boxing.
+        // Fork patch: return concrete KeyCollection to avoid enumerator boxing (see FORK.md).
         public Dictionary<T1, T2>.KeyCollection FirstTypes => t1ToT2Dict.Keys;
         public Dictionary<T2, T1>.KeyCollection SecondTypes => t2ToT1Dict.Keys;
 
@@ -82,7 +82,7 @@ namespace FishySteamworks
             }
         }
 
-        // Close the Deal patch (FORK.md): clear both maps when stopping the server socket.
+        // Fork patch: clear both maps when stopping server socket (see FORK.md).
         public void Clear()
         {
             t1ToT2Dict.Clear();

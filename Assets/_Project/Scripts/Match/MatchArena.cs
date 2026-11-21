@@ -4,12 +4,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.MatchMode
 {
-    /// <summary>
-    /// Answers "where in the match is this point": which floor, inside which building or on
-    /// the neutral ground between them (the plaza and the skybridges), and what that floor is
-    /// called. Worked out from the built towers on every machine, so no trigger volumes are
-    /// needed and nothing here is networked. A firm's index is its building's index.
-    /// </summary>
+    /// <summary>Triggerless world-to-tower/floor/neutral classification computed locally from built towers.</summary>
     public sealed class MatchArena
     {
         /// <summary>Place value for the plaza and the skybridges: neither firm's building.</summary>
@@ -18,10 +13,7 @@ namespace CloseTheDeal.MatchMode
         /// <summary>Place value for anywhere the match does not count as in play.</summary>
         public const byte Outside = byte.MaxValue;
 
-        /// <summary>How far below a floor's surface still counts as that floor, in metres: the last steps of the stairs up to it.</summary>
         const float FloorSnap = 0.3f;
-
-        /// <summary>How far below the street a body can sink before it counts as gone, in metres.</summary>
         const float SunkDepth = 3f;
 
         TowerBuilder _tower;
@@ -94,8 +86,6 @@ namespace CloseTheDeal.MatchMode
             return floor > 0 && floor < _labels.Length && _tower.FloorKindAt(floor) == FloorKind.Checkpoint;
         }
 
-        // ---- Neutral ground ------------------------------------------------------------------
-
         /// <summary>Marks a box, given in Building A's own space, as neutral ground that counts as in play.</summary>
         public void AddNeutral(Bounds inBuildingASpace)
         {
@@ -164,9 +154,7 @@ namespace CloseTheDeal.MatchMode
             return inNeutral ? Neutral : Outside;
         }
 
-        // ---- Floors and buildings ------------------------------------------------------------
-
-        /// <summary>The floor a point is on by height alone, clamped to the buildings. Both buildings and the plaza share the same ground.</summary>
+        /// <summary>The floor a point is on by height alone, clamped to the buildings.</summary>
         public int FloorOf(Vector3 world)
         {
             float height = _worldToLocal0.MultiplyPoint3x4(world).y + FloorSnap;

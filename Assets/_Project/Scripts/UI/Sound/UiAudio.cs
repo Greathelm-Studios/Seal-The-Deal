@@ -3,10 +3,7 @@ using UnityEngine.Audio;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The door to the mixer for a volume slider (Settings › Audio calls it per step): SetVolume(AudioBus.Ui, 0.8f) takes a 0 to 1 slider value,
-    /// writes the exposed dB parameter and remembers it between launches (PlayerPrefs, written to disk by Flush).
-    /// </summary>
+    /// <summary>Applies and persists per-bus mixer volumes (0..1 slider mapped to dB).</summary>
     public static class UiAudio
     {
         const string Key = "ctd.audio.";
@@ -25,9 +22,7 @@ namespace CloseTheDeal.UI
             if (save) { PlayerPrefs.SetFloat(Key + bus, slider01); unsaved = true; }
         }
 
-        /// <summary>Write changed volumes to disk. A slider drag calls SetVolume many times a second, so SetVolume only
-        /// remembers the value; this runs when the settings screen closes (it saves all preferences), when the game loses
-        /// focus and when it quits.</summary>
+        /// <summary>Flushes dirty volume preferences to PlayerPrefs.</summary>
         public static void Flush()
         {
             if (!unsaved) return;
@@ -59,8 +54,7 @@ namespace CloseTheDeal.UI
             set.output.audioMixer.SetFloat(Param[(int)bus], ToDecibels(slider01));
         }
 
-        /// <summary>Restore the saved volumes. Runs after the first scene loads, and again from the sound runner's
-        /// Start one frame later, because a mixer can ignore parameter writes made before it has started.</summary>
+        // Also re-applied in Runner.Start because Unity's AudioMixer can ignore writes before it has started.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         internal static void ApplySaved()
         {

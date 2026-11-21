@@ -1,27 +1,8 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Sonnet 5.5 (Claude Code)
-//  Generated : 2026-11-15
-//  Prompt    : Harvey: "create a blood splatter shader that fits in within the games artstyle
-//              that paints around objects and ontop of them when hit by these attacks."
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : The designer's tuning panel for blood splats: colours, sizes, how many and how
-//              wide they spray, how long they last. Its own asset so the look can be changed
-//              without touching the spawner or the shader.
-// -----------------------------------------------------------------------------
 using UnityEngine;
 
 namespace CloseTheDeal.Effects
 {
-    /// <summary>
-    /// Designer-owned tuning for blood splats. Runtime only reads it (AGENTS.md §4). If the asset
-    /// is missing the spawner uses a copy with these defaults, so blood works before anyone makes one.
-    /// </summary>
-    /// <remarks>
-    /// Defaults are first guesses from the art direction (slightly oversized, flat cartoon blood),
-    /// not from play. Written by <c>Close the Deal &gt; Art &gt; Build Blood Assets</c> to
-    /// <c>Assets/_Project/Art/Blood/Resources/BloodProfile.asset</c>.
-    /// </remarks>
+    /// <summary>Designer-owned tuning for blood splats and air drops.</summary>
     [CreateAssetMenu(menuName = "Close the Deal/Blood Profile", fileName = "BloodProfile")]
     public sealed class BloodProfile : ScriptableObject
     {

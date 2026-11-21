@@ -19,12 +19,7 @@ namespace CloseTheDeal.UI
         ElectricBlue = 2
     }
 
-    /// <summary>
-    /// The player's own preferences, kept on this PC between launches (PlayerPrefs, saved on every change).
-    /// Holds only settings the UI owns and the game already honours; a row whose game-side value does not exist
-    /// yet is left out rather than faked (docs/systems/UI_KIT.md "Settings"). Read on demand, cached after the
-    /// first read; Changed fires once per change so readers redraw on events, never by polling.
-    /// </summary>
+    /// <summary>Local accessibility and HUD preferences persisted in PlayerPrefs.</summary>
     public static class UiSettings
     {
         /// <summary>The key the title lane's transitions read too (its UiTransition, on that lane's branch): one switch for every animation.</summary>

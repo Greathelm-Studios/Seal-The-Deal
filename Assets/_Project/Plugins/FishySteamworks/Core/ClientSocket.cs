@@ -25,7 +25,7 @@ namespace FishySteamworks.Client
         private HSteamNetConnection _socket;
         #endregion
 
-        // Close the Deal patch (FORK.md): removed unused foreground _timeoutThread / CheckTimeout / Thread.Abort().
+        // Fork patch: removed unused _timeoutThread / Thread.Abort (see FORK.md).
 
         /// <summary>
         /// Starts the client connection.
@@ -143,7 +143,7 @@ namespace FishySteamworks.Client
             {
                 for (int i = 0; i < messageCount; i++)
                 {
-                    // Close the Deal patch (FORK.md): skip a message GetMessage dropped as malformed.
+                    // Fork patch: skip malformed message dropped by GetMessage (see FORK.md).
                     if (!base.GetMessage(base.MessagePointers[i], InboundBuffer, out ArraySegment<byte> segment, out byte channel))
                         continue;
                     base.Transport.HandleClientReceivedDataArgs(new ClientReceivedDataArgs(segment, (Channel)channel, Transport.Index));

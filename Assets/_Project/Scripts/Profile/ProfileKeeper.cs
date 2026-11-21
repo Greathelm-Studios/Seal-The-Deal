@@ -4,10 +4,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Profile
 {
-    /// <summary>
-    /// Loads this player's profile when the scene starts and adds each finished match to it, from
-    /// the host's final record only. Sits beside MatchRecords. Local: nothing here is networked.
-    /// </summary>
+    /// <summary>Loads the local profile on start and records host-sent MatchFinal records into ProfileStore. Design: docs/systems/PROFILE.md.</summary>
     [DisallowMultipleComponent]
     public sealed class ProfileKeeper : MonoBehaviour
     {

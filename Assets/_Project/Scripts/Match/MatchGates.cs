@@ -4,18 +4,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.MatchMode
 {
-    /// <summary>
-    /// The floor gates of the briefcase match: nobody climbs above the highest floor the
-    /// briefcase has been carried onto. Each floor above the plaza has a gate where the stairs
-    /// arrive, in both towers: the open side of that floor's stair cage (300°–360°, TOWER.md),
-    /// or a full ring round the stairwell on the roof, which has no cage.
-    ///
-    /// Built locally on every machine from the towers, and switched from synced state alone
-    /// (the open floor and who carries the briefcase), so a client's predicted body meets the
-    /// same walls as the host's and is never pulled back through one. The carrier walks
-    /// through every gate on every machine; everyone else is stopped. Not networked.
-    /// Design: docs/systems/MATCH.md.
-    /// </summary>
+    /// <summary>Local stairwell floor gates driven by synced OpenFloor and briefcase carrier state. Design: docs/systems/MATCH.md.</summary>
     [DisallowMultipleComponent]
     public sealed class MatchGates : MonoBehaviour
     {
@@ -25,23 +14,19 @@ namespace CloseTheDeal.MatchMode
         [Tooltip("Tick and bullets fly through a shut gate as through open air, while bodies are still stopped; untick and a gate stops shots like a wall. Works because the weapons' shot test skips Unity's built-in Ignore Raycast layer, which the panels then sit on.")]
         [SerializeField] bool _letShotsThrough = true;
 
-        /// <summary>Unity's built-in layer 2. Shots skip it; bodies still collide with it.</summary>
         const int IgnoreRaycastLayer = 2;
 
-        /// <summary>Outer edge of the stair treads, metres (TOWER.md: treads out to 2.6 m), plus the gap the cage stands off them.</summary>
+        /// <summary>Outer edge of the stair treads plus cage clearance, in metres.</summary>
         public const float Radius = 2.6f + 0.15f;
 
-        /// <summary>The stair cage is open from here to 360°, clockwise from the rival-facing side: where the flight from below arrives.</summary>
         const float OpeningFrom = 300f;
         const int OpeningPanels = 2;
         const int RoofPanels = 12;
         const float PanelThickness = 0.06f;
         const float Slab = 0.2f;
-
-        /// <summary>How tall the ring on the roof is, metres: well above any jump or mantle.</summary>
         const float RoofGateHeight = 3f;
 
-        /// <summary>The local player walked into a shut gate: the floor it guards. Local only, for the refusal sound; the panel pulses by itself.</summary>
+        /// <summary>Local only. Fired when the local player touches a shut gate, passing its floor index.</summary>
         public static event System.Action<int> OnGateTouched;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -50,11 +35,8 @@ namespace CloseTheDeal.MatchMode
             OnGateTouched = null;
         }
 
-        /// <summary>How long a touched gate's pulse lasts, seconds, and how much brighter and more solid it starts. A short, firm answer.</summary>
         const float PulseSeconds = 0.3f;
         const float PulseGain = 0.45f;
-
-        /// <summary>A gate pulses at most this often, seconds, so pressing against it doesn't strobe.</summary>
         const float PulseRepeat = 0.5f;
 
         static readonly int BaseColour = Shader.PropertyToID("_BaseColor");
@@ -118,7 +100,7 @@ namespace CloseTheDeal.MatchMode
                 }
             }
 
-            // A gate that was switched off and on forgets who it ignores; put the carrier back.
+            // Re-apply carrier IgnoreCollision after SetActive toggles gate colliders.
             Exempt(_exempt, true);
         }
 
@@ -145,9 +127,7 @@ namespace CloseTheDeal.MatchMode
             }
         }
 
-        // ---- Touch feedback (local) -------------------------------------------------------------
-
-        /// <summary>The local player's body hit this collider. If it is a shut gate, the gate pulses and the sound event fires. Returns whether it was a gate.</summary>
+        /// <summary>Pulses a touched shut gate and fires OnGateTouched; returns true if the collider was a gate.</summary>
         public bool Touch(Collider collider)
         {
             if (collider == null || !_floorOf.TryGetValue(collider, out int key) || !collider.gameObject.activeInHierarchy)
@@ -163,7 +143,6 @@ namespace CloseTheDeal.MatchMode
             return true;
         }
 
-        /// <summary>Runs only while a pulse is showing: brightens the touched gate, then eases it back.</summary>
         void Update()
         {
             if (_pulses.Count == 0 || _gateMaterial == null)
@@ -174,7 +153,7 @@ namespace CloseTheDeal.MatchMode
             for (int i = _pulses.Count - 1; i >= 0; i--)
             {
                 float t = Mathf.Clamp01((Time.unscaledTime - _pulses[i].Started) / PulseSeconds);
-                float gain = PulseGain * (1f - t) * (1f - t); // ease-out back to rest
+                float gain = PulseGain * (1f - t) * (1f - t);
                 var colour = new Color(Mathf.Min(1f, rest.r + gain), Mathf.Min(1f, rest.g + gain), Mathf.Min(1f, rest.b + gain), Mathf.Min(1f, rest.a + gain));
                 foreach (Renderer panel in _pulses[i].Panels)
                 {
@@ -190,8 +169,6 @@ namespace CloseTheDeal.MatchMode
                     _pulses.RemoveAt(i);
             }
         }
-
-        // ---- Building ------------------------------------------------------------------------
 
         GameObject BuildGate(MatchArena arena, int building, int floor, bool roof)
         {
@@ -226,7 +203,6 @@ namespace CloseTheDeal.MatchMode
             return gate;
         }
 
-        /// <summary>The stairwell's spot on a floor, read from the first floor above the lobby that has stairs; every template shares it (TOWER.md).</summary>
         static Vector3 FindStairCentre(TowerBuilder tower, MatchArena arena)
         {
             Transform building = tower.BuildingRoot(0);
@@ -237,12 +213,10 @@ namespace CloseTheDeal.MatchMode
                     return stairs.localPosition;
             }
 
-            // The greybox rule the template builder uses: centred across, set back 1.2 m from the spine.
             float z = -arena.Profile.MainDepth + Radius + 1.2f;
             return new Vector3(0f, 0f, Mathf.Min(z, -Radius - 1f));
         }
 
-        /// <summary>Clockwise from above, 0° toward the rival tower (+Z), 90° toward +X; the template builder's convention.</summary>
         static Vector3 Direction(float degrees)
         {
             float rad = degrees * Mathf.Deg2Rad;

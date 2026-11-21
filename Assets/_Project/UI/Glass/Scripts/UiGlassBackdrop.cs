@@ -5,13 +5,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// Makes glass panes blur a UI backdrop instead of the 3D scene: put it on (or above) the RawImage that shows the
-    /// backdrop. While that image is visible, each frame its texture is blurred at quarter size into a texture of
-    /// this component's own and published to the glass, mapped to where the image sits on screen; the scene blur
-    /// stands down. Attached by itself at run time to the kit title screen's BackdropSlot (lane 8's live sky), so no
-    /// other lane's file changes. Cost: one quarter-size blur of the backdrop, only while it is shown.
-    /// </summary>
+    /// <summary>Blurs a UI backdrop RawImage (e.g. TitleScreen.BackdropSlot) when no 3D scene camera feeds glass.</summary>
     [DisallowMultipleComponent]
     [ExecuteAlways]   // so its count is kept in edit mode too (a stuck count would switch the scene blur off)
     [AddComponentMenu("Seal the Deal/UI Glass Backdrop")]

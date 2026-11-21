@@ -3,15 +3,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Combat
 {
-    /// <summary>
-    /// Everything a gun looks like, on this machine only: the model in the hand and how it
-    /// kicks, sways and bobs; the muzzle flash and its light; the tracer and the impact; the
-    /// shooter's view kick, shake and field-of-view punch; the dip of a reload and the slump
-    /// of the camera when its player dies. Nothing here is networked or decides anything; it
-    /// listens to WeaponHolder and Health. Runs after PlayerCamera has placed the camera, so
-    /// the kick sits on top of the player's own look and moves the crosshair with it.
-    /// Per-gun feel lives on each WeaponDefinition; what is the same for every gun lives here.
-    /// </summary>
+    /// <summary>Local weapon model, view kick, shake, FOV punch, sway/bob, and death slump applied after PlayerCamera.</summary>
     [DefaultExecutionOrder(1000)]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(WeaponHolder), typeof(Health))]
@@ -161,8 +153,6 @@ namespace CloseTheDeal.Combat
             _fov.Clear();
             ClearView();
         }
-
-        // ---- What the holder says ------------------------------------------------------------
 
         void OnWeaponChanged(WeaponDefinition weapon, int slot)
         {
@@ -331,8 +321,6 @@ namespace CloseTheDeal.Combat
 
             _models.Clear();
         }
-
-        // ---- Every frame ---------------------------------------------------------------------
 
         void LateUpdate()
         {

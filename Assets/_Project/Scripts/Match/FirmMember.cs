@@ -10,12 +10,7 @@ using UnityEngine.InputSystem;
 
 namespace CloseTheDeal.MatchMode
 {
-    /// <summary>
-    /// A player's place in a firm. The host decides the firm when the player spawns and it is
-    /// synced to everyone, late joiners included. On the owning client it also reads the two
-    /// match keys (pick up, drop) and asks the host to act; the host decides every outcome.
-    /// Lives on Player.prefab. Design and ownership: docs/systems/MATCH.md.
-    /// </summary>
+    /// <summary>Player component syncing firm/slot membership and handling briefcase interaction input. Design: docs/systems/MATCH.md.</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PlayerMotor))]
     public sealed class FirmMember : NetworkBehaviour
@@ -68,16 +63,9 @@ namespace CloseTheDeal.MatchMode
         byte _assignedFirm;
         byte _assignedSlot;
 
-        /// <summary>Host only: ticks this player has been outside the buildings in a row.</summary>
         internal int OutsideTicks;
-
-        /// <summary>Host only: was at a closed floor gate last tick, so the refusal is said once per approach.</summary>
         internal bool WasAtGate;
-
-        /// <summary>Host only: has been told this match why a gate is shut, so later refusals use the short line.</summary>
         internal bool GateExplained;
-
-        /// <summary>Host only: was on a roof last tick, so the "needs the briefcase" line is said once per visit.</summary>
         internal bool WasOnRoof;
 
         /// <summary>Which firm this player belongs to: the index of the building they climb.</summary>
@@ -102,9 +90,6 @@ namespace CloseTheDeal.MatchMode
         /// <summary>Where a carried briefcase hangs on this player for everyone but the carrier.</summary>
         public Transform CarryAnchor => _carryAnchor != null ? _carryAnchor : transform;
 
-        // ---- Firm assignment -----------------------------------------------------------------
-
-        /// <summary>Every player the team spawner is about to spawn is told its firm first, so the firm rides in the spawn message.</summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void HookSpawner()
         {
@@ -123,8 +108,6 @@ namespace CloseTheDeal.MatchMode
                 member._assignedSlot = (byte)slot;
             }
         }
-
-        // ---- Lifecycle -----------------------------------------------------------------------
 
         void Awake()
         {
@@ -215,9 +198,6 @@ namespace CloseTheDeal.MatchMode
                 MatchWiring.Raise(OnLocalChanged);
         }
 
-        // ---- Owner: keys and prompt ----------------------------------------------------------
-
-        /// <summary>Owner only. Keys count only while the mouse is captured, which is exactly while the game menu is closed.</summary>
         void Update()
         {
             if (_interact == null)
@@ -230,7 +210,7 @@ namespace CloseTheDeal.MatchMode
             if (!captured)
                 return;
 
-            // Sent even when this machine's prompt is down: the host's view of the reach decides.
+            // Send interact even if local prompt is hidden; host reach check decides.
             if (_interact.WasPressedThisFrame())
                 RequestInteract();
             if (_drop.WasPressedThisFrame() && prompt == MatchPrompt.DropBriefcase)
@@ -274,7 +254,6 @@ namespace CloseTheDeal.MatchMode
                 MatchDirector.Instance.ServerDrop(this, DropCause.Manual);
         }
 
-        /// <summary>The owner's own body hit something: a shut floor gate answers at once, before the host's refusal line arrives.</summary>
         void OnCollisionEnter(Collision collision)
         {
             if (!IsOwner || MatchDirector.Instance == null || MatchDirector.Instance.Gates == null)
@@ -283,12 +262,7 @@ namespace CloseTheDeal.MatchMode
             MatchDirector.Instance.Gates.Touch(collision.collider);
         }
 
-        // ---- Host: moving and telling the player ---------------------------------------------
-
-        /// <summary>
-        /// Host only. Moves this player to another firm and place in it, for a lobby that
-        /// chose the firms. Synced to everyone like the firm given on join.
-        /// </summary>
+        /// <summary>Host only. Updates synced firm and team slot.</summary>
         public void ServerSetFirm(int firm, int slot)
         {
             if (!IsServerStarted)
@@ -298,10 +272,7 @@ namespace CloseTheDeal.MatchMode
             _slot.Value = (byte)slot;
         }
 
-        /// <summary>
-        /// Host only. Puts the body somewhere else, standing still. The host's next state for
-        /// this body carries the new position, so the owner's prediction is corrected to it.
-        /// </summary>
+        /// <summary>Host only. Teleports the player body and clears velocity and fall counters.</summary>
         public void ServerTeleport(Vector3 position)
         {
             if (!IsServerStarted)
@@ -339,8 +310,6 @@ namespace CloseTheDeal.MatchMode
         {
             OnFellOut?.Invoke(this);
         }
-
-        // ---- Lookup --------------------------------------------------------------------------
 
         /// <summary>The player with this network object id on this machine, or null.</summary>
         public static FirmMember Find(int objectId)

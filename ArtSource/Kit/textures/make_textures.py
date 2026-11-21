@@ -1,17 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-12
-#  Prompt    : Alex approved the "White Trays + Cobalt Portal" office concepts; make the kit to them
-#  Modified  : Claude Opus 5.5, 2026-11-13 — adds Carpet_Dark (the reference plates' dark work-area
-#              carpet) and Ceiling_Grid (the tile grid, now a separate material over work areas).
-#  Modified  : Claude Opus 5.5, 2026-11-15 — Floor_Carpet.png is now big white floor tiles with thin joints (PANLINE).
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Draws the two tiling textures the approved concepts lean on: the cheap ceiling-tile grid
-#              and quarter-turned carpet tiles. They are drawn by script, not painted, so the tile size
-#              stays tied to the kit grid and a value change is one rebuild. Modelling the grid as
-#              geometry was the alternative; it would multiply every slab's triangles for a flat line.
-# -----------------------------------------------------------------------------
 """Usage: python ArtSource/Kit/textures/make_textures.py
 
 Writes Ceiling_Tile.png and Floor_Carpet.png beside this script. Each covers 1 m x 1 m, which is one UV unit

@@ -44,17 +44,10 @@ namespace CloseTheDeal.UI
         }
     }
 
-    /// <summary>
-    /// Every colour, size, type role, spacing and motion value the UI kit uses, in one asset so a designer
-    /// tunes the whole menu from one Inspector. Designer-owned: the game only reads it (AGENTS.md §4).
-    /// Colours are the art bible's seven swatches plus Amber; motion is the feel table in
-    /// ArtSource/UI/research/feel_wii_ds.md §2.2. Guide: docs/systems/UI_KIT.md.
-    /// </summary>
+    /// <summary>Designer-owned UI style, type, spacing, and motion tuning tokens.</summary>
     [CreateAssetMenu(menuName = "Close the Deal/UI Tokens", fileName = "UiTokens")]
     public sealed class UiTokens : ScriptableObject
     {
-        // ---- Colour ----------------------------------------------------------------------------
-
         [Header("Colour: the bible's swatches")]
         [Tooltip("Paper White: every light field and plate. Navy text on it reads 15:1.")]
         public Color Paper = Hex(0xF3F4F4);
@@ -101,8 +94,6 @@ namespace CloseTheDeal.UI
         [Tooltip("The soft hairline shadow under a lifted plate, as a fraction of navy.")]
         [Range(0f, 1f)] public float ShadowAlpha = 0.22f;
 
-        // ---- Type ------------------------------------------------------------------------------
-
         [Header("Type roles (sizes at 1920 x 1080)")]
         [Tooltip("The game's name on the title screen: one large, thin, very wide line.")]
         public UiTypeRole Title = new() { Size = 64f, Tracking = 18f, TargetFace = "Saira Expanded Light" };
@@ -120,8 +111,6 @@ namespace CloseTheDeal.UI
         public UiTypeRole Caption = new() { Size = 13f, Tracking = 10f, TargetFace = "IBM Plex Mono" };
         [Tooltip("Legal microtype in corners and footers: decorative, never needed to act.")]
         public UiTypeRole Micro = new() { Size = 11f, Tracking = 8f, TargetFace = "IBM Plex Mono Light" };
-
-        // ---- Space -----------------------------------------------------------------------------
 
         [Header("Spacing and sizes (pixels at 1920 x 1080)")]
         [Tooltip("The small gap: between a bullet and its text, inside a key cap.")]
@@ -142,8 +131,6 @@ namespace CloseTheDeal.UI
         public float Radius = 0f;
         [Tooltip("How far a control's clickable area reaches past its plate, so near misses still count. Keep gaps between controls at least twice this.")]
         public float HitPadding = 8f;
-
-        // ---- Motion ----------------------------------------------------------------------------
 
         [Header("Motion: hover and press (feel table §2.2)")]
         [Tooltip("Seconds for a hovered button's corner brackets to close and its plate to lift.")]

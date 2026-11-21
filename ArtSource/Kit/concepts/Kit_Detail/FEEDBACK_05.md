@@ -1,15 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-12
-  Prompt    : Alex: "we changed the idea to be not a sniper war twin tower. its gonna be one massive office
-              like labyrinth, designed for combat like STRAFTAT" (on top of FEEDBACK_04's glossy/glass/abstract notes)
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Round-5 brief to Codex after the game's layout changed from twin towers fighting across a
-              gap to one large labyrinthine office built for fast close-quarters arena combat. Keeps
-              FEEDBACK_04's material and style direction; replaces every street/rival-tower requirement.
-              Overrides FEEDBACK_04 and all earlier briefs where they differ.
--->
 # Kit detail, round 5: one office labyrinth, built for arena combat
 
 **From:** Alex, drafted by Claude · **Date:** 2026-11-12 · Supersedes [FEEDBACK_04.md](FEEDBACK_04.md). Read that for the style notes, which still apply; this brief wins wherever they differ.

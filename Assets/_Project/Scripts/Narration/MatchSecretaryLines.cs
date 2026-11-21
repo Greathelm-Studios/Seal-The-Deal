@@ -21,11 +21,7 @@ namespace CloseTheDeal.Narration
         NoWinner
     }
 
-    /// <summary>
-    /// What the secretary says during a match, a few lines per moment; one is picked at random,
-    /// never the same twice in a row. Designer content: read at runtime, never written. Every
-    /// shipped line is a proposal for the owner. Design: docs/systems/NARRATION.md.
-    /// </summary>
+    /// <summary>Designer-owned dialogue pools, priorities, and pacing for match narration. Design: docs/systems/NARRATION.md.</summary>
     [CreateAssetMenu(menuName = "Close the Deal/Narration/Match Secretary Lines", fileName = "MatchSecretaryLines")]
     public sealed class MatchSecretaryLines : ScriptableObject
     {

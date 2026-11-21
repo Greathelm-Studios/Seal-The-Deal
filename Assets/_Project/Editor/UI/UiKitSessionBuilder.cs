@@ -8,13 +8,7 @@ using static CloseTheDeal.Editor.UI.UiKitScreens;
 
 namespace CloseTheDeal.Editor.UI
 {
-    /// <summary>
-    /// Builds the two panels that sit over the title's middle and right columns (the window and the title lockup
-    /// stay): the session panel (hosting, joining, loading, with an honest progress track and Cancel) and the problem
-    /// panel (an amber plate naming what went wrong and the button that fixes it, plus Back). Mockups:
-    /// ArtSource/UI/review/01_menu_survey_03_hosting, 04_joining, 07_failed_full, 08_failed_friends. Coordinates are
-    /// the title's 1920 x 1080 frame. Both are dialogs without a veil: the title stays readable behind them.
-    /// </summary>
+    /// <summary>Builds SessionPanel.prefab and ProblemPanel.prefab over the title's middle and right columns.</summary>
     internal static class UiKitSessionBuilder
     {
         const float Left = 832f;
@@ -125,7 +119,6 @@ namespace CloseTheDeal.Editor.UI
             return root.gameObject;
         }
 
-        /// <summary>§ caption on the left, a short state word on the right, a black rule under both.</summary>
         static TMP_Text Caption(Transform parent, out TMP_Text state)
         {
             UiTokens t = Tokens;

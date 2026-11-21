@@ -5,13 +5,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.MatchMode
 {
-    /// <summary>
-    /// Keeps a scene whose match UI was built by an older setup from breaking the game. A HUD or menu
-    /// piece checks its own slots once on wake; with any empty it says which, and which menu rebuilds
-    /// them, then switches itself off, so the player still spawns and plays without that piece. And
-    /// the roster events are raised one listener at a time, so one faulty listener can never abort a
-    /// player's start.
-    /// </summary>
+    /// <summary>Validates match UI wiring on Awake and isolates roster event exceptions.</summary>
     static class MatchWiring
     {
         internal const string FixMenu = "Close the Deal > Lanes > Add GameMode To Open Scene";

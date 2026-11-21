@@ -5,12 +5,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// The host's player list in reception, built from the UI kit: one row per other player with
-    /// their firm, and Remove behind a confirm dialog. The host opens it with Tab (pad: View) via
-    /// LobbyHostControls. Removing asks the roster, which checks again that the asker is the
-    /// host. Built by Close the Deal > Lanes > Set Up Lobby.
-    /// </summary>
+    /// <summary>Host-only reception player list UI screen with kick confirmation. Design: docs/systems/LOBBY.md.</summary>
     public sealed class LobbyHostPanel : UiScreen
     {
         [Header("Wiring")]
@@ -66,7 +61,6 @@ namespace CloseTheDeal.Lobby
 
         public override void OnCancel() => Close();
 
-        /// <summary>One row per player other than the host, in roster order. Rebuilt on roster changes only.</summary>
         void Fill()
         {
             if (_roster == null || !_roster.TryGetLocal(out LobbyMember me))
@@ -92,7 +86,6 @@ namespace CloseTheDeal.Lobby
                 Refocus();
         }
 
-        /// <summary>Up and down run through the rows in use and wrap via Close, so focus never lands on a hidden row.</summary>
         void LinkNavigation(int used)
         {
             for (int i = 0; i < used; i++)

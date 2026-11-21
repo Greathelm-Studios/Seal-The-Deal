@@ -3,12 +3,7 @@ using UnityEngine.Rendering;
 
 namespace CloseTheDeal.Customisation
 {
-    /// <summary>
-    /// Draws an outfit on a character's body: each slot's chosen colours go onto that slot's
-    /// material slots through one reused property block, so the shared toon materials are
-    /// never touched (AGENTS.md §4 and §6). A change can answer with a short "fitting" bob.
-    /// Purely visual and local; who wears what is decided by PlayerOutfit.
-    /// </summary>
+    /// <summary>Local MaterialPropertyBlock renderer for character outfits and fitting-change bobs. Design: docs/systems/CUSTOMISATION.md.</summary>
     [DisallowMultipleComponent]
     public sealed class OutfitView : MonoBehaviour
     {
@@ -41,7 +36,6 @@ namespace CloseTheDeal.Customisation
         ShadowCastingMode[] _savedShadows;
         bool[] _savedRenderingOff;
 
-        /// <summary>One material slot on one body renderer.</summary>
         readonly struct Target
         {
             public readonly int Renderer;
@@ -104,7 +98,6 @@ namespace CloseTheDeal.Customisation
                 _bobTime = 0f;
         }
 
-        /// <summary>Looks up, once, where each category's material names are on the body's renderers.</summary>
         void ResolveMaterials()
         {
             _targets = new Target[_catalog.SlotCount][];
@@ -145,7 +138,6 @@ namespace CloseTheDeal.Customisation
                 Paint(slotIndex, slot.Option(optionIndex));
         }
 
-        /// <summary>Puts one choice's colours on every body material its category covers.</summary>
         void Paint(int slotIndex, OutfitOption option)
         {
             if (_targets == null)
@@ -169,10 +161,7 @@ namespace CloseTheDeal.Customisation
             }
         }
 
-        /// <summary>
-        /// The owner's own body is hidden in first person (PlayerMotor draws only its shadow).
-        /// The fitting room needs to see it: this shows it and later puts back exactly what it found.
-        /// </summary>
+        /// <summary>Reveals the local first-person hidden body for fitting-room preview and restores previous settings on exit.</summary>
         public void ForceVisible(bool visible)
         {
             if (_bodies.Length == 0 || visible == _forcedVisible)

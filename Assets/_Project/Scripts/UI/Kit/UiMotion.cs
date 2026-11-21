@@ -10,10 +10,7 @@ namespace CloseTheDeal.UI
         bool Tick(float dt);
     }
 
-    /// <summary>
-    /// A critically damped (or, for the refusal shake, underdamped) spring on one value. Interruptible:
-    /// change Target mid-flight and it keeps its velocity. Feel table §2.2: k = (2π/T)², c = 4πζ/T, mass 1.
-    /// </summary>
+    /// <summary>Interruptible damped spring driven on unscaled time.</summary>
     public struct UiSpring
     {
         public float Value;
@@ -116,11 +113,7 @@ namespace CloseTheDeal.UI
         }
     }
 
-    /// <summary>
-    /// The one motion driver every kit component uses. Components register while they move and are ticked
-    /// on unscaled time (menus run while the game runs), then drop out when settled. No allocation per frame.
-    /// A capture tool can pause real time and step it by hand (Paused + Tick), so motion can be filmed frame by frame.
-    /// </summary>
+    /// <summary>Shared unscaled-time motion driver for kit animations; ticks active items until settled.</summary>
     public static class UiMotion
     {
         static readonly List<IUiAnimated> Active = new(64);
@@ -159,10 +152,7 @@ namespace CloseTheDeal.UI
             Active.Remove(item);
         }
 
-        /// <summary>
-        /// Isolates an animated UI subtree on its own sub-Canvas (without adding a GraphicRaycaster)
-        /// so moving or fading it does not rebuild the parent HUD canvas.
-        /// </summary>
+        /// <summary>Isolates an animated UI subtree on its own sub-Canvas (no GraphicRaycaster) to avoid rebuilding parent canvases.</summary>
         public static Canvas EnsureSubCanvas(GameObject go)
         {
             if (go == null)
@@ -179,10 +169,7 @@ namespace CloseTheDeal.UI
         /// <summary>Marks that the player did something, which stops idle life until they stop again.</summary>
         public static void NoteInput() => LastInputTime = Now;
 
-        /// <summary>
-        /// Advances every moving component by dt seconds. A component may wake or sleep others (or itself) while
-        /// ticking, so a finished one is found again by identity before it is removed.
-        /// </summary>
+        /// <summary>Advances all active items by dt unscaled seconds; removes settled/destroyed items safely.</summary>
         public static void Tick(float dt)
         {
             Now += dt;

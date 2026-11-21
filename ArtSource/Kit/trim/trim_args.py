@@ -1,12 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-15
-#  Prompt    : Alex: put the props (and later the kit) on one Painter trim sheet
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Turns trim_layout.json into the skill's `unwrap --trim Material=v0:v1,...` argument for the materials a
-#              build actually uses (unwrap refuses names no mesh uses), so band positions are written down once.
-# -----------------------------------------------------------------------------
 """python trim_args.py <piece>.build.json  ->  prints Material=v0:v1,... (inset by the layout's inset_px)."""
 import json
 import os

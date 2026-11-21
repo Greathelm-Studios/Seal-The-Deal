@@ -1,39 +1,3 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Opus 5.5 (Claude Code)
-//  Generated : 2026-11-11
-//  Prompt    : "do the Unity import check on the kit, and open the scene"
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : Brings the office snap kit from ArtSource/Kit/export into the project in one
-//              repeatable step: import settings, URP materials, prefabs with colliders, a test
-//              scene laid out by the snap convention, and the same seam ray checks that
-//              ArtSource/Kit/assembly_test.py runs in Blender, here against Unity's own colliders.
-//              It is its own file because it is art pipeline, not greybox generation.
-//  Modified  : Claude Opus 5.5, 2026-11-12 — the approved office direction's pieces and materials:
-//              cobalt/portal walls, stair steps, locked door, strip light; Trim_Navy, Accent_Cobalt,
-//              Light_Strip (emissive), Door_LockedRed; carpet and ceiling tile textures; Stair_Flight
-//              keeps its collider but no renderer; visual-only pieces need no collider.
-//  Modified  : Claude Fable 5.2, 2026-11-12 — the glass material uses the Glass Sheen shader
-//              instead of transparent URP Lit.
-//  Modified  : Claude Opus 5.5, 2026-11-12 — the floor is a pale polished surface, not carpet.
-//  Modified  : Claude Opus 5.5, 2026-11-12 — labyrinth pieces (round 5), glossy white, cobalt and silver,
-//              Glass_Frosted, flat ceiling (no tile texture), and box colliders only for real boxes.
-//  Modified  : Claude Opus 5.5, 2026-11-13 — zone signs (visual only), the sculptural desk and pod chair.
-//  Modified  : Claude Opus 5.5, 2026-11-13 — detail-pass pieces; Carpet_Dark, Ceiling_Grid, Plant_Leaf.
-//  Modified  : Claude Opus 5.5, 2026-11-13 — Japanese corporate mix: palette, Accent_Aqua/Mist/Seal, Water_Wall,
-//              nine Japanese office props.
-//  Modified  : Claude Opus 5.5, 2026-11-13 — Water_Wall uses the Aero Water Pane shader (animated liquid).
-//  Modified  : Claude Opus 5.5, 2026-11-15 — ribbons and lightboxes, the tiled floor texture and the ceiling panel
-//              (PANLINE reference).
-//  Modified  : Claude Opus 5.5, 2026-11-14 — AEROSET reference: curtain wall, ceiling beams, glossier floor and walls.
-//  Modified  : Claude Opus 5.5, 2026-11-13 — loose monitor/keyboard, phone and tray get colliders, the lift pieces,
-//              the rooftop pool and its Pool_Water material.
-//  Modified  : Claude Opus 5.5, 2026-11-15 — L2 layout pieces: Wall_Door_2m, Partition_Glass_Door_2m,
-//              Stair_Straight_Half_2m.
-//  Modified  : Claude Opus 5.5, 2026-11-15 — Aero props on the Painter trim sheet: the Trim_Aero material (albedo,
-//              metallic/smoothness, normal and emission from ArtSource/Kit/trim/build/export) and the PC_Tower piece.
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-// -----------------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -47,65 +11,35 @@ using UnityEngine.Rendering;
 
 namespace CloseTheDeal.Editor.Art
 {
-    /// <summary>
-    /// Imports the office snap kit, checks it and builds <c>KitTest.unity</c>. Menu:
-    /// <c>Close the Deal &gt; Art &gt; Import Kit and Build Test Scene</c>. Shell use (with graphics, so not -nographics):
-    ///   Unity.exe -batchmode -quit -projectPath &lt;repo&gt; -executeMethod CloseTheDeal.Editor.Art.KitImport.RunFromCommandLine -kitOut &lt;folder&gt;
-    /// </summary>
-    /// <remarks>
-    /// Re-running overwrites the kit's models, materials, prefabs and test scene; it touches nothing
-    /// else. The source of truth is ArtSource/Kit (kit_pieces.py); rebuild and re-export there first.
-    /// </remarks>
+    /// <summary>Imports the office snap kit, verifies colliders/seams, and builds KitTest.unity.</summary>
     public static class KitImport
     {
-        /// <summary>Kit export folder, relative to the repo root (ArtSource/Kit/build_all.sh writes it).</summary>
         const string ExportFolder = "ArtSource/Kit/export";
         const string ModelFolder = "Assets/_Project/Art/Kit/Models";
         const string MaterialFolder = "Assets/_Project/Art/Kit/Materials";
         const string PrefabFolder = "Assets/_Project/Art/Kit/Prefabs";
-        /// <summary>Tile textures drawn by ArtSource/Kit/textures/make_textures.py, relative to the repo root.</summary>
         const string TextureSource = "ArtSource/Kit/textures";
         const string TextureFolder = "Assets/_Project/Art/Kit/Textures";
-        /// <summary>The trim sheet's material: every prop surface on the sheet is merged into it (ArtSource/Kit/trim).</summary>
         const string TrimMaterialName = "Trim_Aero";
-        /// <summary>Painter's URP export of the trim sheet, relative to the repo root (trim/painter/tp_export.py writes it).</summary>
         const string TrimSource = "ArtSource/Kit/trim/build/export";
-        /// <summary>File-name stem Painter gives the sheet's maps: mesh name, then texture set name.</summary>
         const string TrimStem = "TrimBoard_TrimBoard_Low_ID_Pearl_";
-        /// <summary>Trim sheet LED emission, HDR multiplier. WHY 1.5, under Light_Strip's 2: the LEDs are small dots
-        /// and rings that should read as lit, not bloom into halos; tune by eye in KitOffice.</summary>
         const float TrimEmission = 1.5f;
-        /// <summary>The props' plastic shader (Assets/_Project/Art/Plastic/AeroPlastic.shader).</summary>
         const string AeroPlasticShaderName = "Close the Deal/Aero Plastic";
-        /// <summary>Light_Strip emission, HDR multiplier on white. WHY: bright enough to bloom slightly under the
-        /// office look's exposure without blowing the ceiling out; tune by eye in KitTest.</summary>
         const float LightStripEmission = 2f;
         const string ScenePath = "Assets/_Project/Scenes/KitTest.unity";
 
-        /// <summary>Floor to floor, metres. Kit FLOOR_H and DefaultTower.asset FloorHeight.</summary>
         const float FloorHeight = 4.5f;
-        /// <summary>Floor to slab soffit, metres: floor to floor less the 0.2 m slab.</summary>
         const float ClearHeight = 4.3f;
-        /// <summary>Ray spacing along seams, metres. Same as assembly_test.py: finer than any gap a player would notice.</summary>
         const float SeamStep = 0.02f;
-        /// <summary>Allowed difference between the Blender manifest size and the imported mesh, metres.</summary>
         const float SizeTolerance = 0.001f;
-        /// <summary>Kit cage: 12 panels every 30°, first at 15°, open from 300° (the stair exit).</summary>
         const int CagePanels = 12;
         const float CageFirst = 15f, CageStep = 30f, CageOpenFrom = 300f;
-        /// <summary>Stairwell module pivot in the test scene; 20 m clear of the corner test, as in assembly_test.py.</summary>
         static readonly Vector3 StairModule = new Vector3(20f, 0f, 0f);
-        /// <summary>Stair centre in the stairwell slab's local frame (kit README).</summary>
         static readonly Vector3 StairCentreLocal = new Vector3(6f, 0f, -4f);
-        /// <summary>Tread sample radius, metres: mid-flight between column (0.8) and outer edge (2.6).</summary>
         const float TreadRadius = 1.7f;
-        /// <summary>Glass opacity. The Greybox README's read test recommends 5 % for players to read through.</summary>
         const float GlassAlpha = 0.05f;
-        /// <summary>The kit glass's shader: near-clear with drawn diagonal streaks (GlassSheen.shader).</summary>
         const string GlassShaderName = "Close the Deal/Glass Sheen";
-        /// <summary>Glow of the louvre slats, linear HDR: pale blue, a little over white so the slats read as backlit without blooming.</summary>
-        static readonly Color LouvreGlow = new Color(0.3f, 0.55f, 1.3f);   // more saturated: 0.55/0.75/1.1 read white in daylight
-        /// <summary>Capture size for the review renders, pixels.</summary>
+        static readonly Color LouvreGlow = new Color(0.3f, 0.55f, 1.3f);
         const int RenderWidth = 1280, RenderHeight = 720;
 
         static readonly string[] Pieces =
@@ -115,37 +49,25 @@ namespace CloseTheDeal.Editor.Art
             "Column_CornerR", "Partition_Glass_4m", "Partition_Glass_2m", "Stair_Flight", "Stair_Column", "Stair_CagePanel",
             "Wall_Solid_4m_Cobalt", "Wall_Solid_2m_Cobalt", "Wall_Solid_4m_PortalHead", "Wall_Door_4m_PortalHead",
             "Stair_Steps", "Stair_LockedDoor", "Ceiling_LightStrip",
-            // Labyrinth, round 5 (ArtSource/Kit/concepts/Kit_Detail/DECISION_r5.md)
             "Wall_Return_2x2", "Wall_Return_2x2_Cobalt", "Wall_Niche_4m", "Counter_Capsule_2m", "Cover_Block_2m",
             "Partition_Frost_4m", "Partition_Frost_2m", "Stair_Straight_2m", "Ramp_2x4", "Guard_Glass_4m",
             "Guard_Glass_2m", "Slab_4x4_LightLine",
-            // Fix list 2026-11-13: zone signs and props
             "Sign_Zone_L", "Sign_Zone_R", "Sign_Zone_C", "Sign_Zone_H", "Sign_Zone_A", "Desk_Sculpt", "Chair_Pod",
-            // Detail pass 2026-11-13, after Alex's reference plates
             "Column_Graphic", "Column_Graphic_Tall", "Workstation_Bench", "Chair_Task", "Storage_Low", "Copier",
             "Desk_Reception", "Guard_Rail_4m", "Guard_Rail_2m", "Partition_Header_4m", "Partition_Header_2m", "Partition_Header_Curve_2x2",
             "Light_Pendant_Linear", "Carpet_Overlay_4x4", "Ceiling_Grid_4x4", "Planter_Box",
-            // Japanese office props, the mix (ArtSource/Kit/concepts/Japanese_Aero/DECISION.md)
             "Water_Server", "Umbrella_Stand", "Vending_Machine", "Slipper_Cabinet", "Phone_Desk",
             "Doc_Tray", "Logo_Aonagi", "Sign_LED_Reception", "Water_Wall",
-            // Loose props split out of the bench, the lift and the rooftop pool (2026-11-13)
             "Monitor_Flat", "Keyboard", "Lift_Door_Frame_4m_1F", "Lift_Door_Frame_4m_RF", "Lift_Door_Panel",
             "Lift_Shaft_Wall_4m", "Lift_Car", "Pool_Raised_8x4",
-            // Glass and structure, AEROSET reference (Alex, 2026-11-14)
             "Wall_Curtain_4m", "Ceiling_Beams_4x4",
-            // Ribbons and lightboxes, PANLINE reference (Alex, 2026-11-15)
             "Ribbon_Floor_16m", "Ribbon_Ceiling_16m", "Lightbox_Wall_Wave", "Lightbox_Wall_Logo", "Ceiling_Panel_4x4",
-            // Mood D glass and the court's pendants (Alex's references, 2026-11-15)
             "Partition_Fluted_4m", "Partition_Fluted_2m", "Partition_Louvre_4m", "Partition_Louvre_2m", "Pendant_Sphere",
-            // L2 layout (Alex approved the twin-core court, 2026-11-15): doors on the 2 m grid, enclosed return stairs
             "Wall_Door_2m", "Partition_Glass_Door_2m", "Stair_Straight_Half_2m",
-            // Aero props on the trim sheet (ArtSource/Kit/props_aero.py, 2026-11-15): the new loose PC tower
             "PC_Tower",
-            // The lift's Aero remodel (ArtSource/Kit/concepts/Lift_Aero, 2026-11-15): opaque shaft wall and head-house cap
             "Lift_Shaft_Wall_4m_Solid", "Lift_Cap_4x4",
         };
 
-        /// <summary>Pieces that are seen but never touched, so they have no collider (kit README).</summary>
         static readonly HashSet<string> VisualOnly = new HashSet<string>
         {
             "Stair_Steps", "Ceiling_LightStrip", "Sign_Zone_L", "Sign_Zone_R", "Sign_Zone_C", "Sign_Zone_H", "Sign_Zone_A",
@@ -154,36 +76,17 @@ namespace CloseTheDeal.Editor.Art
             "Ceiling_Panel_4x4", "Pendant_Sphere",
         };
 
-        /// <summary>Pieces whose mesh is only a collider: the stair ramp is walked on, Stair_Steps is what is seen.</summary>
         static readonly HashSet<string> ColliderOnly = new HashSet<string> { "Stair_Flight" };
 
-        /// <summary>Materials that take a tile texture from <see cref="TextureSource"/> (file name = material name).</summary>
-        // WHY not Floor_Carpet: Alex, 2026-11-12, "no carpet, i want a shiny floor". The floor is now a
-        // plain polished surface whose interest comes from what it reflects, not from a texture.
-        // WHY not Ceiling_Tile either: the approved labyrinth (round 5) has flat white ceilings with light lines,
-        // not a tile grid. The texture stays in ArtSource/Kit/textures if a room set wants it back.
-        // Carpet_Dark and Ceiling_Grid (2026-11-13): the reference plates' work-area carpet and tile grid, as
-        // separate materials on overlay pieces, so the polished floor and flat ceiling stay elsewhere.
-        // Floor_Carpet again since 2026-11-15, as big white tiles with thin joints (PANLINE reference): the same white,
-        // the same mirror gloss, now with a joint grid that reads in the reflections.
         static readonly HashSet<string> Textured = new HashSet<string> { "Carpet_Dark", "Ceiling_Grid", "Floor_Carpet", "Glass_Fluted", "Glass_Louvre" };
 
-        /// <summary>Pieces with no collider mesh whose render mesh is the collider, not convex (kit README).</summary>
         static readonly HashSet<string> RenderMeshColliders = new HashSet<string> { "Slab_Stairwell", "Stair_Flight" };
 
-        /// <summary>Kit materials: colour (art bible hex, as in kit_pieces.py), metallic, smoothness (1 − Blender roughness).</summary>
         static readonly (string name, string hex, float metallic, float smoothness, bool glass)[] Materials =
         {
-            // The name stays Floor_Carpet because the exported models are mapped to it by name;
-            // it is a polished resin floor now (Alex, 2026-11-12). Reflections come from the scene's
-            // reflection probes (Close the Deal > Art > Bake Floor Reflections); without them it mirrors the sky.
-            // WHY mid-pale, not white: a white floor reflecting a white room shows no reflection at
-            // all. A slightly darker, near-mirror floor lets the reflections carry it.
-            ("Floor_Carpet", "DCE8EC", 0f, 0.96f, false),   // AEROSET (Alex 2026-11-14): white, but a near mirror
+            ("Floor_Carpet", "DCE8EC", 0f, 0.96f, false),
             ("Ceiling_Tile", "F0F5F5", 0f, 0.1f, false),
-            // Japanese corporate mix (ArtSource/Kit/concepts/Japanese_Aero/DECISION.md): pearl lacquer at satin
-            // gloss rather than round 5's mirror gloss, and a cooler silver.
-            ("Wall_PaperWhite", "F4F8F8", 0f, 0.85f, false),   // AEROSET: gloss on every surface
+            ("Wall_PaperWhite", "F4F8F8", 0f, 0.85f, false),
             ("Frame_Aluminium", "C8D2D9", 0.85f, 0.65f, false),
             ("Glass_Clear", "B3D9F2", 0f, 0.95f, true),
             ("Door_Leaf", "C9CED3", 0f, 0.4f, false),
@@ -193,9 +96,9 @@ namespace CloseTheDeal.Editor.Art
             ("Light_Strip", "FFFFFF", 0f, 0.5f, false),
             ("Door_LockedRed", "C0281E", 0f, 0.55f, false),
             ("Glass_Frosted", "C6E9E6", 0f, 0.3f, false),
-            ("Glass_Fluted", "DCEBF5", 0f, 0.6f, false),   // reeded frost, mood D (2026-11-15); the flutes are its texture
-            ("Glass_Louvre", "CFE6FF", 0f, 0.6f, false),   // the louvres' slats: the reeds, glowing pale blue (backlit)
-            ("Carpet_Dark", "2E3648", 0f, 0.06f, false),   // charcoal-blue since 2026-11-15 (mood D); was 7E96AC
+            ("Glass_Fluted", "DCEBF5", 0f, 0.6f, false),
+            ("Glass_Louvre", "CFE6FF", 0f, 0.6f, false),
+            ("Carpet_Dark", "2E3648", 0f, 0.06f, false),
             ("Ceiling_Grid", "F0F5F5", 0f, 0.1f, false),
             ("Plant_Leaf", "70AF59", 0f, 0.24f, false),
             ("Accent_Aqua", "45BFC7", 0f, 0.76f, false),
@@ -203,33 +106,18 @@ namespace CloseTheDeal.Editor.Art
             ("Accent_Seal", "C7473E", 0f, 0.35f, false),
             ("Water_Wall", "7ADAD8", 0f, 0.9f, false),
             ("Pool_Water", "7ADAD8", 0f, 0.9f, false),
-            // The Aero props' one opaque material. WHY white and 1/1: the sheet's maps carry the colour, metal and
-            // gloss; these only multiply them (URP Lit scales the map's smoothness by _Smoothness).
             (TrimMaterialName, "FFFFFF", 1f, 1f, false),
-            // The props' frosted aqua acrylic (divider, bottle, reception band, trays): more aqua and more opaque than
-            // the walls' Glass_Frosted, which read as grey glass on the props (Alex, 2026-11-15).
             (PropFrostName, "8FDCE0", 0f, 0.8f, false),
-            // The bench divider's fluted pale blue-white frost (mood D, 2026-11-15): one prefab in both colour halves.
             (PaleFrostName, "DCEBF5", 0f, 0.75f, false),
         };
 
-        /// <summary>The bench divider's pale frost (ArtSource/Kit/props_aero.py M_FROST_PALE); as transparent as the
-        /// props' aqua frost.</summary>
         const string PaleFrostName = "Plastic_Frost_Pale";
-
-        /// <summary>The Aero props' frosted acrylic material (ArtSource/Kit/props_aero.py M_FROST).</summary>
         const string PropFrostName = "Plastic_Aqua_Frost";
-        /// <summary>Its opacity. WHY 0.82, above Glass_Frosted's 0.65: the concepts paint it as solid-looking aqua
-        /// acrylic with only a soft glow through it; at 0.65 the room behind washed it out to grey.</summary>
         const float PropFrostAlpha = 0.82f;
-
-        /// <summary>Glass_Frosted opacity. WHY 0.65 (was 0.8): the mix's aqua pearl frost (Japanese_Aero/DECISION.md)
-        /// should glow with the light behind it; it still reads as "can't see through" next to the 5 % clear glass.</summary>
         const float FrostAlpha = 0.65f;
-        /// <summary>The water wall's shader: animated liquid drawn on the flat panel (Art/Water/AeroWater.shader).
-        /// Alex 2026-11-13: "a glass pane with animated liquid inside ... a shader and not physical geometry".</summary>
         const string WaterShaderName = "Close the Deal/Aero Water Pane";
 
+        /// <summary>Imports the kit and builds KitTest.unity from the Unity menu.</summary>
         [MenuItem("Close the Deal/Art/Import Kit and Build Test Scene")]
         public static void RunFromMenu()
         {
@@ -242,7 +130,7 @@ namespace CloseTheDeal.Editor.Art
             Run(Path.Combine(Path.GetTempPath(), "CloseTheDealKit"));
         }
 
-        /// <summary>Batch entry point; reads <c>-kitOut &lt;folder&gt;</c> for the report and renders and exits 1 on any failure.</summary>
+        /// <summary>Batch entry point; reads <c>-kitOut &lt;folder&gt;</c> and exits 1 on failure.</summary>
         public static void RunFromCommandLine()
         {
             string[] args = System.Environment.GetCommandLineArgs();
@@ -253,8 +141,6 @@ namespace CloseTheDeal.Editor.Art
             EditorApplication.Exit(ok ? 0 : 1);
         }
 
-        /// <summary>Does the whole import and check. Returns true when every check passed.</summary>
-        /// <param name="outFolder">Where the report and PNG renders go (outside the project).</param>
         static bool Run(string outFolder)
         {
             Directory.CreateDirectory(outFolder);
@@ -281,8 +167,6 @@ namespace CloseTheDeal.Editor.Art
             return ok;
         }
 
-        // ------------------------------------------------------------------ materials
-
         static Dictionary<string, Material> BuildMaterials()
         {
             Directory.CreateDirectory(MaterialFolder);
@@ -306,15 +190,10 @@ namespace CloseTheDeal.Editor.Art
                 if (m.glass)
                 {
                     c.a = GlassAlpha;
-                    // Glass uses the game's own drawn-sheen shader (Assets/_Project/Art/Glass,
-                    // Alex 2026-11-12), not URP Lit: Lit glass is either invisible or a mirror.
-                    // The streak and edge settings are left as they are on an existing material,
-                    // so tuning them in the Inspector survives a re-import.
                     Shader sheen = Shader.Find(GlassShaderName);
                     if (sheen != null)
                     {
                         mat.shader = sheen;
-                        // -1 = take the queue from the shader (Transparent).
                         mat.renderQueue = -1;
                     }
                     else
@@ -325,8 +204,7 @@ namespace CloseTheDeal.Editor.Art
                 }
                 if (m.name == "Water_Wall" || m.name == "Pool_Water")
                 {
-                    // WHY skip the rest: the water shader has its own colours (tuned in the Inspector and kept
-                    // across re-imports), so the Lit colour, smoothness and texture settings below don't apply.
+                    // Return early so Lit colour/smoothness/texture settings do not overwrite custom water tuning.
                     Shader water = Shader.Find(WaterShaderName);
                     if (water != null)
                     {
@@ -341,7 +219,6 @@ namespace CloseTheDeal.Editor.Art
                     c.a = FrostAlpha;
                     MakeTransparent(mat);
                 }
-                // Fluted glass takes its alpha from its texture (the reeds), so it is transparent with a white base.
                 if (m.name == "Glass_Fluted" || m.name == "Glass_Louvre") MakeTransparent(mat);
                 if (m.name == "Glass_Frosted")
                 {
@@ -355,7 +232,7 @@ namespace CloseTheDeal.Editor.Art
                 }
                 if (Textured.Contains(m.name))
                 {
-                    // WHY white: the texture already holds the final colour; a tint would darken it twice.
+                    // Set base tint white so the texture is not multiplied twice.
                     mat.SetTexture("_BaseMap", ImportTexture(m.name));
                     c = Color.white;
                 }
@@ -365,14 +242,10 @@ namespace CloseTheDeal.Editor.Art
                 }
                 else if (!m.glass)
                 {
-                    // WHY: a material that has dropped its texture (the ceiling tiles, 2026-11-12) must lose it
-                    // here too, or the old map keeps showing under the new colour.
                     mat.SetTexture("_BaseMap", null);
                 }
                 if (m.name == "Glass_Louvre")
                 {
-                    // WHY emissive: the slats read as lit from the blue room behind them (Alex's "DIVISION" reference); a
-                    // light inside the room can't light a transparent slat's outer face.
                     mat.EnableKeyword("_EMISSION");
                     mat.SetTexture("_EmissionMap", ImportTexture(m.name));
                     mat.SetColor("_EmissionColor", LouvreGlow);
@@ -394,7 +267,6 @@ namespace CloseTheDeal.Editor.Art
             return result;
         }
 
-        /// <summary>Copies a tile texture in from ArtSource and returns it; repeat wrap so it tiles across pieces.</summary>
         static Texture2D ImportTexture(string name)
         {
             Directory.CreateDirectory(TextureFolder);
@@ -408,15 +280,8 @@ namespace CloseTheDeal.Editor.Art
             return AssetDatabase.LoadAssetAtPath<Texture2D>(dst);
         }
 
-        /// <summary>Gives <paramref name="mat"/> the trim sheet's four maps from <see cref="TrimSource"/>.</summary>
-        /// <remarks>
-        /// URP Lit reads smoothness from the metallic map's alpha by default, which is how Painter's URP preset packs it.
-        /// Emission is lit only where the sheet has LEDs (its emission map is black elsewhere).
-        /// </remarks>
         static void ApplyTrimSheet(Material mat)
         {
-            // The props' moulded-plastic look (Art/Plastic/AeroPlastic.shader): Lit plus lacquer, gradient and rim.
-            // Its lacquer, rim and gradient values are left as they are on an existing material, so tuning survives.
             Shader aero = Shader.Find(AeroPlasticShaderName);
             if (aero != null && mat.shader != aero)
                 mat.shader = aero;
@@ -434,7 +299,6 @@ namespace CloseTheDeal.Editor.Art
             mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
         }
 
-        /// <summary>Copies one trim sheet map in as <c>Trim_Aero_&lt;map&gt;.png</c> with the right import type.</summary>
         static Texture2D ImportTrimMap(string map, bool srgb, bool normal)
         {
             Directory.CreateDirectory(TextureFolder);
@@ -444,14 +308,12 @@ namespace CloseTheDeal.Editor.Art
             var importer = (TextureImporter)AssetImporter.GetAtPath(dst);
             importer.textureType = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
             importer.sRGBTexture = srgb;
-            // WHY repeat: trim strips run past 1 in U (the sheet tiles along U); V stays inside each band.
             importer.wrapMode = TextureWrapMode.Repeat;
             importer.maxTextureSize = 2048;
             importer.SaveAndReimport();
             return AssetDatabase.LoadAssetAtPath<Texture2D>(dst);
         }
 
-        /// <summary>URP Lit transparent, alpha blended, no depth write: the settings the material inspector applies.</summary>
         static void MakeTransparent(Material mat)
         {
             mat.SetFloat("_Surface", 1f);
@@ -466,9 +328,6 @@ namespace CloseTheDeal.Editor.Art
             mat.renderQueue = (int)RenderQueue.Transparent;
         }
 
-        // ------------------------------------------------------------------ models
-
-        /// <summary>Copies one FBX in, applies the skill's import settings, remaps materials and checks the meshes.</summary>
         static bool ImportModel(string piece, Dictionary<string, Material> mats, StringBuilder report)
         {
             string src = Path.Combine(ExportFolder, piece, piece + ".fbx");
@@ -489,7 +348,7 @@ namespace CloseTheDeal.Editor.Art
             AssetDatabase.ImportAsset(dst, ImportAssetOptions.ForceUpdate);
 
             var importer = (ModelImporter)AssetImporter.GetAtPath(dst);
-            // WHY: the export already baked units and axes into the mesh (blender-modeling unity-import.md).
+            // Exported FBX files already bake units and axes into the mesh.
             importer.globalScale = 1f;
             importer.useFileUnits = true;
             importer.bakeAxisConversion = false;
@@ -542,7 +401,6 @@ namespace CloseTheDeal.Editor.Art
             return ok;
         }
 
-        /// <summary>Object sizes from the export manifest, converted from Blender (x, depth, height) to Unity (x, height, depth).</summary>
         static Dictionary<string, Vector3> ReadManifestSizes(string path)
         {
             var sizes = new Dictionary<string, Vector3>();
@@ -557,14 +415,9 @@ namespace CloseTheDeal.Editor.Art
             return sizes;
         }
 
-        // ------------------------------------------------------------------ prefabs
-
-        /// <summary>True when every vertex sits on a corner of the mesh's bounds: a real axis-aligned box.</summary>
-        /// <remarks>WHY: 12 triangles alone isn't proof. The sloped stair guards are 12-triangle hulls too, and
-        /// a BoxCollider fitted to their bounds would stand a 5 m wall beside the stair.</remarks>
         static bool IsAxisAlignedBox(Mesh mesh)
         {
-            const float Epsilon = 0.0005f;   // half a millimetre: the kit's size tolerance
+            const float Epsilon = 0.0005f;
             Bounds b = mesh.bounds;
             foreach (Vector3 v in mesh.vertices)
                 for (int axis = 0; axis < 3; axis++)
@@ -573,15 +426,9 @@ namespace CloseTheDeal.Editor.Art
             return true;
         }
 
-        /// <summary>Prefab per piece: <c>*_Collider</c> meshes become colliders with no renderer.</summary>
-        /// <remarks>
-        /// A collider mesh that is an axis-aligned box becomes a BoxCollider fitted to it (cheaper and exact for the kit's
-        /// boxes); anything else a convex MeshCollider, as unity-import.md says. The alternative, convex
-        /// MeshColliders everywhere, works too but costs more per contact for no gain on boxes.
-        /// </remarks>
         static bool BuildPrefab(string piece, StringBuilder report)
         {
-            const int BoxIndexCount = 36;   // 12 triangles: a box
+            const int BoxIndexCount = 36;
             Directory.CreateDirectory(PrefabFolder);
             string prefabPath = $"{PrefabFolder}/{piece}.prefab";
             if (!GeneratedAssetGuard.MayOverwrite(prefabPath))
@@ -633,8 +480,6 @@ namespace CloseTheDeal.Editor.Art
             return true;
         }
 
-        // ------------------------------------------------------------------ test scene
-
         static GameObject Place(Transform parent, string piece, float x, float y, float z, float yaw = 0f)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{PrefabFolder}/{piece}.prefab");
@@ -643,7 +488,6 @@ namespace CloseTheDeal.Editor.Art
             return go;
         }
 
-        /// <summary>Same layout as assembly_test.py, placed by grid positions and 90° turns only.</summary>
         static void BuildTestScene()
         {
             var corner = new GameObject("Facade Corner").transform;
@@ -651,7 +495,7 @@ namespace CloseTheDeal.Editor.Art
             {
                 Place(corner, "Slab_4x2", x, 0f, 0f);
                 Place(corner, "Slab_4x4", x, 0f, -2f);
-                Place(corner, "Slab_4x2", x, FloorHeight, 0f);   // the floor above: its soffit is this room's ceiling
+                Place(corner, "Slab_4x2", x, FloorHeight, 0f);
                 Place(corner, "Slab_4x4", x, FloorHeight, -2f);
             }
             Place(corner, "Column_CornerL", 0f, 0f, 0f);
@@ -659,11 +503,10 @@ namespace CloseTheDeal.Editor.Art
             Place(corner, "Column_CornerR", 8f, 0f, 0f);
             Place(corner, "Window_4m", 0f, 0f, 0f);
             Place(corner, "Window_4m", 4f, 0f, 0f);
-            // A side wall running toward -Z: pivot at its far end, turned -90 (kit README).
             Place(corner, "Wall_Solid_2m", 0f, 0f, -2f, -90f);
             Place(corner, "Wall_Solid_4m", 0f, 0f, -6f, -90f);
             Place(corner, "Wall_Door_4m", 0f, 0f, -6f);
-            const float doorLeafX = 1.41f, doorLeafZ = -6.1f;   // kit README: leaf hinge in a door wall
+            const float doorLeafX = 1.41f, doorLeafZ = -6.1f;
             Place(corner, "Door_Leaf", doorLeafX, 0f, doorLeafZ);
             Place(corner, "Partition_Glass_4m", 4f, 0f, -6f);
 
@@ -684,8 +527,6 @@ namespace CloseTheDeal.Editor.Art
             }
         }
 
-        // ------------------------------------------------------------------ seam checks (Unity colliders)
-
         static bool Hit(Vector3 origin, Vector3 dir, float maxDistance, out Vector3 point)
         {
             bool ok = Physics.Raycast(origin, dir.normalized, out RaycastHit h, maxDistance);
@@ -699,7 +540,6 @@ namespace CloseTheDeal.Editor.Art
             for (int i = 0; i <= n; i++) yield return a + i * step;
         }
 
-        /// <summary>The nine checks from assembly_test.py, against colliders instead of render meshes.</summary>
         static bool RunSeamChecks(StringBuilder report)
         {
             const float rayLength = 5f, outside = -1f, gridSample = 0.1f, inset = 0.25f;
@@ -756,9 +596,6 @@ namespace CloseTheDeal.Editor.Art
             return allOk;
         }
 
-        // ------------------------------------------------------------------ renders
-
-        /// <summary>Same three views as assembly_test.py, through the scene's camera, then leaves the camera on the inside view.</summary>
         static void Render(string folder, StringBuilder report)
         {
             Camera cam = Camera.main;

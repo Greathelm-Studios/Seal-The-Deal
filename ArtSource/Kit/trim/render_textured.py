@@ -1,13 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-15
-#  Prompt    : Alex: Aero office props on one Painter trim sheet
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Review only: a textured EEVEE three-quarter render of a prop wired by preview_trim.py, because the
-#              skill's contact sheet shows flat material colours and can't show the trim sheet on the model.
-#  Run       : blender -b <preview>.blend --factory-startup -P render_textured.py -- <out.png> [yaw_degrees]
-# -----------------------------------------------------------------------------
 import math
 import sys
 

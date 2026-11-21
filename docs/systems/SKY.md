@@ -1,22 +1,22 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Fable 5.2 (Claude Code)
-  Generated : 2026-11-12
-  Prompt    : Alex: "i wanna work on the actual skybox and scenery", then four rounds of feedback
-              and two cloud references, then "Yes, wire it in"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : The owning doc for the sky (AGENTS.md §7): what it draws, where its files are, how
-              to tune it, and what has not been checked.
--->
 # Sky and distant city
 
-**Status:** Current (used by Apply Office Look; not measured for frame cost) · **Last updated:** 2026-11-12
+**Status:** Current (used by Apply Office Look; not measured for frame cost) · **Last updated:** 2026-11-21
 
 Outside the windows is a saturated cobalt sky over a city of white towers that rise out of a soft sea of cloud.
 The clouds are flat, posterised shapes with chunky pixel-stepped edges.
 A hairline grid runs across the sky, and small square outlines hunt along the cloud edges like a camera's autofocus brackets.
 
 The dome and city follow art bible reference 04; the clouds and overlay follow two references Alex supplied on 2026-11-12 (a thresholded low-resolution sky, and clouds traced with square outlines over a grid).
+
+## Architecture and rationale
+
+- **Painted procedural skybox over mesh city:** Everything is drawn in one full-screen skybox pass so it can be restyled directly from the material without modelling, LODs, or draw calls while the exterior city scope stays open. Procedural shapes avoid panorama seams and resolution limits, and let colours change without repainting a texture.
+- **UnityCG entry point:** `OfficeSky.shader` targets `UnityCG` like Unity's built-in `Skybox/Procedural` because `RenderSettings.sun` is passed to skybox shaders as `_WorldSpaceLightPos0` across render pipelines.
+- **Two cloud languages on purpose:** Above the horizon, flat pixel-stepped clouds carry the hairline grid, focus brackets, and plane wake. Below the horizon, the towers rise out of a softly shaded cloud sea that can be snapped toward the same pixel grid with `_SeaMatch` so both halves share one resolution.
+- **Rejected cloud designs (do not rebuild):** Soft noise clouds over pale haze washed half the frame grey; a single cumulus band with a flat base read as a ring around the horizon; per-slot stamped clouds read as uniform pebbles (replaced by one perspective-warped noise sheet); and clouds drawn between tower rows made nearer towers look like they were clipping through them (all clouds now draw behind all four city rows).
+- **Cloud horizon thinning and focus brackets:** Overhead clouds fade toward the horizon by subtracting depth (`FIELD_THIN_OUT`) rather than fading alpha, which eats clouds inward from their edges instead of leaving a ruled cutoff line. Cumulus focus brackets only trace the billowed tops (`slotLift >= 0.2`) so they never line up into a flat row along cloud bases.
+- **Tower massing and lighting:** Four depth rows (`HERO`, `NEAR`, `MID`, `FAR`) use prime-like column counts so rows never align. Towers stack up to three off-centre volumes with blank plant/sky-lobby belts (`TOWER_ZONES`) to break up "generated" window ladders, and darken their side faces (`TOWER_SIDE_DARK`) so towers backlit by the sun do not flatten into cards. Glass towers catch sun glints both toward and away from the sun (`abs(cos)`).
+- **Exposure compensation:** [OfficeLook.cs](../../Assets/_Project/Editor/Art/OfficeLook.cs) lifts post-exposure for white interiors (`PostExposure` = 1.0 stops) and writes `_ExposureComp` on the sky material to hold the sky at `SkyShownExposure` (0.6 stops, rather than 0.3 stops which dimmed pre-exposure bloom, and below 0.8 stops where the cloud sea washes white).
 
 ## Files
 
@@ -35,7 +35,7 @@ Tune the material, not the tool. The Inspector is grouped as:
 | Distant towers | Wall, glass, graphic and crown-line colours; height, density, how many giant foreground towers, distance haze, and how much darker the side faces are, and sun glints on glass towers (three flat steps of lift toward the top and a diagonal streak, on glass turned toward the sun or away from it). Towers are up to three volumes stacked off-centre with flat, slanted, tapered or rounded crowns. Only the nearest row and the giant towers carry facades (window zones with blank belts, glass curtain walls, a glass ribbon, the blue slash or a ring mark); the two far rows are plain hazed silhouettes. |
 | Clouds | Amount of horizon cumulus and of the broken field overhead; size; pixel chunkiness; number of flat tone steps; contour lines; drift. |
 | Cloud sea below | Sunlit and hollow colours, amount (0 = plain mist), billow size, how high the cloud tops rise in front of the towers, the white glow where sea meets sky, and how far it matches the pixel clouds above (0 = fully soft, 1 = the same flat stepped look; 0.5 by default, which snaps it to the same pixel grid and half-steps its shading). This is the one softly shaded cloud in the sky: the pixel clouds are above the horizon, the sea is below it, and the towers rise out of it. |
-| Exposure | One value, "Sky brightness multiplier". `Apply Office Look` sets it so the sky cancels the post-processing exposure lift (about 0.57 at +1.1 stops), keeping the sky at the brightness it was designed at while interiors get brighter. Do not tune it by hand; change `PostExposure` in the look tool instead and re-apply. The scene fog gets the same cancellation. |
+| Exposure | One value, "Sky brightness multiplier". `Apply Office Look` sets it so the sky cancels the post-processing exposure lift, keeping the sky at the brightness it was designed at while interiors get brighter. Do not tune it by hand; change `PostExposure` in the look tool instead and re-apply. The scene fog gets the same cancellation. |
 | Overlay | Grid strength and size; focus-square strength, size, and how often each one re-focuses (0 freezes them). |
 | Plane | Seconds between planes (0 = none), seconds to cross, size, contrail length. A small jet flies a straight line in front of the cloud field and tears a channel through it that spreads behind the plane and closes again; one focus bracket tracks it. Each flight takes a new heading and lane. |
 

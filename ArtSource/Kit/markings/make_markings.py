@@ -1,17 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-15
-#  Prompt    : Alex on the L2 KitOffice build: "looks good but bland and boring ... I want them to follow the
-#              structure with purpose and intent" -> build the markings system (concepts/Layout/MARKINGS.md)
-#  Modified  : Claude Opus 5.5, 2026-11-15 - mood D in blue: the two half blues as paint, giant zone numbers.
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Draws every floor, ceiling and wall marking of the L2 office as textures, from the plan's own data
-#              (concepts/Layout/L2/layouts.json for the ring, nodes, case, gates and district colours; l2_on_kit.json
-#              for the walls and doors as built), so each mark follows the structure and moves if the plan does.
-#              Its own file because the marks are one system with one source; KitOfficeScene.cs only places the
-#              textures it writes into ArtSource/Kit/signs/textures.
-# -----------------------------------------------------------------------------
 """Usage: python ArtSource/Kit/markings/make_markings.py   (writes ../signs/textures/*.png and review/markings_sheet.png)
 
 Floor and ceiling marks are whole-plate sheets: one 40 x 40 m texture per storey (the plate is 40 x 32; the rest is

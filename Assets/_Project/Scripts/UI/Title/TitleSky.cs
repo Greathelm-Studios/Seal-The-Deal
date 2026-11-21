@@ -5,13 +5,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI.Title
 {
-    /// <summary>
-    /// The live sky behind the title screen's window frame. In any scene with the UI kit's title screen it adds
-    /// itself: a camera that draws only the scene's own sky (the Office Look sky shader: clouds drift, planes
-    /// cross), slowly breathing, into a render texture shown in TitleScreen.BackdropSlot. The camera renders only
-    /// while the title is on screen, draws no scene geometry and no lights of its own, so it costs nothing in a
-    /// game and cannot leak into gameplay. Design: docs/systems/UI_TITLE.md.
-    /// </summary>
+    /// <summary>Renders the scene skybox into TitleScreen.BackdropSlot while the title screen is active.</summary>
     public sealed class TitleSky : MonoBehaviour
     {
         [Header("View")]
@@ -145,11 +139,9 @@ namespace CloseTheDeal.UI.Title
             }
         }
 
-        /// <summary>The render texture matches the slot's size on screen, so the sky is drawn 1:1.</summary>
         void EnsureTexture()
         {
-            // Measured from the slot's corners on screen, so it is 1:1 in an overlay canvas and in a camera canvas
-            // alike (the canvas scale factor alone came out at 2/3 of the slot in a camera canvas: a soft, upscaled sky).
+            // Measure screen-pixel corners so the RT is 1:1 in both overlay and camera canvases.
             if (_canvas == null)
                 _canvas = _title.BackdropSlot.GetComponentInParent<Canvas>().rootCanvas;
             Vector2 slotSize = _title.BackdropSlot.rect.size;
@@ -202,11 +194,7 @@ namespace CloseTheDeal.UI.Title
         }
     }
 
-    /// <summary>
-    /// The one place that swaps the scene's sky for a title-screen copy (more planes). Shared by TitleSky and
-    /// TitleBackdrop so neither can restore the other's copy: the first user makes the copy, the last puts the
-    /// original back. The sky asset itself is never written.
-    /// </summary>
+    /// <summary>Ref-counted runtime skybox copy for title-screen plane cadence without mutating the asset.</summary>
     public static class TitleSkyOverride
     {
         static readonly int PlaneEvery = Shader.PropertyToID("_PlaneEvery");

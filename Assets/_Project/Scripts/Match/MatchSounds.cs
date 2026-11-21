@@ -3,13 +3,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.MatchMode
 {
-    /// <summary>
-    /// Gives the briefcase match's events their sounds from the shared UI sound set (lane 9's
-    /// clips, UI bus), on each player's own machine: the countdown, a floor opening, the case
-    /// changing hands, a refusal, a warning, the result. Listens only; plays through the
-    /// UI kit's UiSound hub (lane 9's player behind it). Lives on the Match
-    /// object. The mapping is the table in docs/systems/MATCH.md, UI contract.
-    /// </summary>
+    /// <summary>Plays match UI audio events on each player's machine via UiSound. Design: docs/systems/MATCH.md.</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(MatchDirector))]
     public sealed class MatchSounds : MonoBehaviour

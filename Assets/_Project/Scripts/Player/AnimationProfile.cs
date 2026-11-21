@@ -1,40 +1,13 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-12
-//  Prompt    : Alex: "set up a humanoid procedural animation system" (built-in, no clips), then
-//              three rounds of feel notes ending "too stiff, transitions are harsh ... the video
-//              i sent is kinda what im looking for, but that more airy top heavy loose feel"
-//  Modified  : Claude Fable 5.2, 2026-11-12 — clip fields and the start-stop carry, after
-//              Alex chose to drive the ragdoll from real animation clips
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : The tuning panel for PlayerAnimator. Its own asset, like MovementProfile, so the
-//              look of the run can be tuned without touching Player.prefab (which the greybox
-//              tool regenerates) and so runtime never writes a designer's values (AGENTS.md §4).
-// -----------------------------------------------------------------------------
 using UnityEngine;
 
 namespace CloseTheDeal.Player
 {
-    /// <summary>
-    /// Designer-owned tuning for the character animation: the clips it plays, the ragdoll that
-    /// chases them, and the older procedural pose used when a clip slot is empty. Runtime only
-    /// reads it (AGENTS.md §4).
-    /// </summary>
-    /// <remarks>
-    /// Angles are degrees, distances metres, times seconds. All distances assume the 1.8 m
-    /// character; a differently sized character needs its own profile. The defaults were set by
-    /// eye against frame strips of the reference video ("Full Procedural Animations System") and
-    /// of this animator played back in the Editor; none has been tuned in a real play session.
-    /// </remarks>
+    /// <summary>Designer-owned tuning for character animation clips, active ragdoll drives, and procedural fallback (1.8 m rig).</summary>
     [CreateAssetMenu(menuName = "Close the Deal/Animation Profile", fileName = "AnimationProfile")]
     public sealed class AnimationProfile : ScriptableObject
     {
-        /// <summary>How many directions <see cref="RunClips"/> holds: one every 45 degrees.</summary>
         public const int RunDirections = 8;
 
-        /// <summary>True when every clip slot is filled, so the animator can play clips instead of its procedural pose.</summary>
-        /// <summary>True when every crouch and slide slot is filled. Without them the body stays standing when the player crouches or slides (and the motor's own squash, if left on, is all that shows).</summary>
         public bool HasCrouchClips
         {
             get

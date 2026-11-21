@@ -6,17 +6,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The in-game menu: a light glass pane over the running game (nothing pauses). Back to game, Invite friends
-    /// (Steam only), Settings and Leave game, with the focused button's explanation, who is hosting and how many are
-    /// in, and, while the run has not started, reception's seats and who is ready (read-only: the lobby lane owns the
-    /// ready board and the start). The match lane's section sits in MatchSlot. Leaving asks first, in the host's or
-    /// a client's words. Esc / B is Back to game. Opened and closed by the UI root from the game menu's state (menu
-    /// open = mouse free = player idle stays GameMenu's rule). Text changes only on lobby and roster events. While
-    /// open, LateUpdate compares the match section's shown state, height and button (no allocation; the match lane
-    /// raises no event for them) and whether the lobby's roster has spawned, and re-lays out only when one changed.
-    /// Design: docs/systems/UI_KIT.md "In-game menu".
-    /// </summary>
+    /// <summary>In-game menu glass pane: navigation, session summary, match slot, and read-only reception seats.</summary>
     [AddComponentMenu("Close the Deal/UI/In-Game Menu")]
     public sealed class InGameMenuScreen : UiScreen
     {
@@ -79,7 +69,6 @@ namespace CloseTheDeal.UI
         string _sessionText = string.Empty;
         UiButton[] _menuButtons;
 
-        /// <summary>Given by the UI root: the game menu whose rule this pane follows and whose lobby it reads.</summary>
         internal void Bind(GameMenu menu)
         {
             _menu = menu;
@@ -160,7 +149,7 @@ namespace CloseTheDeal.UI
 
         void MarkDirty() => _dirty = true;
 
-        /// <summary>Esc / B: back to the game (the game menu hands the mouse back once the confirm button is up).</summary>
+        /// <summary>Esc / B: resume gameplay.</summary>
         public override void OnCancel()
         {
             UiSound.Play(UiSoundEvent.Back);
@@ -205,7 +194,6 @@ namespace CloseTheDeal.UI
             LinkNavigation();
         }
 
-        /// <summary>Both firms' seats while in reception: who sits where, who is ready, and the empty seats.</summary>
         void RefreshReception()
         {
             bool show = _roster != null && !_roster.RunInProgress && _roster.Rules != null;
@@ -220,10 +208,6 @@ namespace CloseTheDeal.UI
                 _readyCount.text = ready + " of " + _roster.Count + " ready";
         }
 
-        /// <summary>
-        /// The seats were built for a 196 px match section; they move up or down to sit under the real one (none
-        /// showing: up to the top of the column). Only on refresh, never per frame.
-        /// </summary>
         void PlaceReception()
         {
             if (_receptionBlock == null || _matchSlot == null)
@@ -244,7 +228,6 @@ namespace CloseTheDeal.UI
             _receptionBlock.anchoredPosition = new Vector2(0f, -shift);
         }
 
-        /// <summary>One firm's name, colour and seats (members first, then empty seats). Returns how many are ready.</summary>
         int RefreshFirm(int firm)
         {
             if (firm < _firmNames.Length && _firmNames[firm] != null)
@@ -291,7 +274,6 @@ namespace CloseTheDeal.UI
             _seatRings[index].enabled = false;
         }
 
-        /// <summary>Top to bottom; right from any button reaches the match's button when it is showing.</summary>
         void LinkNavigation()
         {
             Selectable right = MatchSelectable();
@@ -375,7 +357,6 @@ namespace CloseTheDeal.UI
                 Stack.Push(_settingsScreen);
         }
 
-        /// <summary>Asks first, in the host's words (the game ends for everyone) or a client's (the team carries on).</summary>
         void OnLeave()
         {
             if (Stack == null || _confirm == null || Stack.Top != this || _lobby == null)

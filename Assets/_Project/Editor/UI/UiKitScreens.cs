@@ -8,24 +8,12 @@ using static CloseTheDeal.Editor.UI.UiKitAssets;
 
 namespace CloseTheDeal.Editor.UI
 {
-    /// <summary>
-    /// Builds the slice's screen prefabs in Assets/_Project/UI/Screens from the kit's component prefabs: the title
-    /// and main menu (window-frame "Survey" layout, mockup ArtSource/UI/review/00a_hero_survey.png), Settings with
-    /// its Accessibility tab (02_settings_04), and the confirm dialog (01_menu_survey_11_quit). Coordinates are
-    /// the mockups' 1920 x 1080 pixels; the design frame stays centred and the paper and sky stretch on wider screens.
-    /// Scene references (the game menu, the other screens) are wired by the scene setup, not here.
-    /// </summary>
+    /// <summary>Builds TitleScreen, SettingsScreen, ConfirmDialog, SessionPanel, ProblemPanel, InGameMenu, and KitCanvas prefabs.</summary>
     internal static class UiKitScreens
     {
         internal static GameObject Title, Settings, Confirm, Session, Problem, GameMenu, Canvas;
 
-        /// <summary>The title lane's band for the title lockup and menu starts at 64% of the frame; the sill sits above it.</summary>
         const float SillY = 664f;
-
-        /// <summary>
-        /// The window bars at 1080p: a 20 px paper face plus a 4 px silver reveal (mullions) or shadow (transom), 24 px
-        /// in all. The owner found the first 44 + 10 px bars too heavy; the panes read as panes at 720p (16 px) too.
-        /// </summary>
         const float BarFace = 20f, BarShade = 4f;
 
         internal static void Build(bool rebuild)
@@ -45,11 +33,6 @@ namespace CloseTheDeal.Editor.UI
             return existing != null && !rebuild ? existing : SavePrefab(build(), path);
         }
 
-        /// <summary>
-        /// The kit's canvas: overlay above the game menu, 1920 x 1080 reference with Expand (the design always fits,
-        /// wider or taller screens add paper and sky), the screen stack, the three screens (hidden until pushed) and
-        /// the focus marks on top. Its only scene link is the game menu, which UiRoot also finds by itself.
-        /// </summary>
         static GameObject BuildCanvas()
         {
             var go = new GameObject("KitUI", typeof(RectTransform)) { layer = 5 };
@@ -102,7 +85,6 @@ namespace CloseTheDeal.Editor.UI
             return root;
         }
 
-        /// <summary>Paper with the faint hairline grid: the field every screen sits on.</summary>
         internal static void PaperField(RectTransform root)
         {
             Img(Fill(root, "Paper"), UiKitArt.White, Tokens.Paper, raycast: true);
@@ -141,8 +123,6 @@ namespace CloseTheDeal.Editor.UI
             if (label != null)
                 label.text = text;
         }
-
-        // ---- Title ------------------------------------------------------------------------------------
 
         static GameObject BuildTitle()
         {
@@ -241,14 +221,12 @@ namespace CloseTheDeal.Editor.UI
             return root.gameObject;
         }
 
-        /// <summary>Small tick marks along a rule: the survey's measuring marks.</summary>
         static void Ticks(Transform parent, float x0, float y, float x1)
         {
             for (float x = x0; x <= x1; x += 96f)
                 Box(parent, "Tick", x, y, 1f, 6f, Tokens.Black);
         }
 
-        /// <summary>The keys row: select, back and move, named for the device the player is on (Enter or A or Cross).</summary>
         static void KeyHints(Transform parent, float x, float y)
         {
             Hint(parent, "SelectHint", x, y, "Select", "UI/Submit");
@@ -256,10 +234,6 @@ namespace CloseTheDeal.Editor.UI
             Hint(parent, "MoveHint", x + 300f, y, "Move", keyboard: "\u2191\u2193", padControl: "leftStick");
         }
 
-        /// <summary>
-        /// A live key hint at x, y: the key for the player's device, read from action (Map/Action), or the fixed keyboard
-        /// text and pad control given. Its cap widens to fit.
-        /// </summary>
         internal static UiKeyHint Hint(Transform parent, string name, float x, float y, string label, string action = "",
             string keyboard = "", string padControl = "", float width = 160f)
         {
@@ -276,10 +250,6 @@ namespace CloseTheDeal.Editor.UI
             return hint;
         }
 
-        /// <summary>
-        /// Sun through the window falling across the paper below: the lower band sits in soft shade, with two hard slabs
-        /// of light (paper again) cutting across it at the sun's angle. Light stays behind text, never over it.
-        /// </summary>
         static void SunOnPaper(RectTransform root)
         {
             UiTokens t = Tokens;
@@ -307,12 +277,6 @@ namespace CloseTheDeal.Editor.UI
             Img(slab, UiKitArt.White, Tokens.Paper);
         }
 
-        /// <summary>
-        /// The window frame: sky above the sill, divided into panes by paper mullions with depth (a lit face, a silver
-        /// reveal on the shadow side), a transom with its shadow and a sill with a black edge. The sky is lane 8's live
-        /// one in BackdropSlot, behind the frame; a flat gradient stands in where it can't run. The window rolls down
-        /// as the title opens.
-        /// </summary>
         static RectTransform SkyWindow(RectTransform root, out RectTransform slot, out GameObject staticSky)
         {
             UiTokens t = Tokens;
@@ -369,7 +333,6 @@ namespace CloseTheDeal.Editor.UI
             return sky;
         }
 
-        /// <summary>A mullion with depth: a paper face, a hairline on its lit edge and a silver reveal on its shadow side.</summary>
         static void Post(RectTransform parent, string name, float centreX)
         {
             RectTransform post = Node(parent, name);
@@ -404,8 +367,6 @@ namespace CloseTheDeal.Editor.UI
             right.pivot = new Vector2(1f, 0f);
             Img(right, UiKitArt.Bracket, Tokens.Navy);
         }
-
-        // ---- Confirm dialog ---------------------------------------------------------------------------------
 
         static GameObject BuildConfirm()
         {

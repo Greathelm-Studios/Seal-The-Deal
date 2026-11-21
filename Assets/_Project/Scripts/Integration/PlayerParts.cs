@@ -6,11 +6,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Integration
 {
-    /// <summary>
-    /// Finds a player's other lanes' components from any one of them without a GetComponent on
-    /// every call: each lookup is resolved once and remembered until someone joins or leaves.
-    /// The local player's parts come straight from each lane's own Local.
-    /// </summary>
+    /// <summary>Cached cross-system component lookups per player, cleared on roster changes.</summary>
     public static class PlayerParts
     {
         static readonly Dictionary<Component, ItemCarrier> Carriers = new();
@@ -36,7 +32,6 @@ namespace CloseTheDeal.Integration
             _hooked = true;
         }
 
-        /// <summary>Someone joined or left: bodies may have been pooled or destroyed, so look everything up afresh.</summary>
         static void Forget()
         {
             Carriers.Clear();

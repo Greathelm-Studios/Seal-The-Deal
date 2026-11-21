@@ -4,11 +4,7 @@ using UnityEngine.InputSystem;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// A tab bar and its pages. Choosing a tab moves the 2 px cobalt rule under it on a spring, slides the old page
-    /// 12 px out and the new one in from the side it came from, and plays TabChange (feel table §2.2). Q / E and the
-    /// pad's shoulder buttons switch tabs while the owning screen is on top. Reduce motion turns the slide into a fade.
-    /// </summary>
+    /// <summary>Tabbed page switcher with animated underline rule and Q/E or shoulder shortcuts.</summary>
     [AddComponentMenu("Close the Deal/UI/Tab Pages")]
     public sealed class UiTabPages : MonoBehaviour, IUiAnimated
     {

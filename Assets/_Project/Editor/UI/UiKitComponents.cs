@@ -7,11 +7,7 @@ using static CloseTheDeal.Editor.UI.UiKitAssets;
 
 namespace CloseTheDeal.Editor.UI
 {
-    /// <summary>
-    /// Builds the kit's component prefabs in Assets/_Project/UI/Kit: buttons (primary, secondary, quiet, tab),
-    /// toggle, stepper, swatches, slider, status line, key hint, section header, plate, glass pane, focus frame,
-    /// crosshair and edge marker. A prefab a designer edited is left alone (GeneratedAssetGuard): edit the prefab to take it over.
-    /// </summary>
+    /// <summary>Builds the UI kit component prefabs under Assets/_Project/UI/Kit (guarded by GeneratedAssetGuard).</summary>
     internal static class UiKitComponents
     {
         internal static GameObject Primary, Secondary, Quiet, Tab, Toggle, Stepper, Swatches, Slider;
@@ -38,8 +34,6 @@ namespace CloseTheDeal.Editor.UI
             EdgeMarker = SavePrefab(BuildEdgeMarker(), KitFolder + "/EdgeMarker.prefab");
         }
 
-        // ---- The shared control frame -----------------------------------------------------------
-
         static RectTransform NewRoot(string name, float w, float h)
         {
             var go = new GameObject(name, typeof(RectTransform)) { layer = 5 };
@@ -48,7 +42,6 @@ namespace CloseTheDeal.Editor.UI
             return rect;
         }
 
-        /// <summary>The parts every control has: padded hit area, refusal plate, lift shadow, plate, brackets, tick.</summary>
         static void Frame(RectTransform root, UiControlFx fx, UiVariant variant, bool keyline)
         {
             UiTokens t = Tokens;
@@ -82,7 +75,6 @@ namespace CloseTheDeal.Editor.UI
             fx.HoverBrackets = Brackets(root, 4f, 12f, UiTokens.WithAlpha(t.Navy, 0f));
         }
 
-        /// <summary>Four L brackets outside a rect's corners: top-left, top-right, bottom-left, bottom-right.</summary>
         internal static Image[] Brackets(RectTransform parent, float gap, float size, Color colour)
         {
             var result = new Image[4];
@@ -114,8 +106,6 @@ namespace CloseTheDeal.Editor.UI
             return label;
         }
 
-        // ---- Buttons --------------------------------------------------------------------------------
-
         static GameObject Button(string name, UiVariant variant, string label, float w, float h)
         {
             RectTransform root = NewRoot(name, w, h);
@@ -135,8 +125,6 @@ namespace CloseTheDeal.Editor.UI
             fx.Apply();
             return root.gameObject;
         }
-
-        // ---- Value controls -----------------------------------------------------------------------
 
         static GameObject BuildToggle()
         {
@@ -251,8 +239,6 @@ namespace CloseTheDeal.Editor.UI
             return root.gameObject;
         }
 
-        // ---- Text parts ---------------------------------------------------------------------------
-
         static GameObject BuildStatusLine()
         {
             RectTransform root = NewRoot("StatusLine", 600f, 52f);
@@ -316,8 +302,6 @@ namespace CloseTheDeal.Editor.UI
             return root.gameObject;
         }
 
-        // ---- Focus marks and crosshair ----------------------------------------------------------------
-
         static GameObject BuildFocusFrame()
         {
             UiTokens t = Tokens;
@@ -377,11 +361,6 @@ namespace CloseTheDeal.Editor.UI
             return go;
         }
 
-        /// <summary>
-        /// The off-screen marker. Its root stretches over the whole canvas (the frame WorldToCanvas.TryProject measures
-        /// in); the body is anchored at the bottom-left corner and moved in canvas units: a navy keyline, the mark,
-        /// the chevron and a paper tag with the distance under it.
-        /// </summary>
         static GameObject BuildEdgeMarker()
         {
             UiTokens t = Tokens;

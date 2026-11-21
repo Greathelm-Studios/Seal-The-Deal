@@ -16,16 +16,7 @@ namespace CloseTheDeal.UI
         Loose = 2
     }
 
-    /// <summary>
-    /// Points at something in the world. In view, the mark sits over it; out of view (or behind you) it waits at the
-    /// nearest screen edge, 48 px in, with a chevron toward the target and the distance in metres under it.
-    /// The kit only draws: the owning HUD projects the target each frame with
-    /// <c>Nameplates.WorldToCanvas.TryProject(camera, canvas, worldPoint, out at)</c> and passes the result to
-    /// <see cref="Place"/>. The marker's own rectangle must stretch over the whole canvas that was passed to
-    /// TryProject (anchors 0,0 to 1,1, no offsets), because TryProject's point is in that canvas's units from its
-    /// bottom-left corner. Allocation-free per frame; the distance text is rebuilt only when the whole metre changes.
-    /// Design: docs/systems/UI_KIT.md "Edge marker".
-    /// </summary>
+    /// <summary>World-space target marker that tracks in-view or clamps to screen edges when off-screen.</summary>
     [AddComponentMenu("Close the Deal/UI/Edge Marker")]
     [RequireComponent(typeof(CanvasGroup))]
     public sealed class UiEdgeMarker : MonoBehaviour, IUiAnimated
@@ -104,10 +95,6 @@ namespace CloseTheDeal.UI
 
         void Awake() => EnsureReady();
 
-        /// <summary>
-        /// Sets the mark up once: from Awake, or from the first Track / Place / Hide / Flash when a HUD calls one before
-        /// this object has woken (it sits under a HUD root that is still switched off).
-        /// </summary>
         void EnsureReady()
         {
             if (_group != null)
@@ -125,7 +112,6 @@ namespace CloseTheDeal.UI
                 Kind = UiMarkKind.Ours;
         }
 
-        /// <summary>Back from being switched off (a HUD hidden mid-fade): finish where it was heading, at once.</summary>
         void OnEnable()
         {
             if (_group == null)
@@ -137,11 +123,7 @@ namespace CloseTheDeal.UI
 
         void OnDisable() => UiMotion.Sleep(this);
 
-        /// <summary>
-        /// Places the mark for this frame. canvasPoint and inFront are exactly what WorldToCanvas.TryProject gave
-        /// (behind the camera it is the mirrored point, which still shows the side the target is on). metres is the
-        /// distance to show under the mark; pass a negative number to hide the tag.
-        /// </summary>
+        /// <summary>Places the marker from WorldToCanvas.TryProject output; negative metres hides distance tag.</summary>
         public void Place(Vector2 canvasPoint, bool inFront, float metres)
         {
             EnsureReady();
@@ -171,7 +153,6 @@ namespace CloseTheDeal.UI
             ShowDistance(metres);
         }
 
-        /// <summary>The chevron points along dir while on the edge; the tag sits on the other side so the two never overlap.</summary>
         void PlaceCues(Vector2 dir, bool inView)
         {
             if (_pointer != null)
@@ -193,11 +174,7 @@ namespace CloseTheDeal.UI
             }
         }
 
-        /// <summary>
-        /// The usual call, once a frame from the owning HUD's LateUpdate: projects worldPoint with
-        /// WorldToCanvas.TryProject for this camera and the canvas the marker is on, and places the mark, with the
-        /// distance from the camera in metres when showDistance is on.
-        /// </summary>
+        /// <summary>Projects worldPoint for the owning HUD's LateUpdate and places the marker.</summary>
         public void Track(Camera camera, Vector3 worldPoint, bool showDistance = true)
         {
             if (camera == null)
@@ -221,10 +198,7 @@ namespace CloseTheDeal.UI
             SetVisible(false);
         }
 
-        /// <summary>
-        /// One flash of the mark: it pops 25% larger and settles back (a fade instead with Reduce motion). For a moment
-        /// the player must notice, such as the rival taking the briefcase. Never loops.
-        /// </summary>
+        /// <summary>Plays a single attention flash (scale pop, or opacity dip under Reduce motion).</summary>
         public void Flash()
         {
             EnsureReady();
@@ -234,11 +208,6 @@ namespace CloseTheDeal.UI
             UiMotion.Wake(this);
         }
 
-        /// <summary>
-        /// The target crossed behind you, so its side flipped (left edge to right): instead of a jump across the
-        /// screen the mark slides round the bottom edge, the way you'd turn, in 140 ms. Reduce motion: no slide.
-        /// Returns the direction to draw this frame.
-        /// </summary>
         Vector2 SideSwitch(Vector2 dir)
         {
             float to = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
@@ -271,10 +240,6 @@ namespace CloseTheDeal.UI
         static Vector2 AngleDir(float degrees) =>
             new(Mathf.Cos(degrees * Mathf.Deg2Rad), Mathf.Sin(degrees * Mathf.Deg2Rad));
 
-        /// <summary>
-        /// The point on the safe rectangle's border along the line from the screen centre toward the target. A point
-        /// almost at the centre (straight behind you) goes to the bottom edge.
-        /// </summary>
         static Vector2 EdgePoint(Vector2 point, Vector2 centre, Vector2 half)
         {
             Vector2 dir = Direction(point, centre);
@@ -319,7 +284,7 @@ namespace CloseTheDeal.UI
             Sprite sprite = _kind == UiMarkKind.Rival ? _triangle : _kind == UiMarkKind.Loose ? _square : _diamond;
             Paint(_shape, sprite, colour);
             Paint(_keyline, sprite, _tokens.Navy);
-            // A square fills its box; a diamond or triangle only half does. Drawn smaller, all three read the same size.
+            // Scale square down so all three marker shapes read at equal visual weight.
             float scale = _kind == UiMarkKind.Loose ? 0.72f : 1f;
             if (_shape != null)
                 _shape.rectTransform.localScale = new Vector3(scale, scale, 1f);

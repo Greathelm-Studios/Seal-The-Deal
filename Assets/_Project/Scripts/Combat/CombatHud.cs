@@ -8,13 +8,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.Combat
 {
-    /// <summary>
-    /// The combat HUD on the shooter's own screen: hit marker and kill confirm (only when the host
-    /// says the hit landed), ammo and the two weapon slots, reload and draw progress, low and empty
-    /// magazine, where damage came from, health while hurt, and the knocked-out card with its
-    /// countdown. Built from the UI kit (plates, tokens, motion, sounds) by Set Up Shooting; reads
-    /// the local player's WeaponHolder and Health and decides nothing. Contract: docs/systems/WEAPONS.md.
-    /// </summary>
+    /// <summary>Displays host-confirmed hit markers, ammo, slots, reload/draw progress, health, damage direction, and respawn countdown.</summary>
     [DisallowMultipleComponent]
     public sealed class CombatHud : MonoBehaviour
     {
@@ -81,8 +75,6 @@ namespace CloseTheDeal.Combat
         const string DefaultDownLine = "BACK ON THIS FLOOR IN";
         const string EmptySlot0 = "1  —";
         const string EmptySlot1 = "2  —";
-
-        // ---- Runtime -------------------------------------------------------------------------
 
         enum HitKind : byte { Hit, Head, Kill }
 
@@ -241,8 +233,6 @@ namespace CloseTheDeal.Combat
             Bind(null);
         }
 
-        // ---- Following the local player ------------------------------------------------------
-
         void Update()
         {
             if (PlayerMotor.Local != _bound)
@@ -337,8 +327,6 @@ namespace CloseTheDeal.Combat
             if (_downGroup != null)
                 _downGroup.alpha = 0f;
         }
-
-        // ---- Hit marker and kill confirm (host-confirmed only) -------------------------------
 
         void OnHitConfirmed(Vector3 point, float damage, bool killed, bool precision)
         {
@@ -440,8 +428,6 @@ namespace CloseTheDeal.Combat
             if (_hitGroup != null)
                 _hitGroup.alpha = show ? 1f : 0f;
         }
-
-        // ---- Weapon: ammo, slots, reload, low and empty --------------------------------------
 
         WeaponLabelCache LabelsFor(WeaponDefinition weapon)
         {
@@ -571,8 +557,6 @@ namespace CloseTheDeal.Combat
             }
         }
 
-        // ---- Health, shown while hurt --------------------------------------------------------
-
         void OnHealthChanged(float current, float max)
         {
             if (Mathf.Approximately(current, _shownHealth))
@@ -600,8 +584,6 @@ namespace CloseTheDeal.Combat
             if (!Mathf.Approximately(alpha, _healthGroup.alpha))
                 _healthGroup.alpha = alpha;
         }
-
-        // ---- Where damage came from ----------------------------------------------------------
 
         void OnDamaged(Health health, DamageInfo info)
         {
@@ -648,8 +630,6 @@ namespace CloseTheDeal.Combat
             }
         }
 
-        // ---- Knocked out ---------------------------------------------------------------------
-
         void ShowDown(float dt)
         {
             bool down = _health.IsDead;
@@ -687,8 +667,6 @@ namespace CloseTheDeal.Combat
                 mark.enabled = false;
         }
 
-        // ---- Motion --------------------------------------------------------------------------
-
         void Kick(ref UiSpring spring, float value)
         {
             spring.Value = value;
@@ -715,8 +693,6 @@ namespace CloseTheDeal.Combat
         {
             _weaponPlateRest = _weaponPlate.anchoredPosition;
         }
-
-        // ---- Helpers -------------------------------------------------------------------------
 
         static Image[] ImagesOf(RectTransform[] rects)
         {

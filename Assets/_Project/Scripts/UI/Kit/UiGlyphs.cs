@@ -21,12 +21,7 @@ namespace CloseTheDeal.UI
         Gamepad = 3
     }
 
-    /// <summary>
-    /// The one place that names keys and pad buttons for the player. Tracks the device the player last used (set by
-    /// UiInput.Poll once a frame; Changed fires only when the kind changes) and turns a binding into the label for
-    /// that device, read from the action's real binding (rebinds included when the caller's actions carry them).
-    /// Text is built only when asked, never per frame: call it when a hint is set up or the device changes.
-    /// </summary>
+    /// <summary>Tracks the active input device kind and formats key/button names from action bindings.</summary>
     public static class UiGlyphs
     {
         /// <summary>The device kind the player used last. Starts on keyboard and mouse.</summary>
@@ -76,10 +71,7 @@ namespace CloseTheDeal.UI
             Changed = null;
         }
 
-        /// <summary>
-        /// A read-only copy of these actions with the player's custom keys (InputPrefs) laid over them, so hints name
-        /// the key the player really pressed. The asset itself is never changed. One copy, refreshed when the keys change.
-        /// </summary>
+        /// <summary>Returns a cached read-only copy of source with InputPrefs binding overrides applied.</summary>
         public static InputActionAsset WithRebinds(InputActionAsset source)
         {
             if (source == null)
@@ -113,12 +105,7 @@ namespace CloseTheDeal.UI
             }
         }
 
-        /// <summary>
-        /// The label for an action on a device kind: "F", "Esc", "A", "Cross", "LB", "L1"; a composite gives its parts in
-        /// binding order ("W/S/A/D"). Generic joystick bindings are skipped (they have no printed names). part picks one
-        /// side of a two-way action ("negative" / "positive"), empty for all. Empty when the action has nothing bound
-        /// for that device. Allocates: call on set-up and on Changed only.
-        /// </summary>
+        /// <summary>Returns the display label for an action on kind (allocates; call on setup or Changed only).</summary>
         public static string For(InputAction action, UiDeviceKind kind, string part = null)
         {
             if (action == null)
@@ -142,7 +129,6 @@ namespace CloseTheDeal.UI
             return string.Empty;
         }
 
-        /// <summary>A plain binding (or the asked-for part of a two-way one) on the wanted kind of device.</summary>
         static bool Matches(InputBinding b, string part, bool wholeAction, bool pad)
         {
             if (wholeAction ? b.isPartOfComposite : !string.Equals(b.name, part, StringComparison.OrdinalIgnoreCase))
@@ -153,10 +139,8 @@ namespace CloseTheDeal.UI
             return IsUsagePath(path) || (IsPadPath(path) == pad && IsKnownDevicePath(path));
         }
 
-        /// <summary>"*/{Submit}" and "*/{Cancel}": any device's confirm or back button (the UI map binds these).</summary>
         static bool IsUsagePath(string path) => path.StartsWith("*/{", StringComparison.Ordinal);
 
-        /// <summary>The control a usage means on each device: the Input System gives Enter and the pad's south button Submit, Esc and east Cancel.</summary>
         static string UsageName(string path, UiDeviceKind kind)
         {
             bool pad = kind != UiDeviceKind.KeyboardMouse;
@@ -189,7 +173,6 @@ namespace CloseTheDeal.UI
             return PadNames.TryGetValue(control, out (string xbox, string ps) names) ? (playStation ? names.ps : names.xbox) : control;
         }
 
-        /// <summary>Keys whose own names read badly or run long on a key cap.</summary>
         static readonly Dictionary<string, string> KeyNames = new()
         {
             { "escape", "Esc" }, { "enter", "Enter" }, { "space", "Space" }, { "leftShift", "Shift" }, { "leftCtrl", "Ctrl" },
@@ -198,7 +181,6 @@ namespace CloseTheDeal.UI
             { "delta", "Mouse" }, { "scroll", "Wheel" },
         };
 
-        /// <summary>Pad controls as printed on an Xbox pad and on a PlayStation pad.</summary>
         static readonly Dictionary<string, (string xbox, string ps)> PadNames = new()
         {
             { "buttonSouth", ("A", "Cross") }, { "buttonEast", ("B", "Circle") }, { "buttonWest", ("X", "Square") },

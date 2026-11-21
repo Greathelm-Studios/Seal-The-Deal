@@ -12,10 +12,7 @@ namespace CloseTheDeal.UI
         void StepFromClick(int value);
     }
 
-    /// <summary>
-    /// A clickable part of a control that is not a focus stop of its own: a stepper arrow or one swatch.
-    /// It passes the click to its control, so focus and navigation stay on the control itself.
-    /// </summary>
+    /// <summary>Non-focusable click zone (stepper arrows, swatches) that forwards clicks to its parent UiControl.</summary>
     [AddComponentMenu("Close the Deal/UI/Click Zone")]
     public sealed class UiClickZone : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
     {

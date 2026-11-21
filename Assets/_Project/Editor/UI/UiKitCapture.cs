@@ -18,16 +18,7 @@ using Object = UnityEngine.Object;
 
 namespace CloseTheDeal.Editor.UI
 {
-    /// <summary>
-    /// Plays Lane_Integration.unity headlessly and films the UI kit: the title and settings at 1920x1080, 1280x720
-    /// and 2560x1080, every control in its five states, a frame sequence of hover -> press -> screen push, a clip
-    /// sequence, the quit confirm answering Esc, the settings surviving a relaunch (two runs), and the
-    /// menu-open = mouse-free = player-idle rule with the pad's A held (A is also Jump). Every UiSound request is
-    /// logged. Needs graphics: the Editor binary with -batchmode but WITHOUT -quit or -nographics (it exits itself):
-    ///   Unity -batchmode -projectPath &lt;repo&gt; -executeMethod CloseTheDeal.Editor.UI.UiKitCapture.RunFromShell
-    ///         -uiCaptureOut &lt;folder&gt; -uiCaptureMode capture|persist-write|persist-read -local
-    /// Nothing is saved: the scene changes only in Play Mode. The persist runs restore the player's own settings.
-    /// </summary>
+    /// <summary>Headless Play Mode capture and verification suite for the UI kit (docs/systems/UI_KIT.md).</summary>
     public static partial class UiKitCapture
     {
         const string ActiveKey = "UiKitCapture.Active";
@@ -251,7 +242,6 @@ namespace CloseTheDeal.Editor.UI
             yield return MenuRule(lobby, menu);
         }
 
-        /// <summary>A press on a greyed-out Host (the network not ready) refuses: Error sound, amber mark, the reason in words.</summary>
         static IEnumerator RefusedHost(TitleScreen title, UiButton host)
         {
             int sound0 = Sounds.Count;
@@ -282,7 +272,6 @@ namespace CloseTheDeal.Editor.UI
                 SetUpCamera();
         }
 
-        /// <summary>Only the menu rule check (mode menu-rule), without the captures.</summary>
         static IEnumerator MenuRuleOnly()
         {
             yield return Until(() => Object.FindAnyObjectByType<UiRoot>() != null);
@@ -292,14 +281,8 @@ namespace CloseTheDeal.Editor.UI
             yield return MenuRule(lobby, Object.FindAnyObjectByType<GameMenu>());
         }
 
-        // ---- The player's Music volume, borrowed by a check ------------------------------------------------
-
         static float _heldMusic = -1f;
 
-        /// <summary>
-        /// Notes the player's Music volume before a check changes it. It comes back with ReleaseMusic, and also if the
-        /// run is stopped first (Play Mode ends, or the Editor quits), so a killed capture never leaves it changed.
-        /// </summary>
         static void HoldMusic()
         {
             if (_heldMusic >= 0f)
@@ -400,7 +383,6 @@ namespace CloseTheDeal.Editor.UI
             Note("wrote " + name + ".png");
         }
 
-        /// <summary>Every visible graphic of a screen must sit inside the canvas at this size (nothing leaves the screen).</summary>
         static void CheckInside(Transform screen, int w, int h, string label)
         {
             Resize(w, h);
@@ -428,11 +410,8 @@ namespace CloseTheDeal.Editor.UI
             Check($"{label}: every line of text is on screen", outside == 0, first != null ? "first outside: " + first : $"canvas {bounds.width:0} x {bounds.height:0}");
         }
 
-        // ---- States ---------------------------------------------------------------------------------------
-
         static readonly string[] StateNames = { "default", "hover", "focus", "pressed", "disabled" };
 
-        /// <summary>Each control in its five states, cropped and laid out as a sheet: one row per control.</summary>
         static IEnumerator StateSheets(TitleScreen title)
         {
             var rows = new List<(string, Selectable)>
@@ -540,9 +519,6 @@ namespace CloseTheDeal.Editor.UI
             to.SetPixels(dx, dy, cw, ch, block);
         }
 
-        // ---- Hover -> press -> push -------------------------------------------------------------------------
-
-        /// <summary>Frames every 1/30 s while the pointer hovers Settings, presses it, lets go and the settings screen pushes in.</summary>
         static IEnumerator HoverPressPush(TitleScreen title)
         {
             UiButton settings = Find<UiButton>(title, "Settings");
@@ -583,7 +559,6 @@ namespace CloseTheDeal.Editor.UI
             Check("Back returned to the title", _root.Stack.Top == title);
         }
 
-        /// <summary>A capture-only time stamp in the top-left corner of the frame (never saved).</summary>
         static TMP_Text TimeStamp()
         {
             var plate = new GameObject("CaptureStamp", typeof(RectTransform)) { layer = 5 };
@@ -607,11 +582,8 @@ namespace CloseTheDeal.Editor.UI
             return text;
         }
 
-        // ---- Settings ---------------------------------------------------------------------------------------
-
         static readonly string[] TabNames = { "controls", "video", "audio", "accessibility" };
 
-        /// <summary>Every settings tab at the three sizes, the second row focused so the marks show.</summary>
         static IEnumerator SettingsShots()
         {
             _root.Stack.Push(Settings());
@@ -645,10 +617,6 @@ namespace CloseTheDeal.Editor.UI
             yield return null;
         }
 
-        /// <summary>
-        /// Proves the hub reaches the sound lane's player: requests a few events and lists every AudioSource that
-        /// starts with its clip and the mixer group it routes to.
-        /// </summary>
         static IEnumerator SoundProof() => SoundProof(UiSoundEvent.Confirm, UiSoundEvent.Back, UiSoundEvent.TabChange, UiSoundEvent.Notification, UiSoundEvent.Error);
 
         static IEnumerator SoundProof(params UiSoundEvent[] events)
@@ -680,11 +648,6 @@ namespace CloseTheDeal.Editor.UI
             Check("the hub plays the sound lane's clips through a mixer group", heard.Count > 0 && heard.TrueForAll(l => !l.EndsWith("none")), $"{heard.Count} sources seen");
         }
 
-        /// <summary>
-        /// Settings > Controls with custom keys live (the flag the input reader will set is forced here, since that hook is
-        /// on the movement lane's branch): Jump asks for a key, G is pressed, and G already belongs to Drop / Throw, so
-        /// the clash dialog asks; Esc keeps things as they were. The player's own keys are put back afterwards.
-        /// </summary>
         static IEnumerator RebindClash()
         {
             string originals = InputPrefs.BindingOverridesJson;
@@ -759,8 +722,6 @@ namespace CloseTheDeal.Editor.UI
             InputPrefs.BindingsHooked = hooked;
         }
 
-        // ---- Quit confirm: Esc = Stay ---------------------------------------------------------------------------
-
         static IEnumerator QuitConfirm(TitleScreen title)
         {
             UiMotion.Paused = false;
@@ -790,9 +751,6 @@ namespace CloseTheDeal.Editor.UI
             yield return 0.35f;
         }
 
-        // ---- The clip ------------------------------------------------------------------------------------
-
-        /// <summary>A 30 fps sequence at 1280x720: idle, keyboard focus moving, hover, press, push to settings, change a value, back.</summary>
         static IEnumerator Clip(TitleScreen title)
         {
             string folder = Path.Combine(_out, "clip");
@@ -866,14 +824,6 @@ namespace CloseTheDeal.Editor.UI
             ExecuteEvents.Execute(selected, axis, ExecuteEvents.moveHandler);
         }
 
-        // ---- Menu open = mouse free = player idle, and the Enter guard ----------------------------------------
-
-        /// <summary>
-        /// Batch mode has no window, so the OS cursor never reads locked and the game menu's "mouse freed elsewhere"
-        /// rule reopens the menu the frame after it closes. So this checks what the rule is made of: the kit closes
-        /// when a game starts; with the menu open every input reads idle even with keys held; and a close asked for
-        /// with the confirm button down waits for its release. Locking itself needs a human with a window.
-        /// </summary>
         static IEnumerator MenuRule(SteamLobby lobby, GameMenu menu)
         {
             // Our own port, so this run can never join someone's open editor game on 7770 instead of hosting.
@@ -956,11 +906,6 @@ namespace CloseTheDeal.Editor.UI
             Check("leaving the game drops every cursor hold", !GameMenu.CursorHeld);
         }
 
-        /// <summary>
-        /// GameMenu.HoldCursor / ReleaseCursor (lane 6's fitting room and host list): a hold keeps the mouse free with the
-        /// menu closed, Esc still opens the menu, a release with A still down waits for A, and a destroyed holder stops
-        /// counting. Batch mode can't lock the cursor, so this reads what the menu asked for (CursorFree).
-        /// </summary>
         static IEnumerator CursorHolds(GameMenu menu, Gamepad pad)
         {
             var owner = new GameObject("CaptureHolder");
@@ -1022,8 +967,6 @@ namespace CloseTheDeal.Editor.UI
             menu.Open();
             yield return 0.1f;
         }
-
-        // ---- Settings persist across a relaunch ----------------------------------------------------------------
 
         const string OriginalsFile = "ui_settings_originals.txt";
         const string BindingsFile = "ui_bindings_originals.txt";

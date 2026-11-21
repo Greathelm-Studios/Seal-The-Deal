@@ -4,13 +4,7 @@ using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Records
 {
-    /// <summary>
-    /// Puts the match records, profile, secretary, first-run hints, death report and names over
-    /// heads into every scene that holds a match, from one prefab, unless the scene already has
-    /// them. So no scene has to be edited, and a scene rebuilt by a setup tool still gets them.
-    /// The prefab is named by Resources/Gaps/RecordsInstaller.asset; delete that asset to turn
-    /// this off. Design: docs/systems/RECORDS.md.
-    /// </summary>
+    /// <summary>Runtime installer spawning Records.prefab into scenes with a MatchDirector and no MatchRecords. Design: docs/systems/RECORDS.md.</summary>
     [CreateAssetMenu(menuName = "Close the Deal/Records/Installer", fileName = "RecordsInstaller")]
     public sealed class RecordsInstaller : ScriptableObject
     {

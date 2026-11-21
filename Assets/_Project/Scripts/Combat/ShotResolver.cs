@@ -21,13 +21,7 @@ namespace CloseTheDeal.Combat
         public int PanesCrossed;
     }
 
-    /// <summary>
-    /// Works out where a shot goes. Glass never stops it (GDD): the ray carries on through
-    /// every pane and remembers them. Bodies are tested as capsules by maths rather than by
-    /// their colliders, so the host can test them where they stood a moment ago, which is
-    /// what the shooter was looking at. The host's answer is the only one that deals damage;
-    /// a client runs the same trace only to draw its own tracer straight away.
-    /// </summary>
+    /// <summary>Traces shots through breakable glass against mathematical rewound body capsules.</summary>
     public static class ShotResolver
     {
         public const int MaxPanesPerShot = 8;

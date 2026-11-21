@@ -10,12 +10,7 @@ using static CloseTheDeal.Editor.UI.UiKitScreens;
 
 namespace CloseTheDeal.Editor.UI
 {
-    /// <summary>
-    /// Builds Settings (Assets/_Project/UI/Screens/SettingsScreen.prefab): the tab bar (Q / E), one page per tab
-    /// (Controls, Video, Audio, Accessibility), each with its rows on the left and, on the right, the focused row's
-    /// detail card above the tab's own live preview, then the footer (Reset to defaults, Back, the status line, key
-    /// hints). Layout in the mockups' 1920 x 1080 pixels (02_settings_*).
-    /// </summary>
+    /// <summary>Builds SettingsScreen.prefab with Controls, Video, Audio, and Accessibility tabs.</summary>
     internal static class UiKitSettingsBuilder
     {
         const float RowsTop = 300f;
@@ -114,8 +109,6 @@ namespace CloseTheDeal.Editor.UI
             return root.gameObject;
         }
 
-        // ---- Tab bar ------------------------------------------------------------------------------
-
         static UiButton[] TabBar(RectTransform parent, out RectTransform rule)
         {
             UiTokens t = Tokens;
@@ -159,7 +152,6 @@ namespace CloseTheDeal.Editor.UI
             return tabs;
         }
 
-        /// <summary>The right column's top: the focused row's name is in the row; its explanation is here.</summary>
         static TextMeshProUGUI DetailCard(Transform parent)
         {
             UiTokens t = Tokens;
@@ -183,9 +175,6 @@ namespace CloseTheDeal.Editor.UI
             return value;
         }
 
-        // ---- Rows -----------------------------------------------------------------------------------
-
-        /// <summary>One settings row: highlight, cobalt rule, name on the left, its control on the right.</summary>
         static T Row<T>(Transform parent, GameObject controlPrefab, string name, string label, ref float y, string description, float height = 64f) where T : Component
         {
             UiTokens t = Tokens;
@@ -215,11 +204,6 @@ namespace CloseTheDeal.Editor.UI
             return control;
         }
 
-        /// <summary>
-        /// Makes a row's stepper wider than the kit's and moves its right arrow, and the arrow's click zone, out to
-        /// the new right edge. The kit places both from the left, so on a widened stepper they sat under the end of a
-        /// long choice ("Borderless window", "System default").
-        /// </summary>
         static void WidenStepper(RectTransform stepper, float width)
         {
             float added = width - stepper.sizeDelta.x;
@@ -239,8 +223,6 @@ namespace CloseTheDeal.Editor.UI
             SetString(page, "_title", title);
             SetArray(page, "_rows", rows);
         }
-
-        // ---- Controls -------------------------------------------------------------------------------
 
         static UiSettingsPage ControlsPage(Transform parent, UiStatusLine status)
         {
@@ -341,8 +323,6 @@ namespace CloseTheDeal.Editor.UI
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        // ---- Video ----------------------------------------------------------------------------------
-
         static UiSettingsPage VideoPage(Transform parent)
         {
             UiTokens t = Tokens;
@@ -378,8 +358,6 @@ namespace CloseTheDeal.Editor.UI
             Set(page, "_readout", readout);
             return page;
         }
-
-        // ---- Audio ----------------------------------------------------------------------------------
 
         static UiSettingsPage AudioPage(Transform parent)
         {
@@ -433,8 +411,6 @@ namespace CloseTheDeal.Editor.UI
             return page;
         }
 
-        // ---- Accessibility ----------------------------------------------------------------------------
-
         static UiSettingsPage AccessibilityPage(Transform parent)
         {
             RectTransform pageRoot = PageRoot(parent, "AccessibilityPage");
@@ -463,7 +439,6 @@ namespace CloseTheDeal.Editor.UI
             return page;
         }
 
-        /// <summary>The live crosshair over three world-like grounds: sunlit white, sky and a dark room.</summary>
         static void PreviewTiles(Transform parent)
         {
             UiTokens t = Tokens;

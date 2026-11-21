@@ -15,14 +15,7 @@ using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Editor.Lanes
 {
-    /// <summary>
-    /// Everything the briefcase game mode needs outside its scripts, from two menu items.
-    /// "Set Up GameMode" makes the firm and match assets, the briefcase prefab, the firm
-    /// component on Player.prefab and the lane's test scene (two short towers). "Add GameMode
-    /// To Open Scene" puts the match, its HUD and its menu section into whichever scene is
-    /// open, for any scene that already has the towers and the game UI. Both only add what is
-    /// missing; neither rebuilds or retunes anything already there (AGENTS.md §4).
-    /// </summary>
+    /// <summary>Additive setup for briefcase game mode assets, briefcase prefab, Player.prefab, and lane scene.</summary>
     public static class GameModeLaneSetup
     {
         const string ScenePath = "Assets/_Project/Scenes/Lanes/Lane_GameMode.unity";
@@ -141,9 +134,6 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log("[GameMode] Added the match to " + scene.path);
         }
 
-        // ---- Assets --------------------------------------------------------------------------
-
-        /// <summary>Firms, match profile and briefcase prefab. Existing assets are the designer's and are left exactly as they are; only an empty slot is filled.</summary>
         static MatchProfile EnsureAssets()
         {
             EnsureFolder("Assets/_Project/Profiles", "Match");
@@ -195,7 +185,6 @@ namespace CloseTheDeal.Editor.Lanes
             return firm;
         }
 
-        /// <summary>The lane scene's towers: the default tower's templates and dimensions, cut down to reception, two floors, a checkpoint, the boardroom and the roof.</summary>
         internal static TowerProfile EnsureLaneTower()
         {
             var lane = AssetDatabase.LoadAssetAtPath<TowerProfile>(LaneTowerPath);
@@ -217,8 +206,6 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log("[GameMode] Created " + LaneTowerPath);
             return lane;
         }
-
-        // ---- Briefcase prefab ----------------------------------------------------------------
 
         /// <summary>Overwrites the briefcase prefab from the tool, only while the tool still owns it (GeneratedAssetGuard). Saving over the path keeps its GUID.</summary>
         [MenuItem("Close the Deal/Lanes/Rebuild GameMode Briefcase")]
@@ -245,10 +232,6 @@ namespace CloseTheDeal.Editor.Lanes
             return existing != null ? existing.GetComponent<NetworkObject>() : BuildBriefcasePrefab();
         }
 
-        /// <summary>
-        /// A greybox briefcase: a case in the firm's colour with a dark handle and corners, no
-        /// stripes, so it never reads as the pickups lane's banded Grenade Case. Networked like furniture.
-        /// </summary>
         static NetworkObject BuildBriefcasePrefab()
         {
             Material leather = EnsureMaterial(LeatherPath, new Color(0.23f, 0.14f, 0.09f));
@@ -313,7 +296,6 @@ namespace CloseTheDeal.Editor.Lanes
             return renderer;
         }
 
-        /// <summary>A frosted see-through panel, so a closed floor can be seen but not reached. Kept clear of red, yellow and the firm colours.</summary>
         static Material EnsureGateMaterial()
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(GatePath);
@@ -337,7 +319,6 @@ namespace CloseTheDeal.Editor.Lanes
             return material;
         }
 
-        /// <summary>The briefcase beacon's material, on the lane's own see-through-everything shader.</summary>
         static Material EnsureBeaconMaterial()
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(BeaconPath);
@@ -370,13 +351,6 @@ namespace CloseTheDeal.Editor.Lanes
             return material;
         }
 
-        // ---- Player prefab -------------------------------------------------------------------
-
-        /// <summary>
-        /// Adds the firm component and the hand a carried briefcase hangs from, if they are
-        /// missing. A prefab the greybox tool still owns stays the tool's (re-fingerprinted),
-        /// so Rebuild Player Prefab still works on it: run this menu again afterwards.
-        /// </summary>
         static void EnsurePlayerPrefab()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
@@ -413,9 +387,6 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log("[GameMode] Added FirmMember and a carry anchor to " + PlayerPrefabPath);
         }
 
-        // ---- Scene ---------------------------------------------------------------------------
-
-        /// <summary>First time only: the menu's backdrop looks down the street between the two towers.</summary>
         internal static void FrameStreet(TowerProfile tower)
         {
             Camera cam = Camera.main;
@@ -442,12 +413,6 @@ namespace CloseTheDeal.Editor.Lanes
                 builder.gameObject.AddComponent<PropSpawner>();
         }
 
-        /// <summary>
-        /// Gives every networked scene object that has none its FishNet scene id. FishNet does
-        /// this itself when a person edits the scene, but not for objects a tool adds in a
-        /// headless run, and without it the object never starts on the network. Ids that
-        /// already exist are kept. FishNet's own method is internal, hence the reflection.
-        /// </summary>
         internal static void AssignSceneIds(Scene scene)
         {
             System.Reflection.MethodInfo create = typeof(NetworkObject).GetMethod(
@@ -467,7 +432,6 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log($"[GameMode] FishNet scene ids assigned to {arguments[2]} object(s) in {scene.name}.");
         }
 
-        /// <summary>The match object, its HUD and its menu section, each only if missing.</summary>
         static void AddMatch(MatchProfile profile)
         {
             MatchDirector match = Object.FindAnyObjectByType<MatchDirector>();
@@ -508,12 +472,9 @@ namespace CloseTheDeal.Editor.Lanes
             EnsureMenuSection(menu, match);
         }
 
-        // ---- HUD (built from the UI kit) -----------------------------------------------------
-
         const string KitFolder = "Assets/_Project/UI/Kit";
         const string KitTokensPath = "Assets/_Project/UI/Tokens/UiTokens.asset";
 
-        /// <summary>The kit's prefabs, sprites and tokens. Null when the UI kit isn't in this project yet (Close the Deal > Lanes > Set Up UI).</summary>
         sealed class Kit
         {
             public UiTokens Tokens;
@@ -539,10 +500,6 @@ namespace CloseTheDeal.Editor.Lanes
             }
         }
 
-        /// <summary>
-        /// The match HUD under the game menu's Hud. A HUD this tool built before the kit (no tokens
-        /// wired) is replaced; one already on the kit is left alone.
-        /// </summary>
         static void EnsureHud(GameMenu menu, MatchDirector match)
         {
             Transform hud = menu.transform.Find("Hud");
@@ -663,7 +620,6 @@ namespace CloseTheDeal.Editor.Lanes
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>True when this component was already built by the kit version of this tool (its tokens are wired).</summary>
         static bool OnKit(Component component)
         {
             return component != null && new SerializedObject(component).FindProperty("_tokens").objectReferenceValue != null;
@@ -692,13 +648,6 @@ namespace CloseTheDeal.Editor.Lanes
             return group;
         }
 
-        // ---- Menu section (built from the UI kit) -----------------------------------------------
-
-        /// <summary>
-        /// The match's section on the game menu card: a plate with the headline, the reason as the
-        /// kit's status line, and the kit's primary button. A section this tool built before the kit
-        /// is replaced; the panel's words (set per scene in the Inspector) are kept.
-        /// </summary>
         static void EnsureMenuSection(GameMenu menu, MatchDirector match)
         {
             Transform card = menu.transform.Find("Menu/Card");
@@ -732,7 +681,6 @@ namespace CloseTheDeal.Editor.Lanes
             WireMenuSection(kit, section, panel, menu, match);
         }
 
-        /// <summary>Headline, reason line and button on the section's plate, wired to the panel.</summary>
         static void WireMenuSection(Kit kit, RectTransform section, MatchMenuPanel panel, GameMenu menu, MatchDirector match)
         {
             UiTokens t = kit.Tokens;
@@ -761,9 +709,6 @@ namespace CloseTheDeal.Editor.Lanes
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        // ---- Small helpers -------------------------------------------------------------------
-
-        /// <summary>The clock's amber cap-warning fill, laid behind its caption and time, hidden until the warning.</summary>
         static UnityEngine.UI.Image ClockWarning(Kit kit, Transform clock)
         {
             Transform caption = clock.Find("Caption");
@@ -777,7 +722,6 @@ namespace CloseTheDeal.Editor.Lanes
 
         const string EdgeMarkerPrefabPath = "Assets/_Project/UI/Kit/EdgeMarker.prefab";
 
-        /// <summary>The kit's edge marker for the briefcase, stretched over the whole HUD (UI_KIT.md "Edge marker"). Null when the kit has none yet.</summary>
         static UiEdgeMarker EdgeMarker(Transform parent)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(EdgeMarkerPrefabPath);
@@ -789,7 +733,6 @@ namespace CloseTheDeal.Editor.Lanes
             return marker;
         }
 
-        /// <summary>A kit HUD from before the kit had an edge marker: add only that.</summary>
         static void AddEdgeMarkerIfMissing(MatchHud hud, Transform hudRoot)
         {
             var serialized = new SerializedObject(hud);
@@ -806,7 +749,6 @@ namespace CloseTheDeal.Editor.Lanes
                 FillIfEmpty(hud, "_edgeMarker", marker);
         }
 
-        /// <summary>A kit HUD from before the cap warning moved onto an amber plate: add only that fill.</summary>
         static void AddClockWarningIfMissing(MatchHud hud, Transform hudRoot)
         {
             var serialized = new SerializedObject(hud);
@@ -823,7 +765,6 @@ namespace CloseTheDeal.Editor.Lanes
             FillIfEmpty(hud, "_clockWarning", image);
         }
 
-        /// <summary>Sets an object slot only when nobody has filled it (AGENTS.md §4).</summary>
         static void FillIfEmpty(Object target, string field, Object value)
         {
             var serialized = new SerializedObject(target);

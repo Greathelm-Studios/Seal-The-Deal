@@ -4,12 +4,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The player's video settings, kept on this PC and applied at launch: display mode, resolution, vertical sync,
-    /// frame rate limit and graphics quality. Uses Unity's own Screen and QualitySettings; nothing a designer authored
-    /// is written. In the Editor the window belongs to the Editor, so display mode and resolution are saved but not
-    /// applied there (they apply in a build).
-    /// </summary>
+    /// <summary>Local video preferences (display mode, resolution, vsync, frame cap, quality) applied in builds.</summary>
     public static class UiVideo
     {
         const string ModeKey = "video.displayMode";
@@ -65,11 +60,7 @@ namespace CloseTheDeal.UI
             }
         }
 
-        /// <summary>
-        /// The resolution saved (never larger than this monitor: a size saved on a bigger one is clamped to it), or the
-        /// desktop's when none is. The desktop's comes from the display itself, not Screen.currentResolution, which in
-        /// exclusive full screen is the game's own mode.
-        /// </summary>
+        /// <summary>Saved resolution clamped to the current monitor's desktop dimensions.</summary>
         public static Vector2Int Resolution
         {
             get
@@ -168,7 +159,7 @@ namespace CloseTheDeal.UI
 
         static void ApplyQuality() => QualitySettings.SetQualityLevel(Quality, true);
 
-        /// <summary>Quality levels carry their own vsync, so timing is applied after quality.</summary>
+        // Quality levels carry their own vsync, so timing must be applied after quality.
         static void ApplyTiming()
         {
             QualitySettings.vSyncCount = VSync ? 1 : 0;

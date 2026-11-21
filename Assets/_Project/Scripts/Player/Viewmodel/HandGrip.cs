@@ -1,48 +1,15 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-14
-//  Prompt    : Harvey: "have the actual playermodel follow the first person view model"
-//  Modified  : Claude Fable 5.2, 2026-11-14 — an arm can now be the left one (Harvey: "add a
-//              left and right hand system and a two handed system").
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : One right arm holding one grip: the bones, the finger joints and the tuning,
-//              and the solve that bends the arm onto a grip point and closes the hand. Lifted
-//              out of ViewmodelArms so the first-person arm and the body other players see
-//              hold the gun with the same code and the same numbers.
-// -----------------------------------------------------------------------------
 using System;
 using UnityEngine;
 
 namespace CloseTheDeal.Player
 {
-    /// <summary>
-    /// One arm and hand, left or right, that can be bent onto a grip. Serialized inside whichever
-    /// component owns the skeleton (<see cref="ViewmodelArms"/> for the first-person arm,
-    /// <see cref="PlayerHeldWeapon"/> for the body).
-    /// </summary>
-    /// <remarks>
-    /// <para>Local to each client and never synced (AGENTS.md §3).</para>
-    /// <para>WHY a plain serializable class and not a component: it has no life of its own.
-    /// The owning component decides when in the frame the arm is solved (after its own pose
-    /// source has written the bones) and where the grip is.</para>
-    /// <para>WHY an analytic two-bone solve and not Humanoid IK or the Animation Rigging
-    /// package: this rig cannot use a humanoid avatar while playing (CHARACTER_ANIMATION.md,
-    /// "The clips"), and a package would be a new dependency for two bones.</para>
-    /// </remarks>
+    /// <summary>Client-local two-bone arm IK solver and finger curl pose for one hand (shared by viewmodel template and player body).</summary>
     [Serializable]
     public sealed class HandGrip
     {
-        /// <summary>Shortest reach in metres; keeps the solve defined when the target sits on the shoulder.</summary>
         const float MinimumReach = 0.001f;
-
-        /// <summary>Share of the full arm length the solve may use; a dead-straight arm cannot choose an elbow direction.</summary>
         const float MaximumReachShare = 0.999f;
-
-        /// <summary>Joints in one finger, base to tip.</summary>
         const int JointsPerFinger = 3;
-
-        /// <summary>Squared length under which the three arm points count as in a line, in square metres squared.</summary>
         const float StraightArmEpsilon = 1e-12f;
 
         [Header("Arm (filled in by the greybox tool)")]
@@ -99,7 +66,6 @@ namespace CloseTheDeal.Player
         /// <summary>This arm's hand bone.</summary>
         public Transform Hand => _hand;
 
-        /// <summary>The three joints of each finger, base first, as the humanoid avatar names them: index, then middle, ring and little, then thumb. Right hand, then left.</summary>
         static readonly HumanBodyBones[] TriggerBones =
         {
             HumanBodyBones.RightIndexProximal, HumanBodyBones.RightIndexIntermediate, HumanBodyBones.RightIndexDistal,
@@ -134,20 +100,12 @@ namespace CloseTheDeal.Player
             HumanBodyBones.LeftThumbProximal, HumanBodyBones.LeftThumbIntermediate, HumanBodyBones.LeftThumbDistal,
         };
 
-        /// <summary>True when this is the left arm.</summary>
         public bool IsLeft => _left;
 
-        /// <summary>+1 for the right arm, -1 for the left: the way this hand's fingers, thumb and elbow swing turn. WHY: a left hand is a right hand mirrored, so every turn that closes it runs the other way about the same axis.</summary>
+        // Mirrored hand curls and swings in the opposite direction around the same bone axes.
         float Side => _left ? -1f : 1f;
 
-        /// <summary>
-        /// Finds the arm and finger bones on a humanoid model and measures the hand, for a
-        /// skeleton that was not wired by the greybox tool (the player's body).
-        /// </summary>
-        /// <param name="humanoid">The model's Animator, with its humanoid avatar still on. The model must be in its T-pose: the open hand is read from it.</param>
-        /// <param name="left">True to take the left arm, false the right.</param>
-        /// <returns>False when the model has no such arm or no index, middle and little finger knuckles on it; nothing usable was found.</returns>
-        /// <remarks>Call once at spawn, never per frame: it asks the avatar for bones and allocates the joint lists.</remarks>
+        /// <summary>Binds arm/finger bones and measures T-pose open-hand rotations (call once at Start before avatar is cleared).</summary>
         public bool Bind(Animator humanoid, bool left = false)
         {
             if (humanoid == null || humanoid.avatar == null || !humanoid.avatar.isHuman)
@@ -180,8 +138,7 @@ namespace CloseTheDeal.Player
             return true;
         }
 
-        /// <summary>Takes the finger curls and elbow swing from another grip, so two arms hold the same way.</summary>
-        /// <param name="from">The grip whose tuning to copy; its bones are not touched.</param>
+        /// <summary>Copies finger curl and elbow swing tuning from another grip.</summary>
         public void CopyTuning(HandGrip from)
         {
             if (from == null)
@@ -209,24 +166,7 @@ namespace CloseTheDeal.Player
             return open;
         }
 
-        /// <summary>
-        /// Bends the arm so the wrist reaches a point, keeping the elbow side of the pose
-        /// already on the bones (then swung by the elbow swing), turns the hand so its knuckles
-        /// match the target's axes, and closes the fingers.
-        /// </summary>
-        /// <param name="target">World position the wrist should reach, in metres. Clamped to the arm's length.</param>
-        /// <param name="targetRotation">World rotation the hand's knuckle frame should take: its forward is where the fingers point, its up runs from the little finger to the index finger.</param>
-        /// <param name="elbowToward">
-        /// World direction the elbow should hang toward, or zero to keep the elbow side of the
-        /// pose already on the bones and apply the elbow swing. Give one when that pose cannot be
-        /// trusted to hold still (a ragdoll's arm, a run clip's pumping arm): the elbow then sits
-        /// on that side of the shoulder-to-wrist line whatever the bones were doing.
-        /// </param>
-        /// <remarks>
-        /// Law of cosines: first open or close the elbow to the target distance, then swing the
-        /// whole arm about the shoulder onto the target. Ported from NorseFPS. Call it after
-        /// whatever poses the skeleton this frame, or that pose overwrites it.
-        /// </remarks>
+        /// <summary>Solves the two-bone arm onto <paramref name="target"/>, orients the hand, and applies finger curls.</summary>
         public void Reach(Vector3 target, Quaternion targetRotation, Vector3 elbowToward = default, bool curlFingers = true)
         {
             if (!IsRigged)
@@ -246,11 +186,7 @@ namespace CloseTheDeal.Player
             Curl(_thumb, open);
         }
 
-        /// <summary>
-        /// Bends the upper arm and forearm so the wrist reaches <paramref name="target"/>,
-        /// without overriding the hand's rotation or closing the fingers into a grip.
-        /// Used to deflect an empty hand out of the camera's sightline.
-        /// </summary>
+        /// <summary>Solves only upper arm and forearm toward <paramref name="target"/> without turning the hand or curling fingers.</summary>
         public void ReachArm(Vector3 target, Vector3 elbowToward = default)
         {
             if (!IsRigged)
@@ -272,21 +208,13 @@ namespace CloseTheDeal.Player
 
             float elbowNow = Vector3.Angle(a - b, c - b);
             float elbowWanted = Mathf.Acos(Mathf.Clamp((upper * upper + lower * lower - reach * reach) / (2f * upper * lower), -1f, 1f)) * Mathf.Rad2Deg;
-            // WHY the sign: with bend = (c - a) x (b - a), a positive turn about bend at the
-            // elbow swings the forearm away from the upper arm, which opens the angle.
             _lowerArm.rotation = Quaternion.AngleAxis(elbowWanted - elbowNow, bend) * _lowerArm.rotation;
 
             _upperArm.rotation = Quaternion.FromToRotation(_hand.position - a, target - a) * _upperArm.rotation;
 
-            // Swing the elbow round the line from shoulder to wrist. The wrist is on that line,
-            // so it stays on the grip; only where the elbow hangs changes.
-            // WHY: the poses underneath hang the elbow straight under the gun, which brings the
-            // forearm up at the hand steeply and cocks the wrist. Out to the side it comes in
-            // behind the gun.
             Vector3 line = (target - a).normalized;
             if (elbowToward != Vector3.zero)
             {
-                // Turn the arm about that same line until the elbow is on the wanted side.
                 Vector3 elbowNowSide = Vector3.ProjectOnPlane(_lowerArm.position - a, line);
                 Vector3 elbowWantedSide = Vector3.ProjectOnPlane(elbowToward, line);
                 if (elbowNowSide.sqrMagnitude > StraightArmEpsilon && elbowWantedSide.sqrMagnitude > StraightArmEpsilon)
@@ -358,10 +286,6 @@ namespace CloseTheDeal.Player
             return open;
         }
 
-        /// <summary>
-        /// Writes precomputed curled local rotations onto a run of finger joints without
-        /// round-tripping through world-space <c>Transform.rotation</c>.
-        /// </summary>
         int Curl(Transform[] joints, int open)
         {
             if (joints == null || _curledHand == null)

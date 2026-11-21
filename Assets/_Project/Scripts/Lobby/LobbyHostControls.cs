@@ -5,12 +5,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// Opens the host's player list when the host presses Tab (pad: View) in reception, and hands
-    /// the controls to it while it is up: the body stands still and the desk, stands and mirror
-    /// ignore the player. Only the host, only outside a run, never while the fitting room or the
-    /// game menu is up. Local only.
-    /// </summary>
+    /// <summary>Handles Tab/d-pad-up toggle and input capture for the host player list. Design: docs/systems/LOBBY.md.</summary>
     [DisallowMultipleComponent]
     public sealed class LobbyHostControls : MonoBehaviour
     {

@@ -1,63 +1,54 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Fable 5.2 (Claude Code)
-  Generated : 2026-11-13
-  Prompt    : Alex: "make the dummy and arsenal section be on the ceiling. to access it, you should [take] an elevator"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : The owning doc for the lift and the rooftop range it serves, so the netcode ownership is written
-              down before the code is trusted (AGENTS.md §3).
--->
 # ELEVATOR
 
-**Status:** Target · **Last updated:** 2026-11-14 · **Verified against:** the working tree on `Alex_Env`: both scripts compile; the lift and roof are in `KitOffice.unity`; ridden up and down three times as host by a script that stood the player in the car (car and rider heights matched, rider stayed grounded, doors parted 0.75 m each way, no console errors). Not walked by a person, not seen from a client, so it stays Target (AGENTS.md §3)
+**Status:** Target · **Last updated:** 2026-11-21
 
-This is dev-scene work in `KitOffice.unity` at Alex's request. It is not on the v1 list in [GDD.md](../GDD.md).
+Dev-scene work in `KitOffice.unity` at Alex's request, not on the v1 list in [GDD.md](../GDD.md). Compiled and ridden in host playtests (car and rider heights matched, doors parted 0.75 m each way), but not yet walked by a human or verified from a client, so it remains Target (`AGENTS.md §3`).
 
-## What happens in the game
+## What the player sees
 
-Beside reception, north-east of the atrium, a glass-backed capsule lift waits with its doors open.
-Walk in and stand for two seconds: the doors close, the car rides up past the upper floor behind glass and opens onto the open rooftop.
-The rooftop is the test range: the hit dummy, the arsenal and loose props to throw.
-Stand in the car again to ride down. Wait in front of closed doors and the car comes to you.
-There is no button to press.
+Beside reception, north-east of the atrium, a glass-backed capsule lift waits with its doors open. Walk in and stand for two seconds: the doors close, the car rides up past the upper floor behind glass, and the doors open onto the open rooftop range (hit dummy, arsenal display, and loose props). Stand in the car again to ride down, or wait in front of closed doors to call the car. There is no button to press.
 
-## Who owns what (AGENTS.md §3)
+## Who owns what (`AGENTS.md §3`)
 
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
-| When a ride starts, and from which stop | Host | One `LiftRide` value (stop, start tick) | On change: once per ride, a few bytes |
-| Car height, door positions | Nobody: every machine computes them from the ride's start tick | Nothing | Never |
-| Riders and callers | Host checks who stands in the car or at the other stop | Nothing | Host only, two overlap checks per tick while the lift is idle |
-| Props in the car | Host, as all props ([PROPS.md](PROPS.md)) | The normal prop stream | Unchanged |
+| When a ride starts, and from which stop | Host | One `LiftRide` value (`FromStop`, `DepartTick`, `Departed`) | On change: once per ride, a few bytes |
+| Car height, door positions | Deterministic function of host tick on every machine | Nothing | Never |
+| Riders and callers | Host polls cabin box and opposite call point | Nothing | Host only, ~10 Hz while idle (`PollIntervalSeconds = 0.1f`) |
+| Props in the car | Host, as all props ([PROPS.md](PROPS.md)) | Normal prop stream | Unchanged |
 
-A client never starts a ride and never moves the car on its own authority.
-The player body is client-predicted, so on a reconcile the client puts the car back where it was for each replayed tick; that is why the car is a function of the tick and not a streamed transform.
-The rejected alternative is a closed-door ride where the host teleports the riders: simpler, but it cannot carry loose props and hides the ride. It is the fallback if riding jitters from a client.
+## Architecture and design rationale
 
-## Code
+- **Tick-derived motion over streamed transforms:** The player body is client-predicted and re-simulated on every reconcile. A streamed car would sit at the wrong height during replay ticks and correct the rider continuously. Because `CarPosition` and `DoorOpen` are pure functions of the host tick (`DepartTick + 0.25 s` schedule lead so the `SyncVar` reaches clients before doors move), `OnPreReplicateReplay` rewinds the car to `serverTick` and steps it to `serverTick + 1`, matching predicted player movement.
+- **Client tick alignment:** `OnPreReconcile(clientTick, serverTick)` records `_localAheadOfHost` so clients translate `TimeManager.LocalTick` into the host tick.
+- **Trapezoidal speed profile and early-out:** `Awake` precomputes acceleration, cruise, and deceleration durations from `_speed`, `_acceleration`, and `_travel` (dropping the cruise phase if `2 * accelDistance >= _travel`). `Place` sets `_restPlaced` once a ride finishes so idle ticks do no transform work.
+- **Designer authority:** The scene builder wires `_car`, `_doorLeaves`, `_doorSlides`, and `_callPoints`. Authored rest positions are read once in `Awake` and never written back. Door slides are authored in each leaf's local space (so mirrored pairs both open along `+X`) and rotated into parent space at startup.
+- **Fallback:** A closed-door teleport ride was rejected because it hides the ride and cannot carry loose props, but remains the fallback if client riding jitters.
 
-- [Elevator.cs](../../Assets/_Project/Scripts/Lift/Elevator.cs): the whole system. Tuning is on the component: travel (m), top speed (m/s), acceleration (m/s²), door time (s), dwell time (s), the cabin box and the call radius.
-- [KitOfficeRoof.cs](../../Assets/_Project/Editor/Art/KitOfficeRoof.cs): the roof's builder, menu `Close the Deal > Art > Add Kit Office Roof Range`. It rebuilds one "Roof range" group and, when the kit's "Lift" group is in the scene, adds the `Elevator`, its `NetworkObject`, the car's kinematic body and the call spots.
-- [KitOfficeScene.cs](../../Assets/_Project/Editor/Art/KitOfficeScene.cs) places the kit's lift pieces (`Lift_Car`, four `Lift_Door_Panel` leaves, the landing frames, the glass shaft walls and the head-house) under a "Lift" group, then calls `KitOfficeRoof.AddTo` at the end of its build, so a rebuild of KitOffice keeps the roof and re-wires the lift.
+## Files and tuning
+
+- [Elevator.cs](../../Assets/_Project/Scripts/Lift/Elevator.cs): `Travel` (m), `Speed` (m/s), `Acceleration` (m/s²), `DoorSeconds` (s), `DwellSeconds` (s), `CabinCentre`, `CabinSize`, and `CallRadius` (m).
+- [KitOfficeRoof.cs](../../Assets/_Project/Editor/Art/KitOfficeRoof.cs): roof builder (`Close the Deal > Art > Add Kit Office Roof Range`), adds the `Elevator`, `NetworkObject`, kinematic car body, and call spots when the `Lift` group exists.
+- [KitOfficeScene.cs](../../Assets/_Project/Editor/Art/KitOfficeScene.cs): places the lift kit pieces and invokes `KitOfficeRoof.AddTo` at the end of a rebuild.
 
 ## The rooftop range
 
-Open to the sky: nothing is overhead except the lift's head-house. Roof-local metres, x east, z south, the roof slab's top at y 9.
+Open to the sky, roof-local metres (x east, z south, roof slab top at `y = 9`).
 
 | What | Where | Why there |
 |---|---|---|
-| Glass guard rails | The whole edge | Nobody walks off |
-| Hit dummy, facing west | (27, −19) | 4 m of clear floor all round, as the hit-reaction session asked. It and its mirror move up only once the lift is in the scene; until then the dummy stays on the upper floor, where it can be reached |
-| Full-height glass screens | East edge south of z −12, south edge east of x 20 | A blasted body must not clear a 1.1 m rail; walls within 6 m of the dummy |
-| Second DevMirror, 8 m | Inside the east screen, behind the dummy | Reactions are judged in a mirror |
-| Arsenal bay, 8 × 6 m, with a rack wall | Corner (7, −16), wall along z −22 | Its east edge is the firing line, 12 m from the dummy. Three `Storage_Low` counters against the rack wall carry four stand-in weapons from `Assets/_Project/Prefabs/Arsenal/` (pistol, grenade, rifle, launcher): display only, no physics and no pickup until the pickup question is settled |
-| Loose props: 3 monitors, 3 chairs, 2 cabinets | x 19 to 21, z −14.5 to −21.5 | Things to throw at the dummy. 8 of the 16-per-floor cap ([PROPS.md](PROPS.md)). Placed as scene objects because KitOffice has no tower for `PropSpawner` |
-| Raised pool, 8 × 4 m | Corner (6, −6) | Alex: "what could be funny is if added a pool". Kit piece `Pool_Raised_8x4`; knee-deep, no swimming |
+| Glass guard rails | Perimeter | Prevents walking off |
+| Hit dummy, facing west | (27, -19) | 4 m clear floor all round; moves up from the upper floor once the lift exists |
+| Full-height glass screens | East edge south of z -12, south edge east of x 20 | Catches blasted bodies that would clear a 1.1 m rail |
+| Second `DevMirror`, 8 m | Inside the east screen, behind the dummy | Reactions are judged in a mirror |
+| Arsenal bay, 8 x 6 m, with rack wall | Corner (7, -16), wall along z -22 | East edge is a 12 m firing line; three counters carry display-only stand-in weapons from `Assets/_Project/Prefabs/Arsenal/` |
+| Loose props: 3 monitors, 3 chairs, 2 cabinets | x 19 to 21, z -14.5 to -21.5 | Scene-placed throwables (8 of the 16-per-floor cap in [PROPS.md](PROPS.md)) |
+| Raised pool, 8 x 4 m | Corner (6, -6) | `Pool_Raised_8x4`, knee-deep, no swimming |
 
 ## Known limitations
 
-- Two stops only. The upper floor has no stop: its side of the shaft faces the atrium void.
-- A ragdolling body's limbs can dip through the moving car floor: the ragdoll's physics copy takes fixed colliders only ([CHARACTER_ANIMATION.md](CHARACTER_ANIMATION.md)).
-- The car moves once per tick with no in-between smoothing, so it may look steppier than the rider's own smoothed body.
-- Doors close whether or not something is in the doorway, and the car comes down whether or not something is under it.
-- Not yet seen from a client, so by AGENTS.md §3 it is not done.
+- Two stops only (the upper floor faces the atrium void).
+- Ragdoll limbs can dip through the moving car floor because ragdoll physics only resolves against fixed colliders.
+- Car motion updates once per tick with no sub-tick visual smoothing.
+- Doors close regardless of objects in the doorway, and the car descends regardless of objects underneath.
+- Not yet tested from a connected client.

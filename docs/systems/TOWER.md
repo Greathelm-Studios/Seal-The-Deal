@@ -1,71 +1,64 @@
 # TOWER
 
-**Status:** Current · **Last updated:** 2026-11-12 · **Verified against:** the tower commit
+**Status:** Current · **Last updated:** 2026-11-21
 
-## What happens in the game
+## What the player sees
 
-Two office towers stand facing each other across the street. Each team starts in its own lobby at the bottom and climbs floor by floor up an open spiral staircase near the middle of every floor. The rival can see and shoot anyone on it. On every floor above the lobby a locked red door stands across the stairs just past where you arrive; blast it three times to break it and keep climbing. The main floor of every level faces the rival tower through open window bays, so you can always see (and shoot) across. Every few floors is a checkpoint, near the top the boardroom, then the roof.
+Two office towers stand facing each other across the street. Each team starts in its own lobby at the bottom and climbs floor by floor up an open spiral staircase near the middle of every floor. Rivals can see and shoot across the street through the open window bays. On every floor above the lobby, a locked red door stands across the stairs just past the arrival point; three blasts break it open. Every few floors is a checkpoint, near the top is the boardroom, and above it is the roof.
 
-The host picks a seed when it starts; everyone builds the same towers from it. The main-floor contents of the ordinary floors are picked from templates by that seed, so the climb differs each run. Both towers use the same seed by default, so neither team gets an easier building (the GDD's proposal; a knob).
+The host picks a seed on start, and every machine builds identical towers locally from that seed (both towers share the same seed by default so neither team gets an easier layout).
 
-## Who owns what (AGENTS.md §3)
+## Who owns what (`AGENTS.md §3`)
 
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
-| Seed | **Host** picks it on start | One number, as a FishNet SyncVar | Once |
-| Buildings | Built locally by everyone from the seed; plain static geometry, not networked | Nothing | — |
-| Team and spawn | **Host.** A joiner goes to the team with fewer players, A on a tie, so the host is A and joiners alternate B, A, B; a leaver frees their place. The team is the player's firm ([MATCH.md](MATCH.md)) | The firm on the player, in its spawn message | On join |
-| Locked doors | **Host** spawns one per floor at the template's marker (via `PropSpawner`) and counts the hits | Hits taken, one byte SyncVar; the door hides at the limit | Only when hit |
+| Seed | Host picks on start and on `Rebuild()` | One `uint` `SyncVar` | Once per build |
+| Buildings | Built locally on every machine from the seed (static geometry, not networked) | Nothing | Never |
+| Team and spawn | Host (`TeamSpawner`: balances to fewer players, A on tie; leavers free seats) | Firm index on player spawn (`FirmMember`) | On join |
+| Locked doors | Host spawns at markers via `PropSpawner` and counts blast hits | Hits taken (`byte` `SyncVar`); hides at limit | Only when hit |
 
-Nothing about the buildings is sent over the network beyond the seed. The locked doors are the exception: they are networked objects spawned like furniture. A client's predicted body still collides with a door until the host's broken state arrives, so the first step through can correct by a few centimetres.
+Nothing about the buildings is sent over the network beyond the seed. Locked doors are the exception: they are networked objects spawned like furniture. A client's predicted body collides with a door until the host's broken state arrives, so stepping through right as it breaks can correct by a few centimetres.
 
-## Designer-authored vs runtime-derived (AGENTS.md §4)
+## Architecture and design rationale
 
-**Authored:** everything on `TowerProfile` (floor counts, checkpoint spacing, dimensions, gap, shared seed, which templates); the floor template prefabs themselves; spawn markers inside the lobby template.
-**Derived:** the seed; the floor list; building positions; which template each floor got.
+- **Runtime static batching and mesh cleanup (`TowerBuilder`):** Floors are instantiated at runtime from `FloorTemplate` prefabs, so Unity's build-time static batching never sees them. After instantiating all floors for a building, `TowerBuilder` runs `StaticBatchingUtility.Combine` on the `Transform[]` parts listed in `FloorTemplate.NeverMoves`. Because `Combine` creates runtime meshes not backed by assets, `NoteOwnMeshes()` snapshots the original `sharedMesh` references right before merging and `RecordMergedMeshes()` records only the newly generated meshes so `DestroyMergedMeshes()` frees them on `Clear()` and `OnDestroy()`, preventing rematch mesh leaks without touching asset meshes.
+- **Immediate detach on rebuild:** `Clear()` deactivates and unparents old building roots (`SetActive(false)` and `SetParent(null)`) before calling `Destroy`, because `Destroy` defers until end of frame and listeners running during `OnBuilt` (such as the glass registry) must never walk stale building children.
+- **Deterministic layout (`TowerLayout`):** Turns `seed` + `TowerProfile` into a bottom-to-top `FloorSpec` list using `Unity.Mathematics.Random`, never repeating the same ordinary office template twice in a row when multiple exist.
+- **Two-pass lobby team assignment (`TeamSpawner`):** `AssignTeams` removes all listed players from their old seats before seating them in their new teams so simultaneous team swaps never collide on a spawn slot. A 5th+ player on a team (possible when a lobby forces teams) wraps round-robin across the 4 lobby spawn slots. `ResetStatics` intentionally preserves `OnPlayerSpawning` because `FirmMember` hooks it at `SubsystemRegistration`.
+- **Designer-authored vs runtime-derived (`AGENTS.md §4`):** Authored values are `TowerProfile` fields, `FloorTemplate` prefabs, and lobby spawn markers. Derived values are the chosen seed, floor stack, building transforms, and runtime batched meshes.
 
-The greybox templates are generated by a menu tool. An artist takes one over just by editing it: the rebuild then skips it with a warning (see below). Until then, change the tool rather than the prefabs.
+## The floor stack and template convention
 
-## The floor stack
+From bottom to top: **Lobby**, then ordinary **Office** floors with a **Checkpoint** inserted after every `CheckpointEvery` floors (including straight before the boardroom when evenly divisible), then **Boardroom**, then **Roof**. Defaults: 9 ordinary floors, checkpoint every 3 (15 floors total).
 
-From the bottom: **Lobby**, then the ordinary floors with a **Checkpoint** inserted after every *N* of them, then **Boardroom**, then **Roof**. Defaults: 9 ordinary floors, checkpoint every 3, including one straight before the boardroom, so 15 floors (the GDD's 12-minute match). Two of the same ordinary template never come consecutively.
+Every floor is a prefab with `FloorTemplate` sharing the standard shell:
 
-## Floor template convention
+- **Pivot:** centre of the front (window) edge at floor level. Local `+Z` faces the rival tower; Building B is rotated 180 degrees.
+- **Footprint:** 28 m wide, 14 m main floor + 4 m service spine deep, 4.5 m floor to floor (`TowerProfile` holds the dimensions).
+- **Window side (`+Z`):** 0.6 m sill with pillars every 4 m and breakable `GlassPane` bays (`Windows` group, kept outside `NeverMoves`). The middle bay of Lobby and Checkpoint floors opens to the plaza and skybridges ([MATCH.md](MATCH.md)); Roof has a 1.2 m parapet.
+- **Service spine (back 4 m):** WC, STORE, and UTIL at 30 / 40 / 30% width, each with a 1.2 m door.
+- **Stairs:** open clockwise spiral around a 0.8 m column (`Assets/_Project/Floors/SpiralFlight.asset` ramp collider), 1.2 m clearance from the spine, starting and arriving on the window side.
+- **Locked door and cage:** on every floor above Lobby, `Prefabs/Props/LockedDoor.prefab` spans the treads 30 degrees past arrival inside a glass stairwell cage open from 300 to 360 degrees.
+- **Loose furniture:** placed as `PropMarker`s (`PropSpawner`, [PROPS.md](PROPS.md)), never static boxes. Leave anything animated, breakable, or lit out of `FloorTemplate.NeverMoves`.
 
-Every floor is one prefab with a `FloorTemplate` component. All templates share the shell from the GDD's standard floor layout:
-
-- **Pivot** at the centre of the front (window) edge, at floor level. Local +Z faces the rival tower; the floor extends toward −Z. Building B is the same prefab rotated 180°.
-- **Footprint** 28 m wide, 14 m main floor + 4 m service spine deep, 4.5 m floor to floor (opened up from 20 × 10 × 4 on 2026-10-03 so offices feel spacious; the back of the main floor is still 26 m from the rival windows, inside the 30 m test blast range). These live on `TowerProfile` and the template builder reads them; change them and rebuild the templates.
-- **Window side** (+Z): a 0.6 m sill (1 m until 2026-11-12, lowered for taller glass) with pillars every 4 m, so sightlines always line up across the gap. Each bay holds one breakable pane from the sill to the slab above, drawn with the first material under Glass Materials on `Profiles/Glass/DefaultGlass.asset` and carrying a `GlassPane` (GLASS.md: a shot passes through and shatters it). Panes sit in their own `Windows` group, never under Never Moves, so they can vanish when broken. The middle bay of the lobby and of each checkpoint floor has no pane: it is the doorway to the briefcase match's plaza and skybridges (MATCH.md). The roof has a parapet, not windows.
-- **Service spine** (back 4 m): WC, STORE and UTIL at 30 / 40 / 30 % of the width, each with a 1.2 m door from the main floor. WC and UTIL are fully walled: safe but blind, per the GDD.
-- **Stairs**: an open spiral, centred across the floor and set back so a 1.2 m walkway stays between it and the spine. One full clockwise turn per floor around a 0.8 m solid column, treads out to 2.6 m, so the inner edge is 42° at 4.5 m floors (the motor walks up to 50°). Every flight starts and arrives on the window side of the column. The tread is one shared mesh, `Assets/_Project/Floors/SpiralFlight.asset`, with a mesh collider: ramps, not steps, because the player body is a physics capsule (PLAYER_MOVEMENT.md, level rules). Every slab above the lobby has a round-ish opening over the treads; the leftover gaps at its corners are under 0.35 m.
-- **Locked door and cage**: on every floor but the lobby, a door (`Prefabs/Props/LockedDoor.prefab`) stands across the treads 30° past the arrival point, from the column to the outer edge and up to just under the flight above, so it can't be jumped or mantled. A floor-to-ceiling glass cage around the treads stops anyone stepping onto the flight past the door; it is open from 300° to 360°, where the flight from below arrives. Break the door with three blasts (`Hits To Break` on the prefab).
-- **Lobby** has no opening (nothing below), no door and no cage, so the run starts open; it carries four spawn markers per team, in a row between the windows and the stairs. **Roof** has the opening but no flight (nothing above) and a 1.2 m parapet.
-- **Office furniture is placed by fractions of the floor**, so a bigger footprint gives wider aisles rather than a crowd in the middle.
-- **Furniture keeps clear of the stairwell.** Check a new layout against the stairwell circle before adding it.
-- **Loose furniture is not in the template.** A template holds `PropMarker`s where furniture stands; the host spawns the networked props there after building (PROPS.md). Anything that must never move stays as static boxes.
-- **Never Moves** on the `FloorTemplate` lists the parts of the floor that stand still. Everything under them is merged into a few big meshes when the tower is built, which draws far faster but freezes them. Leave anything that moves, animates or lights up out of those parts. The tool lists its own `Shell`, `Stairs` and `Contents`; an artist's template merges nothing until they fill the list.
-
-## Scripts
+## Files and tuning
 
 Under [Assets/_Project/Scripts/Tower/](../../Assets/_Project/Scripts/Tower/):
 
-- `TowerProfile.cs`: the knobs, one asset at `Assets/_Project/Profiles/DefaultTower.asset`.
-- `FloorTemplate.cs`: marks a floor prefab with its kind and spawn markers.
-- `BreakableDoor.cs`: on the locked door. The host counts blast hits (`Knockback` calls it); everyone hides the door at the limit.
-- `TowerLayout.cs`: seed → ordered floor list. Pure, deterministic (`Unity.Mathematics.Random`), no Unity objects.
-- `TowerBuilder.cs`: the scene object that holds the seed and stacks both buildings under itself; on a rebuild the old buildings leave the tower at once, so anything numbering its children (the glass registry) sees only the new ones (`Rebuild()` picks a new seed for a rematch; clients rebuild when it arrives), then merges the parts each floor lists under Never Moves (runtime-instantiated floors never get Unity's build-time batching; see PERFORMANCE.md). `GetSpawn(team, slot)` hands out lobby spawns.
-- `TeamSpawner.cs`: on the NetworkManager instead of FishNet's PlayerSpawner. Spawns each joining player in their team's lobby; falls back to the flat greybox spawns when told to. `OnPlayerSpawning` tells the match a player's team before the spawn; `SpawnOverride` lets the match put a mid-match joiner at their firm's checkpoint.
+- [TowerProfile.cs](../../Assets/_Project/Scripts/Tower/TowerProfile.cs): tuning asset at `Assets/_Project/Profiles/DefaultTower.asset`.
+- [FloorTemplate.cs](../../Assets/_Project/Scripts/Tower/FloorTemplate.cs): `Kind`, `SpawnPoints`, `NeverMoves`.
+- [BreakableDoor.cs](../../Assets/_Project/Scripts/Tower/BreakableDoor.cs): `HitsToBreak` (default 3) on `LockedDoor.prefab`.
+- [TowerLayout.cs](../../Assets/_Project/Scripts/Tower/TowerLayout.cs): pure seed-to-layout builder.
+- [TowerBuilder.cs](../../Assets/_Project/Scripts/Tower/TowerBuilder.cs): scene builder, static batching, `Rebuild()`, `TryGetSpawn`.
+- [TeamSpawner.cs](../../Assets/_Project/Scripts/Tower/TeamSpawner.cs): `NetworkManager` player spawner with `SpawnOverride` and `OnPlayerSpawning`.
 
-Templates are generated by **Close the Deal > Greybox > Rebuild Floor Templates** into `Assets/_Project/Floors/` (it also re-runs Set Up Scene on Greybox.unity; **Rebuild Floor Templates Only** rebuilds the templates without opening any scene, for branches that must not touch Greybox.unity) ([GreyboxTowerSetup.cs](../../Assets/_Project/Editor/Greybox/GreyboxTowerSetup.cs)); **Set Up Scene** creates any that are missing and places the `Tower` object. Neither touches a template someone has edited, and neither changes a template slot on `TowerProfile` that is already filled: the generated floors only fill empty slots, and the office list is never shortened. To let the tool rebuild an edited template anyway, select it and run **Let the Tool Rebuild Selected**.
+Template generation: **Close the Deal > Greybox > Rebuild Floor Templates** (or **Rebuild Floor Templates Only**) in [GreyboxTowerSetup.cs](../../Assets/_Project/Editor/Greybox/GreyboxTowerSetup.cs). Edited templates and filled `TowerProfile` slots are never overwritten unless selected and marked with **Let the Tool Rebuild Selected**.
 
 ## Known limitations
 
-- Greybox only: grey boxes, no art, no lighting pass. A door shows no damage until it breaks, and just vanishes.
-- The tower stands 80 m along +X from the flat test area, so movement tests still have their open floor. Set `Spawn In Tower` off on the TeamSpawner to spawn on the flat area instead.
-- No destructible panels, loot, keycards or elevators yet.
-- In a scene with the match ([MATCH.md](MATCH.md)), a player who falls out of a window is put back at their firm's last checkpoint. Without it, they land in the street and walk back to a lobby.
-- **The glass cage stops blasts.** The GDD says glass never stops a projectile, but the cage and the glass-room walls are ordinary colliders that the blast's aim ray hits. A blast on the cage still reaches anyone within 3 m inside it.
-- Only blasts break doors; no gun damage exists yet. The rival team can break your door from across the street too.
-- The 30 / 40 / 30 spine and the stairwell size are constants in the template builder, not `TowerProfile` values.
-- Template count is three ordinary floors, not the GDD's 8–10. Adding one means adding a case to the template builder until an artist authors real ones.
+- Greybox visuals only: doors show no progressive damage before vanishing on break.
+- The tower stands 80 m along `+X` from the flat test area (`Spawn In Tower` toggle on `TeamSpawner`).
+- Destructible panels and keycards are not implemented in towers yet (loot placement is in [INTEGRATION.md](INTEGRATION.md); the prototype lift is in [ELEVATOR.md](ELEVATOR.md)).
+- Without `MatchDirector`, falling out of a window lands in the street; with `MatchDirector` ([MATCH.md](MATCH.md)), players return to their firm's last checkpoint.
+- The stairwell glass cage blocks blast rays beyond 3 m inside it, and rival teams can break your door from across the street (only blasts break doors; no gun damage to doors yet).
+- Spine 30 / 40 / 30 ratios and stairwell radius are constants in the template builder rather than `TowerProfile` fields, with 3 ordinary office templates currently authored.

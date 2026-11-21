@@ -4,11 +4,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// A yes / no question over the current screen, on a frosted pane behind a paper veil. The safe choice (Stay)
-    /// has focus when it opens and is what Esc / the pad's B does; the other choice runs the caller's action.
-    /// One prefab serves every confirm: Configure sets its words and action before Push.
-    /// </summary>
+    /// <summary>Modal yes/no confirmation dialog focusing the safe Stay choice by default.</summary>
     [AddComponentMenu("Close the Deal/UI/Confirm Dialog")]
     public sealed class UiConfirmDialog : UiScreen
     {
@@ -26,8 +22,7 @@ namespace CloseTheDeal.UI
         Action _onConfirm;
         Action _onStay;
 
-        /// <summary>Sets the words and actions. onStay (optional) runs when the player keeps things as they were (Stay, Esc).
-        /// confirmSound: what the confirm button plays; None when onConfirm plays its own answer (it would be masked).</summary>
+        /// <summary>Configures dialog text, button labels, and callbacks (pass None for confirmSound if onConfirm plays its own).</summary>
         public void Configure(string title, string body, string confirmLabel, string stayLabel, Action onConfirm, Action onStay = null,
             UiSoundEvent confirmSound = UiSoundEvent.Confirm)
         {
@@ -69,7 +64,6 @@ namespace CloseTheDeal.UI
                 _body.text = body;
         }
 
-        /// <summary>Esc / B is Stay.</summary>
         public override void OnCancel()
         {
             UiSound.Play(UiSoundEvent.Back);

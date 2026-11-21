@@ -1,6 +1,6 @@
-# PLAYER MOVEMENT
+# Player Movement
 
-**Status:** Current · **Last updated:** 2026-11-12 · **Verified against:** the movement lane branch (`claude/lane-movement-864d86`), scripted play sessions in `Lane_Movement.unity`
+**Status:** Current · **Last updated:** 2026-11-21 · **Verified against:** the movement lane branch (`claude/lane-movement-864d86`), scripted play sessions in `Lane_Movement.unity`
 
 ## What happens in the game
 
@@ -27,8 +27,8 @@ Your own moves show the instant you press them. The host is still the judge: if 
 | Action | Keyboard and mouse | Gamepad | Read as | Used by |
 |---|---|---|---|---|
 | Move | WASD / arrows | Left stick | `Move` | motor |
-| Look | Mouse | — | `LookDelta` (counts) | camera |
-| LookStick | — | Right stick | `LookStick` (rate; dead zone `Look Stick Dead Zone` on the profile) | camera |
+| Look | Mouse | None | `LookDelta` (counts) | camera |
+| LookStick | None | Right stick | `LookStick` (rate; dead zone `Look Stick Dead Zone` on the profile) | camera |
 | Sprint | Left Shift | Left stick press | `Sprint` | motor |
 | Jump | Space | South (A / Cross) | `JumpHeld`, `Consume(Jump)` | motor |
 | Crouch / slide | Left Ctrl, C | East (B / Circle) | `Crouch` | motor |
@@ -48,12 +48,12 @@ Presses are latched every frame and kept until the owning system consumes them o
 
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
-| Player body (position, velocity, state, jump timers, lean, crouch, slide, climb target and exit speed, event counters) | **Host.** The owning client predicts its own body. Other clients run each other player a few ticks past that player's last input that has arrived, repeating it (presses left out) for up to a third of a second, then letting go | Host → everyone: custom-serialized `MoveReconcile` (`Lean` quantized to `sbyte`, `Crouch` to `byte`, `StateTicksLeft` to `ushort`, packed flags, omitting `Mantle` unless mantling and `PendingKnock` when zero — 14 B payload plus `PredictionRigidbody` on normal ticks) | Every tick, 60/s |
+| Player body (position, velocity, state, jump timers, lean, crouch, slide, climb target and exit speed, event counters) | **Host.** The owning client predicts its own body. Other clients run each other player a few ticks past that player's last input that has arrived, repeating it (presses left out) for up to a third of a second, then letting go | Host → everyone: custom-serialized `MoveReconcile` (`Lean` quantized to `sbyte`, `Crouch` to `byte`, `StateTicksLeft` to `ushort`, packed flags, omitting `Mantle` unless mantling and `PendingKnock` when zero: 14 B payload plus `PredictionRigidbody` on normal ticks) | Every tick, 60/s |
 | Player input (move, yaw, sprint, crouch, jump press and hold, lean side) | Owning client | Client → host, about 19 B | Every tick, 60/s |
-| Animation state (`PlayerAnimState`) | Nobody: every machine works it out each frame from the body state above | Nothing extra | — |
-| Jump, landing, climb, refusal events | Counted on the tick inside the reconcile, raised once per change on every machine | Inside the reconcile | — |
+| Animation state (`PlayerAnimState`) | Nobody: every machine works it out each frame from the body state above | Nothing extra | None |
+| Jump, landing, climb, refusal events | Counted on the tick inside the reconcile, raised once per change on every machine | Inside the reconcile | None |
 | Knockback | **Host only.** Clients never decide a hit | Arrives as part of the body state | On hit |
-| Camera, view dip, speed widening | Local only | Nothing | — |
+| Camera, view dip, speed widening | Local only | Nothing | None |
 
 Bandwidth: with **8 players** the host sends each client 8 × ~115 B × 60/s ≈ **55 KB/s**, and its own upload is about 7 × 55 ≈ **390 KB/s (3.1 Mbit/s)** before packing. That is heavy for a residential upload; see Known limitations.
 
@@ -157,7 +157,7 @@ Under [Assets/_Project/Scripts/Player/](../../Assets/_Project/Scripts/Player/):
 - `LedgeProbe.cs`: finds what can be climbed or vaulted, and why not.
 - `PlayerAnimState.cs`: the read-only state a rig reads.
 - `PlayerInputReader.cs`: the one place input is read; see Controls.
-- `PlayerCamera.cs`: first-person camera; look speeds and limits now live on `MovementProfile` (the old scene values, including the Greybox scene's −35° look-up limit, are no longer read).
+- `PlayerCamera.cs`: first-person camera; look speeds and limits now live on `MovementProfile` (the old scene values, including the Greybox scene's −35° look-up limit, are no longer read). In body view (`SetBodyView`), the eye is never parented to the head bone (head bob, turn lead, and hit jolts would cause nausea); view rotation comes from mouse/stick alone while position settles smoothly onto the head bone and takes only a capped share of quick motion (see [VIEWMODEL.md](VIEWMODEL.md)).
 - `MovementProfile.cs`: every tuning value, with tooltips; asset `Assets/_Project/Profiles/DefaultMovement.asset`.
 - `Dev/PlayerMovementSession.cs`: the scripted play session; its host-and-client run found that every reader shared one actions asset, so a remote body spawning switched off the local player's input. Each reader now takes its own copy of the asset (editor and development builds only; wakes only on `-movementSession`).
 - `Combat/Knockback.cs` (not this lane's): turns a blast into `ApplyKnockback` calls; unchanged.

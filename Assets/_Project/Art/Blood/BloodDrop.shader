@@ -1,21 +1,3 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-15
-//  Prompt    : Harvey: "Add a particle effect where blood splatters off of a player when
-//              they're hit, from that spot and somewhat from their body."
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : The drops of blood that fly through the air off a struck body. Each particle is
-//              one flat square of colour, stretched along its flight by the particle system,
-//              in the same two tones as the splats on the walls (BloodSplat.shader).
-// -----------------------------------------------------------------------------
-//
-// Look: flat squares, no texture and no soft edge, so a drop reads as a chunky pixel streak
-// beside the pixel-stepped splats. The particle's own colour is the tone in the main light;
-// _CutColor is the colder tone it takes in shade, with a hard switch between them, the same
-// "base, one hard cut shadow" rule as the characters and the splats.
-// WHY opaque and not blended: a square needs no see-through edge, and opaque drops sort
-// correctly against the body they fly off without any sorting work.
 Shader "Close the Deal/Blood Drop"
 {
     Properties

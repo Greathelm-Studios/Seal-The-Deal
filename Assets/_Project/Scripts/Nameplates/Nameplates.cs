@@ -10,14 +10,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.Nameplates
 {
-    /// <summary>
-    /// Names over teammates' heads, and a short marker on a rival who walks into your tower. Rules
-    /// from ArtSource/UI/research/ux_research.md: own firm only, seen through glass, within 40 m,
-    /// an 18 px name on the kit's white plate with a cyan diamond; a rival inside your tower gets an
-    /// amber marker for 2 s from the moment they enter; no tags across the gap. Drawn on its own
-    /// overlay canvas under the kit's menus. Local only: reads synced firms, positions and the
-    /// reception board's names. Design: docs/systems/NAMEPLATES.md.
-    /// </summary>
+    /// <summary>Local overlay rendering teammate nameplates and timed raider markers. Design: docs/systems/NAMEPLATES.md.</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Canvas))]
     public sealed class Nameplates : MonoBehaviour
@@ -108,14 +101,12 @@ namespace CloseTheDeal.Nameplates
             return tag != null && tag.MarkerGroup.alpha > 0.99f;
         }
 
-        // ---- Who has a tag (on roster events only) ------------------------------------------------
-
         void Rebuild()
         {
             IReadOnlyList<FirmMember> members = FirmMember.All;
             for (int i = _tags.Count - 1; i >= 0; i--)
             {
-                // The local player can be tagged before this machine knows which player is its own.
+                // Local player may appear in FirmMember.All before FirmMember.Local resolves.
                 if (_tags[i].Member == null || _tags[i].Member == FirmMember.Local || !Contains(members, _tags[i].Member))
                     Remove(i);
             }
@@ -161,7 +152,6 @@ namespace CloseTheDeal.Nameplates
             _tags.RemoveAt(index);
         }
 
-        /// <summary>Names come from the reception board; redraw them only when it or the roster changes.</summary>
         void RefreshNames()
         {
             if (_roster == null && LobbyRoster.Instance != null)
@@ -187,8 +177,6 @@ namespace CloseTheDeal.Nameplates
             float width = Padding + DiamondSize + Padding * 0.6f + tag.Name.preferredWidth + Padding;
             tag.Chip.sizeDelta = new Vector2(width, ChipHeight);
         }
-
-        // ---- Building a tag (once per player) -----------------------------------------------------
 
         Tag Make(FirmMember member)
         {
@@ -274,8 +262,6 @@ namespace CloseTheDeal.Nameplates
             rect.offsetMin = rect.offsetMax = Vector2.zero;
         }
 
-        // ---- Each frame: place what is shown ------------------------------------------------------
-
         void LateUpdate()
         {
             FirmMember me = FirmMember.Local;
@@ -297,7 +283,6 @@ namespace CloseTheDeal.Nameplates
             Fade(tag.MarkerGroup, false);
         }
 
-        /// <summary>Shows a teammate's name, or a raider's marker, at the spot above their head.</summary>
         void Place(Tag tag, FirmMember me, Camera cam, MatchDirector runningMatch)
         {
             bool team = tag.Member.Firm == me.Firm;
@@ -321,7 +306,6 @@ namespace CloseTheDeal.Nameplates
 
         static bool Alive(Tag tag) => tag.Health == null || !tag.Health.IsDead;
 
-        /// <summary>Spot above the head in canvas units; false when behind the camera or out of range.</summary>
         bool TryPlace(Tag tag, Camera cam, out Vector2 at)
         {
             Vector3 head = tag.Member.Position + Vector3.up * (tag.Member.BodyHeight + _headroom);
@@ -331,7 +315,6 @@ namespace CloseTheDeal.Nameplates
             return WorldToCanvas.TryProject(cam, _canvas, head, out at);
         }
 
-        /// <summary>A rival is marked for a short while from the moment they step inside your tower.</summary>
         bool RaiderMarked(Tag tag, FirmMember me, MatchDirector match)
         {
             bool inside = match.Arena.PlaceOf(tag.Member.Position, 0f) == me.Firm;

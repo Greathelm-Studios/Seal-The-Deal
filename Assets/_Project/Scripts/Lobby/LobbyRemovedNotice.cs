@@ -3,11 +3,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// Tells a player the host removed them, on a kit plate above the title, because their own
-    /// game only knows the line dropped (SteamLobby's status says "lost the connection").
-    /// Shows for a few seconds after LobbyRoster.LocalRemovedByHost, then fades. Local only.
-    /// </summary>
+    /// <summary>Local title-overlay notice shown when the host kicks this player from reception. Design: docs/systems/LOBBY.md.</summary>
     [DisallowMultipleComponent]
     public sealed class LobbyRemovedNotice : MonoBehaviour
     {

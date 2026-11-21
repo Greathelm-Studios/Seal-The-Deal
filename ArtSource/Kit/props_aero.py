@@ -1,15 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code, blender-modeling skill)
-#  Generated : 2026-11-15
-#  Prompt    : Alex: "building up the office assets, cuz rn they look very bland and roblox like and blockouty, i want
-#              the assets to match the frutiger aero and gen x soft club 2000s office corporate vibe we got goin!"
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : The finished (Aero / Soft Club) office furniture and props, one piece per build, under the same piece
-#              names kit_pieces.py uses, so KitImport and the scenes pick them up unchanged. A separate file because
-#              another session holds kit_pieces.py for the walls and floors; it reuses that file's grid, materials and
-#              helpers by loading it, so the numbers are still defined once.
-# -----------------------------------------------------------------------------
 """Aero / Soft Club office props for Seal the Deal.
 
 Build one piece:

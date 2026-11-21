@@ -5,14 +5,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Customisation
 {
-    /// <summary>
-    /// What a player is wearing, kept by the host and seen by everyone (late joiners included).
-    /// The owner loads their saved outfit and sends it as 8 bytes of ids; the host checks every
-    /// id against the catalog and either keeps it or refuses it, and the kept value reaches all
-    /// players through one synced value. Lock state is NOT checked by the host: the runs count
-    /// lives on the player's own PC, so locks are honoured by the client only (cosmetic, no
-    /// gameplay effect). Owns / synced / rate: docs/systems/CUSTOMISATION.md.
-    /// </summary>
+    /// <summary>Host-validated, 8-byte synced player outfit component on Player.prefab. Design: docs/systems/CUSTOMISATION.md.</summary>
     [DisallowMultipleComponent]
     public sealed class PlayerOutfit : NetworkBehaviour
     {
@@ -87,8 +80,6 @@ namespace CloseTheDeal.Customisation
                 Local = null;
         }
 
-        // ---- Owner API -----------------------------------------------------------------------
-
         /// <summary>Owner only: shows an outfit on this PC without telling anyone, for browsing.</summary>
         public void Preview(OutfitLoadout loadout)
         {
@@ -124,18 +115,13 @@ namespace CloseTheDeal.Customisation
             OnRunsStartedChanged?.Invoke(_runsStarted);
         }
 
-        // ---- Host ----------------------------------------------------------------------------
-
         [ServerRpc]
         void CmdWear(ulong packed)
         {
             ServerWear(packed);
         }
 
-        /// <summary>
-        /// Host only: the one place an outfit request is judged. Public so a test can feed it a
-        /// bad request directly. Returns true when accepted.
-        /// </summary>
+        /// <summary>Host only. Validates packed outfit against the catalog and updates the SyncVar.</summary>
         public bool ServerWear(ulong packed)
         {
             if (!IsServerInitialized)

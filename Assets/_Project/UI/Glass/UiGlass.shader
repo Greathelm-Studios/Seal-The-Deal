@@ -1,9 +1,4 @@
-// Seal the Deal UI glass (pass B "Aero", built for URP + uGUI).
-// One pane = blurred scene behind (from UiGlassBlurFeature), paper tint, hard diagonal sheen streak, 1 px inner
-// highlight, hairline border, optional mullions, small corner radius. Navy text goes ON TOP in its own Graphic.
-// When the blur is off (_UiGlassBlurOn = 0: feature missing, quality "No blur", or scene without it) the pane
-// switches by itself to a plain, denser tint (_FallbackAlpha) over the sharp scene, so text stays legible.
-// Alphas are ENGINE (Linear) values: the SVG mockups used higher sRGB alphas for the same look.
+// Frosted URP glass pane shader with diagonal sheen, border, mullions, and no-blur fallback (docs/systems/UI_GLASS.md).
 Shader "CloseTheDeal/UI/Glass"
 {
     Properties

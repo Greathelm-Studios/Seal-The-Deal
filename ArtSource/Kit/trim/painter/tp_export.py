@@ -1,12 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-15
-#  Prompt    : Alex: "making a trimsheet in substance ... you can use substance painter"
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Painter step 4: exports the sheet's URP maps for KitImport.cs.
-#              Run from ArtSource/Kit/trim/painter with: python sp.py tp_export.py
-# -----------------------------------------------------------------------------
 # Painter step 4: export the sheet for URP (Metallic Standard: BaseMap, MetallicSmoothness, Normal, Emission).
 import os
 import substance_painter.export as ex

@@ -1,9 +1,4 @@
-// Seal the Deal UI glass: the blur passes behind every frosted pane.
-// Used by UiGlassBlurFeature (Render Graph): 4 fullscreen passes on a copy of the camera colour.
-//   0 Down      full -> 1/2 res, 4 bilinear taps
-//   1 Down      1/2 -> 1/4 res, 4 bilinear taps
-//   2 BlurH     9-tap gaussian from 5 bilinear taps at 1/4 res
-//   3 BlurV     same, vertical
+// Four-pass quarter-res Gaussian blur for UiGlassBlurFeature and UiGlassBackdrop (docs/systems/UI_GLASS.md).
 Shader "Hidden/CloseTheDeal/UiGlassBlur"
 {
     SubShader

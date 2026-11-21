@@ -5,10 +5,7 @@ using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Combat
 {
-    /// <summary>
-    /// Plays one-shot particle effects (bullet impacts) at a point. Local visuals only, never
-    /// networked. Effects are reused, so sustained fire allocates nothing once warmed up.
-    /// </summary>
+    /// <summary>Pooled, distance-culled local one-shot impact particle player.</summary>
     public sealed class LocalEffects : MonoBehaviour
     {
         const int MaxPlaying = 32;

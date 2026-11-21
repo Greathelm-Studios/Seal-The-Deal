@@ -1,46 +1,47 @@
 # PROFILE
 
-**Status:** Current (in `buffer`; built by the gaps lane) · **Last updated:** 2026-11-14
+**Status:** Current · **Last updated:** 2026-11-21
 
 ## What the player sees
 
-Nothing drawn yet. Every finished match is kept on this PC: matches, wins, losses, kills, deaths, falls, window kills, briefcase pick-ups and steals, floors opened, throws and throws that hit, time with the briefcase, time played, best floor, most kills in a match, current and best win streak, and the last 20 matches. Quit and relaunch: it is all still there. It also remembers which first-run hints a player has seen.
+Local career persistence on this PC: matches played, wins, losses, draws, kills, deaths, falls, window kills, briefcase pick-ups and steals, floors opened, throws, throw hits, carry seconds, seconds played, best floor, most kills in a match, current/best win streak, the last 20 match summaries, and which onboarding hints have been seen.
 
-## Rules
+## Ownership and netcode boundary (`AGENTS.md §3`)
 
-- **Only a finished match counts**, and only from the final record the host sends ([RECORDS.md](RECORDS.md)). The host leaving mid-match, or this player leaving, writes nothing.
-- **Holds career stats and seen hints only.** The outfit stays in the lobby's `outfit.json` (`OutfitSave`); settings stay with the UI kit. No value lives in two files.
-- **The file is `Application.persistentDataPath/profile.json`**, or the path after `-profileSave` on the command line. Scripted checks never touch a real profile: shell runs pass `-profileSave`, and the menu run uses `Temp/GapsRun/profile.json` (held in the editor's session, cleared when play stops). On this Mac in the editor: `~/Library/Application Support/DefaultCompany/CloseTheDeal/profile.json`; that folder moves if Player Settings' company or product name change.
-- **Written safely:** to `profile.json.tmp`, then swapped in, so a crash mid-write leaves the old profile whole.
-- **Missing file:** a fresh profile, `State = Fresh`.
-- **Unreadable file:** kept as `profile.json.corrupt`, a fresh profile starts, `State = RecoveredFromCorrupt`. A warning in the log, nothing on screen.
-- **Older layout:** read and repaired (missing lists filled, the stats array resized). `CurrentVersion` is 1, so there is no older layout yet.
-- **Newer layout** (a newer build's file): left untouched; this session plays on an unsaved fresh profile, `State = NewerFileKept`.
-- Local only: nothing here is networked.
+Local only: nothing is networked. `ProfileKeeper` writes career match results exclusively from the host-authenticated `MatchFinal` broadcast via `MatchRecords.FinalRecord`. Leaving or host shutdown mid-match records nothing.
 
-## Contract (UI, unlocks, onboarding)
+## Architecture and design rationale
 
-`ProfileStore` (namespace `CloseTheDeal.Profile`), static:
+- **Separation of saves:** `profile.json` stores career stats and seen hints; outfits and `runsStarted` live in `outfit.json` ([CUSTOMISATION.md](CUSTOMISATION.md)), and settings live with the UI kit.
+- **Serialized background save queue (`BackgroundFileWriter`):** Shared by `ProfileStore` and `OutfitSave`. JSON serialization runs synchronously on the main thread, while directory creation and atomic write (`path.tmp` followed by `File.Replace` / `File.Move`) run sequentially on a single background worker thread (`ConcurrentQueue<WriteRequest>`). `BackgroundFileWriter.Flush()` blocks until pending writes drain before `Application.quitting`, domain reload (`SubsystemRegistration`), or any synchronous `Read()`.
+- **Corruption and version handling:**
+  - Missing file: starts fresh (`LoadState.Fresh`).
+  - Unreadable/corrupt file: copies to `profile.json.corrupt`, logs a warning, and starts fresh (`LoadState.RecoveredFromCorrupt`).
+  - Older version (`< CurrentVersion`): `PlayerProfile.Repair` fills null lists and resizes the `stats` array (`LoadState.Loaded`).
+  - Newer file (`> CurrentVersion`): leaves the file untouched on disk and suppresses writes for the session (`LoadState.NewerFileKept`).
+- **Path override:** Reads `Application.persistentDataPath/profile.json`, or `-profileSave <path>` on CLI, or `SessionState` key `ProfileStore.EditorPathKey` in Editor test runs.
+
+## Contract
+
+`ProfileStore` (`CloseTheDeal.Profile`):
 
 | Member | Notes |
 |---|---|
-| `Current` | `PlayerProfile`, loaded on first use. |
-| `Get(ProfileStat)` | One career number, for an unlock rule ("5 wins") or a stats page. |
-| `State` | `Fresh`, `Loaded`, `RecoveredFromCorrupt`, `NewerFileKept`. For logs or a quiet settings line, never an error popup. |
-| `Changed` | `Action<PlayerProfile>`: loaded, a match added, a hint marked. |
-| `MatchRecorded` | `Action<MatchSummary, PlayerProfile>`: for a "career" line on the results screen. |
-| `MarkHintSeen(id)` | Remembers a first-run hint; returns false if already seen. `Current.HasSeen(id)` reads it. |
+| `Current` | `PlayerProfile`, loaded on first access |
+| `Get(ProfileStat)` | Reads a single career stat |
+| `State` | `NotLoaded`, `Fresh`, `Loaded`, `RecoveredFromCorrupt`, `NewerFileKept` |
+| `Changed` | `Action<PlayerProfile>`: fired on load, match record, or hint marked seen |
+| `MatchRecorded` | `Action<MatchSummary, PlayerProfile>`: fired after recording a finished match |
+| `MarkHintSeen(id)` | Marks an onboarding hint seen and saves; returns `false` if already seen |
 
-`PlayerProfile`: `Get(stat)`, `Recent` (newest first, `MatchSummary`: when, `Outcome` Won / Lost / NoWinner, firm, reason, players, seconds, kills, deaths, falls, steals, floors opened, carry seconds, best floor), `IsNew` (no match yet), `CreatedUtc`, `LastPlayedUtc`.
+`PlayerProfile`: `Get(stat)`, `Recent` (newest first, up to 20 `MatchSummary` entries), `IsNew`, `CreatedUtc`, `LastPlayedUtc`, `HasSeen(hintId)`.
 
-**Unlock hook for the lobby:** `OutfitCatalog.Sanitise(loadout, runs)` unlocks by runs started today. To unlock by matches finished or wins instead, it can read `ProfileStore.Get(ProfileStat.MatchesPlayed)` or `Wins`. That is the lobby lane's change to make.
+## Files
 
-## Scripts
-
-[Assets/_Project/Scripts/Profile/](../../Assets/_Project/Scripts/Profile/): `PlayerProfile.cs` (data), `ProfileStore.cs` (load, save, record), `ProfileKeeper.cs` (scene component: loads at start, records each final).
+Under [Assets/_Project/Scripts/Profile/](../../Assets/_Project/Scripts/Profile/): `PlayerProfile.cs`, `ProfileStore.cs` (includes `BackgroundFileWriter`), `ProfileKeeper.cs`.
 
 ## Known limitations
 
-- One profile per OS user on this PC, not per Steam account, and no Steam Cloud. Two Steam accounts on one PC share it.
-- Stats are trusted from the host. A cheating host can give its friends any numbers; acceptable for a friends' game, not for leaderboards.
-- `productName` and `companyName` are still the template's (`CloseTheDeal`, `DefaultCompany`). Renaming them moves the save folder; do it before players have saves.
+- One profile per OS user account rather than per Steam ID, with no Steam Cloud sync.
+- Final match records are trusted from the match host (appropriate for friend-hosted P2P, not competitive leaderboards).
+- Player Settings still uses template `CloseTheDeal` / `DefaultCompany`, which determines the default `persistentDataPath` folder until updated.

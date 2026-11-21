@@ -2,16 +2,13 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// A kit screen with a window onto the live sky (lane 8's TitleSky and its view presets). The sky lane puts its
-    /// view under BackdropSlot and calls SetLiveBackdrop(true), which hides the screen's flat fallback sky.
-    /// </summary>
+    /// <summary>A kit screen that hosts a live sky backdrop behind its window frame.</summary>
     public interface IBackdropScreen
     {
-        /// <summary>Where the live sky goes; it draws behind the window frame's bars.</summary>
+        /// <summary>Slot behind the window bars where the live sky view attaches.</summary>
         RectTransform BackdropSlot { get; }
 
-        /// <summary>True once a live view is in the slot. A scene without a sky material keeps the flat fallback.</summary>
+        /// <summary>Switches between the live sky view and the static fallback.</summary>
         void SetLiveBackdrop(bool live);
     }
 }

@@ -9,12 +9,7 @@ using UnityEngine.Events;
 
 namespace CloseTheDeal.Items
 {
-    /// <summary>
-    /// The wet floor sign: put it down and the floor around it really is wet. Anyone who runs
-    /// across it, from either firm, goes flying; walking is safe. Picking the sign up or
-    /// knocking it away clears the trap. The host decides every slip; everyone else is told
-    /// one synced flag and draws the puddle.
-    /// </summary>
+    /// <summary>Deployable floor hazard that trips running players until picked up or nudged. Design: docs/systems/ITEMS.md.</summary>
     public sealed class WetFloorSign : ItemBehaviour
     {
         [Tooltip("Size of the wet patch and how hard people slip. Read at runtime, never written.")]
@@ -101,9 +96,7 @@ namespace CloseTheDeal.Items
                 TimeManager.OnTick -= ServerTick;
         }
 
-        // ---- Host ----------------------------------------------------------------------------
-
-        /// <summary>Puts the sign down on flat floor just ahead of the carrier, facing them. Refused where there is no such floor.</summary>
+        /// <summary>Places the sign on flat floor ahead of the carrier, or denies if blocked.</summary>
         public override void ServerUse(ItemCarrier user)
         {
             Transform body = user.transform;
@@ -209,8 +202,6 @@ namespace CloseTheDeal.Items
             motor.ApplyKnockback(travel.normalized * _profile.SlipSpeed + Vector3.up * _profile.SlipLift, _profile.ControlLossSeconds);
             ObserversSlipped(body.position);
         }
-
-        // ---- Every machine -------------------------------------------------------------------
 
         void OnDownChanged(bool previous, bool next, bool asServer)
         {

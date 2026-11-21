@@ -1,13 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-13
-#  Prompt    : Alex supplied a generated 4x4 eye sheet ("here you go") for the STDMC eye cards.
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Turns Alex's painted eye sheet (pupils drawn in, 4 blink columns) into the three
-#              textures the eye-card shader reads: lids, iris-opening mask and one sliding iris.
-#              It is a script, not a hand edit, so a repainted sheet can be rebuilt the same way.
-# -----------------------------------------------------------------------------
 """Build the STDMC eye-card textures from STDMC_EyeSheet.png.
 
 Usage (from the repo root):  python ArtSource/Characters/Eyes/build_eye_atlas.py [--preview out.png]

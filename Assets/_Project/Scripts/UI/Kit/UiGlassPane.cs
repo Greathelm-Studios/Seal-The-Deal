@@ -4,11 +4,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// A light pane: the glass lane's frosted URP material when one is assigned, otherwise the no-blur fallback
-    /// (paper at the frosted or plate alpha, with the hairline edge and soft shadow the builder adds).
-    /// Assign the glass material here, or on the pane prefab, to switch every pane to real glass.
-    /// </summary>
+    /// <summary>Applies a frosted URP glass material or falls back to a solid tinted paper alpha when unassigned.</summary>
     [AddComponentMenu("Close the Deal/UI/Glass Pane")]
     public sealed class UiGlassPane : MonoBehaviour
     {

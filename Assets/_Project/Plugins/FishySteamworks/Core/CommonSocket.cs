@@ -67,7 +67,7 @@ namespace FishySteamworks
         /// Buffer used to receive data.
         /// </summary>
         protected byte[] InboundBuffer = null;
-        // Close the Deal patch (FORK.md): reusable persistently-pinned outbound buffer so Send never mutates caller arrays or allocates per packet.
+        // Fork patch: reusable persistently-pinned outbound buffer (see FORK.md).
         private byte[] _outboundBuffer = null;
         private GCHandle _outboundPinned;
         private IntPtr _outboundPtr = IntPtr.Zero;
@@ -98,7 +98,7 @@ namespace FishySteamworks
             Transport = t;
         }
 
-        // Close the Deal patch (FORK.md): lazily allocate receive buffers only on sockets that receive Steam messages (skips ClientHostSocket).
+        // Fork patch: lazily allocate receive buffers to skip ClientHostSocket (see FORK.md).
         protected void EnsureReceiveBuffers()
         {
             if (MessagePointers == null)
@@ -155,10 +155,7 @@ namespace FishySteamworks
         /// <returns></returns>
         protected EResult Send(HSteamNetConnection steamConnection, ArraySegment<byte> segment, byte channelId)
         {
-            /* The channel is packed into the data as a trailing byte, because the receiver
-             * cannot tell otherwise which channel a message came in on.
-             * Close the Deal patch (FORK.md): copy into a reusable persistently-pinned buffer
-             * grown on demand, eliminating per-packet GCHandle.Alloc, Array.Resize, and caller-buffer mutation. */
+            // Fork patch: pack segment + trailing channel byte into reusable pinned _outboundBuffer (see FORK.md).
             int needed = segment.Count + 1;
             if (_outboundBuffer == null || _outboundBuffer.Length < needed)
             {
@@ -225,15 +222,10 @@ namespace FishySteamworks
         /// <returns>False when the message was dropped as malformed; segment and channel are then unset.</returns>
         protected bool GetMessage(IntPtr ptr, byte[] buffer, out ArraySegment<byte> segment, out byte channel)
         {
-            // Close the Deal patch (FORK.md): read m_pData (offset 0) and m_cbSize (offset IntPtr.Size) directly instead of marshaling the entire SteamNetworkingMessage_t struct.
+            // Fork patch: read m_pData (offset 0) and m_cbSize (offset IntPtr.Size) directly (see FORK.md).
             IntPtr pData = Marshal.ReadIntPtr(ptr);
             int packetLength = Marshal.ReadInt32(ptr, IntPtr.Size);
-            /* Close the Deal patch (FORK.md): the original copied any size into the MTU-sized
-             * buffer and read the channel from byte packetLength - 1. A peer sending an empty
-             * message, or one larger than the buffer (Steam allows reliable messages far above
-             * the MTU), threw inside the receive loop every frame: later connections were never
-             * read and the remaining Steam messages were never released. FishNet keeps every
-             * honest packet at least two bytes under the MTU, so these are only ever hostile. */
+            // Fork patch: drop and release empty or oversized messages before reading channel byte (see FORK.md).
             if (packetLength < 1 || packetLength > buffer.Length)
             {
                 SteamNetworkingMessage_t.Release(ptr);

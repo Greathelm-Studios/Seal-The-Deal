@@ -1,13 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-15
-  Prompt    : Alex on KitOffice: "it isnt visually interesting, no feeling, theres no life to it, it just looks visually
-              boring" -> paintover directions over the same captures before changing the scene
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Brief to Codex for three mood paintovers over the current KitOffice captures, so Alex can pick a direction
-              for lighting, colour and set dressing as pictures before anything in the scene changes.
--->
 # KitOffice mood paintovers: request to Codex
 
 **From:** Alex (environment artist), drafted by Claude · **Date:** 2026-11-15 · **Status:** Waiting for Codex

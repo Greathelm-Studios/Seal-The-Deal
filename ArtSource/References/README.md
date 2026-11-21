@@ -1,14 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Sonnet 5.5 (Claude Code)
-  Generated : 2026-11-12
-  Prompt    : Alex: "add all references I gave you to the repo"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Index of the sky, light and grade references Alex pasted into chat while the look
-              was built. They live here, not in a tool's temp folder, so the next artist or agent
-              can see what the look was aiming at. Separate from the art bible plates in
-              ArtSource/Kit/concepts/Office/refs/, which are the original brief.
--->
 # Look references
 
 **Added:** 2026-11-12, supplied by Alex in chat · [contact sheet](contact_sheet.png)

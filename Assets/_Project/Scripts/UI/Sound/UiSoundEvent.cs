@@ -1,9 +1,6 @@
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// Every event the UI can ask a sound for. The names match the table in docs/systems/UI_SOUND.md and the
-    /// clips Assets/_Project/Audio/UI/UI_&lt;Name&gt;.wav. Call UiSound.Play(UiSoundEvent.X); never load a clip yourself.
-    /// </summary>
+    /// <summary>UI sound event IDs mapped to clips in UiSoundSet (append-only at the end).</summary>
     public enum UiSoundEvent
     {
         None = 0,

@@ -6,14 +6,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.Customisation
 {
-    /// <summary>
-    /// The fitting-room form, built from the UI kit: one stepper row per outfit category (left and
-    /// right change the choice, up and down move between categories), Keep outfit and Put back
-    /// buttons, a line saying what the focused choice is and whether it is locked, and a status
-    /// line. It is a kit screen, so it slides in and out with the kit's motion and its controls
-    /// answer with the kit's sounds. It decides nothing: it tells the fitting room what the
-    /// player picked. Built by Close the Deal > Lanes > Set Up Lobby.
-    /// </summary>
+    /// <summary>UI kit fitting-room form emitting slot focus, option changes, keep, and put-back actions. Design: docs/systems/CUSTOMISATION.md.</summary>
     public sealed class FittingRoomScreen : UiScreen
     {
         [Header("Wiring")]
@@ -141,7 +134,6 @@ namespace CloseTheDeal.Customisation
             _hint.text = gamepad ? PadHint : KeysHint;
         }
 
-        /// <summary>The option names per category, with "(locked)" on locked ones. Rebuilt only when the runs count changes.</summary>
         void BuildNames(OutfitCatalog catalog, int runsStarted)
         {
             if (_optionNames != null && _optionNames.Length == catalog.SlotCount && _namesForRuns == runsStarted)

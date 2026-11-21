@@ -1,15 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-12
-  Prompt    : Alex on round 3 of the kit detail sheets: "tell it to prioritise the interior", then
-              "lean more into frutiger aero, 2000s corporate futurism, gen x soft club"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Round-4 brief to Codex. Round 3 reached the right boldness but split its effort evenly
-              between the inside and the street read; this re-weights the work toward the office interior
-              players actually spend the match in. Overrides FEEDBACK_02, FEEDBACK_01 and REQUEST.md where
-              they differ.
--->
 # Kit detail, round 4: prioritise the interior
 
 **From:** Alex, drafted by Claude · **Date:** 2026-11-12 · Read with [FEEDBACK_02.md](FEEDBACK_02.md) and [README_r3.md](README_r3.md). This brief wins where they differ.

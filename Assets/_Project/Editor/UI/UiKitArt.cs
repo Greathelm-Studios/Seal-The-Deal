@@ -6,12 +6,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Editor.UI
 {
-    /// <summary>
-    /// The kit's small sprites, drawn by code into PNGs under Assets/_Project/UI/Kit/Sprites: keylines, the dashed
-    /// disabled outline, corner brackets, the chevron cue, the background grid, the fallback sky, a barcode, and the
-    /// edge marker's diamond, triangle and pointer.
-    /// White where they are tinted by tokens. A PNG someone edited is left alone (GeneratedAssetGuard).
-    /// </summary>
+    /// <summary>Generates small kit sprite PNGs (keylines, brackets, chevrons, grid, barcode, sky fallback, markers).</summary>
     internal static class UiKitArt
     {
         internal const string Folder = "Assets/_Project/UI/Kit/Sprites";
@@ -35,7 +30,6 @@ namespace CloseTheDeal.Editor.UI
             Pointer = Make("Kit_Pointer", 20, 24, 0, false, PointerAlpha);
         }
 
-        /// <summary>An upright triangle filling the square (apex at the top centre), anti-aliased.</summary>
         static float TriangleAlpha(int x, int y)
         {
             float px = x + 0.5f, py = y + 0.5f;
@@ -47,7 +41,6 @@ namespace CloseTheDeal.Editor.UI
             return Mathf.Clamp01(Mathf.Min(side * 0.9f + 0.5f, py - bottom + 0.5f));
         }
 
-        /// <summary>One bold chevron pointing right: the edge marker's direction cue.</summary>
         static float PointerAlpha(int x, int y)
         {
             float d = Mathf.Min(Segment(x + 0.5f, y + 0.5f, 5f, 3f, 15f, 12f), Segment(x + 0.5f, y + 0.5f, 15f, 12f, 5f, 21f));
@@ -59,7 +52,6 @@ namespace CloseTheDeal.Editor.UI
             return x < width || y < width || x >= size - width || y >= size - width ? 1f : 0f;
         }
 
-        /// <summary>Three thin chevrons pointing right, anti-aliased.</summary>
         static float ChevronAlpha(int x, int y)
         {
             float best = 0f;
@@ -83,7 +75,6 @@ namespace CloseTheDeal.Editor.UI
             return Vector2.Distance(p, a + ab * t);
         }
 
-        /// <summary>A fixed bar pattern (not a real code): decoration only, the guide's barcode device.</summary>
         static float BarcodeAlpha(int x, int y)
         {
             uint h = (uint)(x * 2654435761u) ^ 0x9E3779B9u;

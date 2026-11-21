@@ -3,11 +3,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Combat
 {
-    /// <summary>
-    /// Runs a target dummy back and forth along a line at a set speed, for practising on
-    /// something that moves like a sprinting or air-strafing player. The host moves it once
-    /// a tick; clients follow through the NetworkTransform on the same object.
-    /// </summary>
+    /// <summary>Runs a practice target dummy back and forth on the host.</summary>
     [DisallowMultipleComponent]
     public sealed class MovingTarget : NetworkBehaviour
     {

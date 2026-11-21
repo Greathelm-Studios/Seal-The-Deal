@@ -4,11 +4,7 @@ using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Glass
 {
-    /// <summary>
-    /// Plays the shard burst where a pane breaks. Local visuals only, never networked: every
-    /// machine throws its own shards from the same break. The bursts are reused, so a wall
-    /// of windows going at once allocates nothing once the pool has warmed up.
-    /// </summary>
+    /// <summary>Pooled local shard particle bursts played when glass panes shatter.</summary>
     public sealed class GlassShards : MonoBehaviour
     {
         const int MaxActiveBursts = 32;

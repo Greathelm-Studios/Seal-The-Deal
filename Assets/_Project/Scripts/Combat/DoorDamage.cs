@@ -5,11 +5,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Combat
 {
-    /// <summary>
-    /// Lets guns wear down a locked door. The door itself only counts blasts, so this adds
-    /// up gun damage and hands the door one blast's worth each time enough has landed.
-    /// Host only, like the door's own count.
-    /// </summary>
+    /// <summary>Host-only IDamageable adapter that converts accumulated bullet damage into BreakableDoor blasts.</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(BreakableDoor))]
     public sealed class DoorDamage : MonoBehaviour, IDamageable

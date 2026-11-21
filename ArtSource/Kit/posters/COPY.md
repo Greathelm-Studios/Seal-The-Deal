@@ -1,14 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-15
-  Prompt    : Alex: "satirical motivational office messages along the walls, like how they do in real offices, but
-              ironically to be about the bad side of office jobs. same with presentations flicking to different slides in
-              a presentation or pitch room"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : The words on KitOffice's satirical posters and its pitch-room deck, in one place, so the copy can be read
-              and changed without touching the generator (make_posters.py reads this file's tables).
--->
 # KitOffice satire: posters and pitch deck
 
 Deadpan, corporate and dry: the joke is that it looks exactly like a real motivational poster or a real deck. No swearing, no real companies or people. AONAGI is the landlord; the two law firms (Ashcombe & Pryce, Halloran Voss) lease the floor.

@@ -7,11 +7,7 @@ using UnityEngine.Events;
 
 namespace CloseTheDeal.Items
 {
-    /// <summary>
-    /// A practice target for anything that deals damage: thrown furniture, the grenade case.
-    /// It shows its health as a bar, falls over at zero and stands back up after a moment.
-    /// The host owns its health; everyone else is sent the number.
-    /// </summary>
+    /// <summary>Host-authoritative damageable practice target that tips over at zero health and recovers. Design: docs/systems/ITEMS.md.</summary>
     public sealed class DamageDummy : NetworkBehaviour, IDamageable
     {
         [Tooltip("Hit points when fresh. Players are expected to have 100.")]

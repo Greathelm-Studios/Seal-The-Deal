@@ -2,10 +2,7 @@ using FishNet.Broadcast;
 
 namespace CloseTheDeal.Records
 {
-    /// <summary>
-    /// One player's numbers for the match in progress, as the host counted them. Every machine
-    /// holds the host's copy of every line; nobody counts their own. Design: docs/systems/RECORDS.md.
-    /// </summary>
+    /// <summary>Host-counted per-player match statistics replicated to all clients. Design: docs/systems/RECORDS.md.</summary>
     public struct MatchLine
     {
         /// <summary>The player's connection id on the host. Matches LobbyRoster and Health's attacker id.</summary>
@@ -75,8 +72,6 @@ namespace CloseTheDeal.Records
         /// <summary>This player's own numbers, as the host counted them.</summary>
         public MatchLine Line;
     }
-
-    // ---- Wire messages (host → clients) ---------------------------------------------------------
 
     /// <summary>A line changed, or a player left (Gone).</summary>
     public struct MatchLineBroadcast : IBroadcast

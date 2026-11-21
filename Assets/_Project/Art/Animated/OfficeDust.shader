@@ -1,9 +1,3 @@
-// AI-GENERATED SOURCE FILE
-// Generator : Codex (GPT-6)
-// Generated : 2026-11-15
-// Prompt    : REQUEST_ANIM.md; sparse court dust, at most about 200 particles.
-// Reviewed : NOT YET REVIEWED BY A HUMAN
-// Summary   : URP particle billboard material using the ParticleSystem vertex colour and a radial falloff.
 Shader "Close the Deal/Animated/Office Dust"
 {
     Properties

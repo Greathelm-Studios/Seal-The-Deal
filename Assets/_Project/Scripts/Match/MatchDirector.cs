@@ -6,13 +6,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.MatchMode
 {
-    /// <summary>
-    /// The briefcase game mode: two firms, one shared briefcase, and the firm whose player
-    /// carries it onto a roof wins. This scene object holds the whole match as read-only state
-    /// for the HUD and menu, synced from the host only when something changes, with an event
-    /// for every change. The host's decisions are in MatchDirector.Host.cs and MatchReferee.
-    /// A firm's index is the index of the building it climbs. Design: docs/systems/MATCH.md.
-    /// </summary>
+    /// <summary>Host-synced state and event hub for the briefcase match mode. Design: docs/systems/MATCH.md.</summary>
     [DisallowMultipleComponent]
     public sealed partial class MatchDirector : NetworkBehaviour
     {
@@ -21,11 +15,7 @@ namespace CloseTheDeal.MatchMode
 
         public static MatchDirector Instance { get; private set; }
 
-        /// <summary>
-        /// Every machine. Lets another system share the carrier's hands (a carried item): return
-        /// true while this player's hands are full of something else. The briefcase prompt is then
-        /// not offered and the host refuses the pick-up; whoever holds the hands says why.
-        /// </summary>
+        /// <summary>Every machine. Returns true while another system (items) occupies this player's hands.</summary>
         public static Func<FirmMember, bool> HandsFull;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -35,12 +25,10 @@ namespace CloseTheDeal.MatchMode
             HandsFull = null;
         }
 
-        // ---- Events (raised on every machine, only on change) --------------------------------
-
-        /// <summary>The match is on this machine: hosting or connected. Read the state now.</summary>
+        /// <summary>The match is live on this machine (hosting or connected).</summary>
         public event Action OnStarted;
 
-        /// <summary>The match has gone from this machine: left, or the host closed the game.</summary>
+        /// <summary>The match ended or disconnected on this machine.</summary>
         public event Action OnClosed;
 
         /// <summary>Previous phase, new phase.</summary>
@@ -67,27 +55,25 @@ namespace CloseTheDeal.MatchMode
         /// <summary>It reappeared on a skybridge or the plaza.</summary>
         public event Action OnBriefcaseReturned;
 
-        /// <summary>The highest floor anyone may climb to rose: the new open floor. Both towers open together.</summary>
+        /// <summary>Highest open floor index rose (shared across both towers).</summary>
         public event Action<int> OnOpenFloorChanged;
 
-        /// <summary>A floor opened: the floor, and the firm whose carrier opened it. Raised with OnOpenFloorChanged; for the floor-opened banner and its sound.</summary>
+        /// <summary>Floor opened (floor index, opening firm).</summary>
         public event Action<int, int> OnFloorOpened;
 
-        /// <summary>The briefcase changed hands between firms: the taking firm, the firm that carried it last. Not raised for the first pick-up of a match or a pick-up by the same firm.</summary>
+        /// <summary>Briefcase changed hands between firms (taking firm, previous firm).</summary>
         public event Action<int, int> OnBriefcaseStolen;
 
-        /// <summary>The match clock crossed the profile's warning mark: whole seconds left. Once per match.</summary>
+        /// <summary>Clock crossed the cap-warning mark (whole seconds left).</summary>
         public event Action<int> OnCapWarning;
 
-        /// <summary>Firm, checkpoint floor: where that firm's players now come back after a fall.</summary>
+        /// <summary>Firm checkpoint floor advanced (firm, checkpoint floor).</summary>
         public event Action<int, int> OnCheckpointSaved;
 
         public event Action<MatchSnapshot> OnMatchEnded;
 
-        /// <summary>The towers were rebuilt: floor names and counts may differ.</summary>
+        /// <summary>Towers were rebuilt: floor names and counts may differ.</summary>
         public event Action OnArenaChanged;
-
-        // ---- Inspector -----------------------------------------------------------------------
 
         [Tooltip("Tuning for the match: firms, clock, briefcase handling. Read at runtime, never written.")]
         [SerializeField] MatchProfile _profile;
@@ -97,8 +83,6 @@ namespace CloseTheDeal.MatchMode
 
         [Tooltip("The floor gates: nobody climbs above the highest floor the briefcase has been carried onto. Without them every floor is open.")]
         [SerializeField] MatchGates _gates;
-
-        // ---- Synced state --------------------------------------------------------------------
 
         readonly SyncVar<MatchSnapshot> _snapshot = new();
         readonly SyncVar<BriefcaseStatus> _briefcase = new();
@@ -115,15 +99,9 @@ namespace CloseTheDeal.MatchMode
         int _announceFromFrame = int.MaxValue;
         bool _startPending;
 
-        /// <summary>
-        /// Whether a change is news. A client receives the match as it stands while it joins;
-        /// those values are applied but not announced, so a late joiner gets no "Floor 4 opened"
-        /// banner for something that happened before they arrived.
-        /// </summary>
+        // Suppress event banners on initial SyncVar arrival when a client joins mid-match.
         bool Announce => IsServerStarted || Time.frameCount >= _announceFromFrame;
         int _solidMask;
-
-        // ---- Read-only state for HUD and menu ------------------------------------------------
 
         public MatchProfile Profile => _profile;
         public MatchArena Arena => _arena;
@@ -228,10 +206,7 @@ namespace CloseTheDeal.MatchMode
             return _arena.FloorLabel(floor) + ", " + tower;
         }
 
-        /// <summary>
-        /// The result in one sentence, for the menu's result section and any results screen:
-        /// how it was won, when, and whether that was your firm. localFirm may be NoFirm.
-        /// </summary>
+        /// <summary>One-line summary of the match outcome for results UI.</summary>
         public string ReasonLine(MatchSnapshot result, int localFirm)
         {
             string clock = MatchHud.FormatClock(result.EndSeconds);
@@ -269,7 +244,6 @@ namespace CloseTheDeal.MatchMode
             return CanGrab(member) ? MatchPrompt.PickUpBriefcase : MatchPrompt.None;
         }
 
-        /// <summary>The briefcase lies loose, within the member's reach, with nothing solid between it and their eye.</summary>
         bool CanGrab(FirmMember member)
         {
             Briefcase briefcase = Briefcase.Current;
@@ -285,12 +259,10 @@ namespace CloseTheDeal.MatchMode
             return !Physics.Linecast(eye, centre, _solidMask, QueryTriggerInteraction.Ignore);
         }
 
-        // ---- Lifecycle -----------------------------------------------------------------------
-
         void Awake()
         {
             Instance = this;
-            // The building only: players and loose furniture never block a reach or a drop.
+            // Only buildings block reach/drop; ignore players and loose furniture.
             _solidMask = ~(LayerMask.GetMask("Player") | LayerMask.GetMask("Prop"));
         }
 
@@ -345,7 +317,7 @@ namespace CloseTheDeal.MatchMode
 
             if (Briefcase.Current != null)
                 Briefcase.Current.Register();
-            // FishNet hands a joiner the current values after the start callbacks, in this same frame.
+            // FishNet delivers initial SyncVar state after start callbacks in this frame; defer OnStarted.
             _announceFromFrame = Time.frameCount + 1;
             _startPending = true;
         }
@@ -379,12 +351,11 @@ namespace CloseTheDeal.MatchMode
         void OnTowerBuilt()
         {
             RefreshArena();
-            // The tower can finish building before this object has started as the server; OnStartServer prepares the round then.
+            // Towers may build before OnStartServer runs; OnStartServer prepares the round then.
             if (IsServerStarted && _referee != null)
                 ServerPrepareRound();
         }
 
-        /// <summary>Floors, then the plaza and bridges on top of them, then everyone told.</summary>
         void RefreshArena()
         {
             _arena.Refresh(_tower);
@@ -405,11 +376,9 @@ namespace CloseTheDeal.MatchMode
             _arena.Clear();
         }
 
-        // ---- Changes arriving ----------------------------------------------------------------
-
         void OnSnapshotChanged(MatchSnapshot previous, MatchSnapshot next, bool asServer)
         {
-            // The host hears each change twice, as server and as its own client; act on the first.
+            // Host hears SyncVar OnChange twice (server then client); handle once.
             if (asServer != IsServerStarted)
                 return;
 
@@ -443,9 +412,8 @@ namespace CloseTheDeal.MatchMode
 
         void RaiseBriefcaseEvent(BriefcaseStatus previous, BriefcaseStatus next)
         {
-            // A new round puts the case back with nobody as its last carrier: that is a reset, not a drop.
+            // Round resets (NoFirm) and post-result return (Ended) are cleanup, not drops.
             bool reset = next.LastCarrierFirm == NoFirm;
-            // After a result the lobby takes the case off the winner: that is tidying up, not a drop.
             if (previous.State == BriefcaseState.Carried && previous.CarrierFirm != NoFirm && !reset && Phase != MatchPhase.Ended)
                 OnBriefcaseDropped?.Invoke(previous.CarrierFirm);
 
@@ -477,12 +445,7 @@ namespace CloseTheDeal.MatchMode
             OnFloorOpened?.Invoke(next.Floor, next.ByFirm);
         }
 
-        /// <summary>
-        /// Puts the gates in step with the synced state: open up to the open floor, and the
-        /// carrier walks through the rest. Every machine does this from the same state, so a
-        /// client's prediction meets the same walls as the host. Also called when a player
-        /// spawns, since the carrier's body may arrive after the status naming them.
-        /// </summary>
+        // Syncs floor gates to OpenFloor and current carrier; also called when a carrier body spawns late.
         internal void ApplyGates()
         {
             if (_gates == null || !_arena.Ready)
@@ -502,16 +465,12 @@ namespace CloseTheDeal.MatchMode
                 OnCheckpointSaved?.Invoke(firm, next);
         }
 
-        // ---- Clock ---------------------------------------------------------------------------
-
-        /// <summary>Ticks since the current phase began, as this machine sees the host's clock.</summary>
         internal uint ElapsedTicks(uint tick)
         {
             uint began = _snapshot.Value.PhaseTick;
             return tick > began ? tick - began : 0u;
         }
 
-        /// <summary>Picked up, and a steal when the other firm carried it last.</summary>
         void RaisePickUp(byte lastCarrierFirm, byte carrierFirm)
         {
             OnBriefcasePickedUp?.Invoke(carrierFirm);
@@ -519,12 +478,6 @@ namespace CloseTheDeal.MatchMode
                 OnBriefcaseStolen?.Invoke(carrierFirm, lastCarrierFirm);
         }
 
-        /// <summary>
-        /// Once a tick: the host applies the rules, then every machine works the clock out
-        /// from the synced start tick and raises an event when a whole second passes. The
-        /// clock itself is never sent. A joining client says it has started only here, once
-        /// the match's current values have arrived, so the HUD reads them rather than defaults.
-        /// </summary>
         void OnPostTick()
         {
             if (_startPending && Time.frameCount >= _announceFromFrame)
@@ -553,7 +506,6 @@ namespace CloseTheDeal.MatchMode
             CheckCapWarning();
         }
 
-        /// <summary>Once per match, when the clock crosses the profile's mark; a late joiner already past it is not warned again.</summary>
         void CheckCapWarning()
         {
             float mark = _profile.CapWarningSeconds;
@@ -565,7 +517,6 @@ namespace CloseTheDeal.MatchMode
                 OnCapWarning?.Invoke(_secondsLeft);
         }
 
-        /// <summary>Publishes the whole seconds left when they drop. Only ever counts down within a phase, so a client's clock adjusting never flickers a second back.</summary>
         static void CountDown(ref int shown, float secondsLeft, Action<int> changed)
         {
             int whole = Mathf.Max(0, Mathf.CeilToInt(secondsLeft));

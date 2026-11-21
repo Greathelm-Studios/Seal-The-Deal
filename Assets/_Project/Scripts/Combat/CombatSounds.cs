@@ -5,13 +5,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Combat
 {
-    /// <summary>
-    /// Plays a player's gun and body sounds on this machine: shots, dry fire, the reload's stages,
-    /// the draw, where shots land, and (for your own player) hurt, death and respawn. Listens to
-    /// WeaponHolder and Health, decides nothing, sends nothing. Voices are pooled, so a full-auto
-    /// burst creates nothing. One per player, on the player root. Glass shatter is played by the
-    /// first CombatSounds alive, once per pane.
-    /// </summary>
+    /// <summary>Plays pooled 3D weapon/impact/glass audio and 2D local body feedback from WeaponHolder and Health events.</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(WeaponHolder), typeof(Health))]
     public sealed class CombatSounds : MonoBehaviour
@@ -19,7 +13,6 @@ namespace CloseTheDeal.Combat
         [Tooltip("The shared combat sounds and their mixer bus. Each gun's shot and reload sounds are on the gun itself.")]
         [SerializeField] CombatSoundSet _set;
 
-        /// <summary>Reload stage times as fractions of the reload: magazine out, magazine in, slide or charge.</summary>
         const float MagazineOutAt = 0.15f;
         const float MagazineInAt = 0.6f;
         const float ReloadEndAt = 0.85f;
@@ -101,8 +94,6 @@ namespace CloseTheDeal.Combat
             _active.Clear();
         }
 
-        // ---- What the gun says ---------------------------------------------------------------
-
         void OnFired(ShotInfo shot)
         {
             if (shot.Weapon == null)
@@ -167,8 +158,6 @@ namespace CloseTheDeal.Combat
             PlayAt(clip, at, false);
         }
 
-        // ---- What the body says ----------------------------------------------------------------
-
         void OnDamaged(Health health, DamageInfo info)
         {
             if (_health.IsOwner && !info.Fatal)
@@ -192,8 +181,6 @@ namespace CloseTheDeal.Combat
         {
             PlayAt(_set != null ? _set.GlassShatter : null, pane.Centre, true);
         }
-
-        // ---- Voices ----------------------------------------------------------------------------
 
         void PlayAt(AudioClip clip, Vector3 point, bool vary)
         {

@@ -7,16 +7,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Profile
 {
-    /// <summary>
-    /// Loads, changes and saves this player's profile, one small JSON file on this PC. Writes go to
-    /// a temporary file that then replaces the old one, so a crash mid-write leaves the previous
-    /// profile whole. A missing file starts a fresh profile; an unreadable one is kept beside it as
-    /// ".corrupt" and a fresh one starts; a file from a newer build is left untouched and this
-    /// session plays on a profile that is not saved. Nothing reaches the screen from any of these.
-    /// The path is Application.persistentDataPath/profile.json, or the one after -profileSave on
-    /// the command line (scripted checks pass one so they never touch a real profile).
-    /// Design: docs/systems/PROFILE.md.
-    /// </summary>
+    /// <summary>Persistent JSON career-profile store backed by BackgroundFileWriter. Design: docs/systems/PROFILE.md.</summary>
     public static class ProfileStore
     {
         const string FileName = "profile.json";
@@ -92,10 +83,7 @@ namespace CloseTheDeal.Profile
             Changed?.Invoke(_current);
         }
 
-        /// <summary>
-        /// Adds one finished match from the host's record and saves. Only MatchRecords' final record
-        /// should reach this, so every number came from the host.
-        /// </summary>
+        /// <summary>Records one finished match from the host's MatchFinal and enqueues a save.</summary>
         public static MatchSummary RecordMatch(MatchFinal final, byte noFirm)
         {
             PlayerProfile profile = Current;
@@ -143,8 +131,6 @@ namespace CloseTheDeal.Profile
             profile.Best(ProfileStat.BestFloor, line.BestFloor);
             profile.Best(ProfileStat.MostKillsInMatch, line.Kills);
         }
-
-        // ---- File --------------------------------------------------------------------------------
 
         static PlayerProfile Read(DateTime now, out LoadState state)
         {
@@ -228,11 +214,7 @@ namespace CloseTheDeal.Profile
         }
     }
 
-    /// <summary>
-    /// Single serialized background file writer for small JSON saves (profile and outfit).
-    /// JSON serialization stays on the main thread; directory creation and atomic temp+replace run off-thread
-    /// and flush cleanly before quitting or before a synchronous read.
-    /// </summary>
+    /// <summary>Serialized background worker flushing atomic temp+replace JSON writes off the main thread. Design: docs/systems/PROFILE.md.</summary>
     internal static class BackgroundFileWriter
     {
         readonly struct WriteRequest

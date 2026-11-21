@@ -2,12 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Items
 {
-    /// <summary>
-    /// Plays item sounds in the world through the set's mixer bus. One-shots use a small pool of
-    /// 3D sources, so nothing is created per sound and no clip bypasses the bus (as
-    /// AudioSource.PlayClipAtPoint would). A null clip plays nothing. Local only: every machine
-    /// plays from the synced events it already receives.
-    /// </summary>
+    /// <summary>Pooled 3D one-shot playback for item sounds routed through ItemSoundSet mixer buses.</summary>
     public static class ItemAudio
     {
         const int Voices = 24;

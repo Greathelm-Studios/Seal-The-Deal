@@ -4,12 +4,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// Settings › Video: display mode, resolution (a new one asks to be kept and goes back by itself after 10 seconds),
-    /// vertical sync, frame rate limit (only with vertical sync off), graphics quality and menu glass (lane 7's blur
-    /// or its plain no-blur tint, UiGlassSettings). Values live in UiVideo and UiGlassSettings.
-    /// The right column says what the screen is doing now.
-    /// </summary>
+    /// <summary>Settings Video tab: display mode, resolution with revert timer, vsync, frame cap, quality, and glass.</summary>
     [AddComponentMenu("Close the Deal/UI/Settings Page - Video")]
     public sealed class VideoPage : UiSettingsPage
     {

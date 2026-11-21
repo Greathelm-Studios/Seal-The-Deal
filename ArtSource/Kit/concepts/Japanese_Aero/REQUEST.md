@@ -1,13 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-13
-  Prompt    : Alex: "close! push it more to a 2000s japanese corporate futurism, frutiger aero, gen x soft
-              club vibe, as we changed the narrative to be specifically a japanese office/company"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Brief to Codex for paintovers of the real KitOffice captures in the new direction, so the
-              restyle is agreed on the actual level (its cameras, layout and pieces) before the kit is changed.
--->
 # Japanese corporate Aero: paintovers of KitOffice — request to Codex
 
 **From:** Alex (environment artist), drafted by Claude · **Date:** 2026-11-13 · **Status:** Waiting for Codex

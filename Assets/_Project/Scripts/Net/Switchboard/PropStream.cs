@@ -71,10 +71,7 @@ namespace CloseTheDeal.Net
 
         public static PropStream Instance { get; private set; }
 
-        /// <summary>
-        /// The scene's stream, started on its own object if there is none yet. Props call this
-        /// as they appear, so no scene needs setting up. Null when there is no stream and no profile.
-        /// </summary>
+        /// <summary>Returns the scene's PropStream, creating one if needed when profile is supplied.</summary>
         internal static PropStream GetOrCreate(SwitchboardProfile profile)
         {
             if (Instance != null)

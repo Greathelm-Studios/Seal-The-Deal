@@ -1,46 +1,34 @@
 # NARRATION
 
-**Status:** Current (in `buffer`; built by the gaps lane) · **Last updated:** 2026-11-14
+**Status:** Current · **Last updated:** 2026-11-21
 
 ## What the player sees
 
-The secretary keeps talking once the match starts. She comments on the start, the first pick-up, the first kill, every steal, each floor opening, your firm's checkpoint moving, window kills, your own fall, the briefcase coming back, the last minute and the result, in the same flat voice as reception. Lines arrive as subtitles; there is no voice audio yet.
+During a match, the secretary delivers deadpan commentary as subtitles on key moments: match start, first briefcase pick-up, first kill, briefcase steals, floor openings, firm checkpoint advances, window kills, local fall-outs, briefcase returns, 1-minute warning, and match outcome. After speaking, she enforces a quiet cooldown (`QuietSeconds = 4 s` plus line duration) unless a higher-priority moment interrupts (for example, window kills override floor lines, and clock warning / end-of-match always speak). No voice audio clips exist yet.
 
-She comments rather than chatters: after a line she stays quiet for 4 s plus the line's own time, unless something more important happens (a window kill cuts into a floor line; the result and the clock always speak).
+All shipped lines are proposals for Adam in `Assets/_Project/Profiles/Narration/MatchSecretaryLines.asset`.
 
-**Every line is a proposal for Adam.** They are in `Assets/_Project/Profiles/Narration/MatchSecretaryLines.asset`.
-
-## Who owns what (AGENTS.md §3)
+## Ownership and netcode boundary (`AGENTS.md §3`)
 
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
-| Which moment happened | **Host**, through state that is already synced: the match snapshot, the briefcase status, the open floor, checkpoints, and the records' kill feed | Nothing new | — |
-| Which line, and showing it | Each machine, locally | Nothing | — |
+| Which match moment occurred | Host via existing match state and `MatchRecords.Kill` | Nothing extra | Never |
+| Line selection and subtitle display | Local on each machine | Nothing | Never |
 
-So two players may read different lines for the same moment. Win and loss lines are chosen by the reader's own firm.
+Each machine picks randomly from that moment's pool without repeating the same line twice in a row, and selects Won/Lost lines relative to its own firm.
 
-## One subtitle source
+## Architecture and design rationale
 
-`Subtitles` (static, namespace `CloseTheDeal.Narration`) is the one place every spoken line passes through on a machine. The lobby's reception secretary raises into it too (one line added to `Secretary.Say`, speaker "Reception"), so a subtitle bar and a future voice player listen to one stream.
+- **Single subtitle stream (`Subtitles`):** Static hub in `CloseTheDeal.Narration` shared by both `MatchSecretary` and the reception `Secretary` (speaker `"Reception"`, priority `10`). `Subtitles.Show(SubtitleLine)` rejects empty lines or lines strictly outranked by an active subtitle's `Priority`, then raises `Subtitles.Shown`. `TryGetCurrent(out line)` lets late-opening HUD bars read the active subtitle.
+- **Line formatting (`MatchSecretary`):** Resolves `{name}`, `{firm}`, `{rival}`, `{killer}`, `{victim}`, `{floor}`, `{place}`, `{time}` from `MatchDirector` and `MatchRecords.NameOf`, computing duration via `Subtitles.SecondsFor`.
 
-| Member | Notes |
-|---|---|
-| `Shown` | `Action<SubtitleLine>`: `Speaker`, `Text` (filled in), `Seconds`, `Priority`, `Moment` (the moment's name, for picking a voice clip). A new line replaces the one up. |
-| `TryGetCurrent(out line)` | The line still up, for a bar opened late. |
-| `Show(line)` | Refuses a line while a higher-priority one is up. |
+## Files and tuning
 
-The lobby's `Secretary.LineSpoken` stays for anything already using it.
-
-## Designer values
-
-`MatchSecretaryLines.asset`: **Speaker**, **Seconds Per Word** (0.35), **Minimum Seconds** (2.5), **Quiet Seconds** (4), and per moment a **Priority** and its **Lines**. Tokens: `{name}`, `{firm}`, `{rival}`, `{killer}`, `{victim}`, `{floor}`, `{place}`, `{time}`. For Won and Lost, `{firm}` is the winning firm. A moment with no lines is silent.
-
-## Scripts
-
-[Assets/_Project/Scripts/Narration/](../../Assets/_Project/Scripts/Narration/): `Subtitles.cs`, `MatchSecretaryLines.cs`, `MatchSecretary.cs` (on the Records prefab (`Prefabs/Gaps/Records.prefab`)).
+- Scripts under [Assets/_Project/Scripts/Narration/](../../Assets/_Project/Scripts/Narration/): `Subtitles.cs`, `MatchSecretaryLines.cs`, `MatchSecretary.cs` (hosted on `Prefabs/Gaps/Records.prefab`).
+- Tuning: `Assets/_Project/Profiles/Narration/MatchSecretaryLines.asset` (`Speaker`, `SecondsPerWord` 0.35, `MinimumSeconds` 2.5, `QuietSeconds` 4, per-moment `Priority` and `Lines`).
 
 ## Known limitations
 
-- **No voice.** `Moment` is there for a voice player to key clips on.
-- **Names** come from the reception board; without Steam they read "Associate 1", "Associate 2" (the scripted runs saw these).
-- A first pick-up, first kill and steal are said from each machine's own view of the events; a player who joins mid-match never hears that match's "first" lines.
+- No voice audio clips yet (`SubtitleLine.Moment` provides the hook key for future playback).
+- Names fall back to "Associate 1", "Associate 2" when Steam is inactive.
+- First pick-up, first kill, and steals are tracked per client from join time, so mid-match joiners do not see earlier "first" lines.

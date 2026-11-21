@@ -7,13 +7,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// The reception overlay: the ready board (who is in which firm and who is ready), the
-    /// prompt for whatever the player is looking at (with a fill while the host holds to
-    /// start) and the secretary's subtitles. The board text is rebuilt only when the roster
-    /// changes; the prompt only when its line changes. Built by Close the Deal > Lanes > Set Up
-    /// Lobby; restyle it there. Hidden while the fitting room or the game menu is up.
-    /// </summary>
+    /// <summary>Reception overlay showing the ready board, interactable prompt, and secretary subtitles. Design: docs/systems/LOBBY.md.</summary>
     public sealed class LobbyHud : MonoBehaviour
     {
         [Header("Board")]
@@ -118,8 +112,6 @@ namespace CloseTheDeal.Lobby
 
         void MarkDirty() => _boardDirty = true;
 
-        // ---- Board ---------------------------------------------------------------------------
-
         void RebuildBoard()
         {
             _boardDirty = false;
@@ -169,7 +161,6 @@ namespace CloseTheDeal.Lobby
             }
         }
 
-        /// <summary>The guidance line: what the local player should do next and who is being waited on. Built on roster changes only.</summary>
         string StatusLine(LobbyRules rules, bool haveMe, LobbyMember me)
         {
             if (!haveMe)
@@ -204,7 +195,6 @@ namespace CloseTheDeal.Lobby
             return "Everyone is ready. " + why + ", but you can still start: hold F at the desk, then hold it again to confirm.";
         }
 
-        /// <summary>"A, B and C": the players who have not readied up yet (or are in the fitting room).</summary>
         string NotReadyNames()
         {
             _names.Clear();
@@ -221,8 +211,6 @@ namespace CloseTheDeal.Lobby
             return _names.Length > 0 ? _names.ToString() : "the others";
         }
 
-        // ---- Prompt --------------------------------------------------------------------------
-
         void UpdatePrompt(bool inReception)
         {
             LobbyInteractable target = inReception && _interactor != null ? _interactor.Target : null;
@@ -232,11 +220,10 @@ namespace CloseTheDeal.Lobby
             if (line != null && !ReferenceEquals(line, _shownPrompt))
             {
                 _shownPrompt = line;
-                // Prompts read "F   Ready up": the key goes on the key cap, the rest beside it. Split on change only.
                 int gap = line.IndexOf("   ", System.StringComparison.Ordinal);
                 _promptKey.text = gap > 0 ? line.Substring(0, gap) : string.Empty;
                 _promptText.text = gap > 0 ? line.Substring(gap + 3) : line;
-                _promptKey.transform.parent.gameObject.SetActive(gap > 0); // The cap and its text.
+                _promptKey.transform.parent.gameObject.SetActive(gap > 0);
             }
 
             float fill = target != null ? target.HoldProgress : -1f;
@@ -247,8 +234,6 @@ namespace CloseTheDeal.Lobby
                 _holdFill.fillAmount = Mathf.Max(0f, fill);
             }
         }
-
-        // ---- Subtitles -----------------------------------------------------------------------
 
         void OnLine(SecretaryMoment moment, string text, float seconds)
         {

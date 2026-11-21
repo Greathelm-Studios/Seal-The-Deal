@@ -17,12 +17,7 @@ using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Editor.Greybox
 {
-    /// <summary>
-    /// Builds the greybox scene, the player prefab and the tuning assets from menu items.
-    /// "Set Up Scene" only adds what is missing and never rebuilds or retunes anything already
-    /// there. "Rebuild Player Prefab" is the one deliberate overwrite, kept on its own menu item,
-    /// and it too leaves a prefab alone once someone has edited it (GeneratedAssetGuard).
-    /// </summary>
+    /// <summary>Additive greybox scene, Player.prefab, and tuning asset setup (respects GeneratedAssetGuard).</summary>
     public static class GreyboxSceneSetup
     {
         const string ScenePath = "Assets/_Project/Scenes/Greybox.unity";
@@ -45,7 +40,6 @@ namespace CloseTheDeal.Editor.Greybox
         const float BodyRadius = 0.35f;
         const float BodyMass = 80f;
         const float HipHeight = 0.9f;
-        /// <summary>The character every player wears: the toon-shaded STDMC model, scaled to 1.8 m with its feet at the origin.</summary>
         const string CharacterModelPath = "Assets/_Project/Art/Characters/STDMC/STDMC_Toon.prefab";
 
         [MenuItem("Close the Deal/Greybox/Set Up Scene")]
@@ -77,21 +71,7 @@ namespace CloseTheDeal.Editor.Greybox
             Debug.Log("[Greybox] Scene set up and saved.");
         }
 
-        /// <summary>
-        /// Adds what a scene needs before Play can put a player in it: the follow script on the main
-        /// camera, two spawn points, the NetworkManager with its spawner and transports, Steam, and
-        /// the menu and HUD. Like Set Up Scene it only adds what is missing.
-        /// </summary>
-        /// <param name="spawnA">World position of the first spawn point, metres. Used only if "SpawnA" does not exist yet.</param>
-        /// <param name="spawnB">World position of the second spawn point, metres. Used only if "SpawnB" does not exist yet.</param>
-        /// <remarks>
-        /// For scenes other than Greybox.unity (the kit review scenes): no test floor, obstacles or
-        /// tower are added, so players start at the spawn points. It searches every loaded scene and
-        /// creates objects in the active one, so call it with a single scene open. Needs a camera
-        /// tagged MainCamera. Does not save the scene.
-        /// WHY not make SetUpScene call this: SetUpScene builds the tower between the NetworkManager
-        /// and the UI, and that order is left as it was.
-        /// </remarks>
+        /// <summary>Additively adds camera follow, spawn points, NetworkManager, Steam, and UI to the active scene (does not save).</summary>
         public static void EnsurePlayRig(Vector3 spawnA, Vector3 spawnB)
         {
             EnsureLayers();
@@ -109,7 +89,7 @@ namespace CloseTheDeal.Editor.Greybox
             SetUpScene();
         }
 
-        /// <summary>Player prefab, prop prefabs, floor templates and the scene, all rewritten from the tool.</summary>
+        /// <summary>Rebuilds Player.prefab, prop prefabs, and floor templates via GeneratedAssetGuard.</summary>
         [MenuItem("Close the Deal/Greybox/Rebuild Everything")]
         public static void RebuildEverything()
         {
@@ -118,8 +98,6 @@ namespace CloseTheDeal.Editor.Greybox
             GreyboxPropSetup.Ensure(true);
             GreyboxTowerSetup.RebuildFloorTemplates();
         }
-
-        // ---- Player prefab -------------------------------------------------------------------
 
         internal static void RebuildPlayerPrefabIfOwned()
         {
@@ -139,7 +117,6 @@ namespace CloseTheDeal.Editor.Greybox
             return existing.GetComponent<NetworkObject>();
         }
 
-        /// <summary>Writes Player.prefab from scratch. Saving over the existing path keeps its GUID, so scene references survive.</summary>
         static NetworkObject BuildPlayerPrefab()
         {
             EnsureFolder("Assets/_Project", "Prefabs");
@@ -201,16 +178,6 @@ namespace CloseTheDeal.Editor.Greybox
             return prefab.GetComponent<NetworkObject>();
         }
 
-        /// <summary>
-        /// The character model, hung off a pivot at hip height that the motor tilts when the
-        /// player leans.
-        /// </summary>
-        /// <remarks>
-        /// The model goes in as a nested instance of its own prefab, so a change to
-        /// <c>STDMC_Toon</c> (materials, outline mesh, a later rig) reaches the player without
-        /// rebuilding Player.prefab. The alternative, copying its mesh and materials onto a new
-        /// object here, would have to be redone by this tool after every change to the model.
-        /// </remarks>
         static Transform BuildGraphics(Transform root, out Transform leanPivot)
         {
             var graphics = new GameObject("Graphics") { layer = PlayerLayer };
@@ -240,10 +207,6 @@ namespace CloseTheDeal.Editor.Greybox
             return graphics.transform;
         }
 
-        /// <summary>
-        /// Puts the procedural animation, and the ragdoll that shows it, on the smoothed visual,
-        /// pointed at the model's humanoid skeleton. Skipped, with a warning, when the model has none.
-        /// </summary>
         static void AddAnimator(Transform graphics, PlayerMotor motor)
         {
             var avatar = graphics.GetComponentInChildren<Animator>();
@@ -300,8 +263,6 @@ namespace CloseTheDeal.Editor.Greybox
             return material;
         }
 
-        // ---- World ---------------------------------------------------------------------------
-
         static void EnsureFloorAndCamera()
         {
             if (GameObject.Find("Floor") != null)
@@ -320,7 +281,6 @@ namespace CloseTheDeal.Editor.Greybox
             }
         }
 
-        /// <summary>Things to climb and bump into: blocks at desk, sill and chest height, one too tall, and a ramp.</summary>
         static void EnsureObstacles()
         {
             if (GameObject.Find("Obstacles") != null)
@@ -367,8 +327,6 @@ namespace CloseTheDeal.Editor.Greybox
             return spawn.transform;
         }
 
-        // ---- Networking ----------------------------------------------------------------------
-
         static void EnsureNetworkManager(NetworkObject playerPrefab, Transform spawnA, Transform spawnB)
         {
             NetworkManager manager = Object.FindAnyObjectByType<NetworkManager>();
@@ -393,13 +351,6 @@ namespace CloseTheDeal.Editor.Greybox
             EnsureMultipass(manager.gameObject);
         }
 
-        /// <summary>
-        /// FishNet wires up only the transport set when it starts, so Steam and local mode both
-        /// live inside a Multipass from the start: index 0 Steam, index 1 direct on this PC.
-        /// SteamLobby picks one per session. Server actions are per transport, never global,
-        /// so the Steam server is never started when Steam is not running. Wired up only when
-        /// first added; an existing Multipass is someone's setup and is left as it is.
-        /// </summary>
         static void EnsureMultipass(GameObject managerObject)
         {
             var steam = managerObject.GetComponent<global::FishySteamworks.FishySteamworks>();
@@ -432,7 +383,6 @@ namespace CloseTheDeal.Editor.Greybox
             serializedManager.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>Our team-aware spawner replaces FishNet's PlayerSpawner. It only gets the player prefab when it has none; a rebuilt Player.prefab keeps its GUID, so the reference survives rebuilds.</summary>
         static void EnsureTeamSpawner(GameObject managerObject, NetworkObject playerPrefab, Transform spawnA, Transform spawnB)
         {
             PlayerSpawner old = managerObject.GetComponent<PlayerSpawner>();
@@ -450,7 +400,6 @@ namespace CloseTheDeal.Editor.Greybox
                 spawner.SetPlayerPrefab(playerPrefab);
         }
 
-        /// <summary>FishNet must drive physics itself for rigidbody prediction; 60 ticks a second. Set only when first added; an existing one is warned about, never retuned.</summary>
         static void EnsureTimeManager(GameObject managerObject)
         {
             TimeManager timeManager = managerObject.GetComponent<TimeManager>();
@@ -479,8 +428,6 @@ namespace CloseTheDeal.Editor.Greybox
             return go.AddComponent<SteamLobby>();
         }
 
-        // ---- Project settings ----------------------------------------------------------------
-
         internal static void EnsureLayers()
         {
             EnsureLayer(PlayerLayer, PlayerLayerName);
@@ -506,8 +453,6 @@ namespace CloseTheDeal.Editor.Greybox
             tagManager.ApplyModifiedPropertiesWithoutUndo();
             Debug.Log($"[Greybox] Named layer {index} '{name}'.");
         }
-
-        // ---- Asset and serialized-field helpers ----------------------------------------------
 
         internal static T EnsureAsset<T>(string folder, string path) where T : ScriptableObject
         {

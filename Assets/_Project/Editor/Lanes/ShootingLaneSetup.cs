@@ -26,17 +26,9 @@ using Object = UnityEngine.Object;
 
 namespace CloseTheDeal.Editor.Lanes
 {
-    /// <summary>
-    /// The shooting and breakable-glass lane's one editor file. Three menu items:
-    /// "Set Up Shooting" writes the lane's assets, adds the gun and health components to
-    /// Player.prefab and builds the test scene; "Add Shooting To Open Scene" gives whatever
-    /// scene is open the glass registry and a starting loadout; "Run Shooting Self-Check"
-    /// plays the test scene and checks the lane's rules, writing a log and pictures.
-    /// Nothing here runs on its own (AGENTS.md §4). Assets a person has edited are left alone.
-    /// </summary>
+    /// <summary>Additive setup and Play Mode self-check for weapons, glass registry, and combat HUD.</summary>
     public static class ShootingLaneSetup
     {
-        // ---- Paths ---------------------------------------------------------------------------
 
         const string ScenePath = "Assets/_Project/Scenes/Lanes/Lane_Shooting.unity";
         const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player.prefab";
@@ -62,14 +54,11 @@ namespace CloseTheDeal.Editor.Lanes
         const int PlayerLayer = GreyboxSceneSetup.PlayerLayer;
         const int IgnoreRaycastLayer = 2;
 
-        // ---- Combat HUD ------------------------------------------------------------------------
-
         const string CombatHudName = "CombatHud";
         const string PlatePrefabPath = "Assets/_Project/UI/Kit/Plate.prefab";
         const string ChevronSpritePath = "Assets/_Project/UI/Kit/Sprites/Kit_Chevron.png";
         const string WhiteSpritePath = "Assets/_Project/UI/Kit/Sprites/Kit_White.png";
 
-        /// <summary>Replaces the open scene's combat HUD with a fresh one from the current builder, after asking. For a scene saved with an older HUD.</summary>
         [MenuItem("Close the Deal/Lanes/Rebuild Combat HUD In Open Scene")]
         static void RebuildCombatHud()
         {
@@ -87,11 +76,6 @@ namespace CloseTheDeal.Editor.Lanes
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         }
 
-        /// <summary>
-        /// Adds the combat HUD under the game menu's Hud, built from the UI kit: kit plates, the
-        /// tokens' type roles and colours, kit sprites. Only adds: a scene that already has one keeps it.
-        /// Needs the game menu (Set Up Scene) and the kit (Close the Deal > Lanes > Set Up UI).
-        /// </summary>
         static void EnsureCombatHud()
         {
             GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
@@ -160,7 +144,6 @@ namespace CloseTheDeal.Editor.Lanes
             return rect;
         }
 
-        /// <summary>Four diagonal ticks around the centre, each a navy outline under a core.</summary>
         static void BuildHitMarker(RectTransform root, UiTokens tokens, SerializedObject so)
         {
             RectTransform centre = Anchored(root, "HitMarker", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
@@ -184,7 +167,6 @@ namespace CloseTheDeal.Editor.Lanes
             SetObjects(so, "_ticks", cores);
         }
 
-        /// <summary>Chevrons around the centre that point at whoever hit you.</summary>
         static void BuildDamageMarks(RectTransform root, SerializedObject so)
         {
             RectTransform centre = Anchored(root, "DamageMarks", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
@@ -199,7 +181,6 @@ namespace CloseTheDeal.Editor.Lanes
             SetObjects(so, "_damageMarks", marks);
         }
 
-        /// <summary>Bottom right, from the bottom up: the weapon plate (ammo, name, state, progress), the two slots, health while hurt.</summary>
         static void BuildWeaponColumn(RectTransform root, UiTokens tokens, GameObject plate, SerializedObject so)
         {
             var corner = new Vector2(1f, 0f);
@@ -256,7 +237,6 @@ namespace CloseTheDeal.Editor.Lanes
             so.FindProperty("_healthText").objectReferenceValue = number;
         }
 
-        /// <summary>Above the crosshair while knocked out: what happened, and when you are back.</summary>
         static void BuildDownCard(RectTransform root, UiTokens tokens, GameObject plate, SerializedObject so)
         {
             var mid = new Vector2(0.5f, 0.5f);
@@ -276,13 +256,11 @@ namespace CloseTheDeal.Editor.Lanes
             so.FindProperty("_downCount").objectReferenceValue = count;
         }
 
-        /// <summary>The kit's text clips with an ellipsis; a big number would vanish whole if its line ran a pixel over its box.</summary>
         static void Unclipped(TMP_Text text)
         {
             text.overflowMode = TextOverflowModes.Overflow;
         }
 
-        /// <summary>Smallest caption on the HUD, in pixels at 1080p: smaller is unreadable at 1280 x 720.</summary>
         const float MinHudCaption = 15f;
 
         static void SetObjects(SerializedObject so, string field, Object[] values)
@@ -292,8 +270,6 @@ namespace CloseTheDeal.Editor.Lanes
             for (int i = 0; i < values.Length; i++)
                 p.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
         }
-
-        // ---- Test scene measurements (metres) -------------------------------------------------
 
         const float SlabTop = 3f;
         const float OfficeWidth = 16f;
@@ -310,9 +286,7 @@ namespace CloseTheDeal.Editor.Lanes
         static readonly Vector3 SpawnA = new(-2f, SlabTop + 0.1f, -9f);
         static readonly Vector3 SpawnB = new(2f, SlabTop + 0.1f, -9f);
 
-        // =======================================================================================
         // Menu: set up
-        // =======================================================================================
 
         [MenuItem("Close the Deal/Lanes/Set Up Shooting")]
         public static void SetUp()
@@ -346,8 +320,6 @@ namespace CloseTheDeal.Editor.Lanes
             public Material DummyMaterial;
             public CombatSoundSet Sounds;
         }
-
-        // ---- Assets --------------------------------------------------------------------------
 
         static LaneAssets EnsureAssets()
         {
@@ -453,7 +425,6 @@ namespace CloseTheDeal.Editor.Lanes
             return assets;
         }
 
-        /// <summary>The pistol's starting feel: a big snap that is back before the next shot is allowed, a gun that flips hard and settles a little slower.</summary>
         static void PistolFeel(WeaponDefinition w)
         {
             w.SnapUp = 2.2f;
@@ -470,7 +441,6 @@ namespace CloseTheDeal.Editor.Lanes
             w.FlashSeconds = 0.04f;
         }
 
-        /// <summary>The AR-15's starting feel: a small snap per shot inside the shot interval, so the pattern stays readable under it.</summary>
         static void RifleFeel(WeaponDefinition w)
         {
             w.SnapUp = 0.6f;
@@ -487,7 +457,6 @@ namespace CloseTheDeal.Editor.Lanes
             w.FlashSeconds = 0.03f;
         }
 
-        /// <summary>Gives a gun the impact effect when it has none; a designer's choice is never replaced (AGENTS.md §4).</summary>
         static void FillIfEmpty(WeaponDefinition weapon, ParticleSystem impact)
         {
             if (weapon == null || weapon.ImpactEffect != null || impact == null)
@@ -497,7 +466,6 @@ namespace CloseTheDeal.Editor.Lanes
             EditorUtility.SetDirty(weapon);
         }
 
-        /// <summary>The AR-15's starting pattern: eight shots climbing almost straight, then a sweep left and a sweep right that a long burst keeps repeating.</summary>
         static Vector2[] RiflePattern()
         {
             var pattern = new Vector2[24];
@@ -506,7 +474,6 @@ namespace CloseTheDeal.Editor.Lanes
             return pattern;
         }
 
-        /// <summary>The lane's assets loaded fresh from disk. EnsureAssets has made sure they exist.</summary>
         static LaneAssets ReloadAssets()
         {
             return new LaneAssets
@@ -521,11 +488,6 @@ namespace CloseTheDeal.Editor.Lanes
             };
         }
 
-        /// <summary>
-        /// The combat sound set, made when missing, and lane 9's weapon clips filled into it and into
-        /// each gun wherever a slot is still empty (a designer's choice is never replaced). The set
-        /// plays through the game mixer's SFX group once it exists.
-        /// </summary>
         static CombatSoundSet EnsureCombatSounds(WeaponDefinition pistol, WeaponDefinition rifle)
         {
             var set = AssetDatabase.LoadAssetAtPath<CombatSoundSet>(CombatSoundsPath);
@@ -687,7 +649,6 @@ namespace CloseTheDeal.Editor.Lanes
             return SavePrefab(go, path).GetComponent<LineRenderer>();
         }
 
-        /// <summary>A greybox gun out of boxes: enough to read as a pistol or a rifle in the hand, with the Muzzle and Flash children WeaponView looks for.</summary>
         static GameObject EnsureGunView(string path, bool rifle, Material metal, Material flashMaterial)
         {
             if (!GeneratedAssetGuard.MayOverwrite(path))
@@ -759,7 +720,6 @@ namespace CloseTheDeal.Editor.Lanes
             renderer.shadowCastingMode = ShadowCastingMode.Off;
         }
 
-        /// <summary>The shard burst: flat tumbling squares that fall under gravity. Emission is off; GlassShards emits a count sized to the pane.</summary>
         static ParticleSystem EnsureShardPrefab(Material material)
         {
             string path = GlassPrefabFolder + "/GlassShards.prefab";
@@ -809,7 +769,6 @@ namespace CloseTheDeal.Editor.Lanes
             return SavePrefab(go, path).GetComponent<ParticleSystem>();
         }
 
-        /// <summary>Bullet impact: a quick spray of hot sparks off the surface that fall and fade. Played locally on every machine.</summary>
         static ParticleSystem EnsureImpactPrefab(Material material)
         {
             string path = WeaponPrefabFolder + "/ImpactSparks.prefab";
@@ -873,15 +832,6 @@ namespace CloseTheDeal.Editor.Lanes
             AssetDatabase.CreateFolder(parent, Path.GetFileName(folder));
         }
 
-        // ---- Player prefab -------------------------------------------------------------------
-
-        /// <summary>
-        /// Adds Health, WeaponHolder and WeaponView to Player.prefab, a pivot the body falls
-        /// over on, and a hand point for the gun; and points the motor's left-click test blast
-        /// at a profile that does nothing. Safe to run again: it only adds what is missing.
-        /// The prefab is handed back to the greybox tool afterwards, so Rebuild Player Prefab
-        /// still works; run this menu again after it.
-        /// </summary>
         static void PatchPlayerPrefab(LaneAssets assets)
         {
             if (AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath) == null)
@@ -933,13 +883,6 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log("[Shooting Lane] Player.prefab has Health, WeaponHolder, WeaponView and CombatSounds.");
         }
 
-        /// <summary>A pivot at the feet between the smoothed visual and the lean pivot, so the whole body can fall flat without touching the motor's own lean.</summary>
-        /// <summary>
-        /// Where other players see this player's gun: an empty "Hand" point under the lean
-        /// pivot, so it leans with the body. Not the rig's hand bone yet: its axes are not
-        /// known, and a gun parented to it would point the wrong way until someone checks.
-        /// Adds at most one empty object and never moves, renames or rebuilds anything.
-        /// </summary>
         static Transform EnsureHandPoint(Transform root, Transform lean)
         {
             foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
@@ -968,7 +911,6 @@ namespace CloseTheDeal.Editor.Lanes
                 p.objectReferenceValue = value;
         }
 
-        /// <summary>A layer mask left at "everything" (its default) gets the tool's value; any other is someone's choice.</summary>
         static void FillMaskIfEverything(SerializedObject so, string field, int value)
         {
             SerializedProperty p = so.FindProperty(field);
@@ -976,7 +918,6 @@ namespace CloseTheDeal.Editor.Lanes
                 p.intValue = value;
         }
 
-        /// <summary>Lets guns wear down the locked door, if the greybox tool has made one in this checkout.</summary>
         static void PatchDoorPrefab()
         {
             if (AssetDatabase.LoadAssetAtPath<GameObject>(DoorPrefabPath) == null)
@@ -1004,11 +945,6 @@ namespace CloseTheDeal.Editor.Lanes
                 GeneratedAssetGuard.MarkGenerated(AssetDatabase.LoadMainAssetAtPath(DoorPrefabPath));
         }
 
-        /// <summary>
-        /// Whether the greybox tool still owns a prefab, asked quietly: the guard's own message
-        /// says the tool "left it alone", which reads wrong here because this menu only adds
-        /// components. A prefab a person has taken over stays theirs after the patch.
-        /// </summary>
         static bool IsToolOwned(string path)
         {
             LogType saved = Debug.unityLogger.filterLogType;
@@ -1040,14 +976,6 @@ namespace CloseTheDeal.Editor.Lanes
             return null;
         }
 
-        // ---- Test scene ----------------------------------------------------------------------
-
-        /// <summary>
-        /// Two offices facing each other across a street, each with a wall of window bays to
-        /// the tower's measurements (0.6 m sill, a pillar every 4 m). Target dummies stand in
-        /// both. The near office's panes carry a Glass Pane; the far office's are glass only by
-        /// their material, the way the greybox tower's are. Rebuilt from scratch, after asking when the scene already exists.
-        /// </summary>
         static void BuildScene(LaneAssets assets)
         {
             bool exists = File.Exists(ScenePath);
@@ -1101,12 +1029,6 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log("[Shooting Lane] Wrote " + ScenePath);
         }
 
-        /// <summary>
-        /// FishNet gives scene NetworkObjects their ids from its own editor callbacks, at most
-        /// once every quarter second, so objects made in one go by a tool are left without one
-        /// and never spawn. This asks it for every networked object in the scene at once (the
-        /// same thing as its Reserialize Scenes menu, for one scene).
-        /// </summary>
         static void AssignSceneIds(UnityEngine.SceneManagement.Scene scene)
         {
             MethodInfo create = typeof(NetworkObject).GetMethod("CreateSceneId", BindingFlags.Static | BindingFlags.NonPublic,
@@ -1181,7 +1103,6 @@ namespace CloseTheDeal.Editor.Lanes
             return box;
         }
 
-        /// <summary>A capsule with Health that falls over when it dies and stands back up five seconds later. A networked scene object, so a client sees the host's numbers.</summary>
         static GameObject Dummy(Transform parent, string name, Vector3 feet, float yaw, Material material)
         {
             var root = new GameObject(name) { layer = PlayerLayer };
@@ -1222,7 +1143,6 @@ namespace CloseTheDeal.Editor.Lanes
             return root;
         }
 
-        /// <summary>A dummy that runs 12 m back and forth and takes a great many hits, for practising on a moving body.</summary>
         static void Runner(Transform parent, string name, Vector3 feet, float speed, Material material)
         {
             GameObject runner = Dummy(parent, name, feet, 0f, material);
@@ -1271,9 +1191,7 @@ namespace CloseTheDeal.Editor.Lanes
             }
         }
 
-        // =======================================================================================
         // Self-check: plays the test scene and checks the lane's rules
-        // =======================================================================================
         //
         // From the menu it plays as the host alone. From the command line it can also play as a
         // second copy of the game that joins the first, which is the only way the rules about
@@ -1349,7 +1267,6 @@ namespace CloseTheDeal.Editor.Lanes
             EditorApplication.EnterPlaymode();
         }
 
-        /// <summary>Entering Play reloads scripts, so the run is picked up again from the session's notes.</summary>
         [InitializeOnLoadMethod]
         static void ResumeSelfCheck()
         {
@@ -1390,7 +1307,6 @@ namespace CloseTheDeal.Editor.Lanes
             Log($"=== Shooting self-check, role {_role}, Unity {Application.unityVersion} ===");
         }
 
-        /// <summary>With -lanePort, local test mode uses that port, so a run never meets someone else's game on this PC.</summary>
         static void UsePort()
         {
             if (!ushort.TryParse(Arg("-lanePort"), out ushort port))
@@ -1446,9 +1362,6 @@ namespace CloseTheDeal.Editor.Lanes
                 EditorApplication.ExitPlaymode();
         }
 
-        // ---- The host's run ------------------------------------------------------------------
-
-        /// <summary>The copy under test: its player and the parts of it the checks read.</summary>
         sealed class Subject
         {
             public PlayerMotor Me;
@@ -1506,7 +1419,6 @@ namespace CloseTheDeal.Editor.Lanes
                 yield return HostWithClient(s.Me, s.Holder, s.Glass);
         }
 
-        /// <summary>One pistol shot through two panes into a dummy, then three more for the kill.</summary>
         static IEnumerator PistolCheck(Subject s)
         {
             Health target = FindDummy("Dummy Far 2");
@@ -1545,7 +1457,6 @@ namespace CloseTheDeal.Editor.Lanes
                 $"broken {brokenBefore} -> {s.Glass.BrokenCount}, shatter events {shattersBefore} -> {_panesBroken}");
         }
 
-        /// <summary>The AR-15 held down for a second and a half.</summary>
         static IEnumerator RifleCheck(Subject s)
         {
             Health target = FindDummy("Dummy Far 3");
@@ -1596,7 +1507,6 @@ namespace CloseTheDeal.Editor.Lanes
                 $"ammo {s.Holder.AmmoInMagazine}, shots {firedBefore} -> {_fired}, dry-fire events {dryBefore} -> {_dryFired}");
         }
 
-        /// <summary>A reload cut off by a switch must fill nothing; a full one fills the magazine once.</summary>
         static IEnumerator ReloadSwitchCheck(Subject s)
         {
             int cancelledBefore = _reloadCancelled;
@@ -1616,7 +1526,6 @@ namespace CloseTheDeal.Editor.Lanes
             Check("a full reload fills the magazine once", s.Holder.AmmoInMagazine == 30 && _reloadFinished == finishedBefore + 1, $"rifle ammo {s.Holder.AmmoInMagazine}, reload-finished events {_reloadFinished - finishedBefore}");
         }
 
-        /// <summary>Dying in the middle of a reload, then the respawn.</summary>
         static IEnumerator DeathCheck(Subject s)
         {
             s.Holder.Switch(0);
@@ -1664,7 +1573,6 @@ namespace CloseTheDeal.Editor.Lanes
             yield return OriginCheck(s);
         }
 
-        /// <summary>Pistol shots at the two runners, aiming at the body as it is drawn on this copy, the way a player tracks a target.</summary>
         static IEnumerator MovingTargetCheck(WeaponHolder holder, int needed)
         {
             if (holder.ActiveSlot != 0)
@@ -1704,11 +1612,6 @@ namespace CloseTheDeal.Editor.Lanes
             }
         }
 
-        /// <summary>
-        /// Client only: ten pistol shots at the host's own player while the host throws it from
-        /// side to side at about sprint speed. Players reach a client through prediction, not
-        /// the transform sync the dummies use, so they can be drawn at a different delay.
-        /// </summary>
         static IEnumerator MovingPlayerCheck(WeaponHolder holder, PlayerMotor me)
         {
             PlayerMotor host = OtherPlayer(me);
@@ -1740,7 +1643,6 @@ namespace CloseTheDeal.Editor.Lanes
                 $"{hits} of 10 confirmed by the host; this copy's round trip {holder.TimeManager.RoundTripTime} ms");
         }
 
-        /// <summary>Host only: throws its own player left and right until the client is done shooting at it, healed between shots so it never dies.</summary>
         static IEnumerator Dodge(PlayerMotor me)
         {
             Health health = me.GetComponent<Health>();
@@ -1759,7 +1661,6 @@ namespace CloseTheDeal.Editor.Lanes
             health.Restore();
         }
 
-        /// <summary>The AR-15's view kick must follow the same path magazine after magazine when the aim is left alone.</summary>
         static IEnumerator PatternCheck(Subject s)
         {
             var first = new List<Vector2>();
@@ -1811,7 +1712,6 @@ namespace CloseTheDeal.Editor.Lanes
             holder.Fired -= Record;
         }
 
-        /// <summary>A shot may start from the shooter's own eye position only when the host can see it: never through the floor or a wall.</summary>
         static IEnumerator OriginCheck(Subject s)
         {
             MethodInfo trusted = typeof(WeaponHolder).GetMethod("TrustedOrigin", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -1902,7 +1802,6 @@ namespace CloseTheDeal.Editor.Lanes
                 $"wall broken {wall.IsBroken}, chair ({mass} kg) x {startX:0.0} -> {chair.transform.position.x:0.0}, wall at x {wall.Centre.x:0.0}, panes broken {glass.BrokenCount}");
         }
 
-        /// <summary>Bytes the main thread allocates over the same number of frames idle and with the rifle held down. The difference is what firing costs.</summary>
         static IEnumerator AllocationCheck(WeaponHolder holder, Vector3 aimPoint)
         {
             // A fixed number of shots, not frames: the AR-15's full magazine, about three seconds.
@@ -1947,7 +1846,6 @@ namespace CloseTheDeal.Editor.Lanes
             Check("firing allocates nothing per shot", shots >= 25 && perShot <= 0, $"{perShot} B per shot over {shots} shots");
         }
 
-        /// <summary>With a second copy joined: its shot, a kill that goes out through a window, and what it sees when it joins again.</summary>
         static IEnumerator HostWithClient(PlayerMotor me, WeaponHolder holder, GlassRegistry glass)
         {
             FishNet.InstanceFinder.TimeManager.OnPostTick += LogRunnerTicks;
@@ -2014,9 +1912,6 @@ namespace CloseTheDeal.Editor.Lanes
             yield return Until(() => HasFlagFile("client_done"), 180f, "the client to finish");
         }
 
-        // ---- Any scene: is its glass breakable? ----------------------------------------------
-
-        /// <summary>Hosts whatever scene was opened, waits for its towers, and checks the glass the registry found blocks and breaks.</summary>
         static IEnumerator PaneCountRoutine()
         {
             SteamLobby lobby = null;
@@ -2063,8 +1958,6 @@ namespace CloseTheDeal.Editor.Lanes
                 $"registry {glass.BrokenCount} broken, the same window now broken {again?.IsBroken}, hidden panes {HiddenPanes()}");
         }
 
-        // ---- The client's run ----------------------------------------------------------------
-
         static IEnumerator ClientRoutine()
         {
             SteamLobby lobby = null;
@@ -2096,7 +1989,6 @@ namespace CloseTheDeal.Editor.Lanes
             Flag("client_done");
         }
 
-        /// <summary>Adds delay to everything this copy sends and receives, to stand in for a real connection.</summary>
         static void TurnOnLatency()
         {
             if (!long.TryParse(Arg("-laneLatency"), out long oneWay) || oneWay <= 0)
@@ -2108,7 +2000,6 @@ namespace CloseTheDeal.Editor.Lanes
             Log($"Latency simulator on: {oneWay} ms added each way.");
         }
 
-        /// <summary>What a client sees on joining a match in progress, and its own first shot.</summary>
         static IEnumerator ClientJoinAndShotChecks(Subject s)
         {
             WeaponHolder holder = s.Holder;
@@ -2136,7 +2027,6 @@ namespace CloseTheDeal.Editor.Lanes
                 $"broken {brokenBefore} -> {glass.BrokenCount}, hidden here {HiddenPanes()}, shatter events here {_panesBroken}");
         }
 
-        /// <summary>The host kills this player out through a window; this copy must hear its death and respawn and come back whole.</summary>
         static IEnumerator ClientDeathCheck(Subject s, Action<int, string> stateAtEnd)
         {
             Health.AnyDied += CountDeath;
@@ -2154,7 +2044,6 @@ namespace CloseTheDeal.Editor.Lanes
             Health.AnyRespawned -= CountRespawn;
         }
 
-        /// <summary>Leave and join again: a late joiner must see every break and every dummy as the host has them.</summary>
         static IEnumerator ClientRejoinCheck(SteamLobby lobby, int brokenAtLeave, string dummiesAtLeave)
         {
             lobby.Leave();
@@ -2171,15 +2060,8 @@ namespace CloseTheDeal.Editor.Lanes
             Check("late joiner sees the dummies as the host has them", DummyStates() == dummiesAtLeave, $"{DummyStates()}");
         }
 
-        // ---- Combat HUD: every state, captured at 1080p and 720p ----------------------------
-
         static readonly Vector2Int[] HudSizes = { new(1920, 1080), new(1280, 720) };
 
-        /// <summary>
-        /// Hosts the open scene and walks the combat HUD through its states with real shots where the
-        /// scene has targets (Lane_Shooting) and the host's own damage path otherwise, capturing each
-        /// state at every size in HudSizes.
-        /// </summary>
         static IEnumerator HudRoutine()
         {
             SteamLobby lobby = null;
@@ -2292,7 +2174,6 @@ namespace CloseTheDeal.Editor.Lanes
 
         const float _hudLinger = 3.5f;
 
-        /// <summary>Renders the player's view with the HUD at every capture size.</summary>
         static void HudShot(string name)
         {
             Canvas canvas = Object.FindAnyObjectByType<CombatHud>(FindObjectsInactive.Include)?.GetComponentInParent<Canvas>()?.rootCanvas;
@@ -2330,8 +2211,6 @@ namespace CloseTheDeal.Editor.Lanes
             canvas.worldCamera = previousCamera;
             canvas.planeDistance = plane;
         }
-
-        // ---- Self-check helpers --------------------------------------------------------------
 
         static void Listen(WeaponHolder holder)
         {
@@ -2386,7 +2265,6 @@ namespace CloseTheDeal.Editor.Lanes
                 yield return null;
         }
 
-        /// <summary>Turns the player's own look toward a point, the way the mouse would, and waits for the camera to follow.</summary>
         static IEnumerator Aim(Vector3 point)
         {
             SetAim(point);
@@ -2395,7 +2273,6 @@ namespace CloseTheDeal.Editor.Lanes
 
         static readonly FieldInfo ViewTickField = typeof(WeaponHolder).GetField("_viewTick", BindingFlags.Instance | BindingFlags.NonPublic);
 
-        /// <summary>Points the camera at once as well as the look, so a shot fired before the next frame goes there.</summary>
         static void SetAimNow(Vector3 point)
         {
             SetAim(point);
@@ -2403,14 +2280,12 @@ namespace CloseTheDeal.Editor.Lanes
             cam.rotation = Quaternion.LookRotation(point - cam.position);
         }
 
-        /// <summary>For measuring lag allowance: the tick this copy says it is showing, and where it draws the runner.</summary>
         static void LogDrawn(WeaponHolder holder, Health runner)
         {
             Vector3 p = runner.transform.position;
             File.AppendAllText(Path.Combine(_out, _role + "_drawn.txt"), $"{runner.name}#{runner.OwnerId}\t{ViewTickField.GetValue(holder)}\t{holder.TimeManager.Tick}\t{p.x:0.000}\n");
         }
 
-        /// <summary>Host only: every tick, where each runner really is.</summary>
         static void LogRunnerTicks()
         {
             var lines = new System.Text.StringBuilder();
@@ -2534,8 +2409,6 @@ namespace CloseTheDeal.Editor.Lanes
 
         static bool HasFlag(string name) => Array.IndexOf(Environment.GetCommandLineArgs(), name) >= 0;
 
-        // ---- Pictures ------------------------------------------------------------------------
-
         static Camera MakeSideCamera()
         {
             var go = new GameObject("Self-check side camera");
@@ -2547,7 +2420,6 @@ namespace CloseTheDeal.Editor.Lanes
             return cam;
         }
 
-        /// <summary>Renders the player's own view (or another camera) to a PNG in the output folder.</summary>
         static void Capture(string name, Camera camera = null)
         {
             byte[] png = Render(camera != null ? camera : Camera.main, 1280, 720, false);
@@ -2569,7 +2441,6 @@ namespace CloseTheDeal.Editor.Lanes
             _clipName = null;
         }
 
-        /// <summary>While a clip is on, saves every game frame as a JPG; ffmpeg turns the folder into a video afterwards.</summary>
         static void RecordClipFrame()
         {
             if (_clipName == null || Time.frameCount == _lastClipGameFrame)

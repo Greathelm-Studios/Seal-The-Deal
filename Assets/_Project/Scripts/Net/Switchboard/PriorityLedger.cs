@@ -1,11 +1,6 @@
 namespace CloseTheDeal.Net
 {
-    /// <summary>
-    /// One client's running score per body slot. A slot gains score each send while its body
-    /// has something to say; a slot is due at a score of 1 or more; taking a slot returns its
-    /// score to 0. Slot numbers are handed out by PropStream and are the same in every
-    /// client's ledger. Pure; allocates only when it grows. Design: docs/systems/SWITCHBOARD.md.
-    /// </summary>
+    /// <summary>Per-client priority score ledger for Switchboard body slots.</summary>
     public sealed class PriorityLedger
     {
         /// <summary>A slot is due once its score reaches this.</summary>
@@ -51,11 +46,7 @@ namespace CloseTheDeal.Net
             return (uint)slot < (uint)_scores.Length ? _scores[slot] : 0f;
         }
 
-        /// <summary>
-        /// Writes up to max due slots into "into", highest score first (ties: lower slot first),
-        /// returns how many, and returns each taken slot's score to 0. Slots not taken keep
-        /// their score. Only slots below slotCount are considered. No allocation.
-        /// </summary>
+        /// <summary>Takes up to max due slots highest score first and resets their scores to 0.</summary>
         public int TakeDue(int slotCount, int[] into, int max)
         {
             int limit = System.Math.Min(max, into.Length);

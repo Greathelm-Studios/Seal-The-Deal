@@ -30,20 +30,11 @@ namespace CloseTheDeal.Combat
         }
     }
 
-    /// <summary>
-    /// Hit points for a player or a target dummy. The host owns every number: it takes the
-    /// damage, decides the death, counts down the respawn and puts the body back on the floor
-    /// it died on. Everyone else gets the health, the dead flag and the last attacker as synced
-    /// values, plus one message per hit, death and respawn to hang sound, effects and UI on.
-    /// On a player the body is thrown through PlayerMotor's knockback, which also keeps a dead
-    /// player from steering. Design and ownership: docs/systems/WEAPONS.md.
-    /// </summary>
+    /// <summary>Host-authoritative health, death/respawn timer, position rewind history, and local hit flash/flinch visuals.</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CapsuleCollider))]
     public sealed class Health : NetworkBehaviour, IDamageable
     {
-        // ---- Inspector -----------------------------------------------------------------------
-
         [Header("Health")]
         [Tooltip("Hit points at full health. The pistol takes 34 a shot by default, so 100 is three pistol hits.")]
         [Min(1f)] [SerializeField] float _maxHealth = 100f;
@@ -76,8 +67,6 @@ namespace CloseTheDeal.Combat
         [Tooltip("How long the body takes to stand straight again after a flinch, in seconds.")]
         [Range(0.05f, 1f)] [SerializeField] float _flinchSeconds = 0.3f;
 
-        // ---- Events --------------------------------------------------------------------------
-
         /// <summary>This body took a hit. Raised on the host and on every client.</summary>
         public event Action<Health, DamageInfo> Damaged;
 
@@ -94,8 +83,6 @@ namespace CloseTheDeal.Combat
         public static event Action<Health, DamageInfo> AnyDamaged;
         public static event Action<Health, DamageInfo> AnyDied;
         public static event Action<Health> AnyRespawned;
-
-        // ---- Runtime -------------------------------------------------------------------------
 
         const int HistoryLength = 64;
         const int SafeGroundEveryTicks = 15;
@@ -157,8 +144,6 @@ namespace CloseTheDeal.Combat
 
         /// <summary>Client id of whoever hit this body last, or -1 for the world or nobody yet.</summary>
         public int LastAttackerClientId => _lastAttacker.Value;
-
-        // ---- Lifecycle -----------------------------------------------------------------------
 
         void Awake()
         {
@@ -223,8 +208,6 @@ namespace CloseTheDeal.Combat
             _tip = IsDead ? 1f : 0f;
             ApplyTip();
         }
-
-        // ---- Damage (host) -------------------------------------------------------------------
 
         /// <summary>Host only. Plain damage with no shove unless it kills.</summary>
         public void ApplyDamage(float amount, Vector3 point, Vector3 direction, int attackerClientId)
@@ -349,8 +332,6 @@ namespace CloseTheDeal.Combat
                 _motor.ApplyKnockback(Vector3.zero, (float)TimeManager.TicksToTime(_respawnTick - tick));
         }
 
-        // ---- Lag allowance -------------------------------------------------------------------
-
         /// <summary>Host only. Where this body's feet were on a past tick; now, if that tick is no longer remembered.</summary>
         public Vector3 PositionAt(uint tick)
         {
@@ -382,8 +363,6 @@ namespace CloseTheDeal.Combat
             bottom = centre - Vector3.up * half;
             top = centre + Vector3.up * half;
         }
-
-        // ---- Messages to clients -------------------------------------------------------------
 
         [ObserversRpc(ExcludeServer = true)]
         void RpcDamaged(float amount, Vector3 point, uint packedDirection, sbyte attackerClientId, Channel channel = Channel.Unreliable)
@@ -439,8 +418,6 @@ namespace CloseTheDeal.Combat
             if (asServer || !IsServerStarted)
                 HealthChanged?.Invoke(next, _maxHealth);
         }
-
-        // ---- Visuals (every machine) ---------------------------------------------------------
 
         void Update()
         {

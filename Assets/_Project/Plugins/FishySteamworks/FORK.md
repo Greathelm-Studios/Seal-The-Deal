@@ -1,6 +1,6 @@
 # FishySteamworks fork
 
-This is FirstGearGames' FishySteamworks **4.1.1** (the release `.unitypackage`, last upstream commit Aug 2024), moved here from `Assets/FishNet/Plugins/` on 2026-10-03 because upstream is unmaintained and it needed a fix. Every change from upstream is listed below and marked `Close the Deal patch` at the code site, so a future upstream release can be diffed against this folder.
+This is FirstGearGames' FishySteamworks **4.1.1** (the release `.unitypackage`, last upstream commit Aug 2024), moved here from `Assets/FishNet/Plugins/` on 2026-10-03 because upstream is unmaintained and it needed a fix. Every change from upstream is listed below and marked `// Fork patch: ... (see FORK.md)` at the code site, so a future upstream release can be diffed against this folder.
 
 Upstream: https://github.com/FirstGearGames/FishySteamworks
 

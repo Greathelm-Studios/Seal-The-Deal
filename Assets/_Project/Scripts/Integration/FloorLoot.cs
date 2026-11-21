@@ -6,14 +6,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Integration
 {
-    /// <summary>
-    /// Host only. Every time the towers are built (each match start and rematch builds them
-    /// fresh from a new seed), puts the loot table's guns, gadgets and furniture loose on their
-    /// floors, the same spot in both towers, and clears last match's away first. Guns swapped
-    /// out of a full set of slots are spawned here too, so a rebuild clears them as well.
-    /// Clients see the spawns through FishNet and the motion through Switchboard.
-    /// Owner: host. Synced: one spawn message per thing, per match. Design: docs/systems/INTEGRATION.md.
-    /// </summary>
+    /// <summary>Host-only seeded floor loot spawner spread across frames on arena rebuild. Design: docs/systems/INTEGRATION.md.</summary>
     [DisallowMultipleComponent]
     public sealed class FloorLoot : NetworkBehaviour
     {
@@ -64,7 +57,6 @@ namespace CloseTheDeal.Integration
                 enabled = false;
         }
 
-        /// <summary>Finds the tower and match once, from Start or from the server starting, whichever comes first.</summary>
         bool Hook()
         {
             if (_match != null)
@@ -112,7 +104,6 @@ namespace CloseTheDeal.Integration
             _spawned.Clear();
         }
 
-        /// <summary>The floors, plaza and gates are in place for this seed; the furniture already stands on them.</summary>
         void OnArenaChanged()
         {
             if (!IsServerStarted || _table == null || !_match.Arena.Ready || _placedForSeed == _tower.Seed)
@@ -120,7 +111,7 @@ namespace CloseTheDeal.Integration
 
             _placedForSeed = _tower.Seed;
             DespawnAll();
-            // The floors were moved into place after they were made; queries must see them there.
+            // Floors were just placed during build; sync transforms before placement physics checks.
             Physics.SyncTransforms();
             _spawnRandom = new System.Random(unchecked((int)_tower.Seed));
             _nextFloor = 1;
@@ -181,7 +172,6 @@ namespace CloseTheDeal.Integration
             enabled = false;
         }
 
-        /// <summary>Every line of the table for this floor, once per tower. Returns how many found no room.</summary>
         int PlaceFloor(int floor, System.Random random)
         {
             _usedOnFloor.Clear();
@@ -208,7 +198,6 @@ namespace CloseTheDeal.Integration
             return left;
         }
 
-        /// <summary>A random spot on the open floor, in the floor's own space, that is free in both towers.</summary>
         bool TryFindSpot(int floor, System.Random random, out Vector3 local, out float yaw)
         {
             TowerProfile profile = _match.Arena.Profile;
@@ -257,7 +246,6 @@ namespace CloseTheDeal.Integration
             return true;
         }
 
-        /// <summary>The building's floor right under the spot, and nothing at all in the room the thing needs.</summary>
         bool Standable(Vector3 spot)
         {
             if (!Physics.Raycast(spot + Vector3.up * ProbeAbove, Vector3.down, out RaycastHit ground, ProbeDepth, _floorMask, QueryTriggerInteraction.Ignore))
@@ -272,8 +260,6 @@ namespace CloseTheDeal.Integration
 
         static float Range(System.Random random, float min, float max) => min + (float)random.NextDouble() * (max - min);
 
-        // ---- Spawning --------------------------------------------------------------------------
-
         void SpawnAt(NetworkObject prefab, Vector3 position, Quaternion rotation)
         {
             NetworkObject thing = NetworkManager.GetPooledInstantiated(prefab, position, rotation, true);
@@ -283,7 +269,6 @@ namespace CloseTheDeal.Integration
 
         void PruneDeadSpawned()
         {
-            // Things taken and used up mid-match (guns) are gone already; forget them.
             for (int i = _spawned.Count - 1; i >= 0; i--)
             {
                 if (_spawned[i] == null || !_spawned[i].IsSpawned)
@@ -291,10 +276,7 @@ namespace CloseTheDeal.Integration
             }
         }
 
-        /// <summary>
-        /// Host only. Puts a thing loose in the level mid-match (a gun swapped out of full slots),
-        /// moving at the given velocity. It is cleared with the rest at the next build.
-        /// </summary>
+        /// <summary>Host only. Spawns a loose networked object mid-match (e.g. a swapped-out gun) tracked for rebuild cleanup.</summary>
         public NetworkObject ServerSpawnLoose(NetworkObject prefab, Vector3 position, Quaternion rotation, Vector3 velocity)
         {
             if (!IsServerStarted || prefab == null)

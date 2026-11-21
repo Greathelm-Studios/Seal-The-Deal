@@ -6,13 +6,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Editor.ProjectBootstrap
 {
-    /// <summary>
-    /// One-shot, headless package installer. Adds the pinned netcode stack through the
-    /// Package Manager API so UPM resolves dependencies itself.
-    /// Run from the shell with:
-    ///   Unity.exe -batchmode -projectPath <repo> -executeMethod CloseTheDeal.Editor.ProjectBootstrap.PackageInstaller.Install
-    /// Do not pass -quit: the request completes on later editor ticks and this script exits itself.
-    /// </summary>
+    /// <summary>Headless UPM installer for the pinned FishNet and Steamworks.NET packages.</summary>
     public static class PackageInstaller
     {
         static readonly string[] PackagesToAdd =

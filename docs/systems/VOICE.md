@@ -1,22 +1,10 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Fable 5.2 (Claude Code)
-  Generated : 2026-11-15
-  Prompt    : Harvey: "Add VOIP/Proximity chat to the game.", then "Make our own custom VOIP for this."
-  Modified  : Claude Fable 5.2, 2026-11-15. Opus, RNNoise, the low-delay playback, the microphone
-              picker and the settings rows (Harvey: "The quality isnt great / We probably need noise
-              suppression / There's a delay", then "do the delay and mic picker and do the settings in
-              the settings menu", "go grab that", "Yes on the RNNoise").
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : How proximity voice chat works, who owns what, and what has and has not been checked.
--->
-# VOICE
+# Voice
 
-**Status:** Target (runs for one player and the mic test has been heard by Harvey in its first form; **the Opus and RNNoise version has not been listened to, and nothing has been tried with two players**) · **Last updated:** 2026-11-21
+**Status:** Target (runs for one player and the first version was heard by Harvey; **the Opus and RNNoise version has not been listened to, and nothing has been tried with two players**) · **Last updated:** 2026-11-21
 
 ## What the player hears
 
-Players talk to each other by voice, and a voice comes from the speaker's head. It is at full volume within 3 m, fades in a straight line and is gone at 24 m, and it pans left and right as the speaker moves. Both teams hear each other: there are no team channels. The settings screen's **Voice** slider sets how loud everyone is.
+Players talk to each other by voice, and a voice comes from the speaker's head. It is at full volume within 3 m, fades in a straight line and is gone at 24 m, and pans left and right as the speaker moves. Both teams hear each other: there are no team channels. The settings screen's **Voice** slider sets how loud everyone is.
 
 The microphone is open from the start and sends only when the player is speaking. **V** mutes and unmutes it. In push-to-talk mode the microphone is open only while **V** is held. V can be rebound under Settings, Controls (**Mute / Push to talk**).
 
@@ -31,83 +19,97 @@ Keyboard, fan and room noise is taken out of a voice before it is sent.
 | Noise suppression | On by default |
 | Hear my own voice | A mic test: plays the player's voice back flat, after the same cleaning and compression other players get. It works on the title screen with no game running, is not saved, and switches off when the tab is left |
 
-The capture, the packets, who hears whom and the playback are our own code. The compression is Opus and the noise removal is RNNoise, both free libraries shipped in the project. It needs no Steam and no voice service, so it works in local test mode too. A player with no microphone hears everyone and is not heard.
+The capture, packets, proximity relay, and playback are Seal the Deal's own code. Compression is Opus (Concentus) and noise removal is RNNoise, both shipped in `Assets/Plugins/`. It needs no Steam and no external voice service, so it works in local test mode too. A player with no microphone hears everyone and is not heard.
 
-## Who owns what
+## Who owns what (AGENTS.md §3)
 
 | Thing | Owner |
 |---|---|
 | Recording, cleaning and compressing a player's voice | That player's machine |
-| Who hears a voice | The host. It passes a voice on only to players whose body is within 28 m of the speaker's body |
-| How much voice a player may send | The host: 8,000 bytes a second each, more is dropped |
+| Who hears a voice | **Host.** Passes a voice on only to players whose body is within 28 m of the speaker's body (and caps each sender at 8,000 bytes/s) |
 | Where a voice plays from, and its fade | Each listening machine, from the speaker's body |
 | Microphone, mode, noise suppression and mute | The speaker's machine only (`PlayerPrefs`), never sent |
 
+Why the host decides who hears: in a host-authoritative game, sending every voice to every client would let a modified client listen across the whole map regardless of its local volume curve. The 28 m `RelayRange` gives 4 m of margin outside the 24 m `HearRange` so sound is already arriving when a listener steps into fade range.
+
 Nothing is predicted or reconciled and no gameplay reads voice. A player with no body (not yet spawned) is not heard and hears nobody.
 
-## How a word travels
+## Architecture and rationale
 
-1. The speaker's machine records the chosen microphone at 48 kHz (or downmixes multi-channel mics and resamples continuously if the device runs at another rate) and cuts it into 20 ms pieces.
-2. Each piece is cleaned by RNNoise, which also says how likely it is to be speech (skipped when an open microphone is muted or push-to-talk is idle). With an open microphone only speech is sent, and the gate stays open 0.35 s after the last of it so the ends of words are kept. With noise suppression off, or where the RNNoise library is missing, the gate goes by loudness instead. A held push-to-talk key sends everything.
-3. The piece is compressed with Opus at 32,000 bits a second and numbered. A packet is about 82 bytes, 50 a second: about 4.1 kB a second while someone talks, nothing while they are quiet. Each packet also carries a small spare copy of the piece before it.
-4. It goes to the host as a `VoiceFrame` broadcast, unreliable.
-5. The host checks its size and the sender's allowance (refilled lazily on arrival), then sends a single `VoiceRelay` broadcast (the speaker's client id and the same bytes) to all other players in range.
-6. Each listener throws away a piece that arrives late or twice, and only advances the speaker's running number after Opus decodes the frame cleanly. If one to three pieces were lost, it fills the gap: the last lost piece is rebuilt from the spare copy in the packet that did arrive, and any before it are filled by carrying the voice on. Then the piece is decompressed and added to that speaker's lock-free ring buffer.
-7. The buffer holds 60 ms before it starts, so uneven arrival does not crackle, and never more than 300 ms, so a voice cannot fall behind the mouth. Idle speakers pause their audio source after short silence and resume when sound arrives. The sound is heard about a fiftieth of a second after it leaves the buffer.
+### Self-creation and lifecycle
+
+`VoiceChat` creates itself once at `RuntimeInitializeLoadType.BeforeSceneLoad` (`DontDestroyOnLoad`). Because voice has no authored Inspector values and must exist in every scene with a `NetworkManager`, no scene or prefab holds a reference to it. When `_net` becomes null across a scene change, `VoiceChat` re-hooks `ClientManager` and `ServerManager` broadcasts automatically.
+
+### Microphone capture, resampling, and continuous cleaning
+
+1. **Continuous recording:** While connected (and mode is not `Off`) or during the mic test, `VoiceChat` keeps `Microphone.Start` running continuously and discards frames when muted or idle. Starting a Unity microphone recording on demand takes a noticeable moment, which would swallow the first word after a push-to-talk press.
+2. **Stall recovery:** If a frame stall causes more than half of the 1 s looping buffer to accumulate, `VoiceChat` skips ahead to the newest 20 ms frame so delayed audio never builds up.
+3. **Downmix and continuous resampling:** `VoiceChat` targets 48 kHz (`SampleRate = 48000`, 20 ms = 960 samples). Multi-channel mics are averaged to mono, and devices that do not run at 48 kHz are linearly resampled to 48 kHz while carrying the previous frame's final sample across boundaries (`_prevMicSample`).
+4. **Continuous RNNoise cleaning:** `VoiceCleaner` (64-bit Windows native `rnnoise.dll`) processes 10 ms (480-sample) chunks scaled to 16-bit PCM range (`32768f`). It runs even when nothing will be sent so RNNoise continuously adapts to room noise rather than starting deaf on every press.
+5. **Speech gate and Opus encoding:** With open mic, a piece sends when RNNoise's speech probability meets `SpeechChance` (0.5) and RMS meets `SilenceLevel` (0.001), or RMS meets `GateLevel` (0.012) when RNNoise is off or unavailable; the gate stays open `GateHold` (0.35 s) to keep word endings. Held push-to-talk sends everything. After 0.5 s of silence (`EncoderForget`), the Opus encoder resets so prior speech does not colour the next utterance.
+6. **Codec wrapper (`VoiceCodec`):** Isolates `Concentus` behind `VoiceEncoder` and `VoiceDecoder` (48 kHz mono, `OPUS_APPLICATION_VOIP`, `OPUS_SIGNAL_VOICE`, 32 kbps, inband FEC at 10% expected loss, complexity 5 so pure-C# Concentus encodes in ~1 ms and decodes in ~0.26 ms).
+
+### Host relay and packet loss recovery
+
+1. Each `VoiceFrame` (unreliable) begins with a 2-byte wrapping 16-bit sequence number followed by one Opus packet (~82 bytes, ~50/s = ~4.1 KB/s while speaking).
+2. On the host, `OnFrame` validates packet size (`<= MaxPacketBytes` 400), refills the sender's lazy token bucket (`BytesPerSecondCap = 8000` bytes/s), and broadcasts a single `VoiceRelay` (speaker client id + bytes) to authenticated players within `RelayRange` (28 m) whose body exists.
+3. Each listener rejects out-of-order or duplicate sequence numbers (`(short)(number - lastNumber) <= 0`), resets the decoder after 1 s of silence (`NumberForget`), and advances `LastNumber` only after Opus decodes cleanly. Gaps of 1 to 3 (`MaxFill`) lost frames are concealed: earlier missing frames use `Decoder.Conceal`, and the last missing frame before the arrived packet is rebuilt from inband FEC (`previous: true`).
+
+### Low-delay 3D playback (`VoiceSpeaker`)
+
+1. **Carrier clip + `OnAudioFilterRead` instead of streamed `AudioClip`:** Unity reads streamed `AudioClip`s far ahead of the playhead (measured at 0.8 s delay on 16 kHz audio). Instead, `VoiceSpeaker` plays a shared looping 1024-sample all-ones `AudioClip` (`GetSharedCarrier`) on a 3D `AudioSource` (about 20 ms ahead of output) and multiplies the spatially placed output by the voice samples inside `OnAudioFilterRead`.
+2. **Custom linear rolloff:** `AudioSource` uses a custom `AnimationCurve` from 1.0 within 3 m (`FullRange`) down to 0.0 at 24 m (`HearRange`), because Unity's default logarithmic curve never reaches zero.
+3. **Lock-free SPSC ring buffer and output resampling:** `VoiceSpeaker` uses a power-of-2 ring buffer (`RingCapacity = 16384`, ~341 ms at 48 kHz) synchronized with `Volatile.Read` / `Volatile.Write` between the main thread (`Push`) and audio thread (`OnAudioFilterRead`), publishing `_step` and `_ring` before `_source.Play()`. It waits for `StartDelay` (60 ms) before starting playback to absorb arrival jitter, caps buffered audio at `MaxDelay` (300 ms) by advancing the read cursor if behind, linearly resamples from 48 kHz to `AudioSettings.outputSampleRate` (updating `_step` and the carrier clip on `AudioSettings.OnAudioConfigurationChanged`), and pauses the `AudioSource` after 0.5 s of empty buffer (`PauseSilenceSeconds`).
 
 ## Scripts
 
-- [VoiceChat.cs](../../Assets/_Project/Scripts/Voice/VoiceChat.cs): the whole path above. It creates itself at start-up and survives scene changes, so no scene or prefab holds it.
-- [VoiceCodec.cs](../../Assets/_Project/Scripts/Voice/VoiceCodec.cs): `VoiceEncoder` and `VoiceDecoder`, the only code that touches the Opus library.
-- [VoiceCleaner.cs](../../Assets/_Project/Scripts/Voice/VoiceCleaner.cs): the only code that touches the RNNoise library.
-- [VoiceSpeaker.cs](../../Assets/_Project/Scripts/Voice/VoiceSpeaker.cs): one player's voice in the world: the buffer, the 3D audio source and the "is speaking" flag.
-- [VoiceSettings.cs](../../Assets/_Project/Scripts/Voice/VoiceSettings.cs): the saved choices and the mic test switch.
-- [AudioPage.cs](../../Assets/_Project/Scripts/UI/Kit/AudioPage.cs) and [UiKitSettingsBuilder.cs](../../Assets/_Project/Editor/UI/UiKitSettingsBuilder.cs): the four settings rows, and the builder that makes them in `SettingsScreen.prefab`.
-- [InputSystem_Actions.inputactions](../../Assets/InputSystem_Actions.inputactions): a `Voice` action in the Player map, bound to V. It is read from the player's own copy of the actions, so a rebinding is followed.
+- [VoiceChat.cs](../../Assets/_Project/Scripts/Voice/VoiceChat.cs): Capture, resampling, gating, host relay, packet sequencing, and speaker tracking (`PlayerMotor.All` and `Health.All` lookup).
+- [VoiceCodec.cs](../../Assets/_Project/Scripts/Voice/VoiceCodec.cs): `VoiceEncoder` and `VoiceDecoder`, wrapping Concentus Opus.
+- [VoiceCleaner.cs](../../Assets/_Project/Scripts/Voice/VoiceCleaner.cs): P/Invoke wrapper for `rnnoise.dll`.
+- [VoiceSpeaker.cs](../../Assets/_Project/Scripts/Voice/VoiceSpeaker.cs): Lock-free ring buffer, 3D carrier `AudioSource`, `OnAudioFilterRead` playback, and speaking detection.
+- [VoiceSettings.cs](../../Assets/_Project/Scripts/Voice/VoiceSettings.cs): Local `PlayerPrefs` choices (`Mode`, `Device`, `NoiseSuppression`) plus transient `Muted` and `HearSelf`.
+- [AudioPage.cs](../../Assets/_Project/Scripts/UI/Kit/AudioPage.cs) and [UiKitSettingsBuilder.cs](../../Assets/_Project/Editor/UI/UiKitSettingsBuilder.cs): The four Audio tab settings rows.
+- [InputSystem_Actions.inputactions](../../Assets/InputSystem_Actions.inputactions): `Player/Voice` action (default V).
 
-For UI work: `VoiceChat.Instance.IsSpeaking(clientId)`, `.MicOpen`, `.Transmitting`, `.Available`, `.Devices`, `.RefreshDevices()` and `.CanSuppressNoise`, and `VoiceSettings.Changed`.
+For UI work: `VoiceChat.Instance.IsSpeaking(clientId)`, `.MicOpen`, `.Transmitting`, `.Available`, `.Devices`, `.RefreshDevices()`, `.CanSuppressNoise`, and `VoiceSettings.Changed`.
 
 ## Libraries
 
-Both are vendor code under `Assets/Plugins/` and are never edited in place.
+Both are vendor code under `Assets/Plugins/` and are never edited in place:
 
 | Library | What | Where it came from | Licence |
 |---|---|---|---|
-| Concentus 2.2.2 | Opus in plain C#, one DLL, runs on every platform | The `netstandard2.0` build from the official NuGet package | BSD 3-clause, in `Assets/Plugins/Concentus/LICENSE.txt` |
-| RNNoise 0.1.1 | Noise suppression, a native DLL for 64-bit Windows only | Built on Harvey's PC from Xiph's source, see `Assets/Plugins/RNNoise/README.md` | BSD 3-clause, in `Assets/Plugins/RNNoise/LICENSE.txt` |
-
-Both licences ask that their text ships with the game. That is not done yet: see Known limitations.
+| Concentus 2.2.2 | Opus in plain C#, one DLL, runs on every platform | `netstandard2.0` build from NuGet | BSD 3-clause, `Assets/Plugins/Concentus/LICENSE.txt` |
+| RNNoise 0.1.1 | Noise suppression, native DLL for 64-bit Windows only | Built from Xiph's source, `Assets/Plugins/RNNoise/README.md` | BSD 3-clause, `Assets/Plugins/RNNoise/LICENSE.txt` |
 
 ## Tuning
 
-The ranges, bitrate, gate, buffer times and the host's cap are named constants at the top of `VoiceChat.cs` and `VoiceSpeaker.cs`, each with what it controls and why it has that value. They are constants and not Inspector fields because the object is made at start-up and has no prefab to hold them.
+Ranges, bitrate, gate thresholds, buffer delays, and the host cap are named constants at the top of `VoiceChat.cs` and `VoiceSpeaker.cs` because `VoiceChat` is created at startup without a prefab or ScriptableObject.
 
 ## Checked
 
 2026-11-15, in the Editor, in `Lane_Integration.unity`:
 
-- The project compiles with no errors, and the console had no errors from voice.
-- **Delay.** The first version played through a streamed clip. Measured, Unity asked that clip for 0.8 s of sound before playing any. The new playback was timed with a test tone pushed into a speaker: sound reached the listener 10 to 18 ms later, in six runs.
-- **Distance and direction**, with the same test tone and a meter on the listener: flat it peaked at 0.25; 2 m to the right it peaked at 0.50 (all in one ear); at 13.5 m, halfway down the fade, 0.25; at 30 m, 0.00.
-- **Opus** loads and runs: 84 bytes a piece on average for a test tone, 1.0 ms to compress a piece and 0.26 ms to decompress one, a nonsense packet decodes to nothing and a lost piece is filled in.
-- **RNNoise** loads and runs. Steady white noise came out 3.8 dB quieter and was never called speech (0.44 at most against the 0.5 needed), so the gate stayed shut on it.
-- **Mic test with no game running:** on the title screen the microphone started at 48 kHz and a quiet room sent nothing.
-- **Settings rows**, seen in a screenshot and driven from a script: all four show, stepping Microphone to the Yeti restarted the recording on that microphone, the mode and the test toggle changed their values, and Reset to defaults lit up. The Controls tab shows **Mute / Push to talk** on V.
-- Harvey listened to the first version (ADPCM, streamed clip) and it worked, with the three complaints that led to this one.
+- Compiled cleanly with no voice console errors.
+- **Delay:** Measured 10 to 18 ms across six test-tone runs (compared to ~0.8 s on the initial streamed-clip prototype).
+- **Distance and direction:** Flat test tone peaked at 0.25; 2 m right peaked at 0.50 in the right ear; 13.5 m peaked at 0.25; 30 m read 0.00.
+- **Opus:** 84 bytes/frame average on a test tone, ~1.0 ms encode and ~0.26 ms decode; invalid packets decode to 0 and lost frames conceal.
+- **RNNoise:** Steady white noise attenuated by 3.8 dB and stayed below `SpeechChance` (0.44 max vs 0.5 threshold).
+- **Mic test & settings UI:** Title screen mic test recorded at 48 kHz and stayed silent in a quiet room; all four Audio settings rows updated `VoiceSettings` properly.
 
-**Not checked:** nobody has listened to the Opus and RNNoise version, so how it sounds, how well real noise (a keyboard, a fan) is removed and how the delay feels are unjudged. It has not been run with a second player, so the host passing a voice on and the filling of lost pieces on a real connection are unseen. Not tried over Steam or in a build, and RNNoise's DLL has not been seen to load in a build.
+**Not checked:** Nobody has listened to live speech through the Opus + RNNoise build yet, and nothing has been tested with a second player, over Steam, or in a standalone build (including verifying `rnnoise.dll` loads in a build).
 
 ## Known limitations
 
-- **No way to see who is talking.** There is no microphone icon and no speaking marker over heads. The values exist for the UI to read.
-- **The licence texts are not shown in the game yet.** Opus and RNNoise both need their notices shipped with a release, in a credits screen or a file beside the game.
-- **Noise suppression is Windows 64-bit only.** On anything else voice still works and the gate goes by loudness.
-- **`KitOffice.unity` has no Audio Listener**, so nothing at all is heard in that scene, voice included. The lane scenes have one.
-- **Walls and floors do not muffle a voice.** Only distance counts, so a player one floor up is heard as clearly as one across the room.
-- **Dead and waiting players** are treated like anyone else with a body. Whether the dead should hear or be heard is a design question for Adam.
-- **Both teams hear each other.** Team-only or radio voice is not built; that is a design question too.
-- **No per-player mute**, and no check of Steam's own block list.
-- **The host carries every voice.** 8 players all talking in one room is about 8 x 7 x 4.1 kB a second out of the host at worst. Not measured.
-- **No echo removal.** A player on speakers with an open microphone will send other players' voices back to them. Headphones or push-to-talk avoid it.
-- **The microphone itself adds delay** that this code cannot remove: Unity's recording runs a little behind the real microphone. Not measured.
-- **The Audio tab has no "Changed on this tab" list**, as on Controls: nine rows fill the page.
+- **No speaking indicator in HUD or world.** `IsSpeaking(clientId)` and `Transmitting` exist for UI to read, but no icon is drawn yet.
+- **Licence notices not yet in-game.** Opus and RNNoise BSD 3-clause notices must ship in a credits screen or text file beside the release build.
+- **Noise suppression is Windows 64-bit only.** Other platforms fall back to the loudness gate (`GateLevel`).
+- **`KitOffice.unity` has no Audio Listener**, so nothing is heard there.
+- **Walls and floors do not muffle voices.** Only 3D distance applies.
+- **Dead and waiting players** are treated like any player with a body (design question for Adam).
+- **Both teams hear each other.** No team-only or radio channel.
+- **No per-player mute** and no Steam block-list check.
+- **Host relays all voices.** 8 players talking in one room costs up to ~8 x 7 x 4.1 KB/s host upload (not measured).
+- **No acoustic echo cancellation.** Speakers with an open mic will feed other players' voices back.
+- **Microphone driver latency** in Unity's recording buffer cannot be removed in script (not measured).
+- **Audio tab lacks a "Changed on this tab" indicator** unlike Controls.

@@ -1,51 +1,51 @@
 # PROPS
 
-**Status:** Current · **Last updated:** 2026-11-12 · **Verified against:** the pickups lane commit
+**Status:** Current · **Last updated:** 2026-11-21
 
-## What happens in the game
+## What the player sees
 
-Office furniture is loose: chairs, desks, monitors, filing cabinets and the copier. Walk into a chair and it shoves along; a blast throws everything nearby across the room, the furniture as well as the players. You can stand on a desk and climb onto it like any ledge. Furniture that has stopped costs nothing until something disturbs it again. Lighter furniture can be picked up, carried and thrown; that is in [ITEMS.md](ITEMS.md).
+Office furniture is loose: chairs, desks, monitors, filing cabinets, and the copier. Walk into a chair and it shoves along; a blast throws everything nearby across the room, furniture as well as players. Players can stand on a desk and climb onto it like any ledge. Furniture that has stopped sleeps and costs nothing until disturbed again, and lighter furniture can be picked up, carried, and thrown ([ITEMS.md](ITEMS.md)).
 
-## Who owns what (AGENTS.md §3)
+## Who owns what (`AGENTS.md §3`)
 
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
-| Every prop's motion | **Host.** Only the host runs prop physics | Position and rotation, host → each client, through Switchboard's `NetBody` (see [SWITCHBOARD.md](SWITCHBOARD.md)) | Only while moving; up to 30/s for near floors, less for far ones, inside a fixed byte budget per player |
-| Which props exist | Host spawns them at the template markers after the towers build | FishNet spawn message per prop, once | On join |
-| Throwing a prop | Host only, from the same blast that throws players | Arrives as motion | On hit |
-| Carrying a prop | Host decides who holds it; see [ITEMS.md](ITEMS.md) | The holder, once; then motion while the carrier moves | On change |
+| Prop motion | Host (only the host runs prop physics) | Position and rotation via Switchboard `NetBody` ([SWITCHBOARD.md](SWITCHBOARD.md)) | Only while moving; up to 30/s for near floors, less for far ones, inside a fixed per-player byte budget |
+| Which props exist | Host spawns them at template markers after towers build | FishNet spawn message per prop | Once on join or tower build |
+| Throwing a prop | Host only, from blasts or player throws | Arrives as motion | On impulse |
+| Carrying a prop | Host decides who holds it ([ITEMS.md](ITEMS.md)) | Holder id once; motion while carried | On change |
 
-On clients a prop is a **kinematic** body that follows the host's poses. Anything that carries, throws or moves a prop must do it on the host: a client's copy is overwritten by the next pose. Switchboard only streams in a scene with a built `TowerBuilder`. It still blocks and shoves the local player, so collisions look right; it just cannot be moved by the client itself.
+On clients a prop is a kinematic body driven by Switchboard poses. Anything that carries, throws, or pushes a prop must run on the host, because a client's local pose is overwritten by the next host snapshot. Switchboard streams props only when a `TowerBuilder` is built.
 
-**The known trade:** a client walking into a chair is blocked until the host reports the chair moved, then the client's body is corrected forward by a few centimetres. Switchboard smooths the prop's side of that. It was chosen over predicting every prop on every client, which would send every prop's state every tick (the GDD's bandwidth risk). If pushing furniture feels sticky in tests, the next step is to let clients simulate props locally and blend toward the host, not to predict them.
+**The known trade:** a client walking into a chair is blocked briefly until the host reports the chair moved, then the client's body corrects forward a few centimetres while Switchboard smooths the prop. This was chosen over predicting every prop on every client (bandwidth risk in [GDD.md](../GDD.md)).
 
-Bandwidth: sleeping props send nothing; moving ones cost 13 bytes per update and never exceed Switchboard's per-player budget. The numbers are in [SWITCHBOARD.md](SWITCHBOARD.md).
+Bandwidth: sleeping props send nothing; moving ones cost 13 bytes per update and stay inside Switchboard's per-player budget ([SWITCHBOARD.md](SWITCHBOARD.md)).
 
-## Designer-authored vs runtime-derived (AGENTS.md §4)
+## Architecture and design rationale
 
-**Authored:** each prop prefab's size, mass and throw resistance, and its item definition (name, carry and throw numbers); where markers sit in the floor templates; the blast's furniture throw speed on `BlastProfile`.
-**Derived:** which prop instances exist and where they are now.
+- **Far-floor prop freezing:** `PropSpawner` groups spawned props by `(tower, floor)` and polls `PlayerMotor.All` every `0.5 s` (`FreezeCheckIntervalSeconds`) on the host tick. Any floor more than `ActiveFloorRadius = 2` floors away from all players is frozen via `Prop.SetFrozen(true)`, which sets `isKinematic = true` and disables `detectCollisions`. Props that are still moving (`sqrMagnitude >= 0.0025f`), held still, or physically resting near an occupied floor are never frozen. Unfreezing happens automatically when a player enters range or `Prop.Throw` hits a frozen prop.
+- **Designer-authored vs runtime-derived (`AGENTS.md §4`):** Authored values are prefab size, mass, throw resistance (`Prop._throwResistance`), item definitions, marker placement in floor templates, and blast throw speed on `BlastProfile`. Derived values are spawned instances and live poses.
 
 ## Level rules
 
-- **Cap: 16 props per floor**, the locked door and every pick-up item included (it uses a `PropMarker` and is spawned the same way, with no physics; see TOWER.md). The GDD asks for a fixed cap; this is it, enforced by whoever places markers (the greybox tool keeps well under it). Raise it only with a profiler open.
-- Props live on the **Prop** layer (7). They count as ground for the player, so desks are climbable and standable.
-- Heavy set dressing that should never move (the board table, the reception desk, glass walls) stays static geometry in the template, not a prop.
+- **Cap: 16 props per floor** (`PropSpawner.MaxPropsPerFloor`), enforced per `(tower, floor)` cell when spawning. Locked doors and pickups placed via `PropMarker` share the same spawn pipeline.
+- Props live on the **Prop** layer (7) and count as ground for player movement.
+- Heavy set dressing that should never move (board table, reception desk, glass walls) stays static geometry in the template rather than a `PropMarker`.
 
-## Scripts
+## Files and tuning
 
 Under [Assets/_Project/Scripts/Props/](../../Assets/_Project/Scripts/Props/):
 
-- `Prop.cs`: on the prop prefab. Makes the body kinematic everywhere but the host; carries the throw resistance. `Throw(velocityChange)` is host-only and ignored while the prop is carried or out of play. `SetHeldStill` is how a carrier (or anything else) takes the prop away from physics and hands it back.
-- `PropMarker.cs`: on floor templates. Says which prop prefab goes here. Nothing else; it is invisible in play.
-- `PropSpawner.cs`: on the `Tower` object. When the host has built the towers, spawns a networked prop at every marker; despawns them all if the towers rebuild.
+- [Prop.cs](../../Assets/_Project/Scripts/Props/Prop.cs): host-simulated rigidbody, client kinematic mode, `ThrowResistance` tuning, `SetHeldStill`, `SetFrozen`, and `Throw`.
+- [PropMarker.cs](../../Assets/_Project/Scripts/Props/PropMarker.cs): floor template spawn marker (`Prefab`), invisible in play.
+- [PropSpawner.cs](../../Assets/_Project/Scripts/Props/PropSpawner.cs): lives next to `TowerBuilder`, spawns/despawns props on tower build/clear, enforces the 16/floor cap, and drives far-floor freezing.
+- [NotThrowable.cs](../../Assets/_Project/Scripts/Props/NotThrowable.cs): marks props excluded from `Close the Deal > Lanes > Set Up Pickups` and pickup offers.
 
-Prop prefabs are in `Assets/_Project/Prefabs/Props/`, generated by the greybox tool (Chair, Desk, Monitor, Cabinet, Copier) until an artist authors real ones. Each also carries a `Pickup`, added by **Close the Deal > Lanes > Set Up Pickups**; a greybox rebuild writes the prefab without it, so run that menu again afterwards. Items that are props too (cubicle panel, gadgets, gun pickups) are in `Assets/_Project/Prefabs/Items/`. Templates carry markers instead of static furniture wherever furniture should move.
+Prop prefabs live in `Assets/_Project/Prefabs/Props/`, generated by the greybox tool until an artist authors replacements. Re-run **Close the Deal > Lanes > Set Up Pickups** after a greybox rebuild to re-attach `Pickup`.
 
 ## Known limitations
 
-- No ragdoll: a desk hitting a player shoves them through physics but does not knock them down. Ragdoll is its own task.
-- No far-floor freezing yet. Unity puts still props to sleep on its own, which is enough at this scale; add freezing only if a profiler shows otherwise.
-- Props do not break, and nothing is destructible yet; pre-broken panels are a separate system.
-- Every prop that can be picked up runs one sleep check per tick on the host (to catch one falling out of the building). Negligible at 16 per floor; revisit with a profiler if floors far from any player are ever kept awake.
-- Late joiners get every prop's current pose once, then updates; a prop mid-flight at join may pop.
+- No prop-to-player ragdoll knockdown from loose furniture collisions yet.
+- Props do not break or destruct; pre-broken panels are handled separately.
+- Late joiners receive each prop's current pose once, so a prop mid-flight at join may pop.
+- Pickup fall-out checks and far-floor freeze scans assume the 16-prop-per-floor cap; profile before raising `MaxPropsPerFloor`.

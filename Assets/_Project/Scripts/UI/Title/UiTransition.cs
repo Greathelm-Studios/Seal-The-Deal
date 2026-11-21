@@ -19,24 +19,17 @@ namespace CloseTheDeal.UI.Title
         Fade,
     }
 
-    /// <summary>
-    /// Play(kind, onCovered, onDone). onCovered fires the moment the screen is fully hidden: change screens
-    /// there. onDone fires when the overlay is gone. Runs on unscaled time so it works while the game is
-    /// paused. A call made while one is playing waits and plays straight after it, so its screen change is
-    /// always covered. Design: docs/systems/UI_TITLE.md.
-    /// </summary>
+    /// <summary>Screen-to-screen full-screen transitions (CloudWipe, PaneSlide, FrameZoom, Fade).</summary>
     public static class UiTransition
     {
-        /// <summary>Turns every transition into the plain short fade and stills the title idle. The kit's
-        /// Settings > Accessibility > Reduce motion (UiSettings.ReducedMotion) is the one switch.</summary>
+        /// <summary>Shared accessibility switch with UiSettings.ReducedMotion.</summary>
         public static bool ReducedMotion
         {
             get => UiSettings.ReducedMotion;
             set => UiSettings.ReducedMotion = value;
         }
 
-        /// <summary>Called every frame of a FrameZoom with 0..1 while it closes and 1 while it clears, so the scene camera can
-        /// push in with it. It is never reset: the new screen (the lobby) sets its own camera when it loads.</summary>
+        /// <summary>Normalized 0..1 progress callback during FrameZoom for camera push-in.</summary>
         public static Action<float> ZoomProgress;
 
         public static bool IsPlaying => UiTransitionHost.Instance != null && UiTransitionHost.Instance.Playing;
@@ -239,9 +232,7 @@ namespace CloseTheDeal.UI.Title
 
         public void Run(UiTransitionKind kind, Action onCovered, Action onDone)
         {
-            // Keys and the pad: the overlay already eats clicks, but Submit and the arrows go to the selected button
-            // through the EventSystem, so a second A press on Host would fire again under the cover. Hold them off
-            // from the call until the last queued transition is gone.
+            // Hold EventSystem navigation off until queued transitions finish so Confirm cannot fire twice under cover.
             if (_pending++ == 0 && EventSystem.current != null)
             {
                 _blocked = EventSystem.current;
@@ -269,8 +260,7 @@ namespace CloseTheDeal.UI.Title
             _canvas.enabled = true;
             UiSound.Play(SoundFor(kind));   // each kind has its own sound; FrameZoom's is the game-start sting
             UiTransition.Timing(kind, out float cover, out float reveal);
-            // WHY a capped step and t = 0 on the first frame: the frame a press lands on is often a slow one (a
-            // screen being built), and its whole delta would skip the cover phase: the screen change would pop.
+            // Start at t=0 and cap step to 1/30 s so a slow click frame cannot skip the cover phase.
             for (float t = 0f; t < cover; t += Step())
             {
                 Draw(kind, true, Mathf.Clamp01(t / cover));

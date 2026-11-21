@@ -1,35 +1,3 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Opus 5.5 (Claude Code)
-//  Generated : 2026-11-11
-//  Prompt    : Alex: "lets work on the graphics/shader for the visuals for the game"
-//              (chosen scope: a scene look pass, no custom shaders)
-//  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-12 — the sky material now uses the game's
-//              own sky shader instead of Skybox/Procedural, and is updated in place; haze colour
-//              follows the new horizon colour.
-//  Modified  : Claude Opus 5.5 (Claude Code), 2026-11-12 — ambient at 60% so the fake bounce from
-//              the sun patches reads; sky shown at +0.6 stops instead of +0.3.
-//  Modified  : Claude Opus 5.5 (Claude Code), 2026-11-12 — sun shadows soft at the lowest filter,
-//              so edges stay crisp without stair-stepping.
-//  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-12 — post exposure raised to 1.1 so whites
-//              read white, with the sky and fog cancelled back to their designed brightness.
-//  Modified  : Claude Fable 5.2 (Claude Code), 2026-11-12 — regraded to Alex's references: the
-//              sun crosses the street and casts hard shadows, shade is pale blue, sunlit white
-//              blows out and glows; the post-processing profile is now updated in place.
-//  Modified  : Claude Opus 5.5 (Claude Code), 2026-11-14 — AEROSET reference (Alex): stronger sun, less and less blue
-//              ambient, whiter filter, more saturation and bloom. Sky untouched.
-//  Modified  : Claude Opus 5.5 (Claude Code), 2026-11-15 — softer bloom (threshold 1.2, intensity 0.3): Alex found it harsh.
-//  Modified  : Claude Opus 5.5, 2026-11-15 — near-neutral fill, more exposure, less blue in the grade, half the
-//              grain: pearl props read white as in the concept sheets (Alex handed the lighting over).
-//  Modified  : Claude Opus 5.5, 2026-11-15 evening — exposure 1.0, fill 0.5, contrast 18, bloom threshold 1.5:
-//              less glare, more light and dark (Alex: "overly bright and too evenly lit").
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : Gives any open scene the art bible's lighting in one menu step: blue procedural
-//              sky, sun raking along the street, bright cool ambient so white ceilings stay
-//              white, pale distance haze, and one post-processing profile. It is its own file
-//              because the look is shared by every scene (Greybox, KitTest, later the game
-//              scene), while KitImport only builds the kit and its test scene.
-// -----------------------------------------------------------------------------
 using CloseTheDeal.Editor.Greybox;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -39,21 +7,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace CloseTheDeal.Editor.Art
 {
-    /// <summary>
-    /// Applies the office look to the open scene. Menu: <c>Close the Deal &gt; Art &gt; Apply Office Look</c>.
-    /// </summary>
-    /// <remarks>
-    /// Writes two assets under <see cref="LookFolder"/> (the post-processing profile and the sky
-    /// material) with <see cref="GeneratedAssetGuard"/>: once someone edits either one, the tool
-    /// keeps using it as it is and never writes over it. Those two assets are where the look
-    /// should be tuned by hand.
-    /// In the scene it sets the sky, ambient light and fog, points the sun, adds one global Volume
-    /// and turns post-processing on for every camera. It asks before doing so and never saves the
-    /// scene. Re-running KitImport rebuilds KitTest.unity without the look; run this again after it.
-    /// Alternative considered: a runtime component that applies the look on Awake. Rejected
-    /// because runtime must not overwrite authored scene values (AGENTS.md §4), and these values
-    /// are plain scene and asset data Unity already serialises.
-    /// </remarks>
+    /// <summary>Applies the office lighting, sky, haze, and post-processing look to the active scene.</summary>
     public static class OfficeLook
     {
         const string LookFolder = "Assets/_Project/Art/Look";
@@ -62,174 +16,46 @@ namespace CloseTheDeal.Editor.Art
         const string VolumeObjectName = "Office Look";
         const string SunObjectName = "Sun";
 
-
-        // ---- Sky --------------------------------------------------------------------------
-
-        /// <summary>
-        /// The game's own sky shader (Assets/_Project/Art/Sky/OfficeSky.shader): cobalt dome,
-        /// painted city, posterised clouds, focus-square overlay. The material is built with the
-        /// shader's default values, so the sky is tuned in the shader's defaults and in the
-        /// material, never here. It replaced Unity's Skybox/Procedural, which could only do a
-        /// physical gradient and a sun.
-        /// </summary>
         const string SkyShaderName = "Close the Deal/Office Sky";
 
-        // ---- Sun --------------------------------------------------------------------------
-
-        /// <summary>
-        /// Sun height above the horizon, degrees. WHY 32°: low enough that light coming through a
-        /// 4.3 m window reaches about 5 m across the floor, so the sun patches are a feature of
-        /// the room and not a strip under the sill. It was 40°, picked for exterior shadows only.
-        /// </summary>
         const float SunElevation = 32f;
-        /// <summary>
-        /// Sun heading, degrees around Y, where 90° shines straight along the street (+X) and 180°
-        /// straight across it (toward -Z). WHY 140°: the light has to cross the street to get in
-        /// through the glass at all. At the old 80° it ran almost parallel to the windows, which
-        /// lit both façades evenly (ArtSource/Greybox/README.md) but put no sunlight inside
-        /// either tower. 140° comes in at a diagonal, so the patches are raked parallelograms.
-        /// KNOWN COST: only the tower whose windows face +Z gets sun inside; the tower opposite
-        /// has its street face in its own shadow. One sun cannot light both street faces.
-        /// </summary>
         const float SunHeading = 140f;
-        /// <summary>Sun colour: a faintly warm white, so cool ambient shadows and warm lit faces separate.</summary>
         static readonly Color SunColour = Hex(0xFFF3E4);
-        /// <summary>
-        /// Sun intensity (URP units, Unity default 1). WHY 3.2: the references are white rooms
-        /// where anything the sun touches blows out to pure white and glows, while the shade
-        /// beside it stays a readable pale blue. That needs the sun several times brighter than
-        /// the ambient light, not the gentle 1.6 the first look pass used. 4.2 since 2026-11-14 (AEROSET reference:
-        /// "bright sun, not ambient", a visible hotspot on the white floor).
-        /// </summary>
         const float SunIntensity = 4.2f;
 
-        // ---- Ambient ----------------------------------------------------------------------
-        // WHY blue, when the first look pass kept these near white: in the references a white wall
-        // in shade is pale blue, and only what the sun touches is white. With white ambient the
-        // shaded and sunlit halves of a white room differ only in brightness, and the sun patches
-        // read as a faint stain. Blue shade against white sun is the whole look.
+        static readonly Color AmbientSky = Hex(0xF3F4F6);
+        static readonly Color AmbientEquator = Hex(0xF2F3F5);
+        static readonly Color AmbientGround = Hex(0xEAECEF);
+        const float AmbientLevel = 0.5f;
 
-        /// <summary>Ambient from above: the open sky's blue, lighting floors and anything facing up.</summary>
-        // 2026-11-14 (AEROSET reference: "less blue ambient fill"): each term moved a third of the way to neutral.
-        // 2026-11-15 (props concept sheets vs KitOffice: pearl white read flat grey-blue; Alex handed the lighting over): near neutral, a breath of cool, so pearl white reads white with a soft top-down gradient (was DAE4F2).
-        static readonly Color AmbientSky = Hex(0xF3F4F6);   // second step, same day: was EEF1F6 (shaded pearl still read cool-grey)
-        /// <summary>Ambient from the horizon: lights walls. A little paler than the sky term so walls stay the lightest shade.</summary>
-        static readonly Color AmbientEquator = Hex(0xF2F3F5);   // was DCE5F2, then EDF0F4 (2026-11-15, see AmbientSky)
-        /// <summary>
-        /// Ambient from below: this is what lights ceilings. Kept bright, because there are still no
-        /// ceiling lights and a dark ceiling was the Greybox review's main complaint, but blue.
-        /// </summary>
-        static readonly Color AmbientGround = Hex(0xEAECEF);   // was D2DCEA, then E4E8EE; darker than the sky term: the top-down gradient
-        /// <summary>
-        /// How strong the ambient light is, 0–1, applied to all three colours above. WHY 0.6: at
-        /// full strength the ambient lit every surface the same, so the room read flat (a "Unity
-        /// look" tell) and the fake bounce from the sun patches could not show. At 0.6 the ceiling
-        /// is bright over the sun patches and falls to grey-blue deeper in the room. Chosen by Alex
-        /// from a sweep, 2026-11-12, together with BounceLight's strength of 4. 0.5 since 2026-11-14 so the stronger
-        /// sun, not the fill, lights the room (AEROSET reference).
-        /// </summary>
-        /// <remarks>0.6 since 2026-11-15: the neutral fill carries the shade side of pearl props (was 0.5).</remarks>
-        // 0.42 since 2026-11-15 evening (Alex: "overly bright and too evenly lit, hurts my eyes"): the neutral fill flattened the room. The colours stay neutral so white props stay white;
-        // only the amount drops, so shade reads as shade and the light pools carry the rhythm.
-        const float AmbientLevel = 0.5f;   // 0.42 read dull grey in shade; 0.5 keeps it Aero
-
-        // ---- Haze -------------------------------------------------------------------------
-
-        /// <summary>
-        /// Haze colour: the sky shader's default "Colour at the horizon" (0.62, 0.88, 0.99), so
-        /// distant geometry fades into the sky instead of into a paler band. If the horizon colour
-        /// is changed in the sky material, change this to match.
-        /// </summary>
+        // Must match OfficeSky.shader's default horizon colour so distant geometry fades cleanly into the sky.
         static readonly Color HazeColour = Hex(0x9EE0FC);
-        /// <summary>
-        /// Haze starts this far from the camera, metres. WHY: well beyond the street gap and a few
-        /// floors' diagonal, so the rival tower is never fogged; only the distant city fades.
-        /// </summary>
         const float HazeStart = 80f;
-        /// <summary>Haze is complete at this distance, metres.</summary>
         const float HazeEnd = 700f;
 
-        // ---- Post-processing --------------------------------------------------------------
-        // Graded to Alex's references of 2026-11-12: white interiors photographed with a blue-cyan
-        // cast, shade lifted to a milky pale blue, sunlight blown out and glowing, a little grain.
-
-        /// <summary>
-        /// Exposure lift, stops. WHY 1.1 (was 0.3): the whites read pale blue-grey. Mirror's Edge
-        /// Catalyst deliberately overexposed by about 1.8 stops so white surfaces read as white
-        /// (DICE's "Lighting the City of Glass" slides, work in progress). A sweep from 0.3 to 1.8
-        /// found the interior wants about 1.3, but past about 0.8 the outdoor sky washes out, so
-        /// 1.1 is taken and the sky is cancelled back out (see <see cref="SkyExposureComp"/>).
-        /// </summary>
-        /// <remarks>1.25 since 2026-11-15: a little more on whites, as the concept sheets (was 1.1). The sky keeps
-        /// its look through <see cref="SkyExposureComp"/>.</remarks>
-        /// <remarks>1.0 after a first try at 0.85 read dull grey; first lowered 2026-11-15 evening (Alex: "overly bright and too evenly lit, hurts my eyes"): pearl and white surfaces were clipping. Was 1.25.</remarks>
         const float PostExposure = 1.0f;
-        /// <summary>
-        /// The exposure the sky is shown at, stops: the sky is scaled so it looks as it would at
-        /// this exposure, whatever <see cref="PostExposure"/> is. WHY 0.6: the sky was designed at
-        /// 0.3, but cancelling the lift all the way made it look dimmer (Alex, 2026-11-12), because
-        /// bloom is worked out before exposure, so a scaled-down sky also glows less. Above about
-        /// 0.8 the cloud sea starts washing to white (exposure sweep, same day).
-        /// </summary>
         const float SkyShownExposure = 0.6f;
-        /// <summary>
-        /// Multiplier on the sky and the haze, so they sit at <see cref="SkyShownExposure"/> while
-        /// the interior gets the full <see cref="PostExposure"/>.
-        /// </summary>
         static readonly float SkyExposureComp = Mathf.Pow(2f, -(PostExposure - SkyShownExposure));
-        /// <summary>Contrast, -100..100. Up from 10 so hard shadow edges and dark suits bite.</summary>
-        const float Contrast = 18f;   // was 12: light and dark separate again at the lower fill (2026-11-15 evening)
-        /// <summary>
-        /// Saturation, -100..100. WHY only 6: the cast already comes from four places (ambient, filter,
-        /// white balance, shadow tone). At 14 they stacked into a solid blue wash: royal-blue carpet
-        /// and blue suits. 16 since 2026-11-14 (AEROSET: "a more saturated grade"), with the blue cast cut at its
-        /// source instead (ambient a third nearer neutral, a whiter filter), so the saturation lands on the cobalt
-        /// and aqua accents and not on a wash.
-        /// </summary>
+        const float Contrast = 18f;
         const float Saturation = 16f;
-        /// <summary>A pale cyan-blue multiplied over the whole frame: the references' overall cast.</summary>
-        static readonly Color ColourFilter = Hex(0xFAFBFD);   // nearer white 2026-11-15 (was F7FAFF);   // whiter since 2026-11-14 (see Saturation)
-        /// <summary>White balance temperature, -100..100. Negative = cooler.</summary>
-        const float Temperature = -2f;   // was -6: the cool cast now comes only from the faint filter (2026-11-15)
-        /// <summary>White balance tint, -100..100. Slightly negative pulls the blue toward cyan, as in the references.</summary>
-        const float Tint = -1f;   // was -3 (2026-11-15)
-        /// <summary>
-        /// Shadows, midtones, highlights: a colour multiplier each (x,y,z = red, green, blue; w is
-        /// an offset, unused). Shade is pushed blue-cyan, highlights left just warm of neutral, so
-        /// sunlit white stays white instead of going blue with everything else.
-        /// </summary>
-        // 2026-11-15: shade a third as blue as before (was 0.92, 0.99, 1.08), so a white prop's shaded side stays pearl.
-        static readonly Vector4 ShadowsTone = new Vector4(0.99f, 1.00f, 1.01f, 0f);   // second step: was 0.97, 1, 1.03
+        static readonly Color ColourFilter = Hex(0xFAFBFD);
+        const float Temperature = -2f;
+        const float Tint = -1f;
+        static readonly Vector4 ShadowsTone = new Vector4(0.99f, 1.00f, 1.01f, 0f);
         static readonly Vector4 MidtonesTone = new Vector4(0.98f, 1.00f, 1.02f, 0f);
         static readonly Vector4 HighlightsTone = new Vector4(1.02f, 1.00f, 0.99f, 0f);
-        /// <summary>
-        /// Lift: raises the darkest values and tints them blue (x,y,z = tint, w = how much to
-        /// raise). WHY: nothing in the references is black; their deepest shade is a milky blue.
-        /// </summary>
-        static readonly Vector4 Lift = new Vector4(1.00f, 1.00f, 1.01f, 0.012f);   // was 0.97, 1, 1.05 (2026-11-15)
-        /// <summary>Bloom brightness threshold (gamma space). 1.2 since 2026-11-15 (Alex: "the bloom effect is too
-        /// harsh"): above white, so the white walls and floor no longer glow; only real highlights do (sun on glass,
-        /// light strips, the brightest sun patches). It was 0.95, which made every sunlit white surface bloom.</summary>
-        const float BloomThreshold = 1.5f;   // 1.5 since 2026-11-15 evening: no glare off the glossy floor's sun reflections
-        /// <summary>Bloom strength. Strong: the glow off the sun patches is the references' signature.</summary>
-        const float BloomIntensity = 0.2f;   // 0.75 on 2026-11-14 read harsh (Alex, 2026-11-15); glints only now
-        /// <summary>Bloom spread, 0..1. Wide and soft.</summary>
+        static readonly Vector4 Lift = new Vector4(1.00f, 1.00f, 1.01f, 0.012f);
+        const float BloomThreshold = 1.5f;
+        const float BloomIntensity = 0.2f;
         const float BloomScatter = 0.78f;
-        /// <summary>Bloom tint: faintly blue, so the glow belongs to the cast.</summary>
         static readonly Color BloomTint = Hex(0xE3EFFF);
-        /// <summary>Film grain strength, 0..1. Faint: the references have a fine photographic grain.</summary>
-        const float GrainIntensity = 0.08f;   // halved 2026-11-15: it pooled as dark noise at prop bases with the SSAO
-        /// <summary>Film grain response, 0..1. High = grain mostly in the shade, little in the blown highlights.</summary>
+        const float GrainIntensity = 0.08f;
         const float GrainResponse = 0.8f;
 
         [MenuItem("Close the Deal/Art/Apply Office Look")]
         static void ApplyFromMenu() => Apply(askFirst: true);
 
-        /// <summary>
-        /// Creates the look assets if needed and applies the look to the active scene.
-        /// </summary>
-        /// <param name="askFirst">Show a confirmation dialog before changing the scene. Pass false only from scripts the user asked to run.</param>
-        /// <returns>A one-line report of what was done, also written to the Console.</returns>
+        /// <summary>Creates the look assets if needed and applies the office look to the active scene.</summary>
         public static string Apply(bool askFirst)
         {
             var scene = EditorSceneManager.GetActiveScene();
@@ -253,8 +79,7 @@ namespace CloseTheDeal.Editor.Art
             RenderSettings.ambientGroundColor = AtLevel(AmbientGround);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            // Fog is lit before the exposure lift like everything else, so it takes the same
-            // cancellation as the sky it has to match. Done in linear light, where exposure acts.
+            // Cancel fog in linear light to match the compensated sky.
             RenderSettings.fogColor = (HazeColour.linear * SkyExposureComp).gamma;
             RenderSettings.fogStartDistance = HazeStart;
             RenderSettings.fogEndDistance = HazeEnd;
@@ -265,9 +90,7 @@ namespace CloseTheDeal.Editor.Art
             EnsureVolume(profile);
             int cameras = EnablePostOnCameras();
 
-            // WHY: ambient and reflections come from the environment lighting bake, which the
-            // Editor only refreshes on its own when Auto Generate is on. Without this the sky change
-            // shows but the ambient probe can stay stale until the next bake.
+            // Refresh environment probes immediately when Auto Generate GI is off.
             DynamicGI.UpdateEnvironment();
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -282,14 +105,12 @@ namespace CloseTheDeal.Editor.Art
                 AssetDatabase.CreateFolder("Assets/_Project/Art", "Look");
         }
 
-        /// <summary>Builds the post-processing profile, or returns the existing one untouched if a person has edited it.</summary>
         static VolumeProfile EnsureProfile()
         {
             var existing = AssetDatabase.LoadAssetAtPath<VolumeProfile>(ProfilePath);
             if (existing != null && !GeneratedAssetGuard.MayOverwrite(ProfilePath))
                 return existing;
-            // WHY rebuild in place instead of delete-and-create: deleting gives the profile a new
-            // GUID on every apply, and any other scene's volume pointing at it would lose it.
+            // Rebuild in place to keep the profile asset GUID stable across scenes.
             VolumeProfile profile = existing;
             if (profile == null)
             {
@@ -307,8 +128,6 @@ namespace CloseTheDeal.Editor.Art
                 }
             }
 
-            // WHY Neutral, not ACES: ACES rolls whites off to grey and pushes blues toward purple,
-            // fighting a Paper White and cobalt palette. Neutral keeps hues and lets white stay white.
             var tonemap = Add<Tonemapping>(profile);
             tonemap.mode.Override(TonemappingMode.Neutral);
 
@@ -342,9 +161,6 @@ namespace CloseTheDeal.Editor.Art
             grain.intensity.Override(GrainIntensity);
             grain.response.Override(GrainResponse);
 
-            // Deliberately absent: vignette (the references are bright to the edges), chromatic
-            // aberration, lens distortion and motion blur. The bible's world is pristine and
-            // straight-faced; lens dirt reads as grime. The grain is the one exception, and faint.
             EditorUtility.SetDirty(profile);
             GeneratedAssetGuard.MarkGenerated(profile);
             return profile;
@@ -354,13 +170,11 @@ namespace CloseTheDeal.Editor.Art
         {
             T component = profile.Add<T>(true);
             component.name = typeof(T).Name;
-            // WHY: VolumeProfile.Add only creates the component in memory; it must be stored as a
-            // sub-asset or the profile loses it on reload. URP's own profile editor does the same.
+            // VolumeProfile.Add creates the component only in memory; attach as sub-asset to persist.
             AssetDatabase.AddObjectToAsset(component, profile);
             return component;
         }
 
-        /// <summary>Builds the sky material, or returns the existing one untouched if a person has edited it.</summary>
         static Material EnsureSky()
         {
             var existing = AssetDatabase.LoadAssetAtPath<Material>(SkyPath);
@@ -374,7 +188,6 @@ namespace CloseTheDeal.Editor.Art
                 return existing;
             }
 
-            // A throwaway material holding the shader's default values.
             var defaults = new Material(shader);
             Material sky = existing;
             if (sky == null)
@@ -384,14 +197,11 @@ namespace CloseTheDeal.Editor.Art
             }
             else
             {
-                // WHY update in place instead of delete-and-create: deleting gives the material a
-                // new GUID, and every scene the look was applied to would lose its sky.
+                // Update in place so scenes keep their sky material GUID.
                 sky.shader = shader;
             }
 
-            // WHY copy the defaults: a material that changes shader keeps its old values for any
-            // property with the same name (the old sky also had _SunSize and _GroundColor), and
-            // its old keywords. This resets every property and keyword to the new shader's own.
+            // Copy defaults so properties/keywords left over from a previous shader are reset cleanly.
             sky.CopyPropertiesFromMaterial(defaults);
             sky.SetFloat("_ExposureComp", SkyExposureComp);
             Object.DestroyImmediate(defaults);
@@ -400,7 +210,6 @@ namespace CloseTheDeal.Editor.Art
             return sky;
         }
 
-        /// <summary>Uses the scene's sun, or its first directional light, or makes one; then points and colours it.</summary>
         static Light EnsureSun()
         {
             Light sun = RenderSettings.sun;
@@ -429,9 +238,6 @@ namespace CloseTheDeal.Editor.Art
             sun.transform.rotation = Quaternion.Euler(SunElevation, SunHeading, 0f);
             sun.color = SunColour;
             sun.intensity = SunIntensity;
-            // WHY soft at the lowest filter, not hard: Alex asked for harsh shadows, but fully hard
-            // shadows stair-step along every edge, the clearest "default Unity" tell in the renders.
-            // The low filter blurs about a texel, so edges stay crisp but stop stepping.
             sun.shadows = LightShadows.Soft;
             sun.GetUniversalAdditionalLightData().softShadowQuality = SoftShadowQuality.Low;
             sun.shadowStrength = 1f;
@@ -476,7 +282,7 @@ namespace CloseTheDeal.Editor.Art
             return count;
         }
 
-        /// <summary>RenderSettings has no public object to record for Undo; this is the one Unity's Lighting window uses.</summary>
+        // RenderSettings has no public UnityEngine.Object wrapper for Undo; invoke the internal getter.
         static Object RenderSettingsObject()
         {
             var method = typeof(RenderSettings).GetMethod("GetRenderSettings",
@@ -484,7 +290,6 @@ namespace CloseTheDeal.Editor.Art
             return method?.Invoke(null, null) as Object;
         }
 
-        /// <summary>An ambient colour at <see cref="AmbientLevel"/>, keeping its hue.</summary>
         static Color AtLevel(Color c) => new Color(c.r * AmbientLevel, c.g * AmbientLevel, c.b * AmbientLevel, 1f);
 
         static Color Hex(int rgb) => new Color(((rgb >> 16) & 0xFF) / 255f, ((rgb >> 8) & 0xFF) / 255f, (rgb & 0xFF) / 255f);

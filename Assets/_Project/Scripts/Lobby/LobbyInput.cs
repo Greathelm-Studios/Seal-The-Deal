@@ -3,12 +3,7 @@ using UnityEngine.InputSystem;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// The lobby lane's own inputs, defined in code because only the movement lane edits the
-    /// shared actions asset. Listed in docs/HANDOVER_lobby.md for moving into that asset.
-    /// Keyboard and gamepad both work. Escape is left to the game menu.
-    /// Interact is F (and the pad's north button) to match the shared asset: E is lean-right there.
-    /// </summary>
+    /// <summary>InputActionMap for reception interactions, host panel, and fitting room controls.</summary>
     public static class LobbyInput
     {
         static InputActionMap _map;

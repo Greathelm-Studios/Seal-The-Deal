@@ -1,9 +1,3 @@
-// AI-GENERATED SOURCE FILE
-// Generator : Codex (GPT-6)
-// Generated : 2026-11-15
-// Prompt    : REQUEST_ANIM.md and ArtSource/Kit/posters/REQUEST.md; approved mood D in blue, including pitch displays.
-// Reviewed : NOT YET REVIEWED BY A HUMAN
-// Summary   : Explicit editor-build entry point; guarded rig, monitor overlays and conference displays, never automatic.
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -19,11 +13,7 @@ using Object = UnityEngine.Object;
 
 namespace CloseTheDeal.Editor.Art
 {
-    /// <summary>Builds KitOffice's local decorative animation when explicitly called by its scene builder.</summary>
-    /// <remarks>
-    /// Visual ownership is local on every client; no state is synchronized and no networking API is used.
-    /// All persistent outputs live in Art/Animated. Existing assets are read, never rewritten.
-    /// </remarks>
+    /// <summary>Builds KitOffice's local decorative animation and pitch displays.</summary>
     public static class KitOfficeAnimation
     {
         const string Folder = "Assets/_Project/Art/Animated";
@@ -34,7 +24,6 @@ namespace CloseTheDeal.Editor.Art
         const string Provenance = "AI-GENERATED SOURCE FILE | Generator : Codex (GPT-6) | Generated : 2026-11-15 | " +
                                   "Prompt : REQUEST_ANIM.md and posters/REQUEST.md | Reviewed : NOT YET REVIEWED BY A HUMAN";
 
-        // Placement measurements come from REQUEST_ANIM.md; all lengths below are metres.
         static readonly Vector3 ScreenCentreMetres = new Vector3(0f, 0.29f, 0.181f);
         static readonly Vector2 ScreenSizeMetres = new Vector2(0.40f, 0.22f);
         static readonly Vector2 TickerSizeMetres = new Vector2(3.4f, 0.25f);
@@ -43,7 +32,6 @@ namespace CloseTheDeal.Editor.Art
         const float TickerEastWallMetres = 39.72f;
         const float TickerCentreYMetres = 3.9f;
 
-        // Pitch-screen centres are world metres, as specified in posters/REQUEST.md, ground floor only.
         static readonly Vector3 LegalDisplayCentreMetres = new Vector3(2f, 1.55f, -8.21f);
         static readonly Vector3 ReviewDisplayCentreMetres = new Vector3(38f, 1.55f, -23.79f);
         static readonly Vector2 SlideSizeMetres = new Vector2(1.78f, 1f);
@@ -82,17 +70,10 @@ namespace CloseTheDeal.Editor.Art
         const float CookieFeatherFraction = 0.045f;
         const float CookieShadowTransmission = 0.42f;
 
-        // WHY: scene instance IDs change on reload; omit those volatile numbers from the receipt.
-        // Stable reference identities are added separately, so changing a mesh, material or sun is still detected.
+        // Omit volatile scene instance IDs from the ownership fingerprint.
         static readonly Regex InstanceIds = new Regex("\\\"instanceID\\\"\\s*:\\s*-?[0-9]+", RegexOptions.Compiled);
 
-        /// <summary>Rebuilds the guarded background, including conference displays, then assigns the sun cookie.</summary>
-        /// <param name="office">The placed Kit Office root; existing effects use local metres, pitch displays use specified world metres.</param>
-        /// <returns>A one-line report including counts and any skipped content.</returns>
-        /// <remarks>
-        /// Call explicitly in the editor, after the fit-out and the sun exist. Never called by scene load,
-        /// Play Mode or OnValidate. A hand-edited generated hierarchy is left alone, as are existing asset values.
-        /// </remarks>
+        /// <summary>Rebuilds the guarded animated background, pitch displays, and sun cookie under <paramref name="office"/>.</summary>
         public static string AddTo(Transform office)
         {
             if (Application.isPlaying || office == null || EditorUtility.IsPersistent(office) || !office.gameObject.scene.IsValid())
@@ -112,7 +93,7 @@ namespace CloseTheDeal.Editor.Art
             if (oldReceipt != null && oldReceipt.Fingerprint != Fingerprint(oldGroup, oldReceipt.ScreenOverlays))
                 return "Office animation left alone: its generated group or monitor overlays were edited; preserve or remove them explicitly before rebuilding.";
 
-            // WHY: resolve every dependency before removing the previous rig; a missing shader cannot erase it.
+            // Resolve dependencies before destroying the previous rig.
             Shader crtShader = Shader.Find(ShaderPrefix + "Office CRT");
             Shader tickerShader = Shader.Find(ShaderPrefix + "Office Ticker");
             Shader shaftShader = Shader.Find(ShaderPrefix + "Office Shaft");
@@ -154,7 +135,6 @@ namespace CloseTheDeal.Editor.Art
             group.SetParent(office, false);
             var ownership = group.gameObject.AddComponent<OfficeAnimationOwnership>();
             var overlays = new List<Transform>();
-            // WHY: take one snapshot before adding children; no hierarchy search runs at runtime.
             Transform[] placed = office.GetComponentsInChildren<Transform>(true);
             int skippedScreens = 0;
             foreach (Transform piece in placed)
@@ -202,7 +182,6 @@ namespace CloseTheDeal.Editor.Art
 
         static bool IsMonitor(string name)
         {
-            // WHY: match kit instances and Unity's duplicate suffixes, without decorating mesh children named Monitor_Flat_*.
             return name == MonitorName || (name.StartsWith(MonitorName + " (", System.StringComparison.Ordinal) && name.EndsWith(")", System.StringComparison.Ordinal));
         }
 
@@ -213,20 +192,17 @@ namespace CloseTheDeal.Editor.Art
             quad.name = name;
             Transform transform = quad.transform;
             transform.SetParent(parent, false);
-            // WHY: Unity's built-in quad shows its front toward local -Z, as KitSigns.Facing documents.
+            // Unity's Quad faces local -Z.
             transform.SetLocalPositionAndRotation(centre, Quaternion.LookRotation(-normal, Vector3.up));
             transform.localScale = new Vector3(size.x, size.y, 1f);
             DecorativeRenderer(quad, material);
             return transform;
         }
 
-        /// <summary>Places one world-positioned ground-floor screen and its bezel inside the generated group.</summary>
-        /// <remarks>The parent group receipt covers every child; the group's creation Undo removes the complete display.</remarks>
         static void SlideDisplay(Transform parent, string name, Vector3 worldCentre, Vector3 worldNormal,
                                  Material slides, Material bezel)
         {
             Transform display = new GameObject(name).transform;
-            // WHY: the request gives world coordinates, so a transformed office root must not shift these placements.
             display.SetPositionAndRotation(worldCentre, Quaternion.LookRotation(-worldNormal, Vector3.up));
             display.SetParent(parent, true);
             Quad(display, "Slide screen", Vector3.zero, Vector3.back, SlideSizeMetres, slides);
@@ -235,7 +211,6 @@ namespace CloseTheDeal.Editor.Art
             Object.DestroyImmediate(frame.GetComponent<Collider>());
             frame.name = "Dark bezel";
             frame.transform.SetParent(display, false);
-            // WHY: screen centre stays exactly at the supplied point; its frame sits behind, toward the wall.
             frame.transform.localPosition = Vector3.forward * (SlideBezelDepthMetres * 0.5f + SlideGlassGapMetres);
             frame.transform.localScale = new Vector3(SlideSizeMetres.x + SlideBezelBorderMetres * 2f,
                                                    SlideSizeMetres.y + SlideBezelBorderMetres * 2f,
@@ -243,7 +218,6 @@ namespace CloseTheDeal.Editor.Art
             DecorativeRenderer(frame, bezel);
         }
 
-        /// <summary>Configures generated display geometry as decorative, unbatched and free of lighting dependencies.</summary>
         static void DecorativeRenderer(GameObject geometry, Material material)
         {
             var renderer = geometry.GetComponent<MeshRenderer>();
@@ -253,7 +227,7 @@ namespace CloseTheDeal.Editor.Art
             renderer.lightProbeUsage = LightProbeUsage.Off;
             renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
             renderer.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
-            // WHY: no static batching; the screen and shaft shaders read each object's world origin.
+            // Disable static batching so shaders can read each object's world origin.
             GameObjectUtility.SetStaticEditorFlags(geometry, 0);
         }
 
@@ -262,7 +236,7 @@ namespace CloseTheDeal.Editor.Art
             var go = new GameObject("Court dust " + (index + 1));
             go.transform.SetParent(parent, false);
             go.transform.localPosition = centre;
-            // WHY: inactive configuration prevents AddComponent's default particle emission while building in the editor.
+            // Inactive while configuring so AddComponent does not emit default particles in the editor.
             go.SetActive(false);
             var particles = go.AddComponent<ParticleSystem>();
             particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
@@ -331,7 +305,6 @@ namespace CloseTheDeal.Editor.Art
             sun.cookie = cookie;
             if (createdData || data.lightCookieSize == Vector2.zero)
                 data.lightCookieSize = new Vector2(CookieProjectionMetres, CookieProjectionMetres);
-            // WHY: the sun's existing projection size and offset are authored, even before it has a cookie.
             var drift = group.gameObject.AddComponent<OfficeLouvreDrift>();
             drift.Configure(data, cookie);
             EditorUtility.SetDirty(sun);
@@ -346,7 +319,6 @@ namespace CloseTheDeal.Editor.Art
             Material existing = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (existing != null)
                 return existing;
-            // WHY: a file at an unimportable/other-type path still belongs to its author.
             if (File.Exists(path) || !GeneratedAssetGuard.MayOverwrite(path))
                 return null;
             var material = new Material(shader) { name = name, enableInstancing = false };
@@ -392,7 +364,6 @@ namespace CloseTheDeal.Editor.Art
 
         static void StampNewAsset(Object asset, string path)
         {
-            // WHY: use the existing fingerprint guard, and stamp only files created by this call.
             AssetImporter importer = AssetImporter.GetAtPath(path);
             if (importer != null)
             {
@@ -414,7 +385,6 @@ namespace CloseTheDeal.Editor.Art
                         text.Append("missing overlay;");
                         continue;
                     }
-                    // WHY: the screens belong to monitors, outside Animated; include their parent path in the receipt.
                     for (Transform parent = overlay.parent; parent != null; parent = parent.parent)
                         text.Append(parent.name).Append('/');
                     AppendTree(overlay, text);
@@ -464,8 +434,7 @@ namespace CloseTheDeal.Editor.Art
                     text.Append(guid).Append(':').Append(localId).Append(';');
                     continue;
                 }
-                // WHY: new scene objects gain file IDs on save; hierarchy paths are stable before and after that save.
-                // Asset GUID/local-ID pairs above also distinguish subassets and built-in meshes sharing a file.
+                // Hierarchy paths remain stable before and after unsaved scene objects gain file IDs on save.
                 text.Append(reference.GetType().FullName).Append(':').Append(reference.name);
                 Transform transform = reference is Component component ? component.transform :
                                       reference is GameObject gameObject ? gameObject.transform : null;

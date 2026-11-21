@@ -1,16 +1,3 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-13
-//  Prompt    : Alex: "a test dummy in the scene to test animations of being hit by certain
-//              powers of weapons (bullets bombs explosions props, etc)", which should "use the
-//              idle animations we have"
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : Builds the hit-test dummy prefab and places it in the open scene, from menu
-//              items. Its own file, not part of the greybox tool, because the dummy is a dev
-//              aid with no network identity and the greybox tool's files belong to another
-//              lane; it borrows that tool's helpers instead of copying them.
-// -----------------------------------------------------------------------------
 using CloseTheDeal.Editor.Greybox;
 using CloseTheDeal.Player;
 using UnityEditor;
@@ -19,31 +6,9 @@ using UnityEngine;
 
 namespace CloseTheDeal.Editor.Dev
 {
-    /// <summary>
-    /// Menu tools for the hit-test dummy: a copy of the player's body that stands in the idle
-    /// with the same animator and active ragdoll, but has no motor, no input and no network
-    /// identity.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Runs only from its menu items (AGENTS.md §4). The prefab carries the greybox tools'
-    /// fingerprint label, so a rebuild leaves it alone once a person has edited it.
-    /// </para>
-    /// <para>
-    /// WHY a prefab plus a "place" menu item rather than an object saved into a scene: the kit
-    /// scene is rebuilt from its own builder, which drops anything placed by hand. A dummy can
-    /// be put back in one click, or placed by that builder from the same prefab.
-    /// </para>
-    /// <para>
-    /// Alternative considered: instantiating <c>Player.prefab</c> and stripping its network
-    /// parts. It would follow the player's prefab automatically, but an unspawned
-    /// <see cref="PlayerMotor"/> reports "not on the floor", and removing components from a
-    /// nested copy of a networked prefab breaks FishNet's prefab list.
-    /// </para>
-    /// </remarks>
+    /// <summary>Menu-invoked setup for <c>HitDummy.prefab</c> and placing an unsaved dummy in the open scene.</summary>
     public static class HitDummySetup
     {
-        /// <summary>Where the dummy prefab is written; beside the other dev-only prefab, the mirror.</summary>
         public const string PrefabPath = "Assets/_Project/Prefabs/Dev/HitDummy.prefab";
 
         const string CharacterModelPath = "Assets/_Project/Art/Characters/STDMC/STDMC_Toon.prefab";
@@ -51,20 +16,11 @@ namespace CloseTheDeal.Editor.Dev
         const string AnimationProfilePath = ProfileFolder + "/DefaultAnimation.asset";
         const string HitProfilePath = ProfileFolder + "/DefaultHitReaction.asset";
 
-        /// <summary>
-        /// The dummy's solid shape, metres: the same capsule as the player's
-        /// (<c>GreyboxSceneSetup.BodyHeight</c> and <c>BodyRadius</c>, which are private there),
-        /// so shots and blasts find it the way they will find a player.
-        /// </summary>
         const float BodyHeight = 1.8f, BodyRadius = 0.35f;
-
-        /// <summary>How far in front of the view the dummy is placed, metres. WHY 3: close enough to see the whole 1.8 m body, far enough not to stand inside it.</summary>
         const float PlaceDistance = 3f;
-
-        /// <summary>How far above and below the aimed-at point the floor is looked for, metres. WHY 3 and 10: above reaches from waist height to a normal ceiling without finding the floor above; below covers aiming over a stairwell.</summary>
         const float FloorSearchUp = 3f, FloorSearchDown = 10f;
 
-        /// <summary>Writes the prefab from scratch, unless a person has edited it since the last build.</summary>
+        /// <summary>Builds <c>HitDummy.prefab</c> if unedited since generation.</summary>
         [MenuItem("Close the Deal/Dev/Build Hit Dummy Prefab")]
         public static void BuildPrefab()
         {
@@ -72,14 +28,7 @@ namespace CloseTheDeal.Editor.Dev
                 Build();
         }
 
-        /// <summary>
-        /// Puts a dummy in the open scene, standing on the floor in front of the Scene view (or
-        /// in front of the game camera while playing) and facing the viewer.
-        /// </summary>
-        /// <remarks>
-        /// Does not save the scene. Outside Play Mode the new object is an ordinary unsaved scene
-        /// change that Undo removes; placed while playing, it goes when Play stops.
-        /// </remarks>
+        /// <summary>Places a dummy on the floor in front of the active camera (scene is not saved).</summary>
         [MenuItem("Close the Deal/Dev/Place Hit Dummy")]
         public static void Place()
         {
@@ -123,10 +72,6 @@ namespace CloseTheDeal.Editor.Dev
             Debug.Log("[HitDummy] Placed at " + spot.ToString("F2") + ". The scene is not saved.", dummy);
         }
 
-        /// <summary>Where the person is looking from: the game camera while playing, otherwise the last used Scene view.</summary>
-        /// <param name="eye">The viewer's position, world space.</param>
-        /// <param name="ahead">The way the viewer faces, unit length.</param>
-        /// <returns>False when there is neither.</returns>
         static bool FindViewer(out Vector3 eye, out Vector3 ahead)
         {
             Camera camera = Application.isPlaying ? Camera.main : null;
@@ -142,8 +87,6 @@ namespace CloseTheDeal.Editor.Dev
             return true;
         }
 
-        /// <summary>Writes the prefab. Saving over the existing path keeps its GUID, so placed copies survive a rebuild.</summary>
-        /// <returns>The saved prefab, or null when the character model or its skeleton is missing.</returns>
         static GameObject Build()
         {
             var modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterModelPath);
@@ -154,17 +97,13 @@ namespace CloseTheDeal.Editor.Dev
             }
 
             int layer = GreyboxSceneSetup.PlayerLayer;
-            // WHY the Player layer: the ragdoll's level copies skip that layer, so the dummy's
-            // ragdoll does not collide with a copy of its own capsule, and blasts that look for
-            // players find it.
+            // Player layer prevents RagdollWorld from copying the dummy's own capsule as a level collider.
             var root = new GameObject("HitDummy") { layer = layer };
             var capsule = root.AddComponent<CapsuleCollider>();
             capsule.height = BodyHeight;
             capsule.radius = BodyRadius;
             capsule.center = new Vector3(0f, BodyHeight * 0.5f, 0f);
 
-            // The animator reads this object's own movement, as it reads the player's smoothed
-            // visual; the model hangs below it.
             var graphics = new GameObject("Graphics") { layer = layer };
             graphics.transform.SetParent(root.transform, false);
             var model = (GameObject)PrefabUtility.InstantiatePrefab(modelPrefab, graphics.transform);
@@ -181,7 +120,6 @@ namespace CloseTheDeal.Editor.Dev
             }
 
             AnimationProfile profile = GreyboxSceneSetup.EnsureAsset<AnimationProfile>(ProfileFolder, AnimationProfilePath);
-            // No motor: the animator then holds the standing idle.
             var animator = graphics.AddComponent<PlayerAnimator>();
             var serializedAnimator = new SerializedObject(animator);
             GreyboxSceneSetup.SetReference(serializedAnimator, "_profile", profile);
@@ -197,7 +135,6 @@ namespace CloseTheDeal.Editor.Dev
             GreyboxSceneSetup.SetReference(serializedRagdoll, "_hitProfile", GreyboxSceneSetup.EnsureAsset<HitReactionProfile>(ProfileFolder, HitProfilePath));
             serializedRagdoll.ApplyModifiedPropertiesWithoutUndo();
 
-            // On the root, beside the capsule, so a shot that strikes the capsule finds it.
             var dummy = root.AddComponent<HitDummy>();
             var serializedDummy = new SerializedObject(dummy);
             GreyboxSceneSetup.SetReference(serializedDummy, "_ragdoll", ragdoll);

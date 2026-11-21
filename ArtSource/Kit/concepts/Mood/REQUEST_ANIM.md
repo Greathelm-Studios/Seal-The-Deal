@@ -1,12 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-15
-  Prompt    : Alex: "for animations, get codex to do them" (mood D in blue, animated background, concepts/Mood/DECISION.md)
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Brief to Codex to build KitOffice's animated background elements as new, self-contained files, so they plug
-              into the scene build with one call and stay out of the files the scene session is editing.
--->
 # KitOffice animated background: request to Codex
 
 **From:** Alex (environment artist), drafted by Claude · **Date:** 2026-11-15 · **Status:** Waiting for Codex

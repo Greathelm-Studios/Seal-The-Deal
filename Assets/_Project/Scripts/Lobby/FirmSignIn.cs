@@ -2,10 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// A firm's sign-in stand. Press interact to sign in with that firm; the host checks the
-    /// fairness rule and either moves you or refuses (the secretary says which).
-    /// </summary>
+    /// <summary>Firm sign-in stand requesting a firm switch from LobbyRoster on interact. Design: docs/systems/LOBBY.md.</summary>
     public sealed class FirmSignIn : LobbyInteractable
     {
         [Tooltip("Which firm this stand signs players in with: 0 = the first firm, 1 = the second.")]

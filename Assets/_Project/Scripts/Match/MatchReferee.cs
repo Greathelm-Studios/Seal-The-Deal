@@ -3,17 +3,11 @@ using UnityEngine;
 
 namespace CloseTheDeal.MatchMode
 {
-    /// <summary>
-    /// Host only. Applies the rules once per tick, after physics: who fell out, who dropped
-    /// the briefcase, where the briefcase is, checkpoints, the roof and the clock. It reads
-    /// positions and calls the director's host methods; it sends nothing itself. Players are
-    /// checked in one fixed order within the tick, so the result never depends on timing.
-    /// </summary>
+    /// <summary>Host-only per-tick arbiter evaluating falls, checkpoints, briefcase tracking, gates, roofs, and clock expiry.</summary>
     public sealed class MatchReferee
     {
         readonly MatchDirector _match;
 
-        /// <summary>How far from the gate a player is told about it, in metres: beyond the panels, below the floor (the top of the flight), and above it.</summary>
         const float GateReach = 0.8f;
         const float GateBelow = 1.5f;
         const float GateAbove = 1.2f;
@@ -32,7 +26,7 @@ namespace CloseTheDeal.MatchMode
             _match = match;
         }
 
-        /// <summary>New towers, new round: re-read the tuning.</summary>
+        /// <summary>Recomputes tick durations after tower build.</summary>
         public void ResetRound()
         {
             TimeManager time = _match.TimeManager;
@@ -57,13 +51,11 @@ namespace CloseTheDeal.MatchMode
             bool running = phase == MatchPhase.Running;
             StepBriefcase(tick);
 
-            // Falls are handled in every phase, so nobody waits out a lobby or a result in the street.
+            // Handle falls in every phase so nobody waits out a lobby or result in the street.
             StepMembers(running);
             if (running)
                 Decide(tick);
         }
-
-        // ---- Players -------------------------------------------------------------------------
 
         void StepMembers(bool running)
         {
@@ -85,7 +77,6 @@ namespace CloseTheDeal.MatchMode
             }
         }
 
-        /// <summary>Outside the buildings, plaza and skybridges for long enough, or under the street: back to the firm's checkpoint, without the briefcase.</summary>
         bool FellOut(FirmMember member, bool sunk, byte paddedPlace)
         {
             if (!sunk && paddedPlace != MatchArena.Outside)
@@ -106,7 +97,6 @@ namespace CloseTheDeal.MatchMode
             return true;
         }
 
-        /// <summary>Standing on a higher checkpoint floor of your own tower moves your firm's respawn point there. Never above the open floor, so nobody respawns where they could not have walked.</summary>
         void StepCheckpoint(FirmMember member, byte place, int floor, bool onSurface, Vector3 position)
         {
             int firm = member.Firm;
@@ -114,7 +104,6 @@ namespace CloseTheDeal.MatchMode
                 _match.ServerSaveCheckpoint(firm, floor, position);
         }
 
-        /// <summary>Returns false when the carrier lost the briefcase this tick. A carrier standing on a floor above the open floor opens it for everyone.</summary>
         bool StepCarrier(FirmMember member, Vector3 position, byte place, int floor, bool onSurface)
         {
             if (member.Knocked)
@@ -133,24 +122,18 @@ namespace CloseTheDeal.MatchMode
             return true;
         }
 
-        /// <summary>
-        /// Someone without the briefcase at the top of the stairs to a closed floor is told why
-        /// they can't go on, once per approach. The gate itself is a wall on every machine; this
-        /// only gives it words.
-        /// </summary>
         void StepGate(FirmMember member, Vector3 position, byte place, bool carrying)
         {
             bool atGate = _match.HasGates && !carrying && place < MatchArena.Neutral && NearClosedGate(position, place);
             if (atGate && !member.WasAtGate)
             {
-                // The first refusal of the match explains the rule; after that a short reminder.
+                // First refusal explains the rule; later approaches use the short line.
                 member.Notify(member.GateExplained ? MatchNotice.GateRefused : MatchNotice.FirstGateRefusal);
                 member.GateExplained = true;
             }
             member.WasAtGate = atGate;
         }
 
-        /// <summary>Within reach of the stairwell, close under or on the first closed floor.</summary>
         bool NearClosedGate(Vector3 position, int building)
         {
             int closed = _match.OpenFloor + 1;
@@ -162,7 +145,6 @@ namespace CloseTheDeal.MatchMode
             return local.y > -GateBelow && local.y < GateAbove && local.x * local.x + local.z * local.z < reach * reach;
         }
 
-        /// <summary>On a roof with the briefcase claims the win; without it, you are told why nothing happened, once per visit.</summary>
         void StepRoof(FirmMember member, bool onRoof, bool carrying)
         {
             if (onRoof && carrying)
@@ -172,8 +154,6 @@ namespace CloseTheDeal.MatchMode
 
             member.WasOnRoof = onRoof;
         }
-
-        // ---- The briefcase -------------------------------------------------------------------
 
         void StepBriefcase(uint tick)
         {
@@ -197,13 +177,12 @@ namespace CloseTheDeal.MatchMode
             }
         }
 
-        /// <summary>A loose briefcase: sent back if it has left the buildings, plaza and skybridges for long enough; otherwise where it is is kept up to date.</summary>
         void StepLoose(Briefcase briefcase, uint tick)
         {
             Vector3 position = briefcase.Position;
             Arena.Classify(position, Profile.OutsideMargin, out bool sunk, out byte place, out byte paddedPlace, out int floor, out bool onSurface);
             if (place == MatchArena.Outside && !sunk)
-                place = paddedPlace; // Lying on a sill still counts as that building.
+                place = paddedPlace; // Sills count as inside that building.
 
             briefcase.StrayTicks = place == MatchArena.Outside ? briefcase.StrayTicks + 1 : 0;
             if (sunk || briefcase.StrayTicks >= _strayTicks)
@@ -215,8 +194,7 @@ namespace CloseTheDeal.MatchMode
             if (place == MatchArena.Outside)
                 return;
 
-            // Knocked loose and lodged on a floor nobody may reach yet (a slab above the open
-            // floor): only a carrier could fetch it, and nobody can carry it there. Send it back.
+            // Recover loose cases resting on a locked floor above OpenFloor.
             if (floor > _match.OpenFloor && onSurface && briefcase.Resting)
             {
                 _match.ServerBeginReturn(tick);
@@ -226,9 +204,6 @@ namespace CloseTheDeal.MatchMode
             _match.ServerTrackBriefcase(place, floor);
         }
 
-        // ---- The result ----------------------------------------------------------------------
-
-        /// <summary>The roof ends the match at once; otherwise the clock does when it runs out.</summary>
         void Decide(uint tick)
         {
             if (_roofWinner != MatchDirector.NoFirm)

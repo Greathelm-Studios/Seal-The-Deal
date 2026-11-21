@@ -3,16 +3,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Player
 {
-    /// <summary>
-    /// Local-only first-person camera. Sits at the owning player's eye on their smoothed
-    /// visual, so it never steps between ticks. Leaning slides it sideways and tilts it, and
-    /// a wall beside the head stops the slide before the view clips through. Crouching lowers
-    /// it, a landing dips it and speed widens it. Supplies the yaw the player faces and the
-    /// aim direction weapons fire along. Look only applies while the mouse is captured; the
-    /// game menu decides that. Nothing here is networked: lean and crouch are predicted state
-    /// on PlayerMotor, and this only shows them. Look speeds and limits are designer tuning on
-    /// the player's MovementProfile, not on this component, so every scene's camera agrees.
-    /// </summary>
+    /// <summary>Local-only first-person camera following the owning player's eye, lean, crouch, and body-view head smoothing.</summary>
     [RequireComponent(typeof(Camera))]
     public sealed partial class PlayerCamera : MonoBehaviour
     {
@@ -46,10 +37,7 @@ namespace CloseTheDeal.Player
         float _authoredNear;
         Vector3 _headOffset;
 
-        /// <summary>Height of the eyes above the head bone, metres, on the 1.8 m character: the bone sits at the top of the neck.</summary>
         const float HeadBoneToEyes = 0.09f;
-
-        /// <summary>Near clip distance while in the body view, metres. The player's own shoulders and arms are within the usual near distance of the eye.</summary>
         const float BodyViewNear = 0.03f;
 
         /// <summary>Direction the player faces, in degrees around the vertical axis.</summary>
@@ -78,23 +66,7 @@ namespace CloseTheDeal.Player
                 Instance = null;
         }
 
-        /// <summary>
-        /// Switches to the body view: the eye follows the body's real head instead of sitting
-        /// on a fixed point, so the player looks out of their own body.
-        /// </summary>
-        /// <param name="headBone">The character's head bone.</param>
-        /// <param name="follow">Share of the head's quick movement (step bob, a hit's jolt) the eye takes, 0 to 1. 0 = none of it.</param>
-        /// <param name="smoothSeconds">How long the eye takes to settle onto where the head has moved to, seconds. Higher = steadier and laggier.</param>
-        /// <param name="forward">How far in front of the head bone the eye sits, metres: the face, so the collar and shoulders are behind it.</param>
-        /// <param name="maxOffset">The most quick movement the eye may take, metres, before the share is applied.</param>
-        /// <remarks>
-        /// WHY the eye is not simply parented to the head bone: the head bobs with every step,
-        /// leads turns and is thrown about by hits, and a camera that does all of that makes
-        /// people feel sick. The view's direction always comes from the mouse alone. The eye's
-        /// position follows the head fully but slowly, and only a capped share of anything
-        /// quick. The first version followed a third of everything; in a sprint the body then
-        /// leaned 30 cm ahead of the eye and the player saw the back of their own head.
-        /// </remarks>
+        /// <summary>Switches to body view so the eye smoothly tracks the real head bone (see PLAYER_MOVEMENT.md).</summary>
         public void SetBodyView(Transform headBone, float follow, float smoothSeconds, float forward, float maxOffset)
         {
             _headBone = headBone;
@@ -207,17 +179,12 @@ namespace CloseTheDeal.Player
             _camera.fieldOfView = Mathf.MoveTowards(_camera.fieldOfView, _restFov + widen, profile.SpeedFovRate * dt);
         }
 
-        /// <summary>
-        /// The mouse turns the view by how far it moved; the stick turns it at a speed, with
-        /// small pushes kept slow for fine aim. Both read as nothing while the menu is open.
-        /// </summary>
-        /// <summary>Tells the settings screen that look sensitivity, invert and stick speed are applied here, so it shows those rows.</summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void HookPrefs() => InputPrefs.LookHooked = true;
 
         void Look(MovementProfile profile, float dt)
         {
-            // The player's own preferences multiply the designer's values; the profile is never written.
+            // Player preferences scale designer values; never mutate the profile asset.
             Vector2 mouse = _input.LookDelta * (profile.MouseSensitivity * InputPrefs.LookSensitivity);
             Vector2 stick = _input.LookStick;
             if (InputPrefs.InvertY)
@@ -235,7 +202,6 @@ namespace CloseTheDeal.Player
             _pitch = Mathf.Clamp(pitch, -profile.LookUpLimit, profile.LookDownLimit);
         }
 
-        /// <summary>Extra turn speed once the stick has sat at the left or right edge a moment, building up over the ramp time.</summary>
         float TurnBoost(MovementProfile profile, float stickX, float dt)
         {
             _edgeHeld = Mathf.Abs(stickX) >= StickEdge ? _edgeHeld + dt : 0f;
@@ -243,7 +209,6 @@ namespace CloseTheDeal.Player
             return profile.StickTurnBoost * Mathf.Clamp01(built);
         }
 
-        /// <summary>Roll while sliding, away from the slide's sideways drift, so a slide reads as weight without moving the crosshair.</summary>
         float SlideRoll(MovementProfile profile, float dt)
         {
             PlayerAnimState state = _motor.AnimState;

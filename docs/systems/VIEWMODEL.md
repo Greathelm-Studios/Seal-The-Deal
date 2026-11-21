@@ -1,19 +1,6 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Fable 5.2 (Claude Code)
-  Generated : 2026-11-13
-  Prompt    : Alex: "set up an fps viewmodel with the characters model we are using"
-  Modified  : Claude Fable 5.2, 2026-11-13 — second pass. Alex found the first version
-              "glitchy" and asked to "steal the viewmodel framing and posing from the
-              norsefps project", then that the hand "doesnt wrap around the gun well".
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : The owning doc for the first-person arm and held weapon (AGENTS.md §7): what
-              the player sees, who owns it, where the files are, how to tune it, what is
-              unchecked.
--->
 # Viewmodel (first-person arm)
 
-**Status:** Current (slice 1 of the weapon work, third pass, plus 2026-11-21 F5 body-view polish: the F5 body view now carries fire kick, reload, sprint carry, climb drop, look lag, smoothed asymmetric ragdoll swing, crosshair keep-out cushioning, and left-arm sightline deflection. Still awaiting human play-feel review) · **Last updated:** 2026-11-21
+**Status:** Current (slice 1 of the weapon work, third pass, plus 2026-11-21 true-POV body-view polish: the body view now carries fire kick, reload, sprint carry, climb drop, look lag, smoothed asymmetric ragdoll swing, crosshair keep-out cushioning, and left-arm sightline deflection, and the old separate `ViewmodelCamera` overlay pass has been removed. Still awaiting human play-feel review) · **Last updated:** 2026-11-21
 
 In first person you see your own character's right arm, in the same suit and the same toon shading, holding a pistol one-handed to the right of the crosshair.
 
@@ -34,8 +21,8 @@ In first person you see your own character's right arm, in the same suit and the
 
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
-| The arm, the held pistol, sway, bob, kick and reload move | Each client, for the player it controls | Nothing | — |
-| The body's gun arm and the pistol in its hand | Each client, for every player it shows | Nothing new: it reads the aim direction already inside each tick's input | — |
+| The arm, the held pistol, sway, bob, kick and reload move | Each client, for the player it controls | Nothing | None |
+| The body's gun arm and the pistol in its hand | Each client, for every player it shows | Nothing new: it reads the aim direction already inside each tick's input | None |
 
 Nothing reads either arm back, so it cannot desync and costs no bandwidth. The body's arm points along `PlayerMotor.AimDirection`, which every machine fills from the input each tick runs on (the owner's own, the one the host receives, the one other clients are forwarded). Firing, ammunition, pickups and what other players see in the hand are separate, host-owned work (slices 2 to 4, and Adam's shooting and pickups lanes).
 
@@ -43,21 +30,19 @@ Nothing reads either arm back, so it cannot desync and costs no bandwidth. The b
 
 The approach is the NorseFPS project's: **the gun is placed, and the arm follows it.**
 
-1. `PlayerViewmodel` decides where the gun is this frame: the framing from the profile, plus look lag, movement weight, walk bob, sprint carry, climb drop, breathing, fire kick and the reload dip. Movement weight is measured from how the camera itself moved since the last frame, fed through a spring, so it needs nothing from the movement code beyond the state it already publishes. It runs after `PlayerCamera` each frame so it reads this frame's view.
-2. `ViewmodelArms` then slides the skeleton so the right shoulder sits on a fixed point below and right of the eye, bends the elbow so the wrist lands on the `GripHand` target on the gun (a two-bone solve ported from NorseFPS), turns the hand to that target, and closes each finger round the grip from an open hand.
-3. Held in one hand, the left arm is shrunk to nothing. Held in both, it is solved the same way onto a second seat on the gun, `GripSupport`.
+1. `PlayerViewmodel` (execution order `50`, after `PlayerCamera` at `0`) computes look lag, lean counter-roll, sprint carry, climb drop, fire kick, and reload motion into `BodyViewMotionOffset` and `BodyViewMotionRotation`.
+2. `PlayerHeldWeapon` (execution order `105`, after `PlayerAnimator` at `100` and before `PlayerRagdoll` at `110`) bends the body's right arm onto the aimed grip using `HandGrip` (and the left arm onto `GripSupport` when two-handed) so the ragdoll chases that aimed pose.
+3. `HeldWeaponSettle` (execution order `115`, after `PlayerRagdoll` at `110`) runs `PlayerHeldWeapon.Hold(true)` a second time each frame. Unity runs each component once per frame at its own execution order, so a second component is what lets the arm hold bracket `PlayerRagdoll`: the steady sag under gravity (`_restOffset`, `_restTurn`) is stripped out while movement swing (`BodyViewArmSwing` for the owner, `BodyArmSwing` for others) is kept, clamped, and re-applied.
 
-**Hands.** Each arm is a `HandGrip` with a side (left or right); a left hand is the right hand's solve mirrored. What is held says where each hand sits: a main seat (`GripHand`, the right hand) and an optional support seat (`GripSupport`, the left). A weapon with no support seat is one-handed. `PlayerViewmodel.TwoHanded` says which hold is in use; weapon code sets it when the held weapon changes. It is local to each machine: nothing sends it, and it belongs with whatever syncs which weapon a player holds.
+**Why `HandGrip` uses an analytic two-bone solve:** `PlayerAnimator` clears the humanoid avatar on frame 1 (because generic clips are written directly to the rig), so Humanoid IK is unavailable at runtime and Animation Rigging is avoided as an extra dependency. `HandGrip` is a plain `[Serializable]` class (not a component) so whichever component owns the skeleton controls exact frame timing. `Bind` reads the T-pose open hand at `Start` before the avatar is cleared; `EnsureCurledHand` caches baked finger quaternions (`Side = +1` right, `-1` left) and skips finger curling for remote players beyond `12 m`.
 
-**The body follows the view.** `PlayerViewmodel` gives every player's body a `PlayerHeldWeapon` at spawn. It reads the weapon model, the hand's seat on it, the finger curls and the elbow swing from the first-person arms prefab, and the gun's place in front of the eye from the same profile, so there is one set of numbers: retune the view and the body follows. Each frame it bends the body's right arm onto that grip twice: once before the ragdoll, exactly, so the ragdoll's arm is trying to hold the gun out; and once after it, reading how far the ragdoll left the hand and the gun from that aimed pose. The part of that gap that stays put (the arm's sag under its own weight) is taken out, so at rest the arm is straight and the gun is on the aim; the part that changes (the lag, swing and bounce from moving) is kept and multiplied (**Body arm swing**). The body's gun is also held a fixed 6 cm further out along the aim than the view's (**Body gun forward**), because the body's real shoulder is nearer the gun than the one the view pretends to have and the elbow would otherwise hang bent. The elbow itself is pinned: both passes hang it down and a little out relative to the aim, so the arm keeps one shape while the torso sways and only the hand moves, by the small limited swing. The bending is `HandGrip`, the same code the first-person arm uses.
+**The body follows the view.** `PlayerViewmodel` gives every player's body a `PlayerHeldWeapon` at spawn (`Attach`, rather than baking it onto `Player.prefab`, which is shared across lanes). It reads the weapon model, the hand's seat on it, the finger curls, and the elbow swing from `ViewmodelArms.prefab`, and the gun's place in front of the eye from `ViewmodelProfile`. Weapon copies are parented directly to `_grip.Hand` (scaled by `hold.Model.lossyScale / boneScale` to undo rig scale) so the gun rides with the ragdoll between passes, and seated at `_grip.Hand.position - gunRotation * _gripPosition` so the weapon never floats if steep aim puts the target out of reach. The body's gun is also held `6 cm` further out along the aim in third person (`BodyGunForward`), because the body's real shoulder is nearer the gun than the view's shoulder. Both passes pin the elbow hint (`ElbowSide = (0.45, -1, 0)` in third person, `BodyViewElbowSide = (0.85, -1, -0.15)` in first-person body view) so the arm keeps one shape while the torso sways.
 
 So the hand cannot drift off the gun, whatever moves it. The first pass did the reverse (played a full-body pistol clip and hung the gun off the hand bone); seen from the eye that clip's arms filled the screen and its loose hand did not fit this gun.
 
 ## How it is drawn
 
-The arm is a second camera stacked on the player's camera. It draws only the `Viewmodel` layer (layer 8), after the world, with its own depth, so the world cannot cut into it; it also has its own field of view and a 1 cm near distance (the world camera's is 30 cm).
-Just before any camera renders, the arm is switched off unless that camera is its own. That keeps it out of the dev mirror, the Scene view and any later spectator camera without touching those cameras' layer lists.
-The camera and the arm exist only while that player is the local one. The player's camera gets one entry added to its camera stack at spawn and removed afterwards.
+The local player looks straight out of the real character body through the main camera (no separate `ViewmodelCamera` overlay pass). `PlayerViewmodel.OnBeginCameraRendering` writes a world-space sphere `_BodyViewHeadSphere` centred on `_head.position + _head.up * 0.155` (radius `BodyViewHeadClip` = `0.20 m`) for the owner's camera so the character and eye-card shaders clip the head, hair, and eye cards without cutting into the shoulders or sleeves, and clears `_BodyViewHeadSphere` to zero for mirrors, shadows, and every other camera. `ViewmodelArms.prefab` remains as the weapon/grip template asset read at spawn (`GreyboxViewmodelSetup` cuts arm meshes in Unity rather than Blender to preserve weights, bind poses, and outline normals without Blender's 100x scale trap, keeping `updateWhenOffscreen = true` and `AlwaysAnimate` so whole-body bounds never cull the arms).
 
 ## Files
 
@@ -167,7 +152,7 @@ Still rough, and for a person to judge: looking straight down shows the chest, s
 - **The body's gun arm has been seen in stills and measured, not watched moving, so how the flipping reads is unjudged.** Seen in play as host on 2026-11-14 from the side and the front, aiming level, 35 degrees up and 40 down, and the owner's own view was checked for a second gun (there is none); strafing and a jump were measured, not watched. Leaning, a knock-back and **another client's view of it** are unchecked; the aim other clients see comes from forwarded input and has not been watched.
 - **The body's gun is further out than the view's, and moves a little off the aim when moving.** Standing, measured in play as host: the hand is steady to about 2 cm, about 6 cm further forward than the view's point (the straighter arm), and the muzzle is 3 degrees off the aim, which is the gun's own resting turn. Moving, the hand is held within 4 cm sideways, 7 cm up or down and 6 cm forward or back of the aimed spot and the muzzle within 12 degrees; measured in play as host with the elbow pinned and the hand anchored to the eye, a hard left-right strafe moved the hand 9 cm at most and a jump 8 cm, with the muzzle within 15 degrees. The elbow still moves about 13 cm in a strafe, because the shoulder it hangs from sways with the torso; its direction is fixed. Before the hand was anchored to the eye it was measured from the ragdoll's shoulder and was dragged 21 cm about whatever the limits were. They exist because nothing checks the arm's final pose against the level, so a wide swing puts the gun through walls. What was tried and rejected by Harvey: fully pinned (the wrist hung dead still while the elbow flopped round it), partly pinned (sagged 6 cm, 13 degrees off at rest), and a swing of 1.5 capped at 30 cm and 50 degrees, then 0.6 at 15 cm and 25 degrees (both swung too far out).
 - **The body's gun arm is added at spawn, not on Player.prefab.** The prefab has been edited by hand, so the greybox tool leaves it alone, and it is claimed on the workboard. If the prefab is ever rebuilt by the tool, this can move onto it.
-- **Other players' views of the body show no kick, reload, sway or bob** (only the owner's F5 body view carries kick, reload, sprint, climb, and look lag), and fidgets that use the right arm are overridden while the gun is held.
+- **Other players' views of the body show no kick, reload, sway or bob** (only the owner's body view carries kick, reload, sprint, climb, and look lag), and fidgets that use the right arm are overridden while the gun is held.
 - **The motion's feel is not judged by a person.** The third pass was seen in Play Mode as host in still frames (standing, mid-jump, landed). Sprint carry, strafe tilt, the lean, the climb drop, the kick and the reload were not looked at in this pass, and nothing was seen from a joining client (the arm is local-only, so it should not differ).
 - **What made the first pass "glitchy" was not pinned down** beyond the reversed posing described above. One real cause of roughness was found and fixed in the third pass: the step bob had a hard corner at the top of every step.
 - **Crouch and slide have no gun motion.** They are on Adam's movement lane's branch, not here; when they merge, the gun will still trail the camera's drop but has no pose of its own for them.
@@ -184,5 +169,5 @@ Still rough, and for a person to judge: looking straight down shows the chest, s
 - **The reload is a gun move, not a hand animation**: no magazine leaves the gun and the left hand never appears.
 - **The pistol uses the materials Unity made from its FBX** (plain lit, not the toon shader), so it has no outline.
 - **Layer 8 is now `Viewmodel`.** A branch that names layer 8 something else will clash on `ProjectSettings/TagManager.asset`.
-- **Cost is unmeasured.** One extra camera pass over three small skinned meshes and the pistol, for the local player only.
+- **Cost is unmeasured.** True POV uses no extra camera pass; runtime cost is the two-pass arm solve (`PlayerHeldWeapon` + `HeldWeaponSettle`) and head-clip shader check.
 - **The cut sleeve is open at the shoulder.** Not visible from the eye at the default framing; a shoulder position further forward would show it.

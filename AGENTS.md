@@ -126,12 +126,20 @@ Docs are the source of truth.
 
 - [docs/GDD.md](docs/GDD.md) owns design: the loop, the buildings, weapons, v1 scope, roadmap and open questions. Only the owner changes design; ask about an undecided rule rather than inventing one.
 - One current doc per system in `docs/systems/` (created when a system first needs one), named `SCREAMING_SNAKE.md`. It opens with **Status:** (Current / Target / Archived), **Last updated:**, and a few lines on what the player sees.
+- [docs/FEATURES.md](docs/FEATURES.md) is the master feature tracker and documentation index. Update its row (status, verification state, doc link, open gaps) whenever a feature lands, changes state, or is verified in play.
 - Plans, briefs and handovers are temporary. When work lands or is dropped, move them to `docs/archive/` in the same commit with a one-line outcome.
 - Label planned architecture as **Target**. Never present future state as current fact.
 - **Update the owning doc in the same change** whenever behaviour, architecture, data contracts, setup or limitations change. If no doc change is needed, conclude that deliberately.
 - Replace stale text; don't append corrections. Link rather than duplicate.
 - **If doc and code disagree, report it immediately** and say which side appears authoritative. Never work around a mismatch silently.
 - Do not claim files, checks, tests or behaviour exist unless confirmed in the repo.
+
+### Code comments and no AI stamps
+
+- **Never add AI provenance headers or tool stamps** to any file: no `AI-GENERATED SOURCE FILE`, `Generator:`, `Prompt:`, `Modified: Claude/Codex`, or `Reviewed: NOT YET REVIEWED` blocks in code, shaders, scripts, or docs.
+- **Put rationale in docs, not in code essays.** Multi-paragraph `/// <remarks>`, `WHY ...` novels, and design history belong in the owning `docs/systems/<SYSTEM>.md`, never inside `.cs` or `.shader` files.
+- **Keep code comments minimal and high-signal.** Keep Inspector `[Tooltip]` and `[Header]` attributes (§5), short 1-line `/// <summary>` tags on public APIs where helpful, concise fork-patch markers in `FishySteamworks` (`// Fork patch: ... (see FORK.md)`), and brief 1-line inline comments only where they guard a non-obvious engine/runtime trap, execution-order dependency, thread-safety invariant, or temporary workaround (§8).
+- **Do not write redundant comments**: no comments restating what the next line does, no summaries on private fields/constants/methods, and no decorative section dividers (`// ---- ... ----`).
 
 ## 8. Validation and root cause
 
@@ -183,7 +191,7 @@ Everything of ours lives under `Assets/_Project/`. Update this section when it c
 - Third-party packs and plugins stay where they import (`Assets/Plugins/`, vendor folders). Never edit vendor code in place; wrap it. FishNet and Steamworks.NET are Package Manager packages.
 - Forked vendor code: `Assets/_Project/Plugins/FishySteamworks/` (the Steam transport, unmaintained upstream). Its `FORK.md` lists every change from upstream; add to that list with any further patch, and mark the code site.
 - The one-off editor script [PackageInstaller.cs](Assets/_Project/Editor/ProjectBootstrap/PackageInstaller.cs) is how the pinned netcode packages were added; it only runs when invoked from the shell and is kept so a future package change follows the same route.
-- Docs: `docs/` (design), `docs/systems/` (per-system), `docs/notes/` and the boards in §12 (shared knowledge), `docs/archive/` (spent plans).
+- Docs: `docs/` (design, plus [docs/FEATURES.md](docs/FEATURES.md) for feature status and doc tracking), `docs/systems/` (per-system, including [OFFICE_LOOK.md](docs/systems/OFFICE_LOOK.md)), `docs/notes/` and the boards in §12 (shared knowledge), `docs/archive/` (spent plans).
 
 ## 11. Compile check
 

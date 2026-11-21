@@ -1,15 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-15
-#  Prompt    : Alex: put the props (and later the kit) on one Painter trim sheet
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : After the skill's trim-mode unwrap, merges every material that has a band on the trim sheet into one
-#              material, Trim_Aero, so a prop draws with one opaque material (plus Glass_Frosted where it has frost).
-#              The alternative, keeping the semantic materials and giving each the sheet, would keep the extra draw
-#              calls the sheet exists to remove.
-#  Run       : blender -b <unwrapped>.blend --factory-startup -P apply_trim.py -- <out.blend>
-# -----------------------------------------------------------------------------
 import json
 import os
 import sys

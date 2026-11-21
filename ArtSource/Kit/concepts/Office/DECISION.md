@@ -1,12 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-12
-  Prompt    : Alex picked "White Trays + Portal" from the office concepts
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Records which office direction Alex approved and how each concept move maps to kit pieces,
-              so the kit, the README and later room sets answer to one written decision, not to a chat.
--->
 # Office direction — decision
 
 **2026-11-12 · Alex:** build the kit to **01 White Trays + 02 Cobalt Portal**: White Trays for the façade, walls, glass and ceiling, with Cobalt Portal's cobalt frame on the spine wall behind the stair. Luminous Grid is not taken.

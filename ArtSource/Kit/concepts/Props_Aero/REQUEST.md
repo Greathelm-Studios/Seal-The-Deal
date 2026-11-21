@@ -1,13 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-15
-  Prompt    : Alex: "building up the office assets, cuz rn they look very bland and roblox like and blockouty, i want
-              the assets to match the frutiger aero and gen x soft club 2000s office corporate vibe we got goin!"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Brief to Codex for prop concept sheets, so the furniture and props are agreed with Alex as pictures
-              before they are remodelled in Blender (props_aero.py). Walls, floors and stairs are not in scope.
--->
 # Office props, Aero / Soft Club — request to Codex
 
 **From:** Alex (environment artist), drafted by Claude · **Date:** 2026-11-15 · **Status:** Waiting for Codex

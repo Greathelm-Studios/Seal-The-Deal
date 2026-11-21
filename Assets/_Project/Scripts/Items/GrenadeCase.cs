@@ -8,12 +8,7 @@ using UnityEngine.Events;
 
 namespace CloseTheDeal.Items
 {
-    /// <summary>
-    /// The grenade case: pick it up, arm it, throw it. It beeps faster and faster and then
-    /// explodes wherever it is, the armer's hands included. The host owns the fuse and the
-    /// explosion; everyone else is told the tick it goes off and beeps along locally.
-    /// Not the objective briefcase: see docs/systems/ITEMS.md for how the two are told apart.
-    /// </summary>
+    /// <summary>Host-fused explosive gadget with local countdown beeps and blast flash. Design: docs/systems/ITEMS.md.</summary>
     public sealed class GrenadeCase : ItemBehaviour
     {
         [Tooltip("Fuse length, damage and the blast that throws players and furniture. Read at runtime, never written.")]
@@ -47,7 +42,6 @@ namespace CloseTheDeal.Items
         static readonly Color LightOn = new(1f, 0.15f, 0.1f);
         static readonly Color LightOff = new(0.25f, 0.03f, 0.02f);
 
-        /// <summary>The tick the case goes off. 0 while it is not armed.</summary>
         readonly SyncVar<uint> _detonateTick = new();
 
         MaterialPropertyBlock _block;
@@ -141,8 +135,6 @@ namespace CloseTheDeal.Items
                 TimeManager.OnTick -= ServerTick;
         }
 
-        // ---- Host ----------------------------------------------------------------------------
-
         public override void ServerUse(ItemCarrier user)
         {
             if (IsArmed)
@@ -193,8 +185,6 @@ namespace CloseTheDeal.Items
 
         static readonly Collider[] KnockBuffer = new Collider[64];
 
-        // ---- Every machine -------------------------------------------------------------------
-
         void OnDetonateTickChanged(uint previous, uint next, bool asServer)
         {
             // On the host this runs twice, as server then as client: answer once.
@@ -232,7 +222,6 @@ namespace CloseTheDeal.Items
             _onExploded.Invoke();
         }
 
-        /// <summary>Runs only while armed or flashing. Beeps speed up as the fuse runs down.</summary>
         void Update()
         {
             float dt = Time.deltaTime;
@@ -274,7 +263,6 @@ namespace CloseTheDeal.Items
             _onBeep.Invoke();
         }
 
-        /// <summary>This case's own clip, else the shared set's. Null plays nothing.</summary>
         static AudioClip Pick(AudioClip own, AudioClip shared) => own != null ? own : shared;
 
         void ShowLight(bool on)
@@ -288,7 +276,6 @@ namespace CloseTheDeal.Items
             _light.SetPropertyBlock(_block);
         }
 
-        /// <summary>The flash grows to the blast's size where it went off, whatever the case itself is doing by then.</summary>
         void StepFlash(float dt)
         {
             _flashLeft -= dt;

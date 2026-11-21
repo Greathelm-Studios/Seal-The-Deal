@@ -4,18 +4,8 @@ using UnityEngine;
 
 namespace CloseTheDeal.Items
 {
-    /// <summary>
-    /// Slows one player's walking, sprinting and jumping while they carry something heavy.
-    /// The designer's movement profile is never written (AGENTS.md §4): this keeps a runtime
-    /// copy with the slower numbers and hands the motor that copy while the load lasts, then
-    /// the authored profile back. Because the motor itself reads the slower numbers, the
-    /// owner's prediction and the host agree on them.
-    ///
-    /// WORKAROUND (AGENTS.md §8): PlayerMotor has no public way to take a different profile,
-    /// and this lane may not edit it, so the copy is swapped in through its private field.
-    /// The real fix is one public method on PlayerMotor that accepts a profile override;
-    /// when that exists, Set and Clear call it and the reflection goes. Listed in ITEMS.md.
-    /// </summary>
+    /// <summary>Applies carry slowdown via a runtime copy of MovementProfile without mutating the authored asset.</summary>
+    // WORKAROUND (AGENTS.md §8): swaps PlayerMotor's private _profile field via reflection until a public override method exists.
     public sealed class MotorSpeedOverride
     {
         const string ProfileFieldName = "_profile";

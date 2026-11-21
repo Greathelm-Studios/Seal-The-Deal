@@ -7,15 +7,7 @@ using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Glass
 {
-    /// <summary>
-    /// The host's record of which panes of glass are broken, and the one networked part of
-    /// glass. Panes are plain local objects (the towers are built on every machine from the
-    /// seed), so each gets a number that comes out the same everywhere: scene panes by their
-    /// order in the scene, tower panes by building, floor and order on the floor. The host
-    /// adds a pane's number to a synced set when it breaks; every machine hides its own copy
-    /// and throws its own shards. A player who joins later receives the whole set and sees
-    /// the same holes, without the shards. One per scene. Design: docs/systems/GLASS.md.
-    /// </summary>
+    /// <summary>Host-authoritative registry of broken glass panes, synced via deterministic pane IDs.</summary>
     [DisallowMultipleComponent]
     public sealed class GlassRegistry : NetworkBehaviour
     {
@@ -63,8 +55,6 @@ namespace CloseTheDeal.Glass
 
         /// <summary>How many panes the host has recorded as broken.</summary>
         public int BrokenCount => _brokenIds.Count;
-
-        // ---- Lifecycle -----------------------------------------------------------------------
 
         void Awake()
         {
@@ -129,9 +119,7 @@ namespace CloseTheDeal.Glass
                 Apply(entry, false);
         }
 
-        // ---- Breaking (host) -----------------------------------------------------------------
-
-        /// <summary>Host only. Breaks a pane for everyone. direction is which way whatever broke it was travelling.</summary>
+        /// <summary>Host only. Breaks a pane for everyone.</summary>
         public void RequestBreak(GlassPane pane, Vector3 direction)
         {
             // Only a pane this registry numbered: an unnumbered one still carries number 0, which belongs to another pane.
@@ -191,9 +179,6 @@ namespace CloseTheDeal.Glass
             }
         }
 
-        // ---- Numbering panes -----------------------------------------------------------------
-
-        /// <summary>Panes placed in the scene itself, numbered in scene order. Anything under a networked object is skipped: it is built or spawned later.</summary>
         void IndexScene()
         {
             Scene scene = gameObject.scene;

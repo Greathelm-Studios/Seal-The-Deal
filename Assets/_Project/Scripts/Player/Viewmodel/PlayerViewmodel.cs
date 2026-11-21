@@ -1,70 +1,28 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-13
-//  Modified  : 2026-11-21 — removed the old separate-camera viewmodel arms and F5
-//              toggle; true POV (looking out of the real body) is now the only
-//              first-person view, with the head hidden from the owner's camera by a
-//              world-space sphere glued to the head bone.
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : Sits on the player prefab. Attaches PlayerHeldWeapon to every player's
-//              body, drives the local player's true-POV camera and head-clip sphere,
-//              and supplies look lag, sprint carry, climb drop, fire kick, and reload
-//              motion to the body's held weapon.
-// -----------------------------------------------------------------------------
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
 namespace CloseTheDeal.Player
 {
-    /// <summary>
-    /// Drives the local player's true-POV body view and held-weapon motion, and attaches
-    /// <see cref="PlayerHeldWeapon"/> to every player's body.
-    /// </summary>
-    /// <remarks>
-    /// <para><b>Ownership (AGENTS.md §3):</b> local to each client. Nothing is synced and
-    /// nothing reads the pose back; other players see the full third-person body.</para>
-    /// <para><b>Hiding the owner's head:</b> before the owner's camera renders, this sets a
-    /// world-space sphere (<c>_BodyViewHeadSphere</c>) centred on the real head bone so the
-    /// character and eye-card shaders clip the head, hair and eyes for that camera only.
-    /// Every other camera (mirrors, shadows, other players) receives zero and draws the full head.</para>
-    /// <para><b>Driving it:</b> weapon code calls <see cref="Equip"/> when the held weapon
-    /// changes (on every machine), <see cref="Fire"/> for a shot and <see cref="Reload"/> /
-    /// <see cref="CancelReload"/>, and sets <see cref="Driven"/>.</para>
-    /// </remarks>
+    /// <summary>Drives the local player's true-POV body view, head-clip sphere, and held-weapon motion, and attaches <see cref="PlayerHeldWeapon"/> to every player body.</summary>
     [DisallowMultipleComponent]
-    // WHY: look lag and lean counter-roll read PlayerCamera (order 0) this frame;
-    // PlayerHeldWeapon (order 105) reads BodyViewMotionOffset/Rotation right after.
+    // Runs after PlayerCamera (0) and before PlayerAnimator (100) / PlayerHeldWeapon (105).
     [DefaultExecutionOrder(PlaceOrder)]
     public sealed class PlayerViewmodel : MonoBehaviour
     {
-        /// <summary>After PlayerCamera (0), before PlayerAnimator (100) and PlayerHeldWeapon (105).</summary>
         const int PlaceOrder = 50;
-
-        /// <summary>Height of the head-clip sphere centre above the head bone (top of neck), in metres. High enough that the sphere covers skull and hair without reaching down into the shoulders or upper arms.</summary>
         const float HeadClipCenterUp = 0.155f;
 
         /// <summary>Layer name kept for greybox setup and stand-in raycast mask compatibility.</summary>
         public const string LayerName = "Viewmodel";
 
-        /// <summary>How far the stand-in bullet reaches, in metres. Longer than any room in the test scenes. The host's check (<see cref="PlayerHits"/>) uses the same.</summary>
         internal const float StandInBulletRange = 100f;
-
-        /// <summary>Push a stand-in pistol bullet gives what it hits, in newton-seconds.</summary>
         internal const float StandInBulletImpulse = 20f;
-
-        /// <summary>How far the stand-in melee swing reaches from the eye, in metres.</summary>
         internal const float StandInMeleeReach = 2f;
-
-        /// <summary>Push the stand-in melee swing gives what it hits, in newton-seconds.</summary>
         internal const float StandInMeleeImpulse = 60f;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        /// <summary>Input action for the attack button, in the actions asset's Player map.</summary>
         const string AttackAction = "Player/Attack";
-
-        /// <summary>Input action for reload, in the actions asset's Player map. Missing on some branches; the R key is read then.</summary>
         const string ReloadAction = "Player/Reload";
 #endif
 
@@ -113,10 +71,7 @@ namespace CloseTheDeal.Player
         /// <summary>True while this client is running true-POV first person for this player.</summary>
         public bool IsShown => _active;
 
-        /// <summary>
-        /// Whether the weapon is held in both hands. Starts as the template prefab says.
-        /// </summary>
-        /// <remarks>Local to this machine: nothing sends it. It belongs with whatever syncs which weapon a player holds.</remarks>
+        /// <summary>Client-local two-handed grip toggle; starts from the template prefab.</summary>
         public bool TwoHanded
         {
             get => _twoHanded;
@@ -321,10 +276,6 @@ namespace CloseTheDeal.Player
             _baseCamera = null;
         }
 
-        /// <summary>
-        /// Sets the world-space head-clip sphere around the owner's real head bone for the
-        /// owner's camera only, and clears it for mirrors, shadows, and every other camera.
-        /// </summary>
         void OnBeginCameraRendering(ScriptableRenderContext context, Camera rendering)
         {
             if (_active && _head != null && rendering == _baseCamera && _profile.BodyViewHeadClip > 0f)
@@ -339,7 +290,6 @@ namespace CloseTheDeal.Player
             }
         }
 
-        /// <summary>Updates look lag, sprint carry, climb drop, fire kick, and reload motion for the body's held weapon.</summary>
         void LateUpdate()
         {
             if (!_active || _baseCamera == null || _profile == null)

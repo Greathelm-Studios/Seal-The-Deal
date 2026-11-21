@@ -2,10 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Combat
 {
-    /// <summary>
-    /// Designer-owned tuning for one gun. Runtime only reads it (AGENTS.md §4): ammo, bloom and
-    /// cooldowns live on the WeaponHolder that carries the gun. Design: docs/systems/WEAPONS.md.
-    /// </summary>
+    /// <summary>Designer-owned tuning for one weapon.</summary>
     [CreateAssetMenu(menuName = "Close the Deal/Weapon Definition", fileName = "Weapon")]
     public sealed class WeaponDefinition : ScriptableObject
     {

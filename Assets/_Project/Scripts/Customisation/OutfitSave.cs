@@ -5,15 +5,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Customisation
 {
-    /// <summary>
-    /// The player's outfit and their runs-started count, kept on this PC in one small JSON file.
-    /// Choices are stored by slot and option asset name, not by list position, so reordering or
-    /// adding options in the catalog doesn't scramble an old save. A missing, unreadable or
-    /// unknown-version file loads as the default outfit with nothing on screen; an unreadable
-    /// one is kept beside it as ".corrupt" for a bug report.
-    /// The path is Application.persistentDataPath/outfit.json, or the one given after
-    /// -outfitSave on the command line (tests use this so they never touch a real save).
-    /// </summary>
+    /// <summary>Persistent JSON outfit and runs-started store backed by BackgroundFileWriter. Design: docs/systems/CUSTOMISATION.md.</summary>
     public static class OutfitSave
     {
         /// <summary>Raise when the file layout changes, and teach Load the old one.</summary>
@@ -138,8 +130,6 @@ namespace CloseTheDeal.Customisation
             _cachedLoadout = loadout;
             _cachedRunsStarted = runsStarted;
         }
-
-        // ---- File ----------------------------------------------------------------------------
 
         static OutfitLoadout Apply(OutfitCatalog catalog, OutfitLoadout loadout, Choice choice)
         {

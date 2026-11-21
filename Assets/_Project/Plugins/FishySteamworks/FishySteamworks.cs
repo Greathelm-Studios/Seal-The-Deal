@@ -200,7 +200,7 @@ namespace FishySteamworks
             if (server)
                 return _server.GetLocalConnectionState();
 
-            // Close the Deal patch (FORK.md): report clientHost state when acting as host so callers see the host's local client state.
+            // Fork patch: report clientHost state when acting as host (see FORK.md).
             LocalConnectionState hostClientState = _clientHost.GetLocalConnectionState();
             return hostClientState != LocalConnectionState.Stopped
                 ? hostClientState

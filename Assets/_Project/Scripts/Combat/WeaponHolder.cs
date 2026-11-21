@@ -54,13 +54,7 @@ namespace CloseTheDeal.Combat
         }
     }
 
-    /// <summary>
-    /// The guns a player carries: two slots, their magazines, firing, reloading and switching.
-    /// The owner's game answers the button at once (tracer, recoil, ammo count) and tells the
-    /// host; the host checks the shot is allowed, traces it against where everyone stood when
-    /// the shooter saw them, and is the only one that deals damage or breaks glass.
-    /// Pickups call Equip and Unequip on the host. Design and ownership: docs/systems/WEAPONS.md.
-    /// </summary>
+    /// <summary>Manages two weapon slots, owner prediction, and host-authoritative firing, reloading, and validation.</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Health))]
     public sealed class WeaponHolder : NetworkBehaviour
@@ -74,8 +68,6 @@ namespace CloseTheDeal.Combat
         /// </summary>
         public static Func<WeaponHolder, bool> FireHeld;
 
-        // ---- Inspector -----------------------------------------------------------------------
-
         [Tooltip("The list of every gun in the game. Players' games name guns to each other by their place in it.")]
         [SerializeField] WeaponCatalog _catalog;
 
@@ -88,8 +80,6 @@ namespace CloseTheDeal.Combat
 
         [Tooltip("How far the shooter's eye may be from where the host has their body, in metres, before the host fires from its own position instead. Covers leaning and the shooter's own movement during lag; 2.5 allows sprinting on a 200 ms connection.")]
         [Range(0.5f, 5f)] [SerializeField] float _originTolerance = 2.5f;
-
-        // ---- Events --------------------------------------------------------------------------
 
         /// <summary>The gun in hand changed (null for empty hands), with its slot. Every machine.</summary>
         public event Action<WeaponDefinition, int> WeaponChanged;
@@ -117,8 +107,6 @@ namespace CloseTheDeal.Combat
 
         /// <summary>The host confirmed this player's shot killed someone, with where. Shooter's own game only; raised straight after HitConfirmed, for a kill sound and marker of its own.</summary>
         public event Action<Vector3> KillConfirmed;
-
-        // ---- Runtime -------------------------------------------------------------------------
 
         const int PendingLength = 64;
         const byte LongAgo = byte.MaxValue;
@@ -194,8 +182,6 @@ namespace CloseTheDeal.Combat
         int _shownAmmo = -1;
         int _shownMagazine = -1;
 
-        // ---- Read-outs -----------------------------------------------------------------------
-
         /// <summary>The slot in hand. On the owner's game this is already the slot they just switched to.</summary>
         public int ActiveSlot => IsOwner ? _localActive : _active.Value;
 
@@ -245,8 +231,6 @@ namespace CloseTheDeal.Combat
 
         /// <summary>Rounds left in the gun in hand: the host's count on the host, the owner's own running count on their game.</summary>
         public int AmmoInMagazine => IsOwner ? OwnerAmmo(_localActive) : _hostAmmo[_active.Value];
-
-        // ---- Lifecycle -----------------------------------------------------------------------
 
         void Awake()
         {
@@ -330,8 +314,6 @@ namespace CloseTheDeal.Combat
             _input = null;
         }
 
-        // ---- Pickups (host) ------------------------------------------------------------------
-
         /// <summary>
         /// Host only. Gives this player a gun with a full magazine: into the first empty slot,
         /// or over the gun in hand when both are taken. Returns false when it could not
@@ -403,8 +385,6 @@ namespace CloseTheDeal.Combat
                     Debug.LogWarning($"[Weapons] Starting gun '{loadout.Weapons[i].name}' is not in the weapon catalog; not given.");
             }
         }
-
-        // ---- The owner's buttons -------------------------------------------------------------
 
         /// <summary>Owner only. The fire button went down. One shot for a one-per-press gun; an automatic keeps firing until ReleaseTrigger.</summary>
         public void PullTrigger()
@@ -663,8 +643,6 @@ namespace CloseTheDeal.Combat
             ReloadCancelled?.Invoke();
         }
 
-        // ---- Owner's running ammo count ------------------------------------------------------
-
         /// <summary>The host's last count for a slot, less the owner's shots the host has not answered yet.</summary>
         int OwnerAmmo(int slot)
         {
@@ -716,8 +694,6 @@ namespace CloseTheDeal.Combat
 
             RefreshOwnerAmmo();
         }
-
-        // ---- Host: requests from the owner ---------------------------------------------------
 
         [ServerRpc]
         void ServerFire(byte slot, ushort seq, Vector3 origin, uint packedAim, byte ticksSince, uint viewTick, byte stance)
@@ -957,8 +933,6 @@ namespace CloseTheDeal.Combat
                 | ((ulong)_hostReloadsDone << 32);
         }
 
-        // ---- Host: messages out --------------------------------------------------------------
-
         [ObserversRpc(ExcludeOwner = true)]
         void RpcShot(Vector3 end, byte surface, Channel channel = Channel.Unreliable)
         {
@@ -980,8 +954,6 @@ namespace CloseTheDeal.Combat
             if (killed)
                 KillConfirmed?.Invoke(Vector3.zero);
         }
-
-        // ---- Death and respawn (every machine) -----------------------------------------------
 
         void OnDied(Health health, DamageInfo info)
         {
@@ -1023,8 +995,6 @@ namespace CloseTheDeal.Combat
             PushOwnerState();
         }
 
-        // ---- Synced values landing -----------------------------------------------------------
-
         void OnSlotChanged(byte previous, byte next, bool asServer)
         {
             // The host filled _weapons itself in Equip; its client-side echo adds nothing.
@@ -1063,8 +1033,6 @@ namespace CloseTheDeal.Combat
             _weapons[0] = _catalog.Get(_slot0.Value);
             _weapons[1] = _catalog.Get(_slot1.Value);
         }
-
-        // ---- Helpers -------------------------------------------------------------------------
 
         SyncVar<byte> SlotVar(int slot) => slot == 0 ? _slot0 : _slot1;
 

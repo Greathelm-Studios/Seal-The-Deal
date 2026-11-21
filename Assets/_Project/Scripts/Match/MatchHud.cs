@@ -6,15 +6,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.MatchMode
 {
-    /// <summary>
-    /// The briefcase match's in-game readout, drawn with the UI kit (plates, status line, key
-    /// hint, tokens): the clock and its cap warning, the briefcase tracker, the open-floor
-    /// ladder, the countdown, the floor-opened banner, one-off lines and refusals, the key
-    /// prompt, and a marker over the briefcase on screen (pinned to the edge when it is behind
-    /// or off screen). Text changes only on match events; motion runs on the kit's driver only
-    /// while something moves, and the marker is placed each frame from local positions (no
-    /// network). Sounds are MatchSounds'. Built by the lane setup tool. Design: MATCH.md.
-    /// </summary>
+    /// <summary>In-match HUD (clock, briefcase tracker, open-floor ladder, notices, and marker) built from the UI kit. Design: docs/systems/MATCH.md.</summary>
     public sealed class MatchHud : MonoBehaviour, IUiAnimated
     {
         [Header("Wiring")]
@@ -77,11 +69,8 @@ namespace CloseTheDeal.MatchMode
         [Tooltip("How close to the screen's edge the briefcase marker still shows, pixels at 1080p; nearer the edge it hides (the UI kit's edge marker takes over there).")]
         [Min(0f)] [SerializeField] float _markerEdge = 48f;
 
-        /// <summary>How far the banner slides in from above, pixels at 1080p.</summary>
         const float BannerDrop = 24f;
-        /// <summary>How much bigger each countdown number starts.</summary>
         const float CountdownPop = 0.35f;
-        /// <summary>The clock plate's gentle swell once the quarter is closing, as a fraction of its size.</summary>
         const float WarnSwell = 0.04f;
 
         readonly List<Image> _rowBoxes = new();
@@ -109,8 +98,6 @@ namespace CloseTheDeal.MatchMode
         byte _ladderCaseHolder = byte.MaxValue;
         bool _clockScaled;
         bool _noticeShook;
-
-        // ---- Lifecycle ---------------------------------------------------------------------------
 
         void Awake()
         {
@@ -243,8 +230,6 @@ namespace CloseTheDeal.MatchMode
                 Say("The quarter is open. Get the briefcase onto a roof.", UiStatusKind.Info);
         }
 
-        // ---- Clock and countdown --------------------------------------------------------------------
-
         void ShowClock(int secondsLeft)
         {
             _clockText.text = FormatClock(secondsLeft);
@@ -285,8 +270,6 @@ namespace CloseTheDeal.MatchMode
             _countdownTween.Start(1f + CountdownPop, 1f, _tokens.PanelIn, _tokens.EaseOutExpo);
             WakeUp();
         }
-
-        // ---- Briefcase tracker ----------------------------------------------------------------------
 
         void OnBriefcaseChanged(BriefcaseStatus previous, BriefcaseStatus next)
         {
@@ -329,9 +312,6 @@ namespace CloseTheDeal.MatchMode
             }
         }
 
-        // ---- Open-floor ladder ----------------------------------------------------------------------
-
-        /// <summary>One row per floor, roof at the top, copied from the template row. Only when the towers change.</summary>
         void RebuildLadder()
         {
             MatchArena arena = _match.Arena;
@@ -349,7 +329,6 @@ namespace CloseTheDeal.MatchMode
             }
 
             float height = _ladderRow.sizeDelta.y;
-            // The plate grows with the tower: its header, then one row per floor.
             _ladderPlate.sizeDelta = new Vector2(_ladderPlate.sizeDelta.x, -_ladder.anchoredPosition.y + count * height + 12f);
             for (int i = 0; i < _rowBoxes.Count; i++)
             {
@@ -359,7 +338,6 @@ namespace CloseTheDeal.MatchMode
                 if (!used)
                     continue;
 
-                // Roof at the top: floor i sits (count - 1 - i) rows down.
                 row.anchoredPosition = new Vector2(0f, -(count - 1 - i) * height);
                 _rowLabels[i].text = arena.FloorLabel(i);
             }
@@ -371,10 +349,6 @@ namespace CloseTheDeal.MatchMode
             RefreshLadder();
         }
 
-        /// <summary>
-        /// Open floors filled, shut ones hollow; a square marks the briefcase's floor in its
-        /// holder's colour; your firm's checkpoint is named on its row. Shape says it as well as colour.
-        /// </summary>
         void RefreshLadder()
         {
             MatchArena arena = _match.Arena;
@@ -458,12 +432,9 @@ namespace CloseTheDeal.MatchMode
                 Say($"The rival firm reached {label}.", UiStatusKind.Info);
         }
 
-        // ---- Banner ---------------------------------------------------------------------------------
-
         void OnFloorOpened(int floor, int byFirm)
         {
             RefreshLadder();
-            // A "shut" line still showing is now wrong: let it go as the banner arrives.
             if (_showingRefusal && _noticeUntil >= 0f)
                 _noticeUntil = Time.unscaledTime;
             FirmMember local = FirmMember.Local;
@@ -473,8 +444,6 @@ namespace CloseTheDeal.MatchMode
             _bannerUntil = Time.unscaledTime + _bannerSeconds;
             WakeUp();
         }
-
-        // ---- Lines ----------------------------------------------------------------------------------
 
         void OnPickedUp(int firm)
         {
@@ -528,7 +497,6 @@ namespace CloseTheDeal.MatchMode
             }
         }
 
-        /// <summary>Shows one line on the kit's status line; a refusal gets the amber mark and the kit's shake.</summary>
         void Say(string line, UiStatusKind kind)
         {
             _noticeLine.Set(line, kind);
@@ -543,8 +511,6 @@ namespace CloseTheDeal.MatchMode
 
             WakeUp();
         }
-
-        // ---- Prompt ---------------------------------------------------------------------------------
 
         void ShowPrompt(MatchPrompt prompt)
         {
@@ -561,13 +527,6 @@ namespace CloseTheDeal.MatchMode
             }
         }
 
-        // ---- Marker (local, per frame while shown) --------------------------------------------------
-
-        /// <summary>
-        /// A square over the briefcase on screen, pinned to the edge when the case is off screen
-        /// or behind. Hidden from the carrier, while it is away, and when the match isn't live.
-        /// Pure local projection: nothing is read from the network here.
-        /// </summary>
         void LateUpdate()
         {
             Briefcase briefcase = Briefcase.Current;
@@ -615,7 +574,6 @@ namespace CloseTheDeal.MatchMode
             _edgeMarker.Track(view, briefcase.Centre + Vector3.up * 0.6f);
         }
 
-        /// <summary>Whose the case is to this player: shape and colour on the kit marker.</summary>
         static UiMarkKind MarkKind(BriefcaseStatus status)
         {
             FirmMember local = FirmMember.Local;
@@ -624,10 +582,6 @@ namespace CloseTheDeal.MatchMode
             return status.CarrierFirm == local.Firm ? UiMarkKind.Ours : UiMarkKind.Rival;
         }
 
-        /// <summary>
-        /// Over the case while it is on screen; hidden when it is off screen or behind. The edge
-        /// pin for an off-screen case is the UI kit's shared edge marker (lane 5), not built here.
-        /// </summary>
         void PlaceMarker(Briefcase briefcase, Camera view)
         {
             Vector3 screen = view.WorldToScreenPoint(briefcase.Centre + Vector3.up * 0.6f);
@@ -645,8 +599,6 @@ namespace CloseTheDeal.MatchMode
             RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, screen, _uiCamera, out Vector2 local);
             _marker.position = _canvasRect.TransformPoint(local);
         }
-
-        // ---- Motion ---------------------------------------------------------------------------------
 
         void WakeUp()
         {

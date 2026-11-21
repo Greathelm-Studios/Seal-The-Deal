@@ -54,22 +54,7 @@ namespace CloseTheDeal.Net
         Connected
     }
 
-    /// <summary>
-    /// Host, join and invite through Steam lobbies, then start FishNet on top.
-    /// The host creates a friends-only lobby, writes its SteamID64 and the game version into
-    /// the lobby data and starts the server. A joiner enters the lobby by accepting a Steam
-    /// invite or picking Join Game on the host in their Steam friends list, reads that ID and
-    /// connects to it through FishySteamworks. There are no lobby codes.
-    ///
-    /// Local test mode connects directly on this PC instead (FishNet's Tugboat), so an editor
-    /// and a build of the same commit can play together without two Steam accounts. It is
-    /// used when Steam is not running, when the game is launched with -local, or when forced
-    /// in the Inspector.
-    ///
-    /// Both transports sit inside a Multipass on the NetworkManager. FishNet only wires up the
-    /// transport it has when it starts, so the choice is made per connection inside Multipass
-    /// rather than by swapping transports afterwards.
-    /// </summary>
+    /// <summary>Manages Steam lobbies, rich presence, and FishNet Multipass transport selection.</summary>
     [DisallowMultipleComponent]
     public sealed class SteamLobby : MonoBehaviour
     {
@@ -95,8 +80,7 @@ namespace CloseTheDeal.Net
 
         public bool InLobby => LobbyId.IsValid();
 
-        /// <summary>Hosting, joining or joined, by either route. FishNet's client reads not-started while it is still
-        /// connecting, so a join in progress counts too.</summary>
+        /// <summary>True when hosting, joining, or joined via either transport.</summary>
         public bool IsActive => _creatingLobby || _joiningSteam || _joined || InLobby
             || (_net != null && (_net.ServerManager.Started || _net.ClientManager.Started));
 
@@ -106,10 +90,7 @@ namespace CloseTheDeal.Net
 
         public int MaxPlayers => _maxPlayers;
 
-        /// <summary>
-        /// Players in the lobby (Steam), connected to this host, or (a local client) the players this client knows of;
-        /// 0 when not in a game.
-        /// </summary>
+        /// <summary>Players in the Steam lobby or connected to this session.</summary>
         public int PlayerCount
         {
             get
@@ -160,8 +141,7 @@ namespace CloseTheDeal.Net
         /// <summary>True when Steam's overlay can open the friends list (not in the Editor or a build started outside Steam).</summary>
         public bool CanOpenFriends => !LocalMode && SteamService.IsReady && SteamUtils.IsOverlayEnabled();
 
-        /// <summary>The Steam overlay's invite dialog only exists when Steam injected its overlay, which it
-        /// does not for the Unity editor or a build started outside Steam.</summary>
+        /// <summary>True when Steam's overlay invite dialog is available.</summary>
         public bool CanInviteViaOverlay => !LocalMode && InLobby && SteamService.IsReady && SteamUtils.IsOverlayEnabled();
 
         const string HostKey = "host";
@@ -170,13 +150,11 @@ namespace CloseTheDeal.Net
         const string LocalArg = "-local";
         const string LocalAddress = "localhost";
 
-        // Rich presence: what Steam shows friends about us, and what Join Game on our name does.
         const string ConnectKey = "connect";
         const string GroupKey = "steam_player_group";
         const string GroupSizeKey = "steam_player_group_size";
         const string PresenceStatusKey = "status";
 
-        /// <summary>Steam's own connect attempt gives up after about 10 s; this is the backstop behind it.</summary>
         const float ConnectTimeoutSeconds = 15f;
 
         NetworkManager _net;
@@ -188,10 +166,7 @@ namespace CloseTheDeal.Net
         bool _connected;
         bool _leaving;
 
-        /// <summary>True between asking Steam for a lobby and its answer, so a second Host press can't ask again.</summary>
         bool _creatingLobby;
-
-        /// <summary>A lobby Steam created after the player had already left; its enter callback is ignored.</summary>
         CSteamID _abandonedLobby = CSteamID.Nil;
         CSteamID _lastLobby = CSteamID.Nil;
         bool _lastJoinLocal;
@@ -250,7 +225,6 @@ namespace CloseTheDeal.Net
             Fail(LobbyProblem.Unreachable, string.Empty, UnreachableReason(HostName()));
         }
 
-        /// <summary>Leaves the lobby before the process goes, so friends see it close at once rather than time out.</summary>
         void OnApplicationQuit()
         {
             if (!SteamService.IsReady)
@@ -286,8 +260,6 @@ namespace CloseTheDeal.Net
             _lobbyChanged?.Dispose();
             _linkChanged?.Dispose();
         }
-
-        // ---- Actions -------------------------------------------------------------------------
 
         public void Host()
         {
@@ -364,14 +336,12 @@ namespace CloseTheDeal.Net
             ProblemHost = HostName();
         }
 
-        /// <summary>Records why, then drops whatever was running with that line in the status.</summary>
         void Fail(LobbyProblem problem, string detail, string status)
         {
             SetProblem(problem, detail);
             Drop(status);
         }
 
-        /// <summary>Stops whatever is running, leaves the Steam lobby and says why.</summary>
         void Drop(string status)
         {
             if (_net == null)
@@ -404,9 +374,6 @@ namespace CloseTheDeal.Net
             OnChanged?.Invoke();
         }
 
-        // ---- Transport -----------------------------------------------------------------------
-
-        /// <summary>Points Multipass at the Steam or the local transport for everything this session does.</summary>
         bool UseTransport(bool local)
         {
             Transport transport = local
@@ -427,13 +394,10 @@ namespace CloseTheDeal.Net
             return true;
         }
 
-        /// <summary>Server on the chosen transport only, then this machine joins its own server.</summary>
         void StartHosting()
         {
             _multipass.StartConnection(true, _transportIndex);
-            // The transport applies the client cap serialized on its component when the server
-            // starts (FishySteamworks ships 4), so set it afterwards from the lobby size.
-            // FishySteamworks keeps the host's own client off its count; Tugboat counts it.
+            // FishySteamworks excludes the host client from its cap; Tugboat includes it.
             _multipass.SetMaximumClients(LocalMode ? _maxPlayers : _maxPlayers - 1, _transportIndex);
             _net.ClientManager.StartConnection();
             OnChanged?.Invoke();
@@ -449,8 +413,6 @@ namespace CloseTheDeal.Net
             _net.ClientManager.StartConnection();
             OnChanged?.Invoke();
         }
-
-        // ---- Steam callbacks -----------------------------------------------------------------
 
         void OnLobbyCreated(LobbyCreated_t cb)
         {
@@ -543,13 +505,11 @@ namespace CloseTheDeal.Net
             Status($"Connecting to {HostName()}'s game...");
         }
 
-        /// <summary>A friend accepted our invite, or picked Join Game on us, while their game was open.</summary>
         void OnJoinRequested(GameLobbyJoinRequested_t cb)
         {
             JoinLobby(cb.m_steamIDLobby);
         }
 
-        /// <summary>Join Game from our Steam profile or the friends list, carrying the connect string we published.</summary>
         void OnPresenceJoinRequested(GameRichPresenceJoinRequested_t cb)
         {
             if (TryParseConnectLobby(cb.m_rgchConnect.Split(' '), out CSteamID lobby))
@@ -596,7 +556,6 @@ namespace CloseTheDeal.Net
             OnChanged?.Invoke();
         }
 
-        /// <summary>Remembers how our link to the host ended, so the message can tell a closed game from a dropped line.</summary>
         void OnLinkChanged(SteamNetConnectionStatusChangedCallback_t cb)
         {
             if (IsHosting)
@@ -619,7 +578,6 @@ namespace CloseTheDeal.Net
             return SteamMatchmaking.GetLobbyOwner(LobbyId);
         }
 
-        /// <summary>What friends see on our name in Steam, and what Join Game there does. Rebuilt on lobby events only.</summary>
         void PublishPresence()
         {
             if (!InLobby || LocalMode)
@@ -658,7 +616,6 @@ namespace CloseTheDeal.Net
             }
         }
 
-        /// <summary>The scene-setup instruction is for the team; a shipped build says what a player can do.</summary>
         static string BrokenNetworkLine(string forTeam) =>
             Application.isEditor || Debug.isDebugBuild ? forTeam : "Unable to start the network. Restart the game.";
 
@@ -672,8 +629,6 @@ namespace CloseTheDeal.Net
         {
             return $"Unable to reach {host}'s game. They may have left. Try joining again.";
         }
-
-        // ---- FishNet -------------------------------------------------------------------------
 
         void OnClientConnectionState(ClientConnectionStateArgs args)
         {
@@ -734,9 +689,6 @@ namespace CloseTheDeal.Net
                 : "Hosting. Invite friends, or they can choose Join Game on your name in Steam.";
         }
 
-        // ---- Helpers -------------------------------------------------------------------------
-
-        /// <summary>Accepting an invite while the game is closed launches it with "+connect_lobby id".</summary>
         void JoinFromCommandLine()
         {
             if (TryParseConnectLobby(Environment.GetCommandLineArgs(), out CSteamID lobby))

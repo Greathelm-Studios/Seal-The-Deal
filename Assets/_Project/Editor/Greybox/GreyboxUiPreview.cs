@@ -6,12 +6,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Editor.Greybox
 {
-    /// <summary>
-    /// Renders the game menu and HUD to PNGs at 1920×1080 in three states (start, hosting, in
-    /// game) so the layout can be checked without entering Play Mode. Changes are made to the
-    /// open scene in memory only and never saved. Shell use (with graphics, so not -nographics):
-    ///   Unity.exe -batchmode -quit -projectPath &lt;repo&gt; -executeMethod CloseTheDeal.Editor.Greybox.GreyboxUiPreview.CaptureFromCommandLine -previewOut &lt;folder&gt;
-    /// </summary>
+    /// <summary>Headless 1080p PNG renderer for GameUI start, hosting, local, and HUD states.</summary>
     public static class GreyboxUiPreview
     {
         const string ScenePath = "Assets/_Project/Scenes/Greybox.unity";
@@ -86,8 +81,6 @@ namespace CloseTheDeal.Editor.Greybox
             Debug.Log("[UI Preview] Wrote previews to " + folder);
         }
 
-        // ---- States (mirrors what GameMenu.Refresh shows at runtime) ------------------------
-
         static void ShowStart(Transform root)
         {
             Set(root, "Menu", true);
@@ -128,8 +121,6 @@ namespace CloseTheDeal.Editor.Greybox
             Set(root, "Hud", true);
             Text(root, "Hud/NetworkReadout/Text", "Grounded  ·  6.0 m/s  ·  ping 38 ms\nHost corrections 4  ·  last 0.03 m");
         }
-
-        // ---- Helpers -------------------------------------------------------------------------
 
         static void Render(Transform root, Camera cam, RenderTexture rt, string path)
         {

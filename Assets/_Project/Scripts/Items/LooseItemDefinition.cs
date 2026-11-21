@@ -5,14 +5,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Items
 {
-    /// <summary>
-    /// Works out an item definition for a loose prop that was not given one: its name from the
-    /// prefab's name, its weight from its body's mass, how it sits in the hands from the size
-    /// of what is drawn, and how it flies from its weight and the carry profile's loose-prop
-    /// numbers. Derived at runtime, never saved (AGENTS.md §4); a hand-made definition on the
-    /// Pickup always wins. One is made per distinct prop (name, mass and size), not per copy.
-    /// Design: docs/systems/ITEMS.md, "Any loose prop".
-    /// </summary>
+    /// <summary>Derives and caches runtime ItemDefinitions for loose props without an authored asset. Design: docs/systems/ITEMS.md.</summary>
     public static class LooseItemDefinition
     {
         readonly struct DefinitionKey : IEquatable<DefinitionKey>
@@ -116,11 +109,6 @@ namespace CloseTheDeal.Items
             return d;
         }
 
-        /// <summary>
-        /// Something wider than a hand span or heavier than one hand lifts takes both hands, one
-        /// on each side at a little above half its height, palms facing in. Anything smaller is
-        /// held in the right hand from underneath, palm up.
-        /// </summary>
         static void SeatHands(ItemDefinition d, Bounds bounds, float massKg)
         {
             Vector3 c = bounds.center;

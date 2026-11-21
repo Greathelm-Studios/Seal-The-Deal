@@ -2,13 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// The reception desk. Press interact to ready up or take it back. When everyone is ready the
-    /// host instead holds interact to start the run; a quick tap still takes the host's ready
-    /// back. If a firm is empty or the firms are uneven, the first hold arms a confirm (the
-    /// prompt says why) and a second hold within a few seconds starts the run anyway, when the
-    /// lobby rules allow a short-handed start. The desk asks the host; the roster decides.
-    /// </summary>
+    /// <summary>Reception desk interactable handling ready toggles and host start/confirm holds. Design: docs/systems/LOBBY.md.</summary>
     public sealed class ReceptionDesk : LobbyInteractable
     {
         [Tooltip("The desk bell or button that dips when used. Optional; a child made for this, never a placed part of the desk.")]
@@ -126,7 +120,6 @@ namespace CloseTheDeal.Lobby
             Ring();
         }
 
-        /// <summary>A full hold: start now, or (short-handed) arm the confirm, or on the second hold start anyway.</summary>
         void StartOrArm(LobbyRoster roster)
         {
             StartState state = roster.Evaluate(out StartBlock reason);

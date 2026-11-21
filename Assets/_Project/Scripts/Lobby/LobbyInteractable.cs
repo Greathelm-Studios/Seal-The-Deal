@@ -3,11 +3,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// Something in reception a player can walk up to and use with the interact button:
-    /// the desk, a firm's sign-in stand, the fitting-room mirror. The local LobbyInteractor
-    /// picks the one the player is looking at and passes on presses, holds and releases.
-    /// </summary>
+    /// <summary>Base class for reception interactables (desk, firm stands, fitting-room mirror).</summary>
     public abstract class LobbyInteractable : MonoBehaviour
     {
         static readonly List<LobbyInteractable> _all = new();

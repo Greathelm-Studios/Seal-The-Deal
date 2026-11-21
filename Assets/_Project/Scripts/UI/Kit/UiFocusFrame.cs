@@ -4,13 +4,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The one set of focus marks on screen: a 2 px ring, four snapped corner brackets and the chevron cue to
-    /// the left of the focused control. They travel to the new control on a spring when focus moves (the
-    /// selection itself changes on the input frame), show only while the player is on keys or a pad ("hidden
-    /// focus" while the mouse is in use), breathe after a few idle seconds, and nudge at the end of a list.
-    /// Feel table §2.2 and §2.4. Lives on the kit canvas above every screen; there is one.
-    /// </summary>
+    /// <summary>Shared spring-animated focus ring, corner brackets, and chevron cue for keyboard/pad navigation.</summary>
     [AddComponentMenu("Close the Deal/UI/Focus Frame")]
     public sealed class UiFocusFrame : MonoBehaviour, IUiAnimated
     {
@@ -62,10 +56,7 @@ namespace CloseTheDeal.UI
             UiMotion.Wake(_instance);
         }
 
-        /// <summary>
-        /// Wakes the marks after a screen puts focus back by code (selecting the object that was already selected
-        /// raises no select event, so nothing else would).
-        /// </summary>
+        /// <summary>Wakes the frame when code re-selects the already-selected object (raises no OnSelect event).</summary>
         public static void WakeUp()
         {
             if (_instance != null)
@@ -110,10 +101,7 @@ namespace CloseTheDeal.UI
             UiMotion.Wake(this);
         }
 
-        /// <summary>
-        /// Ticked while it has a target or is fading: it tracks a target that may itself be sliding with its panel.
-        /// With no target and faded out it sleeps; the next selection wakes it. No allocation.
-        /// </summary>
+        /// <summary>Tracks active target or fade, returning false to sleep when idle and hidden.</summary>
         public bool Tick(float dt)
         {
             if (_tokens == null)

@@ -1,20 +1,4 @@
 #!/usr/bin/env bash
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-11
-#  Prompt    : "Start the snap kit"
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Builds, checks and exports every kit piece in one go, so the whole kit is always
-#              rebuilt from the same script values. Outputs go to build/ and export/ beside it.
-#  Modified  : Claude Opus 5.5, 2026-11-12 — adds the office-direction pieces (cobalt and portal walls,
-#              stair steps, locked door, strip light).
-#  Modified  : Claude Opus 5.5, 2026-11-12 — adds the round-5 labyrinth pieces.
-#  Modified  : Claude Opus 5.5, 2026-11-13 — adds zone signs, the desk and the pod chair.
-#  Modified  : Claude Opus 5.5, 2026-11-13 — adds the detail-pass pieces (columns, workstations, partitions...).
-#  Modified  : Claude Opus 5.5, 2026-11-13 — adds the Japanese office props (the mix, concepts/Japanese_Aero).
-#  Modified  : Claude Opus 5.5, 2026-11-13 — adds the loose monitor and keyboard, the lift and the rooftop pool.
-# -----------------------------------------------------------------------------
 # Usage: ArtSource/Kit/build_all.sh <path to blender-modeling skill>
 set -euo pipefail
 SKILL="${1:?pass the blender-modeling skill folder}"

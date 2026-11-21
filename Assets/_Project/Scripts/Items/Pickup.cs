@@ -34,13 +34,7 @@ namespace CloseTheDeal.Items
         Knocked = 3
     }
 
-    /// <summary>
-    /// Makes a prop something a player can pick up, carry, drop and throw. The host owns
-    /// every decision: who holds it, when it is let go, what it hits. Everyone else learns
-    /// the holder from one synced value and shows the item in that player's hands locally,
-    /// so it never lags behind the view. Loose, it is an ordinary host-simulated prop.
-    /// Design and ownership: docs/systems/ITEMS.md.
-    /// </summary>
+    /// <summary>Host-authoritative pickup, carry, throw, and return behaviour for loose items and props. Design: docs/systems/ITEMS.md.</summary>
     // After PlayerCamera's LateUpdate, so a carried item is placed from this frame's view.
     [DefaultExecutionOrder(100)]
     [RequireComponent(typeof(Prop))]
@@ -167,11 +161,7 @@ namespace CloseTheDeal.Items
         /// <summary>Every machine. The item is back where it started.</summary>
         public event Action<Pickup> Returned;
 
-        /// <summary>
-        /// Host only, static. A thrown item landed on a player or on something that takes damage:
-        /// the item, the thrower's client id (-1 if unknown), what it hit, and the damage done
-        /// (0 for a shove alone). For match records ("throws landed"). Fires once per throw.
-        /// </summary>
+        /// <summary>Host only. Raised once per thrown item that shoves a player or damages an IDamageable.</summary>
         public static event Action<Pickup, int, GameObject, float> ServerThrowLanded;
 
         /// <summary>The hand-made definition if this prefab has one, otherwise one worked out from the prop itself (LooseItemDefinition).</summary>
@@ -224,7 +214,6 @@ namespace CloseTheDeal.Items
             LookHighlight.Set(_lookRenderers, on);
         }
 
-        /// <summary>What is drawn for it where it stands: its Visual child's renderers, or its own (never the copy in the hands).</summary>
         Renderer[] LookRenderers() => _visual != null ? _visual.GetComponentsInChildren<Renderer>(true) : _ownRenderers;
 
         /// <summary>False for a prop marked NotThrowable: nobody is offered it, and the host refuses it.</summary>
@@ -335,8 +324,6 @@ namespace CloseTheDeal.Items
         void OnHolderChanged(NetworkObject previous, NetworkObject next, bool asServer) => ApplyState();
         void OnAwayChanged(bool previous, bool next, bool asServer) => ApplyState();
 
-        // ---- Host: taking and letting go ------------------------------------------------------
-
         /// <summary>Host only. Puts the item in the carrier's hands. False if it is not loose in the level.</summary>
         public bool ServerHold(ItemCarrier carrier)
         {
@@ -416,17 +403,13 @@ namespace CloseTheDeal.Items
             ObserversReleased(kind);
         }
 
-        /// <summary>
-        /// Host only. The item has been used up (it exploded, it ran empty). It leaves play and,
-        /// if its definition says so, a fresh one is back where it started after a while.
-        /// </summary>
+        /// <summary>Host only. Consumes the item, either despawning it or sending it away until its return timer elapses.</summary>
         public void ServerUseUp()
         {
             if (!IsServerStarted)
                 return;
 
-            // Used up is not let go: a gun went into the weapon slots, a case went off. The hands
-            // empty through the holder change alone, with no drop sound or "released" on any machine.
+            // Consumed items empty hands via holder SyncVar alone without firing Released/drop sound.
             if (Definition.ReturnsAfterUsedSeconds <= 0f)
             {
                 ServerDropFromHands(false);
@@ -437,11 +420,9 @@ namespace CloseTheDeal.Items
             ServerSendAway(Definition.ReturnsAfterUsedSeconds, true);
         }
 
-        /// <summary>Out of play until returnAfterSeconds have passed. usedUp: it was spent (exploded, ran empty), not lost out of the building.</summary>
         void ServerSendAway(float returnAfterSeconds, bool usedUp)
         {
             ServerDropFromHands(false);
-            // An armed case or a venting extinguisher stops: nothing goes on happening out of play.
             if (_behaviour != null)
                 _behaviour.ServerOnSentAway(usedUp);
             _live = false;
@@ -466,10 +447,6 @@ namespace CloseTheDeal.Items
             ObserversReturned();
         }
 
-        /// <summary>
-        /// If a player still holds it, takes it out of their hands without throwing it anywhere.
-        /// Announced as knocked loose only when it really was (its carrier left); a used-up item is not.
-        /// </summary>
         void ServerDropFromHands(bool announce)
         {
             if (_holder.Value == null)
@@ -487,13 +464,11 @@ namespace CloseTheDeal.Items
             transform.SetPositionAndRotation(position, rotation);
             _body.position = position;
             _body.rotation = rotation;
-            // Switchboard counts a sleeping body as at rest and would not send the jump.
+            // Switchboard counts sleeping bodies as at rest; wake and ForceSync to replicate teleports.
             _body.WakeUp();
             if (_netBody != null)
                 _netBody.ForceSync();
         }
-
-        // ---- Host: centralized tick driver ---------------------------------------------------
 
         void RegisterServerDriver()
         {
@@ -638,14 +613,6 @@ namespace CloseTheDeal.Items
             }
         }
 
-        /// <summary>
-        /// Host only. Gone from the building: below the ground, or outside both towers' footprints
-        /// and fallen below where it started (out of a window, into the street). Carried down
-        /// a stairwell or left on a skybridge at its own level, it stays. With no tower built
-        /// (a test scene), anything far below where it started counts.
-        /// The footprint is the same two-tower layout Switchboard's TowerFrame packs into:
-        /// tower-local X within half the width, |Z| from half the gap to the back of the spine.
-        /// </summary>
         bool OutOfTheBuilding(Vector3 position)
         {
             CarryProfile rules = Rules;
@@ -665,12 +632,10 @@ namespace CloseTheDeal.Items
             return !inside && position.y < _homePosition.y - rules.OutsideDropMetres;
         }
 
-        /// <summary>Keeps the solid part at the carrier's hands. A carrier that has gone (left the game) drops it where it is.</summary>
         void FollowHolder()
         {
             if (_carrier == null || !_carrier.IsSpawned)
             {
-                // Left where the hands last were, not where it was picked up.
                 if (!SolidFollowsHands)
                 {
                     if (_carrier != null)
@@ -689,15 +654,7 @@ namespace CloseTheDeal.Items
             _body.MoveRotation(_lastHoldRotation);
         }
 
-        /// <summary>
-        /// Whether the solid part must travel with the carrier. A shield must, to stop shots; a
-        /// gadget must, so its sound, smoke and blast are where it is. A plain carried thing has
-        /// no colliders on, every machine draws it from its carrier and a release starts from the
-        /// hands, so its solid part stays still: Switchboard sees it at rest and sends nothing.
-        /// </summary>
         bool SolidFollowsHands => Definition.CoverWhileCarried || _behaviour != null;
-
-        // ---- Host: a thrown item landing ------------------------------------------------------
 
         void OnCollisionEnter(Collision collision)
         {
@@ -720,7 +677,6 @@ namespace CloseTheDeal.Items
             }
         }
 
-        /// <summary>Shoves a player it hit and hurts anything that takes damage. One throw lands once: after that it is furniture again.</summary>
         void LandOn(Collision collision, PlayerMotor motor, float speed)
         {
             ContactPoint contact = collision.GetContact(0);
@@ -746,7 +702,6 @@ namespace CloseTheDeal.Items
             return true;
         }
 
-        /// <summary>The damage done, or -1 when what it hit takes no damage.</summary>
         float Hurt(IDamageable target, float speed, Vector3 point, Vector3 direction)
         {
             if (target == null)
@@ -756,8 +711,6 @@ namespace CloseTheDeal.Items
             target.ApplyDamage(damage, point, direction, _lastHolderClientId);
             return damage;
         }
-
-        // ---- Every machine: showing the state -------------------------------------------------
 
         [ObserversRpc(RunLocally = true)]
         void ObserversReleased(ReleaseKind kind)
@@ -787,7 +740,6 @@ namespace CloseTheDeal.Items
             _onReturned.Invoke();
         }
 
-        /// <summary>Heavy things thud, light things clatter; harder hits are louder.</summary>
         void PlayImpact(float speed)
         {
             ItemSoundSet sounds = Sounds;
@@ -799,10 +751,6 @@ namespace CloseTheDeal.Items
             ItemAudio.PlayAt(sounds, clip, transform.position, Mathf.Max(0.2f, loudness));
         }
 
-        /// <summary>
-        /// Brings this machine in line with the synced holder and away flags. Safe to call any
-        /// number of times: it only acts on what changed.
-        /// </summary>
         void ApplyState()
         {
             NetworkObject holder = _holder.Value;
@@ -839,7 +787,7 @@ namespace CloseTheDeal.Items
                     AwaitHostPose();
                 else
                     StartReleaseBlend();
-                // Enabled first: turning a collider on forgets who it was told to ignore.
+                // Enable colliders before Physics.IgnoreCollision because disabled colliders drop ignore pairs.
                 RefreshColliders();
                 StartIgnoring(previous.Capsule, Rules.ThrowerIgnoreSeconds);
             }
@@ -859,11 +807,6 @@ namespace CloseTheDeal.Items
             }
         }
 
-        /// <summary>
-        /// Loose: solid, on its own layer. Carried: not solid, unless it is a shield, which stays
-        /// solid on the player layer (so its carrier's own footing and climbing never see it) and
-        /// ignores its carrier's body. Away: not solid.
-        /// </summary>
         void RefreshColliders()
         {
             bool held = _carrier != null;
@@ -922,7 +865,6 @@ namespace CloseTheDeal.Items
             _blend = 1f;
         }
 
-        /// <summary>Holds the drawn item where it was let go until the solid part has moved (or a moment has passed), then eases onto it.</summary>
         bool StillAwaitingPose(Transform shown)
         {
             shown.SetPositionAndRotation(_releasedAtPosition, _releasedAtRotation);
@@ -938,20 +880,14 @@ namespace CloseTheDeal.Items
         void AwaitHostPose()
         {
             Shown.GetPositionAndRotation(out _releasedAtPosition, out _releasedAtRotation);
-            // Where the solid part sat while carried (a plain carried thing does not move): if the
-            // host's new pose already arrived before the hands emptied, it is not waited for.
+            // Wait for the host's released pose before blending if the solid part stayed stationary while carried.
             _rootAtRelease = _rootWhileHeld;
             _awaitUntil = Time.time + AwaitPoseSeconds;
             _awaitingPose = true;
         }
 
-        /// <summary>What moves into the hands: the prefab's Visual child, or the copy made for a prop without one.</summary>
         Transform Shown => _visual != null ? _visual : _handsCopy;
 
-        /// <summary>
-        /// Hides the item while it is out of play. For a prop with no Visual child, also swaps
-        /// between its own renderers (loose) and the copy in the hands (carried, or easing back).
-        /// </summary>
         void RefreshShown(bool away)
         {
             if (_visual != null)
@@ -971,7 +907,6 @@ namespace CloseTheDeal.Items
             ShowOwnRenderers(!away && !inHands);
         }
 
-        /// <summary>Shows or hides a prop's own meshes, leaving any the prefab had switched off switched off.</summary>
         void ShowOwnRenderers(bool shown)
         {
             for (int i = 0; i < _ownRenderers.Length; i++)
@@ -999,7 +934,6 @@ namespace CloseTheDeal.Items
             return _defaultRules;
         }
 
-        /// <summary>Starts the ease from where the item lay into the hands. Not for a joiner seeing an item already held.</summary>
         void StartTake(ItemCarrier carrier)
         {
             _swaying = false;
@@ -1014,11 +948,6 @@ namespace CloseTheDeal.Items
             _takeFromRotation = transform.rotation * _visualRestRotation;
         }
 
-        /// <summary>
-        /// Where the item is drawn in the hands this frame. For the carrier's own view, it trails
-        /// a fast turn by up to a few degrees, further for heavier things; just after a take it
-        /// eases in from where it lay.
-        /// </summary>
         void ShowInHands(Transform shown)
         {
             _carrier.GetHoldPose(Definition, true, _carrier.IsOwner, out Vector3 position, out Quaternion rotation);
@@ -1043,12 +972,7 @@ namespace CloseTheDeal.Items
             _drawnPosition = targetPosition - _drawnRotation * _visualRestPosition;
         }
 
-        /// <summary>
-        /// Every machine, while carried: where the carrier's hands go on the item as drawn this
-        /// frame, in world space (Definition's seats; a loose prop's are worked out from its size).
-        /// A seat's +Y is where the palm faces and +Z where the fingers point. Valid after this
-        /// item's LateUpdate (execution order 100); false when nobody holds it.
-        /// </summary>
+        /// <summary>World-space hand seats for the held item; valid after execution order 100.</summary>
         public bool TryGetHandSeats(out Pose main, out Pose support, out bool twoHanded)
         {
             ItemDefinition item = Definition;
@@ -1060,7 +984,6 @@ namespace CloseTheDeal.Items
 
         Pose Seat(Vector3 local, Vector3 euler) => new(_drawnPosition + _drawnRotation * local, _drawnRotation * Quaternion.Euler(euler));
 
-        /// <summary>Swings the held pose round the eye so it lags the view's turn, heavier things more.</summary>
         void Sway(Transform view, ref Vector3 position, ref Quaternion rotation)
         {
             CarryProfile rules = Rules;
@@ -1081,7 +1004,6 @@ namespace CloseTheDeal.Items
             rotation = lag * rotation;
         }
 
-        /// <summary>Eases the drawn item from where it was let go back onto the solid part.</summary>
         void StepReleaseBlend(Transform shown)
         {
             _blend = Mathf.Max(0f, _blend - Time.deltaTime / ReleaseBlendSeconds);
@@ -1094,11 +1016,6 @@ namespace CloseTheDeal.Items
                 RefreshShown(_away.Value);
         }
 
-        /// <summary>
-        /// Visual only, and only running while there is something to show: the item in a
-        /// player's hands, the short ease from the hands back onto the solid part after
-        /// letting go, or the wait before the thrower can be touched by it again.
-        /// </summary>
         void LateUpdate()
         {
             Transform shown = Shown;
@@ -1118,7 +1035,6 @@ namespace CloseTheDeal.Items
             SleepWhenDone();
         }
 
-        /// <summary>Ends the thrower's grace once it runs out, and stops running once nothing is left to show.</summary>
         void SleepWhenDone()
         {
             if (_ignoring && Time.time >= _ignoreUntil)
