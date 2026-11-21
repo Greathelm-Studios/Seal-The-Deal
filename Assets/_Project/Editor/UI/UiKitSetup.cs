@@ -174,6 +174,7 @@ namespace CloseTheDeal.Editor.UI
             if (section == null)
                 return false;
             section.SetParent(slot, false);
+            CloseTheDeal.Editor.Lanes.GameModeLaneSetup.StyleMatchSummary((RectTransform)section, AssetDatabase.LoadAssetAtPath<UiTokens>(TokensPath));
             Debug.Log("[UI] Moved the match lane's section from the playtest card into the in-game menu (" + MatchSlotPath + ").");
             return true;
         }

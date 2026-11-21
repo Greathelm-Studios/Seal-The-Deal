@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using CloseTheDeal.UI;
 using TMPro;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using static CloseTheDeal.Editor.UI.UiKitAssets;
@@ -9,18 +10,15 @@ using static CloseTheDeal.Editor.UI.UiKitScreens;
 namespace CloseTheDeal.Editor.UI
 {
     /// <summary>
-    /// Builds the in-game menu (Screens/InGameMenu.prefab): a frosted glass pane on the left of the running game with
-    /// MENU, the §5.5 line and buttons (ArtSource/UI/research/ui_inventory.md), the focused button's explanation, the
-    /// session line and key hints; on the right the match lane's slot (Content/MatchSlot, a path lane 4's tool builds
-    /// into) and reception's seats on a second pane. No veil: the game stays in view. Coordinates are the 1920 x 1080
-    /// design frame.
+    /// Builds the in-game menu on the Settings paper grid, with navigation on the left
+    /// and the live match section and reception seats on the right.
     /// </summary>
     internal static class UiKitGameMenuBuilder
     {
-        const float PaneX = 96f, PaneY = 120f, PaneW = 528f, PaneH = 724f;
+        const float PaneY = 120f;
         const float X = 136f, W = 448f;
         const float SideX = 656f, SideW = 624f;
-        const float SeatsY = 340f, SeatsH = 320f; // drawn just under a 196 px match section; the screen moves it to fit the real one
+        const float SeatsY = 340f; // drawn just under a 196 px match section; the screen moves it to fit the real one
         const int SeatsPerFirm = 4;
 
         internal static GameObject Build()
@@ -30,9 +28,6 @@ namespace CloseTheDeal.Editor.UI
             RectTransform frame = DesignFrame(root, "Content");
             frame.gameObject.AddComponent<CanvasGroup>();
             var reveal = new List<CanvasGroup>();
-
-            var pane = Place<RectTransform>(UiKitComponents.GlassPane, frame, "Pane", PaneX, PaneY);
-            pane.sizeDelta = new Vector2(PaneW, PaneH);
 
             RectTransform head = RevealLine(frame, "Head");
             reveal.Add(head.GetComponent<CanvasGroup>());
@@ -61,7 +56,7 @@ namespace CloseTheDeal.Editor.UI
             SetLabel(invite, "Invite friends");
             SetLabel(settings, "Settings");
             SetLabel(leave, "Leave game");
-            back.Description = "Close this menu. The game kept running while it was open.";
+            back.Description = "Close this menu and return to the office.";
             invite.Description = "Open Steam's invite list. Friends you invite join straight into this game.";
             settings.Description = "Controls, video, audio and accessibility. The game keeps running behind it.";
             leave.Description = "Go back to the title. Your team carries on without you.";
@@ -120,7 +115,76 @@ namespace CloseTheDeal.Editor.UI
             SetArray(screen, "_seatStates", refs.States.ToArray());
             SetArray(screen, "_seatMarks", refs.Marks.ToArray());
             SetArray(screen, "_seatRings", refs.Rings.ToArray());
+            ApplyMenuStyle(root, t);
             return root.gameObject;
+        }
+
+        // Shared by the builder and the one-time upgrade of existing screen instances.
+        internal static void ApplyMenuStyle(RectTransform root, UiTokens t)
+        {
+            var frame = (RectTransform)root.Find("Content");
+            if (root.Find("Paper") == null)
+            {
+                var paper = Img(Fill(root, "Paper"), null, t.Paper, raycast: true);
+                paper.transform.SetAsFirstSibling();
+                var grid = AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_Grid.png");
+                Img(Fill(root, "Grid"), grid, t.Grid, Image.Type.Tiled).transform.SetSiblingIndex(1);
+            }
+
+            var head = frame.Find("Head");
+            var caption = head.Find("Caption").GetComponent<TMP_Text>();
+            caption.text = "SEAL THE DEAL  ·  SESSION";
+            caption.fontSize = t.Body.Size;
+            UiKitAssets.Place(caption.rectTransform, 116, 26, 780, 28);
+            UiKitAssets.Place((RectTransform)head.Find("Bullet"), 96, 34, 8, 8);
+            if (head.Find("Heading") == null)
+                Label(head, "Heading", 96, 78, 1050, 60, "MATCH MENU", t.Heading, t.Navy);
+            UiKitAssets.Place((RectTransform)head.Find("Line"), 96, 145, 1050, 36);
+            var title = head.Find("Heading").GetComponent<TMP_Text>();
+            UiKitAssets.Place(title.rectTransform, 96, 65, 1050, 84);
+            title.overflowMode = TextOverflowModes.Overflow;
+            var screen = root.GetComponent<InGameMenuScreen>();
+            Set(screen, "_pageTitle", title);
+            Set(screen, "_runningNotice", head.Find("Line").gameObject);
+            head.Find("State").gameObject.SetActive(false);
+            UiKitAssets.Place((RectTransform)head.Find("Rule"), 96, 216, 1728, 1);
+
+            var buttons = frame.Find("Buttons");
+            UiKitAssets.Place((RectTransform)buttons.Find("Column"), 96, 270, 458, 300);
+            UiKitAssets.Place((RectTransform)frame.Find("FocusInfo/FocusHeading"), 96, 588, 458, 28);
+            UiKitAssets.Place((RectTransform)frame.Find("FocusInfo/FocusRule"), 96, 625, 458, 1);
+            UiKitAssets.Place((RectTransform)frame.Find("FocusInfo/FocusBody"), 96, 643, 458, 94);
+            UiKitAssets.Place((RectTransform)frame.Find("Session/SessionCaption"), 96, 770, 458, 28);
+            UiKitAssets.Place((RectTransform)frame.Find("Session/SessionLine"), 96, 810, 458, 86);
+            UiKitAssets.Place((RectTransform)frame.Find("Hints/HintRule"), 96, 928, 1728, 1);
+            UiKitAssets.Place((RectTransform)frame.Find("Hints/SelectHint"), 96, 965, 150, 42);
+            UiKitAssets.Place((RectTransform)frame.Find("Hints/BackHint"), 263, 965, 240, 42);
+
+            UiKitAssets.Place((RectTransform)frame.Find("MatchSlot"), 720, 263, 1104, 400);
+            var block = frame.Find("Reception/Block");
+            // Keep the dynamic match slot height. Place children relative to the same design frame.
+            float left = 720, right = 1824;
+            UiKitAssets.Place((RectTransform)block.Find("Bullet"), left, 524, 8, 8);
+            UiKitAssets.Place((RectTransform)block.Find("Caption"), left + 20, 514, 500, 32);
+            block.Find("Caption").GetComponent<TMP_Text>().fontSize = t.Body.Size;
+            UiKitAssets.Place((RectTransform)block.Find("ReadyCount"), right - 360, 514, 360, 32);
+            UiKitAssets.Place((RectTransform)block.Find("Rule"), left, 553, right - left, 1);
+            for (int firm = 0; firm < 2; firm++)
+            {
+                float x = left + firm * 574;
+                UiKitAssets.Place((RectTransform)block.Find("FirmMark" + firm), x, 587, 9, 9);
+                UiKitAssets.Place((RectTransform)block.Find("Firm" + firm), x + 21, 571, 508, 42);
+                UiKitAssets.Place((RectTransform)block.Find("FirmRule" + firm), x, 618, 530, 1);
+                for (int seat = 0; seat < SeatsPerFirm; seat++)
+                {
+                    string id = firm + "_" + seat;
+                    float y = 633 + seat * 56;
+                    UiKitAssets.Place((RectTransform)block.Find("SeatMark" + id), x, y + 10, 8, 8);
+                    UiKitAssets.Place((RectTransform)block.Find("SeatRing" + id), x, y + 10, 8, 8);
+                    UiKitAssets.Place((RectTransform)block.Find("SeatName" + id), x + 21, y, 506, 28);
+                    UiKitAssets.Place((RectTransform)block.Find("SeatState" + id), x + 21, y + 27, 506, 24);
+                }
+            }
         }
 
         sealed class ReceptionRefs
@@ -134,9 +198,6 @@ namespace CloseTheDeal.Editor.UI
         {
             UiTokens t = Tokens;
             var refs = new ReceptionRefs();
-            var pane = Place<RectTransform>(UiKitComponents.GlassPane, parent, "Pane", SideX, SeatsY);
-            pane.sizeDelta = new Vector2(SideW, SeatsH);
-
             float x0 = SideX + 32f, inner = SideW - 64f;
             Box(parent, "Bullet", x0, SeatsY + 40f, 8f, 8f, t.Black);
             Label(parent, "Caption", x0 + 16f, SeatsY + 32f, 300f, 24f, "§ RECEPTION", t.Section, t.Navy).fontSize = 14f;

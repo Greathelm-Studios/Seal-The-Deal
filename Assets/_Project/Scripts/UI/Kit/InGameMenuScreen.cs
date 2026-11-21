@@ -1,4 +1,5 @@
 using CloseTheDeal.Lobby;
+using CloseTheDeal.MatchMode;
 using CloseTheDeal.Net;
 using TMPro;
 using UnityEngine;
@@ -7,7 +8,7 @@ using UnityEngine.UI;
 namespace CloseTheDeal.UI
 {
     /// <summary>
-    /// The in-game menu: a light glass pane over the running game (nothing pauses). Back to game, Invite friends
+    /// The in-game menu: the Settings paper layout shared by pause, reception and match results. Back to game, Invite friends
     /// (Steam only), Settings and Leave game, with the focused button's explanation, who is hosting and how many are
     /// in, and, while the run has not started, reception's seats and who is ready (read-only: the lobby lane owns the
     /// ready board and the start). The match lane's section sits in MatchSlot. Leaving asks first, in the host's or
@@ -27,6 +28,11 @@ namespace CloseTheDeal.UI
         [SerializeField] UiButton _leave;
 
         [Header("Text")]
+        [Tooltip("The page heading changes when the match ends.")]
+        [SerializeField] TMP_Text _pageTitle;
+        [Tooltip("The live game notice, hidden when results are shown.")]
+        [SerializeField] GameObject _runningNotice;
+        bool? _showingResults;
         [Tooltip("Heading of the focused button's explanation.")]
         [SerializeField] TMP_Text _focusHeading;
         [Tooltip("The focused button's explanation.")]
@@ -127,6 +133,17 @@ namespace CloseTheDeal.UI
 
         void LateUpdate()
         {
+            var match = MatchDirector.Instance;
+            bool ended = match != null && match.Phase == MatchPhase.Ended;
+            if (_showingResults != ended)
+            {
+                _showingResults = ended;
+                if (_pageTitle != null)
+                    _pageTitle.text = ended ? "MATCH RESULTS" : "MATCH MENU";
+                if (_runningNotice != null)
+                    _runningNotice.SetActive(!ended);
+            }
+
             if (LobbyRoster.Instance != _roster)
             {
                 WatchRoster(LobbyRoster.Instance); // spawned after the menu opened

@@ -833,6 +833,8 @@ namespace CloseTheDeal.Editor.Lanes
             RectTransform actionRect = (RectTransform)action.transform;
             UiKitAssets.Place(actionRect, 20f, 120f, 584f, t.PrimaryHeight);
             TMP_Text actionLabel = action.transform.Find("Plate/Label")?.GetComponent<TMP_Text>();
+            if (section.parent.name == "MatchSlot")
+                StyleMatchSummary(section, t);
 
 
             var so = new SerializedObject(panel);
@@ -845,6 +847,30 @@ namespace CloseTheDeal.Editor.Lanes
             so.FindProperty("_action").objectReferenceValue = action;
             so.FindProperty("_actionLabel").objectReferenceValue = actionLabel;
             so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        internal static void StyleMatchSummary(RectTransform section, UiTokens t)
+        {
+            foreach (var name in new[] { "Edge", "Surface", "Shadow" })
+            {
+                var layer = section.Find(name);
+                if (layer != null)
+                    layer.gameObject.SetActive(false);
+            }
+            var title = section.Find("Headline").GetComponent<TMP_Text>();
+            title.font = t.Heading.Font;
+            title.fontStyle = t.Heading.Style;
+            title.characterSpacing = t.Heading.Tracking;
+            title.fontSize = 33;
+            title.enableAutoSizing = true;
+            title.fontSizeMax = 33;
+            title.fontSizeMin = 22;
+            UiKitAssets.Place(title.rectTransform, 0, 0, 1060, 59);
+            UiKitAssets.Place((RectTransform)section.Find("Reason"), 0, 67, 1060, 62);
+            UiKitAssets.Place((RectTransform)section.Find("Reason/Text"), 22, 0, 1038, 62);
+            var button = section.Find("MatchActionButton").GetComponent<UiButton>();
+            UiKitAssets.Place((RectTransform)button.transform, 0, 138, 530, t.PrimaryHeight);
+            UiKitScreens.AddV3FocusMark(button);
         }
 
         // ---- Small helpers -------------------------------------------------------------------
