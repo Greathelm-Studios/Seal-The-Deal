@@ -205,23 +205,23 @@ namespace CloseTheDeal.Editor.Lanes
             var corner = new Vector2(1f, 0f);
             var round = AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_Round16.png");
             var tab = AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_Round8.png");
-            const float width = 360f;
-            RectTransform weapon = Anchored(root, "WeaponPlate", corner, corner, new Vector2(-24f, 24f), new Vector2(width, 138f));
+            const float width = 376f;
+            RectTransform weapon = Anchored(root, "WeaponPlate", corner, corner, new Vector2(-24f, 24f), new Vector2(width, 155f));
             UiKitAssets.Img(weapon, round, tokens.Paper);
 
             TMP_Text name = UiKitAssets.Label(weapon, "WeaponName", 18, 10, 184, 39, "PISTOL", tokens.Item, tokens.Navy);
-            name.fontSize = 23f;
+            name.fontSize = 27f;
             TMP_Text ammo = UiKitAssets.Label(weapon, "Ammo", 198, 1, 84, 56, "12", tokens.Heading, tokens.Navy, TextAlignmentOptions.MidlineRight);
-            ammo.fontSize = 48f;
+            ammo.fontSize = 53f;
             ammo.characterSpacing = 0f;
             Unclipped(ammo);
-            TMP_Text magazine = UiKitAssets.Label(weapon, "Magazine", 290, 20, 62, 30, "/ 12", tokens.Label, tokens.Ink2);
-            magazine.fontSize = 17f;
+            TMP_Text magazine = UiKitAssets.Label(weapon, "Magazine", 290, 17, 77, 38, "/ 12", tokens.Label, tokens.Ink2);
+            magazine.fontSize = 22f;
 
-            Image statePlate = UiKitAssets.Box(weapon, "StatusPlate", 14, 55, width - 28, 28, tokens.HoverTint, tab);
-            TMP_Text state = UiKitAssets.Label(weapon, "State", 24, 55, width - 48, 28, "READY", tokens.Label, tokens.Navy);
-            state.fontSize = 16f;
-            RectTransform track = UiKitAssets.At(weapon, "ProgressTrack", 18, 86, width - 36, 3);
+            Image statePlate = UiKitAssets.Box(weapon, "StatusPlate", 14, 55, width - 28, 36, tokens.HoverTint, tab);
+            TMP_Text state = UiKitAssets.Label(weapon, "State", 24, 55, width - 48, 36, "READY", tokens.Label, tokens.Navy);
+            state.fontSize = 21f;
+            RectTransform track = UiKitAssets.At(weapon, "ProgressTrack", 18, 94, width - 36, 4);
             Solid(track, tokens.Hair);
             RectTransform fill = Anchored(track, "Fill", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, track.sizeDelta);
             Solid(fill, tokens.Cobalt);
@@ -232,18 +232,19 @@ namespace CloseTheDeal.Editor.Lanes
             float tabWidth = (width - 34f) / WeaponHolder.SlotCount;
             for (int i = 0; i < WeaponHolder.SlotCount; i++)
             {
-                RectTransform row = UiKitAssets.At(weapon, "Slot" + (i + 1), 14 + i * (tabWidth + 6), 97, tabWidth, 30);
+                RectTransform row = UiKitAssets.At(weapon, "Slot" + (i + 1), 14 + i * (tabWidth + 6), 106, tabWidth, 37);
                 slotBars[i] = UiKitAssets.Img(row, tab, tokens.Cobalt);
-                slotTexts[i] = UiKitAssets.Label(row, "Text", 8, 0, tabWidth - 16, 30, (i + 1) + "  —", tokens.Label, tokens.Navy,
+                slotTexts[i] = UiKitAssets.Label(row, "Text", 8, 0, tabWidth - 16, 37, (i + 1) + "  —", tokens.Label, tokens.Navy,
                     TextAlignmentOptions.Center);
+                ((TMP_Text)slotTexts[i]).fontSize = 20f;
             }
 
-            RectTransform health = Anchored(root, "HealthPlate", corner, corner, new Vector2(-24f, 170f), new Vector2(244f, 60f));
+            RectTransform health = Anchored(root, "HealthPlate", corner, corner, new Vector2(-24f, 190f), new Vector2(244f, 60f));
             UiKitAssets.Img(health, round, tokens.Paper);
             var group = health.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
             group.interactable = false;
-            UiKitAssets.Label(health, "Label", 16, 6, 160, 28, "HEALTH", tokens.Label, tokens.Ink2);
+            UiKitAssets.Label(health, "Label", 16, 6, 160, 28, "HEALTH", tokens.Label, tokens.Navy).fontSize = 21f;
             TMP_Text number = UiKitAssets.Label(health, "Number", 170, 4, 58, 30, "100", tokens.Item, tokens.Navy, TextAlignmentOptions.MidlineRight);
             RectTransform healthTrack = UiKitAssets.At(health, "Track", 16, 39, 212, 8);
             UiKitAssets.Img(healthTrack, tab, tokens.Hair);
