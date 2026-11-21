@@ -15,11 +15,11 @@ namespace CloseTheDeal.Player
         static readonly Vector3 MaxSwing = new(0.04f, 0.07f, 0.06f);
         static readonly Vector3 ElbowSide = new(0.45f, -1f, 0f);
         const float MaxTurn = 12f;
-        static readonly Vector3 BodyViewElbowSide = new(0.85f, -1f, -0.15f);
-        static readonly Vector3 BodyViewSwingMin = new(-0.03f, -0.12f, -0.07f);
-        static readonly Vector3 BodyViewSwingMax = new(0.10f, 0.035f, 0.07f);
-        const float BodyViewMaxTurn = 24f;
-        const float BodyViewCushion = 0.04f;
+        static readonly Vector3 BodyViewElbowSide = new(0.65f, -1f, -0.25f);
+        static readonly Vector3 BodyViewSwingMin = new(-0.02f, -0.045f, -0.035f);
+        static readonly Vector3 BodyViewSwingMax = new(0.045f, 0.015f, 0.035f);
+        const float BodyViewMaxTurn = 10f;
+        const float BodyViewCushion = 0.03f;
         const float LeftArmClearX = 0.24f, LeftArmClearY = 0.22f, LeftArmFrontFade = 0.12f;
         const float RemoteCurlDistance = 12f;
 

@@ -46,14 +46,27 @@ namespace CloseTheDeal.Player
         const float StandingStride = 0.02f;
         const float RunDirectionBlendTime = 0.12f;
         const float RunDirectionSlack = 10f;
-        const float StrideHoldTime = 0.2f;
+        const float StrideHoldTime = 0.1f;
         const float LookChestShare = 0.35f;
         const float BodyViewHeadTurnLimit = 15f;
         const float StandingToLook = 0.1f;
         const float BreathSpineShare = 0.5f, BreathShoulderShare = 1f;
-        const float LandClipRate = 1.6f;
-        const float LandFadeStart = 0.3f;
-        const float RunningLandShare = 0.4f;
+        const float LandClipRate = 1.25f;
+        const float LandFadeStart = 0.45f;
+        const float RunningLandShare = 0.6f;
+        const float MaxStrafeAimTwist = 80f;
+        const float StrafeAimBlendTime = 0.1f;
+        const float AirVelocityRef = 6f;
+        const float AirArmForwardTuck = 12f;
+        const float AirElbowTuck = 26f;
+        const float AirFallArmLift = 10f;
+        const float AirRiseSpinePitch = 7f;
+        const float AirFallSpinePitch = -4f;
+        const float AirRiseThighLift = 14f;
+        const float AirFallThighReach = 6f;
+        const float AirRiseKneeBend = 20f;
+        const float AirFallKneeExtend = 10f;
+        const float AirTrailLegShare = 0.65f;
 
         [Header("References")]
         [Tooltip("The clips, and the tuning for the ragdoll and the procedural pose. Read at runtime, never written.")]
@@ -138,6 +151,7 @@ namespace CloseTheDeal.Player
         bool _lookStarted;
         int _runDirection;
         float _heldStride, _strideDip;
+        float _strafeAimWeight;
         Transform[] _skeleton;
         Vector3[] _skeletonRestPositions;
         Quaternion[] _skeletonRestRotations;
@@ -372,7 +386,8 @@ namespace CloseTheDeal.Player
                 if (_strideDip > StrideHoldTime)
                     _heldStride = stride;
             }
-            _moveWeight = Mathf.SmoothDamp(_moveWeight, _heldStride, ref _moveWeightRate, ease, Mathf.Infinity, dt);
+            float moveEase = _heldStride < _moveWeight ? _profile.StopBlendTime : ease;
+            _moveWeight = Mathf.SmoothDamp(_moveWeight, _heldStride, ref _moveWeightRate, moveEase, Mathf.Infinity, dt);
             _airWeight = Mathf.SmoothDamp(_airWeight, onFloor ? 0f : 1f, ref _airWeightRate, ease, Mathf.Infinity, dt);
             _knocked = Mathf.SmoothDamp(_knocked, _hasMotor && _motor.State == MoveState.Knocked ? 1f : 0f, ref _knockedRate, ease, Mathf.Infinity, dt);
             _stagger = Mathf.MoveTowards(_stagger, 0f, dt / _profile.StaggerRecover);
@@ -387,7 +402,7 @@ namespace CloseTheDeal.Player
                 ground = Mathf.Lerp(_profile.SideClipSpeed * _clipLengths[RunInput + SideDirection], ground, forward);
                 if (_usesCrouch)
                     ground = Mathf.Lerp(ground, _profile.CrouchClipSpeed * _clipLengths[CrouchRunInput], _crouchWeight);
-                float matched = Mathf.Max(speed, SlowestCadence * walkSpeed);
+                float matched = Mathf.Max(speed, SlowestCadence * walkSpeed * _moveWeight);
                 _phase = _moveWeight < StandingStride && stride < StandingStride
                     ? 0f
                     : Mathf.Repeat(_phase + matched / ground * dt, 1f);
@@ -504,6 +519,8 @@ namespace CloseTheDeal.Player
             for (int i = 0; i < _skeleton.Length; i++)
                 _skeleton[i].SetLocalPositionAndRotation(_skeletonRestPositions[i], _skeletonRestRotations[i]);
             _graph.Evaluate();
+            AlignUpperBodyToAim(dt, floor - slide);
+            ShapeAirPose();
             TurnHeadFirst(dt);
             Breathe(idle);
         }
@@ -550,6 +567,113 @@ namespace CloseTheDeal.Player
                 return 0f;
             }
             return _fidgetWeight;
+        }
+
+        void AlignUpperBodyToAim(float dt, float groundedNonSlide)
+        {
+            float strafeFactor = _travel.z < 0f ? 1f : Mathf.Abs(_travel.x);
+            float targetWeight = strafeFactor * Mathf.Clamp01(groundedNonSlide) * _moveWeight * _profile.StrafeAimAlign;
+            _strafeAimWeight += (targetWeight - _strafeAimWeight) * (1f - Mathf.Exp(-dt / StrafeAimBlendTime));
+            if (_strafeAimWeight < MinClipWeight)
+                return;
+
+            Bone chestRef = _upperChest.T != null ? _upperChest : (_chest.T != null ? _chest : _spine);
+            if (chestRef.T == null)
+                return;
+
+            Quaternion poseInModel = Quaternion.Inverse(_model.rotation) * chestRef.T.rotation * Quaternion.Inverse(chestRef.Rest);
+            Vector3 chestForward = poseInModel * Vector3.forward;
+            if (chestForward.x * chestForward.x + chestForward.z * chestForward.z < 0.01f)
+                return;
+
+            float chestYaw = Mathf.Atan2(chestForward.x, chestForward.z) * Mathf.Rad2Deg;
+            float twist = Mathf.Clamp(-chestYaw * _strafeAimWeight, -MaxStrafeAimTwist, MaxStrafeAimTwist);
+            if (Mathf.Abs(twist) < 0.05f)
+                return;
+
+            Vector3 up = _model.up;
+            bool hasSpine = _spine.T != null;
+            bool hasChest = _chest.T != null;
+            bool hasUpper = _upperChest.T != null;
+            float wSpine = hasSpine ? (hasChest || hasUpper ? 0.35f : 1f) : 0f;
+            float wChest = hasChest ? (hasUpper ? 0.35f : (hasSpine ? 0.65f : 1f)) : 0f;
+            float wUpper = hasUpper ? (1f - wSpine - wChest) : 0f;
+
+            if (hasSpine) _spine.T.rotation = Quaternion.AngleAxis(twist * wSpine, up) * _spine.T.rotation;
+            if (hasChest) _chest.T.rotation = Quaternion.AngleAxis(twist * wChest, up) * _chest.T.rotation;
+            if (hasUpper) _upperChest.T.rotation = Quaternion.AngleAxis(twist * wUpper, up) * _upperChest.T.rotation;
+
+            if (_neck.T != null)
+            {
+                _neck.T.rotation = Quaternion.AngleAxis(-twist * 0.4f, up) * _neck.T.rotation;
+                if (_head.T != null)
+                    _head.T.rotation = Quaternion.AngleAxis(-twist * 0.6f, up) * _head.T.rotation;
+            }
+            else if (_head.T != null)
+            {
+                _head.T.rotation = Quaternion.AngleAxis(-twist, up) * _head.T.rotation;
+            }
+        }
+
+        void ShapeAirPose()
+        {
+            float w = _airWeight * (1f - _knocked);
+            if (w < MinClipWeight)
+                return;
+
+            float rise = Mathf.Clamp(_local.y / AirVelocityRef, -1f, 1f);
+            float motion = _profile.AirPoseMotion;
+            Vector3 right = _model.right, forward = _model.forward;
+
+            if (motion > 0f)
+            {
+                float spinePitch = (rise >= 0f ? AirRiseSpinePitch * rise : AirFallSpinePitch * -rise) * motion * w;
+                if (Mathf.Abs(spinePitch) > 0.05f)
+                {
+                    bool hasSpine = _spine.T != null;
+                    bool hasChest = _chest.T != null;
+                    if (hasSpine) _spine.T.rotation = Quaternion.AngleAxis(spinePitch * (hasChest ? 0.5f : 1f), right) * _spine.T.rotation;
+                    if (hasChest) _chest.T.rotation = Quaternion.AngleAxis(spinePitch * (hasSpine ? 0.5f : 1f), right) * _chest.T.rotation;
+                    if (_head.T != null) _head.T.rotation = Quaternion.AngleAxis(-spinePitch * 0.7f, right) * _head.T.rotation;
+                }
+            }
+
+            float armDown = Mathf.Max(0f, _profile.AirArmTuck - Mathf.Max(0f, -rise) * AirFallArmLift * motion) * w;
+            float armFwd = AirArmForwardTuck * w;
+            float elbowBend = AirElbowTuck * w;
+
+            if (_leftUpperArm.T != null)
+            {
+                _leftUpperArm.T.rotation = Quaternion.AngleAxis(-armFwd, right) * Quaternion.AngleAxis(armDown, forward) * _leftUpperArm.T.rotation;
+                if (_leftLowerArm.T != null)
+                {
+                    Vector3 leftElbowAxis = _leftLowerArm.T.rotation * (Quaternion.Inverse(_leftLowerArm.Rest) * Vector3.up);
+                    _leftLowerArm.T.rotation = Quaternion.AngleAxis(elbowBend, leftElbowAxis) * _leftLowerArm.T.rotation;
+                }
+            }
+            if (_rightUpperArm.T != null)
+            {
+                _rightUpperArm.T.rotation = Quaternion.AngleAxis(-armFwd, right) * Quaternion.AngleAxis(-armDown, forward) * _rightUpperArm.T.rotation;
+                if (_rightLowerArm.T != null)
+                {
+                    Vector3 rightElbowAxis = _rightLowerArm.T.rotation * (Quaternion.Inverse(_rightLowerArm.Rest) * Vector3.up);
+                    _rightLowerArm.T.rotation = Quaternion.AngleAxis(-elbowBend, rightElbowAxis) * _rightLowerArm.T.rotation;
+                }
+            }
+
+            if (motion <= 0f)
+                return;
+
+            float thighPitch = (rise >= 0f ? -AirRiseThighLift * rise : AirFallThighReach * -rise) * motion * w;
+            float kneePitch = (rise >= 0f ? AirRiseKneeBend * rise : -AirFallKneeExtend * -rise) * motion * w;
+            if (_leftUpperLeg.T != null)
+                _leftUpperLeg.T.rotation = Quaternion.AngleAxis(thighPitch, right) * _leftUpperLeg.T.rotation;
+            if (_leftLowerLeg.T != null)
+                _leftLowerLeg.T.rotation = Quaternion.AngleAxis(kneePitch, right) * _leftLowerLeg.T.rotation;
+            if (_rightUpperLeg.T != null)
+                _rightUpperLeg.T.rotation = Quaternion.AngleAxis(thighPitch * AirTrailLegShare, right) * _rightUpperLeg.T.rotation;
+            if (_rightLowerLeg.T != null)
+                _rightLowerLeg.T.rotation = Quaternion.AngleAxis(kneePitch * AirTrailLegShare, right) * _rightLowerLeg.T.rotation;
         }
 
         void TurnHeadFirst(float dt)

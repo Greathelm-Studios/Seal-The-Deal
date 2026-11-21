@@ -12,19 +12,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d9c7b960ab8328d488bf6215c7853921, type: 3}
   m_Name: DefaultViewmodel
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.Player.ViewmodelProfile
-  FieldOfView: 62
-  NearDistance: 0.01
-  FarDistance: 5
   GunPosition: {x: 0.125, y: -0.135, z: 0.38}
   GunTurn: {x: -1, y: -3, z: 4}
-  ShoulderPosition: {x: 0.165, y: -0.165, z: -0.1}
+  TwoHandedPosition: {x: 0.055, y: -0.1, z: 0.33}
+  TwoHandedTurn: {x: -1, y: -1, z: 0}
+  TwoHandedBlendSeconds: 0.18
+  BodyGunForward: 0.06
+  BodyArmSwing: 0.5
+  BodySwingSettleSeconds: 0.35
   LookLagSeconds: 0.03
   LookLagLimit: 5
   LookLagSettleSeconds: 0.09
-  BobHeight: 0.012
-  BobSide: 0.008
-  BobStepsPerMetre: 0.55
-  BobFadeSeconds: 0.15
+  LookLagRoll: 0.5
+  LookLagShift: 0.0012
+  LeanCounterRoll: 0.35
+  SprintShift: {x: 0, y: -0.012, z: -0.015}
+  SprintTurn: {x: 3, y: -6, z: -4}
+  SprintBlendSeconds: 0.18
+  ClimbDrop: 0.09
+  ClimbTilt: 30
+  ClimbBlendSeconds: 0.12
   KickPitch: 6
   KickBack: 0.035
   KickRoll: 3
@@ -33,3 +40,14 @@ MonoBehaviour:
   ReloadDrop: 0.1
   ReloadTilt: 40
   ReloadRoll: 25
+  BodyViewHeadFollow: 0.2
+  BodyViewSmoothing: 0.12
+  BodyViewForward: 0.065
+  BodyViewMaxOffset: 0.15
+  BodyViewGunShift: {x: 0.025, y: 0.02, z: 0.025}
+  BodyViewHeadClip: 0.2
+  BodyViewArmSwing: 0.45
+  BodyViewSwingSmooth: 0.035
+  BodyViewKeepOutRight: 0.125
+  BodyViewKeepOutDown: 0.085
+  BodyViewMinForward: 0.36
