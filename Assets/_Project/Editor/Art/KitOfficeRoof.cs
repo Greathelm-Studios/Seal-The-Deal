@@ -149,6 +149,11 @@ namespace CloseTheDeal.Editor.Art
         [MenuItem("Close the Deal/Art/Add Kit Office Roof Range")]
         static void AddFromMenu()
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                EditorUtility.DisplayDialog("Add Kit Office Roof Range", "Stop Play Mode first.", "OK");
+                return;
+            }
             GameObject office = GameObject.Find(OfficeRootName);
             if (office == null)
             {
@@ -305,10 +310,13 @@ namespace CloseTheDeal.Editor.Art
             if (go == null)
             {
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HitDummyPath);
-                if (prefab != null) go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                if (prefab != null)
+                {
+                    go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                    go.transform.SetPositionAndRotation(spot, Quaternion.Euler(0f, DummyYaw, 0f));
+                }
+                else report.Append("No HitDummy prefab: dummy not placed. ");
             }
-            if (go != null) go.transform.SetPositionAndRotation(spot, Quaternion.Euler(0f, DummyYaw, 0f));
-            else report.Append("No HitDummy prefab: dummy not placed. ");
 
             var mirrorPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(DevMirrorPath);
             if (mirrorPrefab == null) return;
@@ -343,11 +351,15 @@ namespace CloseTheDeal.Editor.Art
             }
 
             // §4: fill only what is empty or what this tool just created.
-            if (!car.TryGetComponent(out Rigidbody body)) body = car.gameObject.AddComponent<Rigidbody>();
-            body.isKinematic = true;
-            body.useGravity = false;
+            if (!car.TryGetComponent(out Rigidbody body))
+            {
+                body = car.gameObject.AddComponent<Rigidbody>();
+                body.isKinematic = true;
+                body.useGravity = false;
+            }
             if (!lift.TryGetComponent(out NetworkObject _)) lift.gameObject.AddComponent<NetworkObject>();
-            if (!lift.TryGetComponent(out Elevator elevator)) elevator = lift.gameObject.AddComponent<Elevator>();
+            bool addedElevator = !lift.TryGetComponent(out Elevator elevator);
+            if (addedElevator) elevator = lift.gameObject.AddComponent<Elevator>();
 
             var calls = new Transform[2];
             for (int stop = 0; stop < calls.Length; stop++)
@@ -358,8 +370,8 @@ namespace CloseTheDeal.Editor.Art
                 {
                     call = new GameObject(name).transform;
                     call.SetParent(lift, false);
+                    call.position = office.TransformPoint(CallSpot + Vector3.up * (stop * RoofHeight));
                 }
-                call.position = office.TransformPoint(CallSpot + Vector3.up * (stop * RoofHeight));
                 calls[stop] = call;
             }
 
@@ -369,17 +381,29 @@ namespace CloseTheDeal.Editor.Art
             Vector3 cabinSize = bounds.size - Vector3.one * (2f * CabinMargin);
 
             var so = new SerializedObject(elevator);
-            so.FindProperty("_car").objectReferenceValue = body;
-            SetArray(so.FindProperty("_doorLeaves"), doors);
-            SetArray(so.FindProperty("_callPoints"), calls);
+            SerializedProperty carProp = so.FindProperty("_car");
+            if (carProp.objectReferenceValue == null) carProp.objectReferenceValue = body;
+            SerializedProperty leavesProp = so.FindProperty("_doorLeaves");
+            if (leavesProp.arraySize == 0) SetArray(leavesProp, doors);
+            SerializedProperty callsProp = so.FindProperty("_callPoints");
+            if (callsProp.arraySize == 0) SetArray(callsProp, calls);
             SerializedProperty slides = so.FindProperty("_doorSlides");
-            slides.arraySize = doors.Length;
-            for (int i = 0; i < doors.Length; i++)
-                slides.GetArrayElementAtIndex(i).vector3Value = Vector3.right * DoorSlide;
-            so.FindProperty("_travel").floatValue = RoofHeight;
-            so.FindProperty("_playerMask").intValue = LayerMask.GetMask(PlayerLayerName);
-            so.FindProperty("_cabinCentre").vector3Value = car.InverseTransformPoint(bounds.center);
-            so.FindProperty("_cabinSize").vector3Value = cabinSize;
+            if (slides.arraySize == 0)
+            {
+                slides.arraySize = doors.Length;
+                for (int i = 0; i < doors.Length; i++)
+                    slides.GetArrayElementAtIndex(i).vector3Value = Vector3.right * DoorSlide;
+            }
+            SerializedProperty travelProp = so.FindProperty("_travel");
+            if (addedElevator || travelProp.floatValue <= 0f) travelProp.floatValue = RoofHeight;
+            SerializedProperty maskProp = so.FindProperty("_playerMask");
+            if (addedElevator || maskProp.intValue == 0) maskProp.intValue = LayerMask.GetMask(PlayerLayerName);
+            SerializedProperty cabinSizeProp = so.FindProperty("_cabinSize");
+            if (addedElevator || cabinSizeProp.vector3Value == Vector3.zero)
+            {
+                so.FindProperty("_cabinCentre").vector3Value = car.InverseTransformPoint(bounds.center);
+                cabinSizeProp.vector3Value = cabinSize;
+            }
             so.ApplyModifiedPropertiesWithoutUndo();
             report.Append("Lift wired: travel ").Append(RoofHeight).Append(" m, rider box ").Append(cabinSize.ToString("F2")).Append('.');
         }

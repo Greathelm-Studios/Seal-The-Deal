@@ -7,6 +7,7 @@ using Steamworks;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Runtime.InteropServices;
 using UnityEngine;
@@ -73,6 +74,9 @@ namespace FishySteamworks
         /// Maximum number of messages which can be received per connection.
         /// </summary>
         protected const int MAX_MESSAGES = 256;
+        private static readonly long MalformedLogIntervalTicks = Stopwatch.Frequency * 5L;
+        private long _nextMalformedLogTimestamp = long.MinValue;
+        private int _suppressedMalformedCount;
         #endregion
 
         /// <summary>
@@ -196,7 +200,24 @@ namespace FishySteamworks
                 SteamNetworkingMessage_t.Release(ptr);
                 segment = default;
                 channel = 0;
-                Transport.NetworkManager.LogWarning($"Dropped a malformed Steam message of {packetLength} bytes.");
+                long now = Stopwatch.GetTimestamp();
+                if (now >= _nextMalformedLogTimestamp)
+                {
+                    _nextMalformedLogTimestamp = now + MalformedLogIntervalTicks;
+                    if (_suppressedMalformedCount > 0)
+                    {
+                        Transport.NetworkManager.LogWarning($"Dropped a malformed Steam message of {packetLength} bytes ({_suppressedMalformedCount} suppressed).");
+                        _suppressedMalformedCount = 0;
+                    }
+                    else
+                    {
+                        Transport.NetworkManager.LogWarning($"Dropped a malformed Steam message of {packetLength} bytes.");
+                    }
+                }
+                else
+                {
+                    _suppressedMalformedCount++;
+                }
                 return false;
             }
 

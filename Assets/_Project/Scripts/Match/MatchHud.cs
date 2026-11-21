@@ -101,6 +101,7 @@ namespace CloseTheDeal.MatchMode
         bool _awake;
         RectTransform _canvasRect;
         Camera _uiCamera;
+        Camera _camera;
         bool _wired;
 
         // ---- Lifecycle ---------------------------------------------------------------------------
@@ -494,7 +495,7 @@ namespace CloseTheDeal.MatchMode
         void LateUpdate()
         {
             Briefcase briefcase = Briefcase.Current;
-            Camera view = Camera.main;
+            Camera view = ResolveCamera();
             bool show = MarkerWanted(briefcase, view);
             if (_edgeMarker != null)
             {
@@ -505,6 +506,13 @@ namespace CloseTheDeal.MatchMode
                 _marker.gameObject.SetActive(show);
             if (show)
                 PlaceMarker(briefcase, view);
+        }
+
+        Camera ResolveCamera()
+        {
+            if (_camera == null || !_camera.isActiveAndEnabled)
+                _camera = Camera.main;
+            return _camera;
         }
 
         bool MarkerWanted(Briefcase briefcase, Camera view)

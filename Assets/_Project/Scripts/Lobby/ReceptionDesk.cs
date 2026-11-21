@@ -20,6 +20,12 @@ namespace CloseTheDeal.Lobby
         /// <summary>Raised when the host's first hold arms a short-handed confirm (the reason). For a sound and the board.</summary>
         public static event System.Action<StartBlock> OnConfirmArmed;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            OnConfirmArmed = null;
+        }
+
         enum Mode { None, Ready, Unready, HostStart, WaitForHost, RunStarted }
 
         // Prompts are fixed strings so nothing is built per frame (AGENTS.md §6).

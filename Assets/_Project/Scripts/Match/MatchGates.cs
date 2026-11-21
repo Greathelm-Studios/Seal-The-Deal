@@ -44,6 +44,12 @@ namespace CloseTheDeal.MatchMode
         /// <summary>The local player walked into a shut gate: the floor it guards. Local only, for the refusal sound; the panel pulses by itself.</summary>
         public static event System.Action<int> OnGateTouched;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            OnGateTouched = null;
+        }
+
         /// <summary>How long a touched gate's pulse lasts, seconds, and how much brighter and more solid it starts. A short, firm answer.</summary>
         const float PulseSeconds = 0.3f;
         const float PulseGain = 0.45f;

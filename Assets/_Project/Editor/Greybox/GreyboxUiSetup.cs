@@ -47,7 +47,11 @@ namespace CloseTheDeal.Editor.Greybox
                 return;
 
             if (EditorSceneManager.GetActiveScene().path != ScenePath)
+            {
+                if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                    return;
                 EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            }
 
             SteamLobby lobby = Object.FindAnyObjectByType<SteamLobby>();
             if (lobby == null)

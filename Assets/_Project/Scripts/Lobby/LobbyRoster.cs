@@ -101,6 +101,14 @@ namespace CloseTheDeal.Lobby
         /// <summary>Host only. The host started the run; the list is every player and their firm. The match flow listens here.</summary>
         public static event Action<IReadOnlyList<RunEntrant>> RunStartRequested;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+            RunStartRequested = null;
+            LocalRemovedByHost = null;
+        }
+
         /// <summary>
         /// The run's players as client id to firm index (0 = first firm, 1 = second), the shape the
         /// match flow's start call takes (MatchDirector.HostStartRun). Allocates; call once per run.
@@ -508,6 +516,18 @@ namespace CloseTheDeal.Lobby
             Debug.Log($"[Lobby] Run start requested with {entrants.Count} players{(state == StartState.NeedsConfirm ? " (short-handed, confirmed)" : string.Empty)}.");
             RpcRunStarting();
             RunStartRequested?.Invoke(entrants);
+        }
+
+        /// <summary>
+        /// Host only: a run has started (whether from the lobby desk or the match menu).
+        /// Marks the lobby as in-progress so reception commands stay locked mid-match.
+        /// </summary>
+        public void ServerBeginRun()
+        {
+            if (!IsServerStarted)
+                return;
+
+            _runInProgress.Value = true;
         }
 
         /// <summary>

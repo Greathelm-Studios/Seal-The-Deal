@@ -144,6 +144,9 @@ namespace CloseTheDeal.UI
             _focus.Snap(_focused && _interactable ? 1f : 0f);
             _press.Snap(_pressed ? 1f : 0f);
             _pressDown.Snap(_press.Value);
+            _refusal.Snap(0f);
+            _shake.Snap(0f);
+            _tick.Snap(0f);
             Apply();
         }
 

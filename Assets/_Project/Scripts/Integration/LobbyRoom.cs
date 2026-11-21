@@ -23,6 +23,12 @@ namespace CloseTheDeal.Integration
 
         public static LobbyRoom Instance { get; private set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+        }
+
         MatchDirector _match;
         bool _blockingLobby;
 

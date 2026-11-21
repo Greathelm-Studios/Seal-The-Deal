@@ -86,6 +86,14 @@ namespace CloseTheDeal.Effects
         Mesh cube;
         BloodProfile profile;
         int surfaceMask;
+        bool _ownsMaterial;
+        bool _ownsProfile;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            instance = null;
+        }
 
         /// <summary>Makes the system when a Play Mode or build session has loaded its first scene.</summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -138,6 +146,18 @@ namespace CloseTheDeal.Effects
 
         void OnDestroy()
         {
+            if (_ownsMaterial && material != null)
+            {
+                Destroy(material);
+                material = null;
+            }
+            if (_ownsProfile && profile != null)
+            {
+                Destroy(profile);
+                profile = null;
+            }
+            _ownsMaterial = false;
+            _ownsProfile = false;
             if (instance == this)
                 instance = null;
         }
@@ -161,6 +181,11 @@ namespace CloseTheDeal.Effects
                         // Defaults in code: the field initialisers in BloodProfile.
                         profile = ScriptableObject.CreateInstance<BloodProfile>();
                         profile.hideFlags = HideFlags.HideAndDontSave;
+                        _ownsProfile = true;
+                    }
+                    else
+                    {
+                        _ownsProfile = false;
                     }
                 }
 
@@ -192,21 +217,26 @@ namespace CloseTheDeal.Effects
             return mesh;
         }
 
-        static Material LoadMaterial()
+        Material LoadMaterial()
         {
             var loaded = Resources.Load<Material>(MaterialResource);
             if (loaded != null)
+            {
+                _ownsMaterial = false;
                 return loaded;
+            }
 
             // The material asset is missing: make one from the shader. In a build the shader is
             // only present if something references it, so this path is for the Editor.
             Shader shader = Shader.Find(ShaderName);
             if (shader == null)
             {
+                _ownsMaterial = false;
                 Debug.LogWarning($"[Blood] Neither the material '{MaterialResource}' in a Resources folder nor the shader '{ShaderName}' was found; no blood will draw. Run Close the Deal > Art > Build Blood Assets.");
                 return null;
             }
 
+            _ownsMaterial = true;
             return new Material(shader) { name = "BloodSplat (runtime)", enableInstancing = true, hideFlags = HideFlags.HideAndDontSave };
         }
 

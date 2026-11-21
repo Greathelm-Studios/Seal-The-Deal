@@ -28,6 +28,13 @@ namespace CloseTheDeal.MatchMode
         /// </summary>
         public static Func<FirmMember, bool> HandsFull;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+            HandsFull = null;
+        }
+
         // ---- Events (raised on every machine, only on change) --------------------------------
 
         /// <summary>The match is on this machine: hosting or connected. Read the state now.</summary>

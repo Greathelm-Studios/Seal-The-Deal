@@ -24,6 +24,24 @@ namespace CloseTheDeal.Editor.UI
     /// </summary>
     public static partial class UiKitCapture
     {
+        static System.Net.Sockets.UdpClient _silentUdp;
+
+        static void CloseSilentUdp()
+        {
+            if (_silentUdp == null)
+                return;
+            try { _silentUdp.Close(); }
+            catch { }
+            _silentUdp = null;
+            EditorApplication.playModeStateChanged -= OnSilentUdpPlayModeChanged;
+        }
+
+        static void OnSilentUdpPlayModeChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.ExitingPlayMode || state == PlayModeStateChange.EnteredEditMode)
+                CloseSilentUdp();
+        }
+
         static IEnumerator WideScript(string mode)
         {
             yield return Until(() => Object.FindAnyObjectByType<UiRoot>() != null);
@@ -784,7 +802,10 @@ namespace CloseTheDeal.Editor.UI
             // 1. A join to a port where something takes the packets but never answers (a silent UDP socket): the
             // client really waits, so the connecting state, its clock and Cancel can be seen; then the problem.
             ushort silentPort = (ushort)(port + 1);
-            var silent = new System.Net.Sockets.UdpClient(silentPort);
+            CloseSilentUdp();
+            _silentUdp = new System.Net.Sockets.UdpClient(silentPort);
+            EditorApplication.playModeStateChanged -= OnSilentUdpPlayModeChanged;
+            EditorApplication.playModeStateChanged += OnSilentUdpPlayModeChanged;
             tugboat?.SetPort(silentPort);
             int sound0 = Sounds.Count;
             lobby.JoinLocal();
@@ -842,7 +863,7 @@ namespace CloseTheDeal.Editor.UI
                 !lobby.IsActive && _root.Stack.Top == title && lobby.Problem == LobbyProblem.None && lobby.StatusText == "You left the game.",
                 $"active {lobby.IsActive}, top {_root.Stack.Top?.name}, status '{lobby.StatusText}'");
             Film(folder, 0.6f);
-            silent.Close();
+            CloseSilentUdp();
             tugboat?.SetPort(port);
 
             // 4. Host: the session panel says hosting, then the window closes over the view and the game starts.

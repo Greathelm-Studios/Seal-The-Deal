@@ -31,6 +31,14 @@ namespace CloseTheDeal.Tower
         /// <summary>The spawner on the NetworkManager, or null when there is none.</summary>
         public static TeamSpawner Instance { get; private set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+            SpawnOverride = null;
+            // OnPlayerSpawning is hooked by FirmMember at SubsystemRegistration; don't clear it here.
+        }
+
         [Tooltip("The networked player prefab.")]
         [SerializeField] NetworkObject _playerPrefab;
 

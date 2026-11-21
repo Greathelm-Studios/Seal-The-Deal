@@ -102,6 +102,10 @@ namespace CloseTheDeal.Items
         public override void OnStartServer()
         {
             base.OnStartServer();
+            _detonateTick.Value = 0;
+            _nextBeepIn = 0f;
+            _lightOffIn = 0f;
+            _flashLeft = 0f;
             TimeManager.OnTick += ServerTick;
         }
 

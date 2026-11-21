@@ -75,6 +75,10 @@ namespace CloseTheDeal.Items
         public override void OnStartServer()
         {
             base.OnStartServer();
+            _ventUntilTick.Value = 0;
+            _empty.Value = false;
+            _sentAwayEmpty = false;
+            _takeAwayAt = 0f;
             TimeManager.OnTick += ServerTick;
         }
 

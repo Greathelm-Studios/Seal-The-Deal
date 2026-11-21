@@ -170,6 +170,11 @@ namespace CloseTheDeal.Editor.Art
         [MenuItem("Close the Deal/Art/Build Kit Office Scene")]
         static void BuildFromMenu()
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                EditorUtility.DisplayDialog("Build Kit Office Scene", "Stop Play Mode first.", "OK");
+                return;
+            }
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             BuildAndSave();
         }
@@ -276,6 +281,11 @@ namespace CloseTheDeal.Editor.Art
         [MenuItem("Close the Deal/Art/Make Open Scene Playable")]
         static void MakePlayableFromMenu()
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                EditorUtility.DisplayDialog("Make Open Scene Playable", "Stop Play Mode first.", "OK");
+                return;
+            }
             // WHY one scene only: the rig is found by searching every loaded scene, so with Greybox
             // loaded alongside it would find Greybox's rig and add nothing here.
             if (SceneManager.sceneCount != 1)

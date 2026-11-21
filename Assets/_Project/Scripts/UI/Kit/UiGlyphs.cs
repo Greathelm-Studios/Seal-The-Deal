@@ -61,6 +61,21 @@ namespace CloseTheDeal.UI
         static InputActionAsset _rebound;
         static string _reboundJson;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            if (_rebound != null)
+            {
+                if (Application.isPlaying) UnityEngine.Object.Destroy(_rebound);
+                else UnityEngine.Object.DestroyImmediate(_rebound);
+            }
+            _rebound = null;
+            _rebindSource = null;
+            _reboundJson = null;
+            Current = UiDeviceKind.KeyboardMouse;
+            Changed = null;
+        }
+
         /// <summary>
         /// A read-only copy of these actions with the player's custom keys (InputPrefs) laid over them, so hints name
         /// the key the player really pressed. The asset itself is never changed. One copy, refreshed when the keys change.

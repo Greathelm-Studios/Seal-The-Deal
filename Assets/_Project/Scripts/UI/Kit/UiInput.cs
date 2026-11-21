@@ -20,6 +20,15 @@ namespace CloseTheDeal.UI
         static bool _capturing;
         static int _captureEndFrame = -10;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            UsingKeysOrPad = true;
+            _capturing = false;
+            _captureEndFrame = -10;
+            _switchFrame = -1;
+        }
+
         /// <summary>
         /// True while a settings row is listening for a new key (and for the frame after), so Esc and the arrows reach
         /// the rebind, not the menu.

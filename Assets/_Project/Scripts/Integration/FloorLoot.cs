@@ -37,6 +37,12 @@ namespace CloseTheDeal.Integration
 
         public static FloorLoot Instance { get; private set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+        }
+
         void Awake()
         {
             Instance = this;

@@ -516,7 +516,7 @@ namespace CloseTheDeal.Items
             if (_held == null)
                 return;
 
-            ItemBehaviour behaviour = _held.GetComponent<ItemBehaviour>();
+            ItemBehaviour behaviour = _held.Behaviour;
             if (behaviour != null)
                 behaviour.ServerUse(this);
         }
@@ -595,6 +595,18 @@ namespace CloseTheDeal.Items
         }
 
         static readonly RaycastHit[] HoldHits = new RaycastHit[32];
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Local = null;
+            LocalChanged = null;
+            ServerItemTaken = null;
+            HandsTakenElsewhere = null;
+            InteractClaimedElsewhere = null;
+            UsingPadChanged = null;
+            Array.Clear(HoldHits, 0, HoldHits.Length);
+        }
 
         /// <summary>
         /// Host only. Something just left these hands: this player takes nothing for a moment,

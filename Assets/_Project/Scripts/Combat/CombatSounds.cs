@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CloseTheDeal.Glass;
 using UnityEngine;
 
@@ -26,6 +27,7 @@ namespace CloseTheDeal.Combat
         static AudioSource[] _voices;
         static int _next;
         static CombatSounds _glassVoice;
+        static readonly List<CombatSounds> _active = new();
 
         WeaponHolder _holder;
         Health _health;
@@ -52,6 +54,8 @@ namespace CloseTheDeal.Combat
             _health.Damaged += OnDamaged;
             _health.Died += OnDied;
             _health.Respawned += OnRespawned;
+            if (!_active.Contains(this))
+                _active.Add(this);
             if (_glassVoice == null)
             {
                 _glassVoice = this;
@@ -70,10 +74,16 @@ namespace CloseTheDeal.Combat
             _health.Damaged -= OnDamaged;
             _health.Died -= OnDied;
             _health.Respawned -= OnRespawned;
+            _active.Remove(this);
             if (_glassVoice == this)
             {
                 GlassPane.AnyBroken -= OnPaneBroken;
                 _glassVoice = null;
+                if (_active.Count > 0)
+                {
+                    _glassVoice = _active[0];
+                    GlassPane.AnyBroken += _glassVoice.OnPaneBroken;
+                }
             }
         }
 
@@ -82,7 +92,10 @@ namespace CloseTheDeal.Combat
         {
             _voices = null;
             _next = 0;
+            if (_glassVoice != null)
+                GlassPane.AnyBroken -= _glassVoice.OnPaneBroken;
             _glassVoice = null;
+            _active.Clear();
         }
 
         // ---- What the gun says ---------------------------------------------------------------

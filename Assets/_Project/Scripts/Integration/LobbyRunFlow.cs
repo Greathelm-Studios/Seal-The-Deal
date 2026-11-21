@@ -104,7 +104,11 @@ namespace CloseTheDeal.Integration
 
             _returnAt = next == MatchPhase.Ended ? Time.time + _backToLobbySeconds : -1f;
             if (next == MatchPhase.Countdown)
+            {
+                if (LobbyRoster.Instance != null)
+                    LobbyRoster.Instance.ServerBeginRun();
                 FreshStart();
+            }
         }
 
         /// <summary>

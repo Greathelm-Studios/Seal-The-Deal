@@ -292,7 +292,7 @@ namespace CloseTheDeal.UI
             if (_tag != null)
                 _tag.gameObject.SetActive(whole >= 0);
             if (_distance != null && whole >= 0)
-                _distance.text = whole + " m";
+                _distance.SetText("{0} m", whole);
         }
 
         void SetVisible(bool visible)

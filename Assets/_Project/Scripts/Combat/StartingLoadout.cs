@@ -12,6 +12,12 @@ namespace CloseTheDeal.Combat
     {
         public static StartingLoadout Instance { get; private set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+        }
+
         [Tooltip("The guns every player starts with in this scene, slot 1 first. Only the first two are used. Each must be in the weapon catalog.")]
         public WeaponDefinition[] Weapons = new WeaponDefinition[0];
 

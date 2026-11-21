@@ -106,6 +106,11 @@ namespace CloseTheDeal.Effects
 
         void OnDestroy()
         {
+            if (material != null)
+            {
+                Destroy(material);
+                material = null;
+            }
             if (instance == this)
                 instance = null;
         }
@@ -114,7 +119,7 @@ namespace CloseTheDeal.Effects
         {
             var loaded = Resources.Load<Material>(MaterialResource);
             if (loaded != null)
-                return loaded;
+                return new Material(loaded) { name = "BloodDrop (runtime)", hideFlags = HideFlags.HideAndDontSave };
 
             // The material asset is missing: make one from the shader. In a build the shader is
             // only present if something references it, so this path is for the Editor.

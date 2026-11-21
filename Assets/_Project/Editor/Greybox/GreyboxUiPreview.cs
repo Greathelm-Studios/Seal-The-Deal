@@ -59,22 +59,30 @@ namespace CloseTheDeal.Editor.Greybox
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.62f, 0.65f, 0.68f); // Roughly a greybox wall, the hardest backdrop for the HUD.
             var rt = new RenderTexture(Width, Height, 24);
-            cam.targetTexture = rt;
-            canvas.renderMode = RenderMode.ScreenSpaceCamera;
-            canvas.worldCamera = cam;
-            canvas.planeDistance = 1f;
+            try
+            {
+                cam.targetTexture = rt;
+                canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                canvas.worldCamera = cam;
+                canvas.planeDistance = 1f;
 
-            Transform root = ui.transform;
-            ShowStart(root);
-            Render(root, cam, rt, Path.Combine(folder, "1_menu_start.png"));
-            ShowHosting(root);
-            Render(root, cam, rt, Path.Combine(folder, "2_menu_hosting.png"));
-            ShowLocal(root);
-            Render(root, cam, rt, Path.Combine(folder, "3_menu_local.png"));
-            ShowHud(root);
-            Render(root, cam, rt, Path.Combine(folder, "4_hud.png"));
-
-            Object.DestroyImmediate(camGo);
+                Transform root = ui.transform;
+                ShowStart(root);
+                Render(root, cam, rt, Path.Combine(folder, "1_menu_start.png"));
+                ShowHosting(root);
+                Render(root, cam, rt, Path.Combine(folder, "2_menu_hosting.png"));
+                ShowLocal(root);
+                Render(root, cam, rt, Path.Combine(folder, "3_menu_local.png"));
+                ShowHud(root);
+                Render(root, cam, rt, Path.Combine(folder, "4_hud.png"));
+            }
+            finally
+            {
+                cam.targetTexture = null;
+                rt.Release();
+                Object.DestroyImmediate(rt);
+                Object.DestroyImmediate(camGo);
+            }
             Debug.Log("[UI Preview] Wrote previews to " + folder);
         }
 

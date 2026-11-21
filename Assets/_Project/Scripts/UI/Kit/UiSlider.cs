@@ -27,6 +27,7 @@ namespace CloseTheDeal.UI
         bool _pointerInside;
         bool _selected;
         int _shownStep = int.MinValue;
+        string _format;
 
         public UiControlFx Fx => _fx;
 
@@ -46,6 +47,7 @@ namespace CloseTheDeal.UI
         {
             _displayScale = displayScale;
             _suffix = suffix;
+            CacheFormat();
             _shownStep = int.MinValue;
             DrawField();
         }
@@ -61,6 +63,7 @@ namespace CloseTheDeal.UI
             base.Awake();
             wholeNumbers = true;
             transition = Transition.None;
+            CacheFormat();
         }
 
         protected override void OnEnable()
@@ -88,13 +91,17 @@ namespace CloseTheDeal.UI
             Changed?.Invoke(DisplayValue);
         }
 
+        void CacheFormat() => _format = "{0}" + (_suffix ?? string.Empty);
+
         void DrawField()
         {
             int step = Mathf.RoundToInt(value);
             if (_field == null || step == _shownStep)
                 return;
             _shownStep = step;
-            _field.SetText("{0}" + _suffix, DisplayValue);
+            if (_format == null)
+                CacheFormat();
+            _field.SetText(_format, DisplayValue);
         }
 
         protected override void DoStateTransition(SelectionState state, bool instant)

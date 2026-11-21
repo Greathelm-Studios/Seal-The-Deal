@@ -22,6 +22,12 @@ namespace CloseTheDeal.Records
         /// <summary>The one on this machine, or null.</summary>
         public static MatchRecords Instance { get; private set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+        }
+
         [Header("Credit")]
         [Tooltip("How long after a rival's hit a fall out of the building still counts as their kill (the window shot), in seconds. Longer = more falls credited; 0 = falls are never anyone's kill.")]
         [Range(0f, 20f)] [SerializeField] float _windowKillSeconds = 6f;

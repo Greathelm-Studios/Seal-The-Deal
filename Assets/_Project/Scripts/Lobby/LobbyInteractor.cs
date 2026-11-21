@@ -15,6 +15,12 @@ namespace CloseTheDeal.Lobby
     {
         public static LobbyInteractor Instance { get; private set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+        }
+
         /// <summary>The thing in reach changed (null = nothing). UI and sound listen.</summary>
         public event Action<LobbyInteractable> OnTargetChanged;
 

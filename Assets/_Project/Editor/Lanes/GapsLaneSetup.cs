@@ -301,6 +301,8 @@ namespace CloseTheDeal.Editor.Lanes
 
         static void Begin(string role, string outFolder)
         {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
             EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             GapsLaneSetup.Build();
             SessionState.SetBool(SceneHadRecordsKey, Object.FindAnyObjectByType<MatchRecords>(FindObjectsInactive.Include) != null);
@@ -349,8 +351,25 @@ namespace CloseTheDeal.Editor.Lanes
             if (change != PlayModeStateChange.EnteredEditMode)
                 return;
             EditorApplication.update -= Pump;
+            Application.logMessageReceived -= CountProfileErrors;
             SessionState.SetBool(ActiveKey, false);
             SessionState.EraseString(ProfileStore.EditorPathKey);
+            Steps.Clear();
+            Report.Clear();
+            _waiting = null;
+            _waitUntil = 0f;
+            _started = false;
+            _role = null;
+            _out = null;
+            _failures = 0;
+            _passes = 0;
+            _profileErrors = 0;
+            _finals = 0;
+            _deadAtFinal = false;
+            _phaseAtJoin = null;
+            Said.Clear();
+            Hinted.Clear();
+            Downs.Clear();
         }
 
         // ---- The stepper ---------------------------------------------------------------------

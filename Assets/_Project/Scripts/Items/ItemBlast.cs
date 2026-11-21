@@ -13,6 +13,13 @@ namespace CloseTheDeal.Items
         static readonly Collider[] Buffer = new Collider[256];
         static readonly List<IDamageable> Hurt = new(16);
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            System.Array.Clear(Buffer, 0, Buffer.Length);
+            Hurt.Clear();
+        }
+
         /// <summary>
         /// Hurts every IDamageable with a collider inside the radius, once each, full damage at
         /// the centre falling to the edge fraction of it at the rim. Returns how many were hurt.

@@ -16,6 +16,12 @@ namespace CloseTheDeal.Lobby
         /// <summary>A line was spoken on this machine: the moment (for picking a clip), the finished text and how long it stays up in seconds.</summary>
         public static event Action<SecretaryMoment, string, float> LineSpoken;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            LineSpoken = null;
+        }
+
         [Tooltip("What she says.")]
         [SerializeField] SecretaryLines _lines;
 

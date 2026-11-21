@@ -164,7 +164,19 @@ namespace CloseTheDeal.Items
         public bool IsDerived => _definition == null;
         public Rigidbody Body => _body;
         public ItemCarrier Holder => _carrier;
+        internal ItemBehaviour Behaviour => _behaviour;
         public PickupState State => _away.Value ? PickupState.Away : _holder.Value != null ? PickupState.Held : PickupState.InWorld;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            ServerThrowLanded = null;
+            if (_defaultRules != null)
+            {
+                DestroyImmediate(_defaultRules);
+                _defaultRules = null;
+            }
+        }
 
         /// <summary>This machine only: brightens the item while the local player's prompt is about it.</summary>
         public void ShowLookedAt(bool on)
@@ -221,8 +233,15 @@ namespace CloseTheDeal.Items
         {
             base.OnStartServer();
             transform.GetPositionAndRotation(out _homePosition, out _homeRotation);
+            _holder.Value = null;
+            _away.Value = false;
             _lastHolderClientId = -1;
             _live = false;
+            _liveUntil = 0f;
+            _throwerSafeUntil = 0f;
+            _thrower = null;
+            _returnAt = 0f;
+            _lastVelocity = Vector3.zero;
             TimeManager.OnTick += ServerTick;
         }
 

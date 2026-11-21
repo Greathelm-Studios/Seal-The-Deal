@@ -47,11 +47,18 @@ namespace CloseTheDeal.MatchMode
         /// <summary>The match's briefcase on this machine, or null before it has spawned.</summary>
         public static Briefcase Current { get; private set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Current = null;
+        }
+
         Rigidbody _rigidbody;
         Collider _collider;
         NetworkTransform _networkTransform;
         MaterialPropertyBlock _block;
         Vector3 _centreLocal;
+        Camera _camera;
 
         float _popStarted = -1f;
         float _handScale = 1f;
@@ -268,7 +275,7 @@ namespace CloseTheDeal.MatchMode
         void UpdateBeacon()
         {
             MatchDirector match = MatchDirector.Instance;
-            Camera view = Camera.main;
+            Camera view = ResolveCamera();
             if (_beacon == null || match == null || view == null)
                 return;
 
@@ -293,6 +300,13 @@ namespace CloseTheDeal.MatchMode
             _beacon.GetPropertyBlock(_beaconBlock);
             _beaconBlock.SetFloat(Fade, fade);
             _beacon.SetPropertyBlock(_beaconBlock);
+        }
+
+        Camera ResolveCamera()
+        {
+            if (_camera == null || !_camera.isActiveAndEnabled)
+                _camera = Camera.main;
+            return _camera;
         }
 
         /// <summary>

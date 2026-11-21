@@ -17,6 +17,17 @@ namespace CloseTheDeal.Items
         static readonly Dictionary<string, ItemDefinition> Made = new();
         static readonly string[] NamePrefixes = { "SM_", "PF_", "Prop_", "Kit_", "Loose_" };
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            foreach (ItemDefinition definition in Made.Values)
+            {
+                if (definition != null)
+                    UnityEngine.Object.DestroyImmediate(definition);
+            }
+            Made.Clear();
+        }
+
         /// <summary>A definition for a prop of this name, mass and size, shared by every prop that matches.</summary>
         public static ItemDefinition For(string objectName, float massKg, Bounds localBounds, CarryProfile rules)
         {

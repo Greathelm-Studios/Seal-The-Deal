@@ -25,6 +25,11 @@ namespace FishySteamworks
                 Remove(key);
             }
 
+            if (t2ToT1Dict.ContainsKey(value))
+            {
+                Remove(value);
+            }
+
             t1ToT2Dict[key] = value;
             t2ToT1Dict[value] = key;
         }
@@ -34,6 +39,11 @@ namespace FishySteamworks
             if (t2ToT1Dict.ContainsKey(key))
             {
                 Remove(key);
+            }
+
+            if (t1ToT2Dict.ContainsKey(value))
+            {
+                Remove(value);
             }
 
             t2ToT1Dict[key] = value;

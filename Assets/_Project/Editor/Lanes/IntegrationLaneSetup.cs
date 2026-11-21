@@ -392,6 +392,9 @@ namespace CloseTheDeal.Editor.Lanes
         static int _failures;
         static int _passes;
         static Keyboard _keyboard;
+        static InputSettings.BackgroundBehavior _savedBackgroundBehavior;
+        static InputSettings.EditorInputBehaviorInPlayMode _savedEditorInputBehavior;
+        static bool _hasSavedInputSettings;
         static int _countdowns;
         static int _builds;
 
@@ -437,6 +440,7 @@ namespace CloseTheDeal.Editor.Lanes
             SessionState.SetBool(ActiveKey, false);
             PlayerInputReader.ScriptedCapture = false;
             LobbyInput.EditorForceCaptured = false;
+            CleanupInputAndState();
             Debug.Log("[IntegrationRun] Stopped before the check finished; it will not resume on the next Play.");
         }
 
@@ -465,6 +469,9 @@ namespace CloseTheDeal.Editor.Lanes
             Directory.CreateDirectory(_out);
             Application.runInBackground = true;
             Application.targetFrameRate = 60;
+            _savedBackgroundBehavior = InputSystem.settings.backgroundBehavior;
+            _savedEditorInputBehavior = InputSystem.settings.editorInputBehaviorInPlayMode;
+            _hasSavedInputSettings = true;
             InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
             InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
             _keyboard = InputSystem.AddDevice<Keyboard>("Integration check keyboard");
@@ -556,10 +563,39 @@ namespace CloseTheDeal.Editor.Lanes
             LobbyInput.EditorForceCaptured = false;
             Note($"RESULT: {_failures} failed, {_passes} passed ({_role}).");
             File.WriteAllText(Path.Combine(_out, _role + "_report.txt"), Report.ToString());
+            bool passed = _failures == 0;
+            CleanupInputAndState();
             if (Application.isBatchMode)
-                EditorApplication.Exit(_failures == 0 ? 0 : 3);
+                EditorApplication.Exit(passed ? 0 : 3);
             else
                 EditorApplication.ExitPlaymode();
+        }
+
+        static void CleanupInputAndState()
+        {
+            if (_keyboard != null)
+            {
+                if (_keyboard.added)
+                    InputSystem.RemoveDevice(_keyboard);
+                _keyboard = null;
+            }
+            if (_hasSavedInputSettings)
+            {
+                InputSystem.settings.backgroundBehavior = _savedBackgroundBehavior;
+                InputSystem.settings.editorInputBehaviorInPlayMode = _savedEditorInputBehavior;
+                _hasSavedInputSettings = false;
+            }
+            Steps.Clear();
+            Report.Clear();
+            _waiting = null;
+            _waitUntil = 0f;
+            _started = false;
+            _role = null;
+            _out = null;
+            _failures = 0;
+            _passes = 0;
+            _countdowns = 0;
+            _builds = 0;
         }
 
         static void Note(string line)

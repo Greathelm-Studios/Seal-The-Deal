@@ -185,6 +185,20 @@ namespace CloseTheDeal.UI.Title
         static Material _original, _copy;
         static int _users;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            if (_copy != null)
+            {
+                if (RenderSettings.skybox == _copy)
+                    RenderSettings.skybox = _original;
+                if (Application.isPlaying) Object.Destroy(_copy); else Object.DestroyImmediate(_copy);
+            }
+            _copy = null;
+            _original = null;
+            _users = 0;
+        }
+
         public static void Acquire(float planeEverySeconds)
         {
             if (_users++ > 0)

@@ -21,6 +21,12 @@ namespace CloseTheDeal.Glass
     {
         public static GlassRegistry Instance { get; private set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+        }
+
         [Tooltip("Tuning for breakable glass: what counts as glass, how hard a hit breaks it, the shards. Read at runtime, never written.")]
         [SerializeField] GlassProfile _profile;
 

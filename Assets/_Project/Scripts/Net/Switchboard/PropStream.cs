@@ -196,8 +196,10 @@ namespace CloseTheDeal.Net
         void OnTowerBuilt()
         {
             TowerProfile towerProfile = _tower.Profile;
-            int floors = towerProfile.RandomFloors +
-                (towerProfile.CheckpointEvery > 0 ? towerProfile.RandomFloors / towerProfile.CheckpointEvery : 0) + 3;
+            int floors = _tower.FloorCount > 0
+                ? _tower.FloorCount
+                : towerProfile.RandomFloors +
+                    (towerProfile.CheckpointEvery > 0 ? towerProfile.RandomFloors / towerProfile.CheckpointEvery : 0) + 3;
             _frame = TowerFrame.From(_tower.transform, towerProfile, floors);
             _frameReady = true;
             _hasPacket = false;
@@ -351,9 +353,10 @@ namespace CloseTheDeal.Net
                 return;
             _lastSendTick = tick;
 
+            double actualSends = (double)_net.TimeManager.TickRate / interval;
             Capture();
             for (int i = 0; i < _clients.Count; i++)
-                Send(_clients[i], tick, sends);
+                Send(_clients[i], tick, actualSends);
             PublishStats(true);
         }
 
@@ -389,21 +392,42 @@ namespace CloseTheDeal.Net
             }
         }
 
-        void Send(ClientState client, uint tick, int sends)
+        void Send(ClientState client, uint tick, double sends)
         {
             NetworkConnection connection = client.Connection;
             if (!connection.IsAuthenticated || connection.IsLocalClient)
                 return;
+
+            int room = ComputePacketRoom(client, sends);
+            if (room < HeaderBytes + EntryBytes)
+                return;
+
+            AccrueClientLedger(client, connection);
+
+            int capacity = Mathf.Min(255, (room - HeaderBytes) / EntryBytes);
+            int dueCount = client.Ledger.TakeDue(_slotCount, _due, capacity);
+            int offset = HeaderBytes;
+            int count = WriteDueBodies(client, dueCount, ref offset);
+            WriteHealBodies(client, dueCount, room, ref offset, ref count);
+
+            if (count == 0)
+                return;
+            TransmitPacket(client, connection, tick, offset, count);
+        }
+
+        int ComputePacketRoom(ClientState client, double sends)
+        {
             double allowance = (double)Mathf.Max(0, _profile.BytesPerSecondPerPlayer) / sends;
             client.Tokens = Math.Min(allowance * 2d, client.Tokens + allowance);
             client.HealCredit = Math.Min(_profile.HealBodiesPerSecond,
                 client.HealCredit + (double)Mathf.Max(0, _profile.HealBodiesPerSecond) / sends);
             int packetLimit = Mathf.Min(PacketCapacity,
                 _net.TransportManager.GetLowestMTU((byte)Channel.Unreliable) - FishNetOverheadBytes);
-            int room = Mathf.Min(packetLimit, (int)client.Tokens);
-            if (room < HeaderBytes + EntryBytes)
-                return;
+            return Mathf.Min(packetLimit, (int)client.Tokens);
+        }
 
+        void AccrueClientLedger(ClientState client, NetworkConnection connection)
+        {
             NetworkObject viewer = connection.FirstObject;
             bool hasViewer = viewer != null;
             FloorCell viewerCell = hasViewer ? _frame.CellOfLocal(_frame.ToLocal(viewer.transform.position)) : default;
@@ -417,10 +441,10 @@ namespace CloseTheDeal.Net
                     _profile.NearFloorsSameTower, _profile.NearFloorsRivalTower) : Band.Near;
                 client.Ledger.Accrue(slot, band == Band.Near ? 1f : _profile.FarWeight);
             }
+        }
 
-            int capacity = Mathf.Min(255, (room - HeaderBytes) / EntryBytes);
-            int dueCount = client.Ledger.TakeDue(_slotCount, _due, capacity);
-            int offset = HeaderBytes;
+        int WriteDueBodies(ClientState client, int dueCount, ref int offset)
+        {
             int count = 0;
             for (int i = 0; i < dueCount; i++)
             {
@@ -432,7 +456,11 @@ namespace CloseTheDeal.Net
                 if (_atRest[slot] && client.Owed[slot] > 0)
                     client.Owed[slot]--;
             }
+            return count;
+        }
 
+        void WriteHealBodies(ClientState client, int dueCount, int room, ref int offset, ref int count)
+        {
             int scanned = 0;
             while (offset + EntryBytes <= room && client.HealCredit >= 1d && scanned < _slotCount)
             {
@@ -440,13 +468,7 @@ namespace CloseTheDeal.Net
                     client.HealCursor = 0;
                 int slot = client.HealCursor++;
                 scanned++;
-                if (_bodies[slot] == null || !_atRest[slot])
-                    continue;
-                bool alreadyWritten = false;
-                for (int i = 0; i < dueCount; i++)
-                    if (_due[i] == slot)
-                        alreadyWritten = true;
-                if (alreadyWritten)
+                if (_bodies[slot] == null || !_atRest[slot] || IsDueSlot(slot, dueCount))
                     continue;
                 WriteBody(slot, ref offset);
                 count++;
@@ -454,9 +476,18 @@ namespace CloseTheDeal.Net
                 if (client.Owed[slot] > 0)
                     client.Owed[slot]--;
             }
+        }
 
-            if (count == 0)
-                return;
+        bool IsDueSlot(int slot, int dueCount)
+        {
+            for (int i = 0; i < dueCount; i++)
+                if (_due[i] == slot)
+                    return true;
+            return false;
+        }
+
+        void TransmitPacket(ClientState client, NetworkConnection connection, uint tick, int offset, int count)
+        {
             _packet[0] = (byte)tick;
             _packet[1] = (byte)(tick >> 8);
             _packet[2] = (byte)(tick >> 16);
@@ -465,7 +496,7 @@ namespace CloseTheDeal.Net
             _net.ServerManager.Broadcast(connection,
                 new StreamPacket { Payload = new ArraySegment<byte>(_packet, 0, offset) },
                 true, Channel.Unreliable);
-            client.Tokens -= offset;
+            client.Tokens -= offset + FishNetOverheadBytes;
             _secondBytes += offset;
             _secondBodies += count;
         }
@@ -494,23 +525,36 @@ namespace CloseTheDeal.Net
             int count = bytes[offset + 4];
             if (HeaderBytes + count * EntryBytes != segment.Count)
                 return;
-            if (!_hasPacket || tick > _newestPacketTick)
+
+            RecordPacketTiming(tick);
+            ApplyPacketBodies(bytes, offset + HeaderBytes, end, tick, count);
+
+            _secondBytes += segment.Count;
+            _secondBodies += count;
+            PublishStats(false);
+        }
+
+        void RecordPacketTiming(uint tick)
+        {
+            if (_hasPacket && tick <= _newestPacketTick)
+                return;
+            double now = Time.unscaledTimeAsDouble;
+            if (_hasPacket)
             {
-                double now = Time.unscaledTimeAsDouble;
-                if (_hasPacket)
-                {
-                    double expected = (double)(tick - _newestPacketTick) / _net.TimeManager.TickRate;
-                    double deviation = Math.Abs(now - _lastArrival - expected);
-                    _jitterSeconds += (deviation - _jitterSeconds) * 0.1d;
-                }
-                _lastArrival = now;
-                _newestPacketTick = tick;
-                UpdateDelay();
-                if (!_hasPacket)
-                    _playbackTick = tick - _delayTicks;
-                _hasPacket = true;
+                double expected = (double)(tick - _newestPacketTick) / _net.TimeManager.TickRate;
+                double deviation = Math.Abs(now - _lastArrival - expected);
+                _jitterSeconds += (deviation - _jitterSeconds) * 0.1d;
             }
-            offset += HeaderBytes;
+            _lastArrival = now;
+            _newestPacketTick = tick;
+            UpdateDelay();
+            if (!_hasPacket)
+                _playbackTick = tick - _delayTicks;
+            _hasPacket = true;
+        }
+
+        void ApplyPacketBodies(byte[] bytes, int offset, int end, uint tick, int count)
+        {
             for (int i = 0; i < count && offset + EntryBytes <= end; i++)
             {
                 int id = bytes[offset] | bytes[offset + 1] << 8;
@@ -526,9 +570,6 @@ namespace CloseTheDeal.Net
                     offset += PoseCodec.PoseBytes;
                 }
             }
-            _secondBytes += segment.Count;
-            _secondBodies += count;
-            PublishStats(false);
         }
 
         double DelayTicksForCurrentSettings()
@@ -594,6 +635,12 @@ namespace CloseTheDeal.Net
                 if (_bodies[i] != null && _bodies[i].enabled)
                     count++;
             return count;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
         }
     }
 }

@@ -31,6 +31,17 @@ namespace CloseTheDeal.Customisation
         /// <summary>The player tried to keep an outfit with a locked choice in it.</summary>
         public static event Action OnLockedRefused;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+            OnEntered = null;
+            OnExited = null;
+            OnSlotFocused = null;
+            OnOptionShown = null;
+            OnLockedRefused = null;
+        }
+
         [Tooltip("The fitting-room screen.")]
         [SerializeField] FittingRoomScreen _screen;
 

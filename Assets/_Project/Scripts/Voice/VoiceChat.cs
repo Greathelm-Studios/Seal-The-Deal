@@ -19,6 +19,7 @@
 // -----------------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using CloseTheDeal.Combat;
 using CloseTheDeal.Player;
 using CloseTheDeal.UI;
 using FishNet;
@@ -335,6 +336,7 @@ namespace CloseTheDeal.Voice
             if (_net == null)
                 return;
             _net.ClientManager.RegisterBroadcast<VoiceRelay>(OnRelay);
+            _net.ClientManager.OnRemoteConnectionState += OnClientRemoteConnectionState;
             _net.ServerManager.RegisterBroadcast<VoiceFrame>(OnFrame);
             _net.ServerManager.OnRemoteConnectionState += OnRemoteConnectionState;
         }
@@ -345,6 +347,7 @@ namespace CloseTheDeal.Voice
             if (_net != null)
             {
                 _net.ClientManager.UnregisterBroadcast<VoiceRelay>(OnRelay);
+                _net.ClientManager.OnRemoteConnectionState -= OnClientRemoteConnectionState;
                 _net.ServerManager.UnregisterBroadcast<VoiceFrame>(OnFrame);
                 _net.ServerManager.OnRemoteConnectionState -= OnRemoteConnectionState;
             }
@@ -357,7 +360,16 @@ namespace CloseTheDeal.Voice
         void OnRemoteConnectionState(NetworkConnection connection, RemoteConnectionStateArgs args)
         {
             if (args.ConnectionState == RemoteConnectionState.Stopped)
+            {
                 _allowance.Remove(connection.ClientId);
+                RemoveSpeaker(connection.ClientId);
+            }
+        }
+
+        void OnClientRemoteConnectionState(RemoteConnectionStateArgs args)
+        {
+            if (args.ConnectionState == RemoteConnectionState.Stopped)
+                RemoveSpeaker(args.ConnectionId);
         }
 
         // ---- This player's microphone --------------------------------------------------------
@@ -496,12 +508,19 @@ namespace CloseTheDeal.Voice
         {
             // Bring the piece to our rate. With a microphone already at our rate this is a copy.
             int source = _micFrame.Length;
-            for (int i = 0; i < FrameSamples; i++)
+            if (source == FrameSamples)
             {
-                float at = i * (source - 1) / (float)(FrameSamples - 1);
-                int low = (int)at;
-                int high = Mathf.Min(low + 1, source - 1);
-                _frame[i] = Mathf.Lerp(_micFrame[low], _micFrame[high], at - low);
+                Array.Copy(_micFrame, _frame, FrameSamples);
+            }
+            else
+            {
+                for (int i = 0; i < FrameSamples; i++)
+                {
+                    float at = i * (source - 1) / (float)(FrameSamples - 1);
+                    int low = (int)at;
+                    int high = Mathf.Min(low + 1, source - 1);
+                    _frame[i] = Mathf.Lerp(_micFrame[low], _micFrame[high], at - low);
+                }
             }
 
             // Cleaned even when nothing will be sent: RNNoise learns the room's noise as it
@@ -703,8 +722,24 @@ namespace CloseTheDeal.Voice
             }
         }
 
-        static PlayerMotor FindBody(int clientId)
+        PlayerMotor FindBody(int clientId)
         {
+            if (_net != null && _net.ServerManager.Started
+                && _net.ServerManager.Clients.TryGetValue(clientId, out NetworkConnection conn)
+                && conn.FirstObject != null
+                && conn.FirstObject.TryGetComponent(out PlayerMotor hostBody))
+            {
+                return hostBody;
+            }
+
+            List<Health> all = Health.All;
+            for (int i = 0; i < all.Count; i++)
+            {
+                Health health = all[i];
+                if (health != null && health.OwnerId == clientId && health.TryGetComponent(out PlayerMotor body))
+                    return body;
+            }
+
             PlayerMotor[] bodies = FindObjectsByType<PlayerMotor>();
             for (int i = 0; i < bodies.Length; i++)
             {
@@ -713,6 +748,15 @@ namespace CloseTheDeal.Voice
             }
 
             return null;
+        }
+
+        void RemoveSpeaker(int speakerId)
+        {
+            if (!_heard.TryGetValue(speakerId, out Heard heard))
+                return;
+            if (heard.Speaker != null)
+                Destroy(heard.Speaker.gameObject);
+            _heard.Remove(speakerId);
         }
 
         void ClearSpeakers()

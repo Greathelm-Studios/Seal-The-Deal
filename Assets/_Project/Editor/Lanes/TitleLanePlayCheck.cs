@@ -50,7 +50,33 @@ namespace CloseTheDeal.Editor.Lanes
         static void Resume()
         {
             if (SessionState.GetBool(ActiveKey, false))
+            {
                 EditorApplication.update += Pump;
+                EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            }
+        }
+
+        static void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state != PlayModeStateChange.EnteredEditMode)
+                return;
+            CleanupSession();
+            _run = null;
+            _failures = 0;
+            _out = null;
+            Log.Clear();
+        }
+
+        static void CleanupSession()
+        {
+            EditorApplication.update -= Pump;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            SessionState.SetBool(ActiveKey, false);
+            if (SessionState.GetBool(ReducedSavedKey, false))
+            {
+                UiSettings.ReducedMotion = SessionState.GetBool(ReducedKey, false);
+                SessionState.SetBool(ReducedSavedKey, false);
+            }
         }
 
         static void Pump()
@@ -67,13 +93,7 @@ namespace CloseTheDeal.Editor.Lanes
 
         static void Finish()
         {
-            EditorApplication.update -= Pump;
-            SessionState.SetBool(ActiveKey, false);
-            if (SessionState.GetBool(ReducedSavedKey, false))
-            {
-                UiSettings.ReducedMotion = SessionState.GetBool(ReducedKey, false);
-                SessionState.SetBool(ReducedSavedKey, false);
-            }
+            CleanupSession();
             Log.AppendLine(_failures == 0 ? "PASS" : $"FAIL ({_failures})");
             File.WriteAllText(Path.Combine(_out, "play_check.txt"), Log.ToString());
             Debug.Log("[TitlePlay]\n" + Log);

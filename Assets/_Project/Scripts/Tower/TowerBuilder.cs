@@ -19,6 +19,12 @@ namespace CloseTheDeal.Tower
 
         public static TowerBuilder Instance { get; private set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+        }
+
         /// <summary>Both buildings stand. Raised on every machine after its own local build.</summary>
         public event Action OnBuilt;
 

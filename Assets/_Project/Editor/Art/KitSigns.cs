@@ -20,6 +20,7 @@
 // only earn its cost for a sign that wraps a corner or lies across uneven surfaces, and none does.
 using System.Collections.Generic;
 using System.IO;
+using CloseTheDeal.Editor.Greybox;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -270,29 +271,45 @@ namespace CloseTheDeal.Editor.Art
             if (Made.TryGetValue(key, out var cached) && cached != null) return cached;
             Directory.CreateDirectory(Folder);
             string texPath = $"{Folder}/{name}.png";
-            File.Copy(Path.Combine(TextureSource, name + ".png"), texPath, true);
-            AssetDatabase.ImportAsset(texPath, ImportAssetOptions.ForceUpdate);
-            var importer = (TextureImporter)AssetImporter.GetAtPath(texPath);
-            importer.sRGBTexture = true;
-            importer.alphaIsTransparency = true;
-            importer.mipmapEnabled = true;
-            importer.wrapMode = TextureWrapMode.Clamp;
-            importer.anisoLevel = Aniso;
-            importer.textureCompression = TextureImporterCompression.CompressedHQ;
-            importer.maxTextureSize = MaxDecalTexture;
-            // WHY: an alpha-clipped mark keeps its coverage in the smaller mips, so thin lines don't vanish with distance.
-            importer.mipMapsPreserveCoverage = finish != Finish.Printed;
-            importer.alphaTestReferenceValue = 0.5f;
-            importer.SaveAndReimport();
+            if (GeneratedAssetGuard.MayOverwrite(texPath))
+            {
+                File.Copy(Path.Combine(TextureSource, name + ".png"), texPath, true);
+                AssetDatabase.ImportAsset(texPath, ImportAssetOptions.ForceUpdate);
+                var importer = (TextureImporter)AssetImporter.GetAtPath(texPath);
+                importer.sRGBTexture = true;
+                importer.alphaIsTransparency = true;
+                importer.mipmapEnabled = true;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.anisoLevel = Aniso;
+                importer.textureCompression = TextureImporterCompression.CompressedHQ;
+                importer.maxTextureSize = MaxDecalTexture;
+                // WHY: an alpha-clipped mark keeps its coverage in the smaller mips, so thin lines don't vanish with distance.
+                importer.mipMapsPreserveCoverage = finish != Finish.Printed;
+                importer.alphaTestReferenceValue = 0.5f;
+                importer.SaveAndReimport();
+                var texAsset = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+                if (texAsset != null) GeneratedAssetGuard.MarkGenerated(texAsset);
+            }
 
             string matPath = $"{Folder}/{key}.mat";
+            if (!GeneratedAssetGuard.MayOverwrite(matPath))
+            {
+                var existingMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                Made[key] = existingMat;
+                return existingMat;
+            }
             var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
             if (mat == null)
             {
                 mat = new Material(Shader.Find("Universal Render Pipeline/Lit")) { name = key };
                 AssetDatabase.CreateAsset(mat, matPath);
             }
-            if (finish != Finish.Printed) return Made[key] = Clipped(mat, AssetDatabase.LoadAssetAtPath<Texture2D>(texPath), finish);
+            if (finish != Finish.Printed)
+            {
+                var clippedMat = Clipped(mat, AssetDatabase.LoadAssetAtPath<Texture2D>(texPath), finish);
+                GeneratedAssetGuard.MarkGenerated(clippedMat);
+                return Made[key] = clippedMat;
+            }
             mat.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(texPath));
             mat.SetColor("_BaseColor", Color.white);
             mat.SetFloat("_Smoothness", 0f);
@@ -324,6 +341,7 @@ namespace CloseTheDeal.Editor.Art
             }
             EditorUtility.SetDirty(mat);
             AssetDatabase.SaveAssets();
+            GeneratedAssetGuard.MarkGenerated(mat);
             Made[key] = mat;
             return mat;
         }

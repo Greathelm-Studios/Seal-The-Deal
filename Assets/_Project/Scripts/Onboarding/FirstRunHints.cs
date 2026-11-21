@@ -44,7 +44,6 @@ namespace CloseTheDeal.Onboarding
 
         readonly Queue<HintLine> _queue = new();
         MatchDirector _match;
-        Health _localHealth;
         float _nextShow;
         float _nextReceptionCheck;
 
@@ -114,9 +113,7 @@ namespace CloseTheDeal.Onboarding
         void OnDied(Health health, DamageInfo info)
         {
             FirmMember me = FirmMember.Local;
-            if (me != null && _localHealth == null)
-                _localHealth = me.GetComponent<Health>();
-            if (health == _localHealth && health != null)
+            if (me != null && health != null && health.gameObject == me.gameObject)
                 Offer(HintTrigger.Died);
         }
 

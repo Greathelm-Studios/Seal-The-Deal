@@ -75,7 +75,23 @@ namespace CloseTheDeal.Editor.UI
         static void Resume()
         {
             if (SessionState.GetBool(ActiveKey, false))
+            {
                 EditorApplication.update += Pump;
+                EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            }
+        }
+
+        static void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state != PlayModeStateChange.EnteredEditMode)
+                return;
+            UiMotion.Paused = false;
+            _started = false;
+            _waiting = null;
+            Steps.Clear();
+            SessionState.SetBool(ActiveKey, false);
+            EditorApplication.update -= Pump;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
         }
 
         // ---- Stepper -------------------------------------------------------------------------------
@@ -166,6 +182,7 @@ namespace CloseTheDeal.Editor.UI
             File.WriteAllText(Path.Combine(_out, $"ui_{_mode}_sounds.txt"), string.Join("\n", Sounds));
             SessionState.SetBool(ActiveKey, false);
             EditorApplication.update -= Pump;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             EditorApplication.Exit(_failures == 0 ? 0 : 1);
         }
 

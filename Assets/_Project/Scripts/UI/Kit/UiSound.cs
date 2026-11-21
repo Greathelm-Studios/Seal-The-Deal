@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
@@ -16,6 +17,13 @@ namespace CloseTheDeal.UI
 
         /// <summary>Raised for every request, sounded or not, with the event asked for. For logs and checks.</summary>
         public static event Action<UiSoundEvent> Played;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Player = null;
+            Played = null;
+        }
 
         /// <summary>Asks for a UI sound. Silent until the sound lane's player is registered.</summary>
         public static void Play(UiSoundEvent e)

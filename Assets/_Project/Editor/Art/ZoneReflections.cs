@@ -83,6 +83,8 @@ namespace CloseTheDeal.Editor.Art
                     "Bake", "Cancel"))
                 return "Cancelled.";
 
+            EnsureFolder(ProbeFolder);
+
             Transform old = kit.Find(GroupName);
             if (old != null) Undo.DestroyObjectImmediate(old.gameObject);
             var group = new GameObject(GroupName);
@@ -118,6 +120,15 @@ namespace CloseTheDeal.Editor.Art
                     }
             EditorSceneManager.MarkSceneDirty(scene);
             return Report($"[Zone Reflections] Baked {baked} of {total} zone probes in '{scene.name}' to {ProbeFolder}. Scene not saved.");
+        }
+
+        static void EnsureFolder(string folder)
+        {
+            if (AssetDatabase.IsValidFolder(folder))
+                return;
+            string parent = System.IO.Path.GetDirectoryName(folder).Replace('\\', '/');
+            EnsureFolder(parent);
+            AssetDatabase.CreateFolder(parent, System.IO.Path.GetFileName(folder));
         }
 
         static string Report(string line)

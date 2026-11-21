@@ -22,6 +22,13 @@ namespace CloseTheDeal.Customisation
         /// <summary>Raised on the owner when the local player's outfit becomes available.</summary>
         public static event Action<PlayerOutfit> OnLocalSpawned;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Local = null;
+            OnLocalSpawned = null;
+        }
+
         /// <summary>Raised on every machine when this player's worn outfit changes (after the host accepted it).</summary>
         public event Action<OutfitLoadout> OnWornChanged;
 

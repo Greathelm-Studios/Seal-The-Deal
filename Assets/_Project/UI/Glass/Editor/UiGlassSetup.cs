@@ -109,6 +109,12 @@ namespace CloseTheDeal.Editor.UI
         [MenuItem("Close the Deal/UI/Wire Kit Glass Pane")]
         public static void WireKitPane()
         {
+            if (!Application.isBatchMode && !EditorUtility.DisplayDialog(
+                    "Wire Kit Glass Pane",
+                    "This modifies and saves GlassPane.prefab and Plate.prefab to wire them to the UI glass materials. Any unguarded changes to those glass bindings will be overwritten.",
+                    "Wire", "Cancel"))
+                return;
+
             Wire(KitPane, "GlassFrosted.mat", UiGlass.Preset.Frosted);   // menus, settings, confirm
             Wire(KitPlate, "GlassHudChip.mat", UiGlass.Preset.HudChip);  // every HUD plate (lanes 3 and 4 build from it)
         }

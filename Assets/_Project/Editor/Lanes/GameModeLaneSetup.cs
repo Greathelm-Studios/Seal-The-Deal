@@ -62,6 +62,14 @@ namespace CloseTheDeal.Editor.Lanes
         [MenuItem("Close the Deal/Lanes/Set Up GameMode")]
         public static void SetUp()
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                if (!Application.isBatchMode)
+                    EditorUtility.DisplayDialog("Set Up GameMode", "Stop Play Mode first.", "OK");
+                else
+                    Debug.LogWarning("[GameMode] Stop Play Mode first.");
+                return;
+            }
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
 
@@ -103,6 +111,20 @@ namespace CloseTheDeal.Editor.Lanes
         [MenuItem("Close the Deal/Lanes/Add GameMode To Open Scene")]
         public static void AddToOpenScene()
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                if (!Application.isBatchMode)
+                    EditorUtility.DisplayDialog("Add GameMode To Open Scene", "Stop Play Mode first.", "OK");
+                else
+                    Debug.LogWarning("[GameMode] Stop Play Mode first.");
+                return;
+            }
+            if (!Application.isBatchMode && !EditorUtility.DisplayDialog(
+                    "Add GameMode To Open Scene",
+                    "This adds the Match, HUD and menu section (if missing) to the open scene and saves it.",
+                    "Add and Save", "Cancel"))
+                return;
+
             MatchProfile profile = EnsureAssets();
             EnsurePlayerPrefab();
             if (Object.FindAnyObjectByType<TowerBuilder>() == null)
@@ -138,6 +160,7 @@ namespace CloseTheDeal.Editor.Lanes
                 profile.Firms = new[] { firmA, firmB };
                 profile.BriefcasePrefab = briefcase;
                 AssetDatabase.CreateAsset(profile, MatchProfilePath);
+                GeneratedAssetGuard.MarkGenerated(profile);
                 Debug.Log("[GameMode] Created " + MatchProfilePath);
             }
             else if (profile.BriefcasePrefab == null)
@@ -167,6 +190,7 @@ namespace CloseTheDeal.Editor.Lanes
             firm.MarkerColour = colour;
             firm.Tower = tower;
             AssetDatabase.CreateAsset(firm, path);
+            GeneratedAssetGuard.MarkGenerated(firm);
             Debug.Log("[GameMode] Created " + path);
             return firm;
         }
@@ -189,6 +213,7 @@ namespace CloseTheDeal.Editor.Lanes
             lane.RandomFloors = 2;
             lane.CheckpointEvery = 2;
             AssetDatabase.CreateAsset(lane, LaneTowerPath);
+            GeneratedAssetGuard.MarkGenerated(lane);
             Debug.Log("[GameMode] Created " + LaneTowerPath);
             return lane;
         }
@@ -199,6 +224,14 @@ namespace CloseTheDeal.Editor.Lanes
         [MenuItem("Close the Deal/Lanes/Rebuild GameMode Briefcase")]
         public static void RebuildBriefcase()
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                if (!Application.isBatchMode)
+                    EditorUtility.DisplayDialog("Rebuild GameMode Briefcase", "Stop Play Mode first.", "OK");
+                else
+                    Debug.LogWarning("[GameMode] Stop Play Mode first.");
+                return;
+            }
             if (!GeneratedAssetGuard.MayOverwrite(BriefcasePath))
                 return;
 
@@ -300,6 +333,7 @@ namespace CloseTheDeal.Editor.Lanes
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
             material.SetColor("_BaseColor", new Color(0.86f, 0.9f, 0.95f, 0.45f));
             AssetDatabase.CreateAsset(material, GatePath);
+            GeneratedAssetGuard.MarkGenerated(material);
             return material;
         }
 
@@ -319,6 +353,7 @@ namespace CloseTheDeal.Editor.Lanes
 
             material = new Material(shader) { name = "BriefcaseBeacon" };
             AssetDatabase.CreateAsset(material, BeaconPath);
+            GeneratedAssetGuard.MarkGenerated(material);
             return material;
         }
 
@@ -331,6 +366,7 @@ namespace CloseTheDeal.Editor.Lanes
             material = new Material(Shader.Find("Universal Render Pipeline/Lit")) { name = Path.GetFileNameWithoutExtension(path) };
             material.SetColor("_BaseColor", colour);
             AssetDatabase.CreateAsset(material, path);
+            GeneratedAssetGuard.MarkGenerated(material);
             return material;
         }
 

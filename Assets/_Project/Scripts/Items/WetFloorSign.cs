@@ -69,6 +69,9 @@ namespace CloseTheDeal.Items
         public override void OnStartServer()
         {
             base.OnStartServer();
+            _down.Value = false;
+            _placedAt = Vector3.zero;
+            _targets.Clear();
             TimeManager.OnTick += ServerTick;
         }
 

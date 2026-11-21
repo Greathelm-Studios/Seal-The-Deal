@@ -39,6 +39,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
+using CloseTheDeal.Editor.Greybox;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -232,6 +233,11 @@ namespace CloseTheDeal.Editor.Art
         [MenuItem("Close the Deal/Art/Import Kit and Build Test Scene")]
         public static void RunFromMenu()
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                EditorUtility.DisplayDialog("Import Kit and Build Test Scene", "Stop Play Mode first.", "OK");
+                return;
+            }
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             Run(Path.Combine(Path.GetTempPath(), "CloseTheDealKit"));
         }
@@ -286,6 +292,11 @@ namespace CloseTheDeal.Editor.Art
             {
                 string path = $"{MaterialFolder}/{m.name}.mat";
                 var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (mat != null && !GeneratedAssetGuard.MayOverwrite(path))
+                {
+                    result[m.name] = mat;
+                    continue;
+                }
                 if (mat == null)
                 {
                     mat = new Material(lit) { name = m.name };
@@ -322,6 +333,7 @@ namespace CloseTheDeal.Editor.Art
                         mat.shader = water;
                         mat.renderQueue = -1;
                         EditorUtility.SetDirty(mat);
+                        GeneratedAssetGuard.MarkGenerated(mat);
                         result[m.name] = mat;
                         continue;
                     }
@@ -376,6 +388,7 @@ namespace CloseTheDeal.Editor.Art
                 mat.SetFloat("_Metallic", m.metallic);
                 mat.SetFloat("_Smoothness", m.smoothness);
                 EditorUtility.SetDirty(mat);
+                GeneratedAssetGuard.MarkGenerated(mat);
                 result[m.name] = mat;
             }
             return result;
@@ -467,6 +480,11 @@ namespace CloseTheDeal.Editor.Art
             }
             Directory.CreateDirectory(ModelFolder);
             string dst = $"{ModelFolder}/{piece}.fbx";
+            if (!GeneratedAssetGuard.MayOverwrite(dst))
+            {
+                report.AppendLine($"SKIP  {piece}: {dst} was edited by hand.");
+                return true;
+            }
             File.Copy(src, dst, true);
             AssetDatabase.ImportAsset(dst, ImportAssetOptions.ForceUpdate);
 
@@ -489,6 +507,7 @@ namespace CloseTheDeal.Editor.Art
 
             bool ok = true;
             var root = AssetDatabase.LoadAssetAtPath<GameObject>(dst);
+            if (root != null) GeneratedAssetGuard.MarkGenerated(root);
             Dictionary<string, Vector3> expected = ReadManifestSizes(manifest);
             foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
             {
@@ -564,6 +583,12 @@ namespace CloseTheDeal.Editor.Art
         {
             const int BoxIndexCount = 36;   // 12 triangles: a box
             Directory.CreateDirectory(PrefabFolder);
+            string prefabPath = $"{PrefabFolder}/{piece}.prefab";
+            if (!GeneratedAssetGuard.MayOverwrite(prefabPath))
+            {
+                report.AppendLine($"SKIP  {piece}: {prefabPath} was edited by hand.");
+                return true;
+            }
             var model = AssetDatabase.LoadAssetAtPath<GameObject>($"{ModelFolder}/{piece}.fbx");
             var go = (GameObject)PrefabUtility.InstantiatePrefab(model);
             PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.OutermostRoot, InteractionMode.AutomatedAction);
@@ -597,8 +622,9 @@ namespace CloseTheDeal.Editor.Art
                     if (ColliderOnly.Contains(piece)) Object.DestroyImmediate(child.GetComponent<MeshRenderer>());
                 }
             }
-            PrefabUtility.SaveAsPrefabAsset(go, $"{PrefabFolder}/{piece}.prefab");
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, prefabPath);
             Object.DestroyImmediate(go);
+            GeneratedAssetGuard.MarkGenerated(prefab);
             if (colliders == 0 && !VisualOnly.Contains(piece))
             {
                 report.AppendLine($"FAIL  {piece}: prefab has no collider");
