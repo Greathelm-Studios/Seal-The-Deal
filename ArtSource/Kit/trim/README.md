@@ -1,11 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-15
-  Prompt    : Alex: "making a trimsheet in substance or something that can be used on most modular kits and props"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : How the AONAGI Aero trim sheet is made in Substance Painter and how the props are mapped onto it.
--->
 # AONAGI Aero trim sheet
 
 **Status:** Current for the office props and doors · **Last updated:** 2026-11-15

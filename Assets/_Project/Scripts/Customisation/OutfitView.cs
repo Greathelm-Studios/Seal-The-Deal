@@ -3,12 +3,7 @@ using UnityEngine.Rendering;
 
 namespace CloseTheDeal.Customisation
 {
-    /// <summary>
-    /// Draws an outfit on a character's body: each slot's chosen colours go onto that slot's
-    /// material slots through one reused property block, so the shared toon materials are
-    /// never touched (AGENTS.md §4 and §6). A change can answer with a short "fitting" bob.
-    /// Purely visual and local; who wears what is decided by PlayerOutfit.
-    /// </summary>
+    /// <summary>Local MaterialPropertyBlock renderer for character outfits and fitting-change bobs. Design: docs/systems/CUSTOMISATION.md.</summary>
     [DisallowMultipleComponent]
     public sealed class OutfitView : MonoBehaviour
     {
@@ -41,7 +36,6 @@ namespace CloseTheDeal.Customisation
         ShadowCastingMode[] _savedShadows;
         bool[] _savedRenderingOff;
 
-        /// <summary>One material slot on one body renderer.</summary>
         readonly struct Target
         {
             public readonly int Renderer;
@@ -104,17 +98,12 @@ namespace CloseTheDeal.Customisation
                 _bobTime = 0f;
         }
 
-        OutfitSlot[] _slotOrder;
-
-        /// <summary>Looks up, once, where each category's material names are on the body's renderers.</summary>
         void ResolveMaterials()
         {
-            _slotOrder = new OutfitSlot[_catalog.SlotCount];
             _targets = new Target[_catalog.SlotCount][];
-            for (int s = 0; s < _slotOrder.Length; s++)
+            for (int s = 0; s < _targets.Length; s++)
             {
                 OutfitSlot slot = _catalog.Slot(s);
-                _slotOrder[s] = slot;
                 if (slot == null)
                     continue;
 
@@ -146,17 +135,15 @@ namespace CloseTheDeal.Customisation
         {
             OutfitSlot slot = _catalog.Slot(slotIndex);
             if (slot != null && slot.IsValidOption(optionIndex))
-                Paint(slot, slot.Option(optionIndex));
+                Paint(slotIndex, slot.Option(optionIndex));
         }
 
-        /// <summary>Puts one choice's colours on every body material its category covers.</summary>
-        void Paint(OutfitSlot slot, OutfitOption option)
+        void Paint(int slotIndex, OutfitOption option)
         {
             if (_targets == null)
                 ResolveMaterials();
 
-            int slotIndex = System.Array.IndexOf(_slotOrder, slot);
-            Target[] targets = slotIndex >= 0 ? _targets[slotIndex] : null;
+            Target[] targets = slotIndex >= 0 && slotIndex < _targets.Length ? _targets[slotIndex] : null;
             if (targets == null)
                 return;
 
@@ -174,16 +161,13 @@ namespace CloseTheDeal.Customisation
             }
         }
 
-        /// <summary>
-        /// The owner's own body is hidden in first person (PlayerMotor draws only its shadow).
-        /// The fitting room needs to see it: this shows it and later puts back exactly what it found.
-        /// </summary>
+        /// <summary>Reveals the local first-person hidden body for fitting-room preview and restores previous settings on exit.</summary>
         public void ForceVisible(bool visible)
         {
             if (_bodies.Length == 0 || visible == _forcedVisible)
                 return;
 
-            if (visible)
+            if (visible && (_savedShadows == null || _savedShadows.Length != _bodies.Length))
             {
                 _savedShadows = new ShadowCastingMode[_bodies.Length];
                 _savedRenderingOff = new bool[_bodies.Length];

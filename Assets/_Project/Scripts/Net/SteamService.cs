@@ -4,10 +4,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Net
 {
-    /// <summary>
-    /// Owns the Steam API for the whole run of the game: starts it on launch, pumps its
-    /// callbacks every frame and shuts it down on quit. Nothing else calls SteamAPI.Init.
-    /// </summary>
+    /// <summary>Owns the Steam API lifecycle for the whole run of the game.</summary>
     [DisallowMultipleComponent]
     public sealed class SteamService : MonoBehaviour
     {
@@ -61,8 +58,7 @@ namespace CloseTheDeal.Net
                 return;
             }
 
-            // Steam measures its relay routes in the background from this call on. The transport
-            // only asks when a connection starts, which would make the first Host or Join wait for it.
+            // Warm up relay routing at launch so the first Host/Join does not stall.
             SteamNetworkingUtils.InitRelayNetworkAccess();
             Debug.Log($"[Steam] Ready as {SteamFriends.GetPersonaName()} ({SteamUser.GetSteamID()}).");
         }
@@ -81,6 +77,13 @@ namespace CloseTheDeal.Net
             if (IsReady)
                 SteamAPI.Shutdown();
 
+            IsReady = false;
+            _instance = null;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
             IsReady = false;
             _instance = null;
         }

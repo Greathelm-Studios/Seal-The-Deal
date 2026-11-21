@@ -4,16 +4,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// Settings › Audio: one slider per mixer bus (Master, Music, Effects, Voice, Interface) through the sound lane's
-    /// UiAudio, a Play test sound button and a live output meter in the right column (the sound lane's UiSoundMeter
-    /// on the listener, added only while this tab shows). Below the sliders, voice chat: which microphone, how it
-    /// opens, noise suppression, and a mic test that plays the player's own voice back (values in VoiceSettings).
-    /// </summary>
-    /// <remarks>
-    /// Modified: Claude Fable 5.2, 2026-11-15, the four voice chat rows (Harvey: "do the delay and mic picker and do
-    /// the settings in the settings menu"). NOT YET REVIEWED BY A HUMAN.
-    /// </remarks>
+    /// <summary>Settings Audio tab: mixer bus sliders, output meter, and voice chat controls.</summary>
     [AddComponentMenu("Seal the Deal/UI/Settings Page - Audio")]
     public sealed class AudioPage : UiSettingsPage
     {
@@ -38,19 +29,12 @@ namespace CloseTheDeal.UI
         static readonly string[] ModeNames = { "Open microphone", "Push to talk", "Off" };
         const string DefaultMicName = "System default";
 
-        /// <summary>Longest microphone name the stepper shows before it is cut with an ellipsis.</summary>
         const int MicNameLength = 18;
 
-        /// <summary>
-        /// True when this prefab has the voice rows. A settings prefab built before they existed has none, and the
-        /// sliders must still work.
-        /// </summary>
         bool HasVoice => _microphone != null && _micMode != null && _noise != null && _micTest != null;
 
-        /// <summary>Unity's names for the microphones on offer, in the stepper's order after "System default".</summary>
         string[] _devices = System.Array.Empty<string>();
 
-        /// <summary>"Microphone (Yeti Classic)" reads as "Yeti Classic": Windows wraps every name the same way.</summary>
         static string ShortName(string device)
         {
             string name = device;
@@ -60,7 +44,6 @@ namespace CloseTheDeal.UI
             return name.Length > MicNameLength ? name.Substring(0, MicNameLength - 1).TrimEnd() + "\u2026" : name;
         }
 
-        /// <summary>Reads the microphones plugged in now and shows the saved choice. A saved one that is unplugged shows as the default.</summary>
         void ShowMicrophones()
         {
             _devices = Microphone.devices;
@@ -71,14 +54,12 @@ namespace CloseTheDeal.UI
             _microphone.SetOptions(names, System.Array.IndexOf(_devices, VoiceSettings.Device) + 1);
         }
 
-        /// <summary>The row's own name, as the player reads it beside the slider.</summary>
         static string RowName(Component control)
         {
             var label = control.transform.parent != null ? control.transform.parent.Find("Name") : null;
             return label != null && label.TryGetComponent(out TMPro.TMP_Text text) ? text.text : control.name;
         }
 
-        /// <summary>The sound lane's shipped level for a bus, in percent.</summary>
         static int DefaultPercent(int i) => Mathf.RoundToInt(UiAudio.DefaultOf(Order[i]) * 100f);
 
         System.Action<int>[] _handlers;
@@ -143,7 +124,6 @@ namespace CloseTheDeal.UI
             _micTest.SetWithoutNotify(VoiceSettings.HearSelf);
         }
 
-        /// <summary>Nine rows fill the page, as on Controls: there is no room for the changes summary under them.</summary>
         public override bool ShowsChanges => !HasVoice;
 
         public override bool AtDefaults

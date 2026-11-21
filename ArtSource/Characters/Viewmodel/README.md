@@ -1,11 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Fable 5.2 (Claude Code)
-  Generated : 2026-11-13
-  Prompt    : Alex: "set up an fps viewmodel with the characters model we are using"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : How the first-person arm clips were made, so they can be remade or added to.
--->
 # First-person arm clips
 
 `Assets/_Project/Art/Characters/STDMC/Animations/STDMC_ViewmodelMoves.fbx` holds `Pistol_Idle_Loop` (the only one in use), `Pistol_Shoot`, `Pistol_Reload` and `Pistol_Aim_Neutral` from the Quaternius Universal Animation Library 1 (CC0), retargeted onto the character's own skeleton with the `character-animation` skill. The system is described in [docs/systems/VIEWMODEL.md](../../../docs/systems/VIEWMODEL.md).

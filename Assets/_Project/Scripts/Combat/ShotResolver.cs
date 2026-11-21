@@ -1,3 +1,4 @@
+using System;
 using CloseTheDeal.Glass;
 using UnityEngine;
 
@@ -20,13 +21,7 @@ namespace CloseTheDeal.Combat
         public int PanesCrossed;
     }
 
-    /// <summary>
-    /// Works out where a shot goes. Glass never stops it (GDD): the ray carries on through
-    /// every pane and remembers them. Bodies are tested as capsules by maths rather than by
-    /// their colliders, so the host can test them where they stood a moment ago, which is
-    /// what the shooter was looking at. The host's answer is the only one that deals damage;
-    /// a client runs the same trace only to draw its own tracer straight away.
-    /// </summary>
+    /// <summary>Traces shots through breakable glass against mathematical rewound body capsules.</summary>
     public static class ShotResolver
     {
         public const int MaxPanesPerShot = 8;
@@ -36,22 +31,34 @@ namespace CloseTheDeal.Combat
 
         /// <summary>Step past a pane's surface before looking further, in metres. Under any pane's thickness.</summary>
         const float PaneSkin = 0.002f;
+        const int MaxRaySteps = MaxPanesPerShot * 4;
         const float TwoPi = Mathf.PI * 2f;
 
         static readonly GlassPane[] Panes = new GlassPane[MaxPanesPerShot];
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Array.Clear(Panes, 0, Panes.Length);
+        }
+
         /// <summary>
         /// Traces one shot. solidMask is the world (never the Player layer). With rewind on,
         /// bodies are tested where they stood on rewindTick; only the host has that history.
+        /// Pass recordPanes: true on the host before calling BreakCrossedPanes.
         /// </summary>
-        public static ShotResult Trace(Vector3 origin, Vector3 direction, float range, int solidMask, Health shooter, bool rewind, uint rewindTick, float headFromHeight)
+        public static ShotResult Trace(Vector3 origin, Vector3 direction, float range, int solidMask, Health shooter, bool rewind, uint rewindTick, float headFromHeight, bool recordPanes = false)
         {
+            if (recordPanes)
+                Array.Clear(Panes, 0, Panes.Length);
+
             var result = new ShotResult();
             float limit = NearestBody(origin, direction, range, shooter, rewind, rewindTick, out Health body, out float bodyFeetY);
 
             float travelled = 0f;
             bool clear = false;
-            for (int i = 0; i <= MaxPanesPerShot && travelled < limit; i++)
+            GlassPane lastPane = null;
+            for (int step = 0; step <= MaxRaySteps && travelled < limit; step++)
             {
                 Vector3 from = origin + direction * travelled;
                 if (!Physics.Raycast(from, direction, out RaycastHit hit, limit - travelled, solidMask, QueryTriggerInteraction.Ignore))
@@ -69,7 +76,21 @@ namespace CloseTheDeal.Combat
                     return result;
                 }
 
-                Remember(pane, ref result);
+                // A pane whose collider is a hollow mesh is met twice, front and back: count unique panes only.
+                if (pane != lastPane)
+                {
+                    if (result.PanesCrossed >= MaxPanesPerShot)
+                    {
+                        travelled += hit.distance;
+                        break;
+                    }
+
+                    if (recordPanes)
+                        Panes[result.PanesCrossed] = pane;
+                    result.PanesCrossed++;
+                    lastPane = pane;
+                }
+
                 travelled += hit.distance + PaneSkin;
             }
 
@@ -100,12 +121,22 @@ namespace CloseTheDeal.Combat
 
             Vector3 direction = line / length;
             float travelled = 0f;
-            for (int i = 0; i <= MaxPanesPerShot && travelled < length; i++)
+            int uniquePanes = 0;
+            GlassPane lastPane = null;
+            for (int step = 0; step <= MaxRaySteps && travelled < length; step++)
             {
                 if (!Physics.Raycast(from + direction * travelled, direction, out RaycastHit hit, length - travelled, solidMask, QueryTriggerInteraction.Ignore))
                     return true;
-                if (!GlassPane.TryFind(hit.collider, out _))
+                if (!GlassPane.TryFind(hit.collider, out GlassPane pane))
                     return false;
+
+                if (pane != lastPane)
+                {
+                    if (uniquePanes >= MaxPanesPerShot)
+                        return false;
+                    uniquePanes++;
+                    lastPane = pane;
+                }
 
                 travelled += hit.distance + PaneSkin;
             }
@@ -114,10 +145,11 @@ namespace CloseTheDeal.Combat
             return travelled >= length;
         }
 
-        /// <summary>Host only. Breaks the panes the last traced shot crossed. Call straight after Trace.</summary>
+        /// <summary>Host only. Breaks the panes the last traced shot crossed. Call straight after Trace(..., recordPanes: true).</summary>
         public static void BreakCrossedPanes(in ShotResult result, Vector3 direction, int attackerClientId)
         {
-            for (int i = 0; i < result.PanesCrossed; i++)
+            int count = Mathf.Min(result.PanesCrossed, Panes.Length);
+            for (int i = 0; i < count; i++)
             {
                 GlassPane pane = Panes[i];
                 Panes[i] = null;
@@ -160,14 +192,6 @@ namespace CloseTheDeal.Combat
             return new Vector3(Mathf.Sin(yaw) * flat, Mathf.Sin(pitch), Mathf.Cos(yaw) * flat);
         }
 
-        static void Remember(GlassPane pane, ref ShotResult result)
-        {
-            // A pane whose collider is a hollow mesh is met twice, front and back.
-            bool repeat = result.PanesCrossed > 0 && Panes[result.PanesCrossed - 1] == pane;
-            if (!repeat && result.PanesCrossed < MaxPanesPerShot)
-                Panes[result.PanesCrossed++] = pane;
-        }
-
         /// <summary>Distance to the first living body on the ray, or range when there is none.</summary>
         static float NearestBody(Vector3 origin, Vector3 direction, float range, Health shooter, bool rewind, uint rewindTick, out Health body, out float bodyFeetY)
         {
@@ -191,7 +215,10 @@ namespace CloseTheDeal.Combat
                 // their screen sits between ticks, and is never known closer than that.
                 for (int offset = -RewindSlackTicks; offset <= RewindSlackTicks; offset++)
                 {
-                    uint tick = rewindTick + (uint)offset;
+                    if (offset < 0 && rewindTick < (uint)(-offset))
+                        continue;
+
+                    uint tick = offset >= 0 ? rewindTick + (uint)offset : rewindTick - (uint)(-offset);
                     if (candidate.WasAliveAt(tick))
                         TestBody(candidate, candidate.PositionAt(tick), origin, direction, ref nearest, ref body, ref bodyFeetY);
                 }

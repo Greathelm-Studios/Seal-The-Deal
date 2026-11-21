@@ -27,11 +27,7 @@ namespace CloseTheDeal.Narration
         }
     }
 
-    /// <summary>
-    /// The one place every spoken line passes through on this machine, so a subtitle bar and a
-    /// voice player listen to a single source. Local only: whatever raises a line has already
-    /// decided it from synced state. Design: docs/systems/NARRATION.md.
-    /// </summary>
+    /// <summary>Single local subtitle stream shared by match and reception narration. Design: docs/systems/NARRATION.md.</summary>
     public static class Subtitles
     {
         /// <summary>A line starts. A new one replaces whatever is showing.</summary>

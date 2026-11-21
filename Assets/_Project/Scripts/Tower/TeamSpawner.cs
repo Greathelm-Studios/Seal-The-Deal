@@ -9,13 +9,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Tower
 {
-    /// <summary>
-    /// Spawns each joining player in their team's lobby. Replaces FishNet's PlayerSpawner on
-    /// the NetworkManager. Host only: the host decides teams and positions. A joiner goes to
-    /// the team with fewer players, team A on a tie, so the host is team A and joiners
-    /// alternate B, A, B until someone leaves. The team reaches clients through whoever
-    /// listens to OnPlayerSpawning (the match's FirmMember syncs it).
-    /// </summary>
+    /// <summary>Host-authoritative player spawner replacing FishNet's PlayerSpawner. Design: docs/systems/TOWER.md.</summary>
     [DisallowMultipleComponent]
     public sealed class TeamSpawner : MonoBehaviour
     {
@@ -30,6 +24,14 @@ namespace CloseTheDeal.Tower
 
         /// <summary>The spawner on the NetworkManager, or null when there is none.</summary>
         public static TeamSpawner Instance { get; private set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+            SpawnOverride = null;
+            // OnPlayerSpawning is hooked by FirmMember at SubsystemRegistration; don't clear it here.
+        }
 
         [Tooltip("The networked player prefab.")]
         [SerializeField] NetworkObject _playerPrefab;
@@ -107,7 +109,6 @@ namespace CloseTheDeal.Tower
             _networkManager.SceneManager.AddOwnerToDefaultScene(player);
         }
 
-        /// <summary>A leaver frees their place, so the next joiner evens the teams up again.</summary>
         void OnRemoteConnectionState(NetworkConnection conn, RemoteConnectionStateArgs args)
         {
             if (args.ConnectionState != RemoteConnectionState.Stopped || !_seats.Remove(conn.ClientId, out Seat seat))
@@ -116,7 +117,6 @@ namespace CloseTheDeal.Tower
             Released(seat.Team);
         }
 
-        /// <summary>One fewer in the team; the slots still in use are worked out again from who is seated, so a slot two players share is never freed under one of them.</summary>
         void Released(int team)
         {
             _playersPerTeam[team]--;
@@ -128,7 +128,6 @@ namespace CloseTheDeal.Tower
             }
         }
 
-        /// <summary>The host stopped: nobody is seated any more, so the next session starts from team A again.</summary>
         void OnServerConnectionState(ServerConnectionStateArgs args)
         {
             if (args.ConnectionState != LocalConnectionState.Stopped)
@@ -142,11 +141,7 @@ namespace CloseTheDeal.Tower
             }
         }
 
-        /// <summary>
-        /// Host only. Moves a connected player to the given team, as a lobby that chose the teams
-        /// decides, keeping the head counts the next joiner is balanced against. Returns their
-        /// slot in the new team (which picks their spawn point).
-        /// </summary>
+        /// <summary>Host only. Moves a player to the given team and returns their assigned slot.</summary>
         public int AssignTeam(int clientId, int team)
         {
             if (_seats.TryGetValue(clientId, out Seat old) && old.Team == team)
@@ -157,11 +152,7 @@ namespace CloseTheDeal.Tower
             return SitDown(clientId, team).Slot;
         }
 
-        /// <summary>
-        /// Host only. Seats a whole lobby's choice at once (client id → team): everyone listed
-        /// leaves their seat first, then sits down in their team, so two players swapping teams
-        /// can never be handed the same slot. Players not listed keep their seats.
-        /// </summary>
+        /// <summary>Host only. Applies a batch of clientId-to-team assignments without slot collisions on swaps.</summary>
         public void AssignTeams(IReadOnlyDictionary<int, int> teamByClientId)
         {
             foreach (KeyValuePair<int, int> pair in teamByClientId)
@@ -180,7 +171,6 @@ namespace CloseTheDeal.Tower
         /// <summary>The player's slot in their team, or -1 when they have no seat.</summary>
         public int SlotOf(int clientId) => _seats.TryGetValue(clientId, out Seat seat) ? seat.Slot : -1;
 
-        /// <summary>The team with fewer players (A on a tie) and the lowest free slot in it.</summary>
         Seat TakeSeat(int clientId)
         {
             if (_seats.TryGetValue(clientId, out Seat existing))
@@ -191,8 +181,6 @@ namespace CloseTheDeal.Tower
 
         Seat SitDown(int clientId, int team)
         {
-            // The lowest free slot; a fifth player in a team (only possible when a lobby chooses
-            // the teams) shares a spawn point, picked round-robin, rather than corrupting the set.
             int slot = 0;
             while (slot < SlotsPerTeam && (_slotsInUse[team] & (1 << slot)) != 0)
                 slot++;

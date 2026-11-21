@@ -5,14 +5,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.MatchMode
 {
-    /// <summary>
-    /// The one briefcase of the match: the objective either firm can carry. The host simulates
-    /// it while it lies loose; everyone else holds it still and follows the host through
-    /// NetworkTransform, like furniture. While carried the networked body stays parked where
-    /// it was picked up, switched off, and only the visual follows the carrier on each
-    /// machine, so carrying costs no traffic. Its state lives on the MatchDirector; this only
-    /// shows it. Design: docs/systems/MATCH.md.
-    /// </summary>
+    /// <summary>Host-simulated objective briefcase with local carry visuals, firm tinting, and beacon. Design: docs/systems/MATCH.md.</summary>
     [DefaultExecutionOrder(200)] // After the player camera has moved, so the carrier's own view never lags a frame.
     [RequireComponent(typeof(Rigidbody), typeof(NetworkTransform))]
     public sealed class Briefcase : NetworkBehaviour
@@ -23,35 +16,34 @@ namespace CloseTheDeal.MatchMode
         [Tooltip("The parts tinted to show who holds it: your firm's colour, the rival's, or the loose colour from the match profile.")]
         [SerializeField] Renderer[] _firmMarkers = new Renderer[0];
 
-        /// <summary>Turned side-on and leaning in toward the middle of the view; mirrored when the case sits on the left.</summary>
         static readonly Quaternion FirstPersonTiltRight = Quaternion.Euler(0f, 75f, 8f);
         static readonly Quaternion FirstPersonTiltLeft = Quaternion.Euler(0f, -75f, -8f);
 
         static readonly int BaseColour = Shader.PropertyToID("_BaseColor");
         static readonly int Fade = Shader.PropertyToID("_Fade");
 
-        /// <summary>The beacon's column is this wide, metres.</summary>
         const float BeaconWidth = 0.6f;
-
-        /// <summary>Picked up or let go, the case squashes a little and settles: how much bigger it starts, and how long it takes, seconds.</summary>
         const float PopScale = 0.18f;
-
-        /// <summary>The rival-held beacon breathes this many times a second, down to this fraction of full strength.</summary>
         const float RivalPulseRate = 1.5f;
         const float RivalPulseLow = 0.35f;
         const float PopSeconds = 0.18f;
-
-        /// <summary>Over the last this-fraction of the beacon range it fades out rather than popping.</summary>
         const float BeaconFadeBand = 0.25f;
 
         /// <summary>The match's briefcase on this machine, or null before it has spawned.</summary>
         public static Briefcase Current { get; private set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Current = null;
+        }
 
         Rigidbody _rigidbody;
         Collider _collider;
         NetworkTransform _networkTransform;
         MaterialPropertyBlock _block;
         Vector3 _centreLocal;
+        Camera _camera;
 
         float _popStarted = -1f;
         float _handScale = 1f;
@@ -67,24 +59,16 @@ namespace CloseTheDeal.MatchMode
         Vector3 _blendFromPosition;
         Quaternion _blendFromRotation;
 
-        /// <summary>Host only: ticks it has lain outside the buildings, plaza and skybridges in a row.</summary>
         internal int StrayTicks;
-
-        /// <summary>Host only: the tick it comes back.</summary>
         internal uint ReturnAtTick;
-
-        /// <summary>Host only: where its carrier last stood, in case the carrier vanishes without a word.</summary>
         internal Vector3 LastCarrierPosition;
 
-        /// <summary>The centre of the case as it lies in the world.</summary>
+        /// <summary>World-space centre of the case.</summary>
         public Vector3 Centre => transform.TransformPoint(_centreLocal);
 
         public Vector3 Position => _rigidbody.position;
 
-        /// <summary>Host: lying still (asleep, or barely moving), not in flight.</summary>
         internal bool Resting => _rigidbody.IsSleeping() || _rigidbody.linearVelocity.sqrMagnitude < 0.04f;
-
-        // ---- Lifecycle -----------------------------------------------------------------------
 
         void Awake()
         {
@@ -126,7 +110,6 @@ namespace CloseTheDeal.MatchMode
                 Current = null;
         }
 
-        /// <summary>Makes itself the match's briefcase and takes up whatever state the match already has.</summary>
         internal void Register()
         {
             Current = this;
@@ -136,9 +119,6 @@ namespace CloseTheDeal.MatchMode
                 Apply(match.CaseStatus);
         }
 
-        // ---- Showing the state (every machine) -----------------------------------------------
-
-        /// <summary>Takes up a new state from the match: where it is, whether it can be touched, who holds it.</summary>
         internal void Apply(BriefcaseStatus status)
         {
             BriefcaseState previous = _state;
@@ -179,7 +159,6 @@ namespace CloseTheDeal.MatchMode
             _visual.GetPositionAndRotation(out _blendFromPosition, out _blendFromRotation);
         }
 
-        /// <summary>While carried, the visual eases into the carrier's hand and then stays in it. The beacon follows the visual.</summary>
         void LateUpdate()
         {
             if (_state == BriefcaseState.Carried)
@@ -215,7 +194,6 @@ namespace CloseTheDeal.MatchMode
                 _visual.localScale = Vector3.one * Mathf.Lerp(1f, _handScale, t);
         }
 
-        /// <summary>A quick squash and settle on the visual when it changes hands: wide and short first, then back to its own shape.</summary>
         void PopStep()
         {
             float t = Mathf.Clamp01((Time.unscaledTime - _popStarted) / PopSeconds);
@@ -228,9 +206,6 @@ namespace CloseTheDeal.MatchMode
             _popStarted = -1f;
         }
 
-        // ---- Beacon (every machine, local only) ------------------------------------------------
-
-        /// <summary>A column of light over the case, drawn through floors and walls, so a stranger can find the objective. Built once, from the match profile's material.</summary>
         void EnsureBeacon(MatchDirector match)
         {
             if (_beacon != null || match == null || match.Profile == null || match.Profile.BeaconMaterial == null)
@@ -238,8 +213,7 @@ namespace CloseTheDeal.MatchMode
 
             GameObject column = GameObject.CreatePrimitive(PrimitiveType.Quad);
             column.name = "Beacon";
-            // At once, not at the end of the frame: a concave mesh collider under the briefcase's
-            // moving rigidbody is refused by physics on every step until it is gone.
+            // DestroyImmediate so a concave mesh collider never sits on the moving rigidbody even for one frame.
             DestroyImmediate(column.GetComponent<Collider>());
             column.transform.SetParent(transform, false);
             _beacon = column.GetComponent<Renderer>();
@@ -264,11 +238,10 @@ namespace CloseTheDeal.MatchMode
             _beacon.SetPropertyBlock(_beaconBlock);
         }
 
-        /// <summary>Stands on the visible case, turns to face the camera about the vertical, and fades out toward the profile's range. Hidden from the carrier and while away.</summary>
         void UpdateBeacon()
         {
             MatchDirector match = MatchDirector.Instance;
-            Camera view = Camera.main;
+            Camera view = ResolveCamera();
             if (_beacon == null || match == null || view == null)
                 return;
 
@@ -295,10 +268,13 @@ namespace CloseTheDeal.MatchMode
             _beacon.SetPropertyBlock(_beaconBlock);
         }
 
-        /// <summary>
-        /// A second cue besides colour, for players who can't tell cyan from amber: while the
-        /// rival firm holds the case its beacon breathes; your own firm's and a loose one stay steady.
-        /// </summary>
+        Camera ResolveCamera()
+        {
+            if (_camera == null || !_camera.isActiveAndEnabled)
+                _camera = Camera.main;
+            return _camera;
+        }
+
         float RivalPulse()
         {
             FirmMember local = FirmMember.Local;
@@ -309,7 +285,6 @@ namespace CloseTheDeal.MatchMode
             return Mathf.Lerp(RivalPulseLow, 1f, wave);
         }
 
-        /// <summary>1 near, fading to 0 toward the profile's range; 0 while away or for the carrier themself.</summary>
         float BeaconFade(MatchDirector match, Vector3 viewer, Vector3 foot)
         {
             bool mine = _state == BriefcaseState.Carried && _carrier != null && _carrier == FirmMember.Local;
@@ -320,7 +295,6 @@ namespace CloseTheDeal.MatchMode
             return Mathf.Clamp01((range - Vector3.Distance(viewer, foot)) / (range * BeaconFadeBand));
         }
 
-        /// <summary>The carrier sees it low in their own view; everyone else sees it hanging at the carrier's side.</summary>
         void HandPose(out Vector3 position, out Quaternion rotation)
         {
             PlayerCamera view = PlayerCamera.Instance;
@@ -338,7 +312,6 @@ namespace CloseTheDeal.MatchMode
             _handScale = 1f;
         }
 
-        /// <summary>In your firm's colour while one of you holds it, the rival's while they do, the loose colour otherwise; on your own screen.</summary>
         void RefreshTint()
         {
             MatchDirector match = MatchDirector.Instance;
@@ -358,9 +331,6 @@ namespace CloseTheDeal.MatchMode
             }
         }
 
-        // ---- Host: physics -------------------------------------------------------------------
-
-        /// <summary>Host only. Into a hand, or away for a return: it stops moving and can't be touched.</summary>
         internal void ServerPark()
         {
             _rigidbody.linearVelocity = Vector3.zero;
@@ -369,10 +339,9 @@ namespace CloseTheDeal.MatchMode
             StrayTicks = 0;
         }
 
-        /// <summary>Host only. Loose in the world again at this spot with this velocity.</summary>
         internal void ServerRelease(Vector3 position, Quaternion rotation, Vector3 velocity)
         {
-            // Clients snap to the new spot rather than gliding there from where it was parked.
+            // Teleport() prevents NetworkTransform interpolation from the parked spot.
             _networkTransform.Teleport();
             transform.SetPositionAndRotation(position, rotation);
             _rigidbody.position = position;
@@ -384,10 +353,7 @@ namespace CloseTheDeal.MatchMode
             StrayTicks = 0;
         }
 
-        /// <summary>
-        /// Host only. Shoves a loose briefcase: the hook for a blast or a thrown object to send
-        /// it flying. Ignored while it is carried or away.
-        /// </summary>
+        /// <summary>Host only. Applies a velocity impulse to a loose briefcase.</summary>
         public void Throw(Vector3 velocityChange)
         {
             if (!IsServerStarted || _rigidbody.isKinematic)

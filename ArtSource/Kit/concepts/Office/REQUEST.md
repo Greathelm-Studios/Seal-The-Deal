@@ -1,14 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-11
-  Prompt    : Alex: "speak to codex or chatgpt to get concept visuals of what the office could look like
-              based on our art direction, style and brief; once approved, make the modular kit"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Brief to Codex for whole-office concept paintings. The per-piece rounds (window bay, wall,
-              ceiling) lack a picture of the finished floor to judge them against; this asks for that
-              picture first, so Alex can approve one direction before the kit is modelled to it.
--->
 # Office concept visuals — request to Codex
 
 **From:** Alex (environment artist), drafted by Claude · **Date:** 2026-11-11 · **Status:** Waiting for Codex

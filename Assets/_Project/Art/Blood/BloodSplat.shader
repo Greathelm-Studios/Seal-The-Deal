@@ -1,36 +1,3 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Sonnet 5.5 (Claude Code)
-//  Generated : 2026-11-15
-//  Prompt    : Harvey: "create a blood splatter shader that fits in within the games artstyle
-//              that paints around objects and ontop of them when hit by these attacks."
-//  Modified  : Claude Fable 5.2, 2026-11-15 — restyled to the art bible: spiked shape, cooler
-//              colours, lit and shaded tones from the main light, no rim (Harvey: "it looks
-//              very out of place versus the rest of the games art style").
-//  Modified  : Claude Fable 5.2, 2026-11-15 — four kinds of splat picked by the seed (splash,
-//              slash, spray, blot with drips) and a subtle world-size pixel grid (Harvey: "Add
-//              more splatter variety ... and make it a little more pixelated").
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : A flat, cartoon blood splat drawn onto whatever geometry is inside a box. The
-//              box is a plain cube; each pixel of it looks up the scene depth behind it, works
-//              out where that surface is in the box's own space, and paints the splat there, so
-//              the splat wraps over floors, walls, desks and props instead of lying on a quad.
-// -----------------------------------------------------------------------------
-//
-// WHY this and not the URP Decal feature: the Decal renderer feature is not enabled in this
-// project and the renderer assets are not ours to edit, so this does the same job on its own.
-// It needs the camera depth texture (on in PC_RPAsset).
-//
-// Look: the art bible's characters are one base colour plus one hard-edged cut colour, no
-// gradients. Blood follows: one deep cool crimson where the main light reaches the surface, one
-// colder, darker cut tone where it is in shade, no outline (the rim is off by default), every
-// edge a hard edge with one pixel of anti-aliasing. The shape is one sharp spiked splash, not a
-// blob with many droplets (bible §20: one memorable shape; no thick outlines; cool palette).
-// The shape is generated here from a per-splat seed, so no two look alike and no texture exists.
-//
-// Known trade-offs (also in docs/systems/BLOOD.md): it paints on anything inside the box that
-// writes depth, including a moving character; and the surface direction comes from depth
-// derivatives, which is noisy on the one-pixel edge of a depth jump.
 Shader "Close the Deal/Blood Splat"
 {
     Properties
@@ -64,14 +31,10 @@ Shader "Close the Deal/Blood Splat"
             Tags { "LightMode" = "UniversalForward" }
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
-            // WHY front faces are culled and the depth test is off: the box is only a volume to
-            // find surfaces in. Drawing its back faces with no depth test fills the screen area
-            // of the box even when the camera is inside it, and the depth texture lookup below
-            // decides what actually gets painted.
+            // Cull front faces with depth test off so projection still works when the camera is inside the box.
             Cull Front
             ZTest Always
-            // Skips pixels a character covers: CharacterToon.shader sets bit 8 there. Without
-            // this a body walking through a splat's box would wear the splat.
+            // Skip pixels marked with stencil bit 8 by CharacterToon.shader.
             Stencil { Ref 8 ReadMask 8 Comp NotEqual }
 
             HLSLPROGRAM
@@ -102,11 +65,8 @@ Shader "Close the Deal/Blood Splat"
                 UNITY_DEFINE_INSTANCED_PROP(float4, _Params)
             UNITY_INSTANCING_BUFFER_END(Props)
 
-            /// Where the box is thinner than this (as a fraction of its depth) the splat fades, so a surface right at the back of the box does not cut off hard.
             #define DEPTH_FADE 0.12
-            /// The most spikes a splash can have; about a quarter are left out of each.
             #define SPIKES 7
-            /// Everything is drawn inside a circle of this radius in splat space; the box edge is at 1.
             #define SPLAT_SCALE 1.1
 
             struct Attributes
@@ -294,26 +254,42 @@ Shader "Close the Deal/Blood Splat"
                 float depth = SampleSceneDepth(uv);
                 float3 positionWS = ComputeWorldSpacePosition(uv, depth, UNITY_MATRIX_I_VP);
                 float3 positionOS = mul(UNITY_MATRIX_I_M, float4(positionWS, 1.0)).xyz;
+                float2 p = positionOS.xy * 2.0 * SPLAT_SCALE;
+
+                // Screen-space derivatives must be evaluated before any discard so quad helper lanes stay valid.
+                float3 dPdy = ddy(positionWS);
+                float3 dPdx = ddx(positionWS);
+                float aa = max((fwidth(p.x) + fwidth(p.y)) * 0.7, 1e-4);
+
+                // Early clip: reject sky and fragments outside the projection cube before normal, trig, SDF, or shadow math.
+                #if UNITY_REVERSED_Z
+                    bool isSky = depth < 0.000001;
+                #else
+                    bool isSky = depth > 0.999999;
+                #endif
+                float3 outside = abs(positionOS) - 0.5;
+                if (isSky || max(outside.x, max(outside.y, outside.z)) > 0.0)
+                    discard;
 
                 // Which way the surface faces, from how the world position changes across the
                 // screen. Turned to face the camera, because the cross product's sign depends on
                 // the platform. The box's +Z is the way it projects, so a surface square-on to it
                 // has a normal pointing along -Z.
-                float3 normalWS = normalize(cross(ddy(positionWS), ddx(positionWS)));
+                float3 normalWS = normalize(cross(dPdy, dPdx));
                 float3 toCamera = _WorldSpaceCameraPos - positionWS;
                 normalWS *= (dot(normalWS, toCamera) < 0.0) ? -1.0 : 1.0;
                 float3 projectDirWS = normalize(mul((float3x3)UNITY_MATRIX_M, float3(0, 0, 1)));
                 float facing = dot(normalWS, -projectDirWS);
                 float angleFade = smoothstep(_AngleCut, _AngleCut + 0.2, facing);
+                if (angleFade <= 0.0)
+                    discard;
 
-                float2 p = positionOS.xy * 2.0 * SPLAT_SCALE;
-                // One screen pixel in splat space: the width of every anti-aliased edge.
-                // Taken here with the other derivatives, before any discard.
-                float aa = max((fwidth(p.x) + fwidth(p.y)) * 0.7, 1e-4);
+                float4 sp = UNITY_ACCESS_INSTANCED_PROP(Props, _Params);
+                if (sp.w <= 0.0)
+                    discard;
 
                 // The box's own axes in the world, for the pixel grid and for which way is down.
                 float3 axisX = float3(UNITY_MATRIX_M._m00, UNITY_MATRIX_M._m10, UNITY_MATRIX_M._m20);
-                float3 axisY = float3(UNITY_MATRIX_M._m01, UNITY_MATRIX_M._m11, UNITY_MATRIX_M._m21);
                 float boxWidth = max(length(axisX), 1e-4);
 
                 // Pixel grid: snap to squares of a fixed size in the world, so big and small
@@ -323,18 +299,12 @@ Shader "Close the Deal/Blood Splat"
                 if (cell > aa * 1.5)
                     p = (floor(p / cell) + 0.5) * cell;
 
-                // Nothing drawn here (sky): nothing to paint on.
-                #if UNITY_REVERSED_Z
-                    bool isSky = depth < 0.000001;
-                #else
-                    bool isSky = depth > 0.999999;
-                #endif
-                // Outside the box: not ours to paint.
-                float3 outside = abs(positionOS) - 0.5;
-                if (isSky || max(outside.x, max(outside.y, outside.z)) > 0.0 || angleFade <= 0.0)
+                // Bounding-circle reject before trig and SDF loops (max shape extent across all 4 variants is within ~1.28).
+                float maxRadius = 1.28 + aa;
+                if (dot(p, p) > maxRadius * maxRadius)
                     discard;
 
-                float4 sp = UNITY_ACCESS_INSTANCED_PROP(Props, _Params);
+                float3 axisY = float3(UNITY_MATRIX_M._m01, UNITY_MATRIX_M._m11, UNITY_MATRIX_M._m21);
                 float seed = sp.x * 7.31;
 
                 // Turn so +x points along the throw; the cut tone sits on the side facing the floor.

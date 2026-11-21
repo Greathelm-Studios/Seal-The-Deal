@@ -1,13 +1,3 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Sonnet 5.5 (Claude Code)
-//  Generated : 2026-11-15
-//  Prompt    : Harvey: "create a blood splatter shader that fits in within the games artstyle
-//              that paints around objects and ontop of them when hit by these attacks."
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : A Play Mode dev menu item that fires a few fake hits at whatever the camera is
-//              looking at, so the blood can be judged without a second player or a weapon.
-// -----------------------------------------------------------------------------
 using CloseTheDeal.Effects;
 using CloseTheDeal.Player;
 using UnityEditor;
@@ -15,17 +5,10 @@ using UnityEngine;
 
 namespace CloseTheDeal.Editor.Art
 {
-    /// <summary>
-    /// Menu: <c>Seal the Deal &gt; Art &gt; Spawn Test Blood (Play Mode)</c>. Fires a pistol shot,
-    /// a melee blow and a very hard blow at the surface the camera faces, spread left to right,
-    /// each as if a victim stood a metre in front of it. Run it again for different shapes.
-    /// </summary>
+    /// <summary>Dev menu item firing three Play Mode test blood hits at the surface in front of the camera.</summary>
     public static class BloodTestSplats
     {
-        /// <summary>How far in front of the wall the pretend victim stands, metres.</summary>
         const float VictimDistance = 1f;
-
-        /// <summary>Gap between the three test hits along the wall, metres.</summary>
         const float Spacing = 1.8f;
 
         const float MaxRange = 15f;

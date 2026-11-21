@@ -32,11 +32,7 @@ namespace CloseTheDeal.UI
                 UiSound.Play(UiSoundEvent.Focus);
         }
 
-        /// <summary>
-        /// Moves focus the way the player pushed, skipping controls that are greyed out (they can't be used, so
-        /// focus never rests on them; their reason shows when they are clicked). Nothing usable that way (the end of
-        /// a list): the focus marks nudge instead. The frozen sound list has no edge-bump event yet, so that is silent.
-        /// </summary>
+        /// <summary>Moves focus along axis input, skipping non-interactable controls or bumping at list ends.</summary>
         public static void Move(Selectable from, AxisEventData eventData)
         {
             Selectable next = Next(from, eventData.moveDir);
@@ -72,11 +68,7 @@ namespace CloseTheDeal.UI
         }
     }
 
-    /// <summary>
-    /// The base of every kit control except the slider (which extends uGUI's Slider and shares the same parts).
-    /// Keeps uGUI's navigation and EventSystem, and adds the kit's look and answers through UiControlFx.
-    /// Design: docs/systems/UI_KIT.md.
-    /// </summary>
+    /// <summary>Base Selectable for kit controls, driving shared visuals and audio via UiControlFx.</summary>
     public abstract class UiControl : Selectable
     {
         [Tooltip("The control's look and motion parts. Filled by the kit builder.")]
@@ -108,6 +100,10 @@ namespace CloseTheDeal.UI
         protected override void OnEnable()
         {
             base.OnEnable();
+            // Selectables run in edit mode too. Posing the visuals there would be saved into the prefab or scene, and
+            // the brackets take their home from where they sit, so every editor save pushed them out further.
+            if (!Application.isPlaying)
+                return;
             _pointerInside = false;
             _selected = EventSystem.current != null && EventSystem.current.currentSelectedGameObject == gameObject;
             _fx.SetState(IsInteractable(), false, false, _selected, true);
@@ -121,9 +117,9 @@ namespace CloseTheDeal.UI
 
         protected override void DoStateTransition(SelectionState state, bool instant)
         {
-            if (_fx == null)
-                return;
-            _fx.SetState(state != SelectionState.Disabled, _pointerInside, state == SelectionState.Pressed, _selected, instant || !Application.isPlaying);
+            if (_fx == null || !Application.isPlaying)
+                return;   // edit mode: leave the serialized layout alone (see OnEnable)
+            _fx.SetState(state != SelectionState.Disabled, _pointerInside, state == SelectionState.Pressed, _selected, instant);
         }
 
         public override void OnPointerEnter(PointerEventData eventData)

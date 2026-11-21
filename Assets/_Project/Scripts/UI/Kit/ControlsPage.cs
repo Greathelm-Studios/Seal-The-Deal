@@ -1,4 +1,5 @@
 using System;
+using CloseTheDeal.Combat;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -6,12 +7,7 @@ using UnityEngine.InputSystem;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// Settings › Controls: look sensitivity, invert and stick speed (shown once the camera reads InputPrefs), and the
-    /// key list: every action with its key and pad button. Once the input reader applies custom keys, each key is a
-    /// button: press it, press the new key (Esc cancels); a key another action uses asks before moving it there.
-    /// Rebinds are kept as binding-override JSON in InputPrefs. The actions asset itself is never changed.
-    /// </summary>
+    /// <summary>Settings Controls tab: look preferences and key binding overrides stored in InputPrefs.</summary>
     [AddComponentMenu("Seal the Deal/UI/Settings Page - Controls")]
     public sealed class ControlsPage : UiSettingsPage
     {
@@ -50,6 +46,7 @@ namespace CloseTheDeal.UI
         [SerializeField] float _lookHeight = 192f;
 
         InputActionAsset _working;
+        bool _hasCustomBindings;
         CanvasGroup _screenGroup;
         InputActionRebindingExtensions.RebindingOperation _operation;
         BindingRow _listening;
@@ -61,7 +58,6 @@ namespace CloseTheDeal.UI
 
         public bool Listening => _operation != null;
 
-        /// <summary>The pad's B cancels a key capture too (the capture itself only listens to keys and the mouse).</summary>
         void Update()
         {
             if (_operation != null && Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame)
@@ -130,7 +126,7 @@ namespace CloseTheDeal.UI
         public override bool AtDefaults =>
             Mathf.Approximately(InputPrefs.LookSensitivity, 1f) && !InputPrefs.InvertY && Mathf.Approximately(InputPrefs.StickLookSpeed, 1f)
             && InputPrefs.StickDeadZone == null
-            && string.IsNullOrEmpty(InputPrefs.BindingOverridesJson);
+            && (_working != null ? !_hasCustomBindings : string.IsNullOrEmpty(InputPrefs.BindingOverridesJson));
 
         public override void ResetToDefaults()
         {
@@ -141,7 +137,6 @@ namespace CloseTheDeal.UI
 
         public override void Hidden() => CancelListening();
 
-        /// <summary>The look rows and the key list fill this tab: no room for the changes summary.</summary>
         public override bool ShowsChanges => false;
 
         void OnSensitivity(int percent) { InputPrefs.LookSensitivity = percent / 100f; RaiseSaved(); }
@@ -150,9 +145,6 @@ namespace CloseTheDeal.UI
 
         void OnStickSpeed(int percent) { InputPrefs.StickLookSpeed = percent / 100f; RaiseSaved(); }
 
-        // ---- The key list ---------------------------------------------------------------------
-
-        /// <summary>Pad names follow the pad in use; not while a row is listening, which would wipe its prompt.</summary>
         void OnDeviceChanged()
         {
             if (_operation == null)
@@ -166,18 +158,33 @@ namespace CloseTheDeal.UI
             if (_working == null)
                 _working = Instantiate(_actions);
             _working.RemoveAllBindingOverrides();
+            _hasCustomBindings = false;
             if (!string.IsNullOrEmpty(InputPrefs.BindingOverridesJson))
+            {
                 _working.LoadBindingOverridesFromJson(InputPrefs.BindingOverridesJson);
+                RemoveDefaultOverrides();
+                foreach (var binding in _working.bindings)
+                    _hasCustomBindings |= binding.hasOverrides;
+            }
         }
 
         void DrawBindings()
         {
-            bool live = InputPrefs.BindingsHooked;
             foreach (BindingRow row in _bindings)
             {
                 InputAction action = _working != null ? _working.FindAction("Player/" + row.Action) : null;
+                bool fixedInput = IsFixedInput(row.Action);
+                bool live = InputPrefs.BindingsHooked && !fixedInput;
                 string key = action != null ? KeyName(action, KeyIndex(action, row.Part)) : "—";
                 string pad = action != null ? PadName(action, BindingIndex(action, row.Part, "<Gamepad>")) : "—";
+                if (fixedInput && action != null)
+                {
+                    int keyIndex = KeyIndex(action, row.Part);
+                    if (keyIndex >= 0)
+                        key = UiGlyphs.Name(action.bindings[keyIndex].path, UiDeviceKind.KeyboardMouse);
+                    if (row.Action == "Reload")
+                        pad = UiGlyphs.Name(WeaponHolder.ReloadPadBinding, UiGlyphs.Current);
+                }
                 if (row.Cap != null)
                 {
                     row.Cap.text = key;
@@ -196,14 +203,12 @@ namespace CloseTheDeal.UI
             }
         }
 
-        /// <summary>The keyboard binding, or the mouse one for actions on a mouse button (Fire, Aim).</summary>
         static int KeyIndex(InputAction action, string part)
         {
             int index = BindingIndex(action, part, "<Keyboard>");
             return index >= 0 ? index : BindingIndex(action, part, "<Mouse>");
         }
 
-        /// <summary>The binding of this action (or this side of a two-way action) on the given device, or -1.</summary>
         static int BindingIndex(InputAction action, string part, string device)
         {
             for (int i = 0; i < action.bindings.Count; i++)
@@ -230,7 +235,6 @@ namespace CloseTheDeal.UI
             return string.IsNullOrEmpty(path) ? "—" : UiGlyphs.Name(path, UiDeviceKind.KeyboardMouse);
         }
 
-        /// <summary>The pad button as printed on the player's pad: PlayStation names on a PlayStation pad, Xbox names otherwise.</summary>
         static string PadName(InputAction action, int index)
         {
             if (index < 0)
@@ -238,8 +242,6 @@ namespace CloseTheDeal.UI
             UiDeviceKind kind = UiGlyphs.Current == UiDeviceKind.PlayStation ? UiDeviceKind.PlayStation : UiDeviceKind.Xbox;
             return UiGlyphs.Name(action.bindings[index].effectivePath, kind);
         }
-
-        // ---- Rebinding ------------------------------------------------------------------------
 
         void StartListening(BindingRow row)
         {
@@ -306,21 +308,20 @@ namespace CloseTheDeal.UI
             Commit("Saved on this PC.");
         }
 
+        // Weapons and items consume their own fixed actions in the game.
+        static bool IsFixedInput(string action) => action == "Attack" || action == "AltFire" || action == "Reload";
+
         bool HasRow(string actionName)
         {
             foreach (BindingRow row in _bindings)
             {
-                if (string.Equals(row.Action, actionName, StringComparison.Ordinal))
+                if (!IsFixedInput(actionName) && string.Equals(row.Action, actionName, StringComparison.Ordinal))
                     return true;
             }
 
             return false;
         }
 
-        /// <summary>
-        /// The key belongs to something this page can't give a new key (moving, help, the slots): taking it would leave
-        /// that with no key and no row to restore it, so the press is refused and nothing changes.
-        /// </summary>
         void RefuseFixedKey(string path, InputAction other, int otherIndex)
         {
             LoadWorking();
@@ -330,10 +331,6 @@ namespace CloseTheDeal.UI
             UiSound.Play(UiSoundEvent.Error);
         }
 
-        /// <summary>
-        /// Another binding already on this key. One held by an action with no row here (moving, Help, the slots) is
-        /// found first, so the press is refused rather than offered.
-        /// </summary>
         bool FindClash(InputAction action, int index, string path, out InputAction other, out int otherIndex)
         {
             other = null;
@@ -343,7 +340,7 @@ namespace CloseTheDeal.UI
                 for (int i = 0; i < candidate.bindings.Count; i++)
                 {
                     if ((candidate == action && i == index)
-                        || !string.Equals(candidate.bindings[i].effectivePath, path, StringComparison.OrdinalIgnoreCase))
+                        || !string.Equals(IsFixedInput(candidate.name) ? candidate.bindings[i].path : candidate.bindings[i].effectivePath, path, StringComparison.OrdinalIgnoreCase))
                         continue;
                     bool fixedKey = !HasRow(candidate.name);
                     if (other == null || fixedKey)
@@ -403,9 +400,26 @@ namespace CloseTheDeal.UI
             RaiseSaved(line);
         }
 
+        void RemoveDefaultOverrides()
+        {
+            foreach (var action in _working)
+            {
+                for (int i = 0; i < action.bindings.Count; i++)
+                {
+                    var binding = action.bindings[i];
+                    if (binding.overridePath != null && binding.overrideProcessors == null && binding.overrideInteractions == null
+                        && string.Equals(binding.overridePath, binding.path, StringComparison.OrdinalIgnoreCase))
+                        action.RemoveBindingOverride(i);
+                }
+            }
+        }
+
         void SaveKeys()
         {
-            InputPrefs.BindingOverridesJson = _working.SaveBindingOverridesAsJson();
+            RemoveDefaultOverrides();
+            string json = _working.SaveBindingOverridesAsJson();
+            _hasCustomBindings = !string.IsNullOrEmpty(json);
+            InputPrefs.BindingOverridesJson = json;
             UiSound.Play(UiSoundEvent.KeyBindSet);
         }
 
@@ -429,13 +443,13 @@ namespace CloseTheDeal.UI
 
         string LabelOf(BindingRow row) => NameOfAction(row.Action, row.Part);
 
-        /// <summary>The name a player reads for an action (the Player map's names are code names).</summary>
+        /// <summary>Display label for a Player-map action.</summary>
         public static string NameOfAction(string action, string part)
         {
             switch (action)
             {
                 case "Attack": return "Fire";
-                case "AltFire": return "Aim";
+                case "AltFire": return "Use item";
                 case "Throw": return "Drop / Throw";
                 case "Voice": return "Mute / Push to talk";
                 case "Lean": return string.Equals(part, "negative", StringComparison.OrdinalIgnoreCase) ? "Lean left" : "Lean right";

@@ -1,23 +1,6 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Fable 5.2 (Claude Code)
-  Generated : 2026-11-13
-  Prompt    : Alex: "a test dummy in the scene to test animations of being hit by certain powers
-              of weapons (bullets bombs explosions props, etc) as we want to add a ragdoll system
-              when explosion systems or heavy or big props get thrown"
-  Modified  : Claude Opus 5.5, 2026-11-15 — players flinch when hit, through the host
-              (Harvey: "add hit reactions when hit by guns/melee weapons for the players so
-              that when a shooter hits another player, they see a visible reaction in the
-              person; currently theres a shake, which is quite funny but there should be an
-              exaggeration of it.")
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : The owning doc for how a body reacts to hits (AGENTS.md §7): the test dummy, the
-              hit bench, the flinch on players and the dummy, and the knock-down that is still
-              to be built for players.
--->
 # Hit reactions
 
-**Status:** Current for the dummy, the bench, the flinch (players and dummy) and the dummy's knock-down (its rules are placeholders); **Target** for knock-down on players · **Last updated:** 2026-11-15
+**Status:** Current for the dummy, the bench, the flinch (players and dummy) and the dummy's knock-down (its rules are placeholders); **Target** for knock-down on players · **Last updated:** 2026-11-21
 
 A player who is shot or struck flinches where everyone can see it, exaggerated so it reads from across a room: a shot snaps the part it hit, a melee swing throws the whole top half back so the body folds at the waist and staggers back up.
 The player keeps running and aiming throughout; only the body shown flinches.
@@ -58,14 +41,15 @@ The body it runs on is the active ragdoll described in [CHARACTER_ANIMATION.md](
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
 | A hit on a player | The host decides it (weapon code calls `PlayerHits.Strike` on the host) | One reliable message to every machine carrying the `HitInfo`, its point relative to the victim (about 35 bytes) | Once per hit; nothing per tick |
-| The player's flinch | Each machine, on its own copy of the victim's ragdoll | Nothing (bones are never streamed) | — |
-| `HitFeed.Struck` (blood and other effects) | Each machine, raised locally after the flinch starts | Nothing | Once per hit |
+| The player's flinch | Each machine, on its own copy of the victim's ragdoll | Nothing (bones are never streamed) | None |
+| `HitFeed.Struck` (blood and other effects) | Each machine, raised locally after the flinch starts | Nothing | None |
 | Stand-in shot or swing at a player (throwaway) | The shooter's machine asks; the host checks and decides | One reliable message shooter to host: eye position, aim and kind (about 25 bytes) | Once per press that lands on a player |
-| The dummy and its reactions | Each client, for its own screen | Nothing | — |
+| The dummy and its reactions | Each client, for its own screen | Nothing | None |
 
-Clients never decide a hit on a player: the stand-in message carries only where the shooter's eye was and which way it looked, the host ignores it if that eye is more than 1.5 m from where the host has the shooter, and the host casts the ray again itself.
+Clients never decide a hit on a player: the stand-in message carries only where the shooter's eye was and which way it looked, the host ignores it if that eye is more than `1.5 m` from where the host has the shooter (covering ~0.7 m prediction lead at sprint on a 100 ms round trip plus ~0.5 m lean), and the host casts the ray again itself.
 The flinch moves only the ragdoll, which lives in its own physics scene, so the capsule, `PlayerMotor`, prediction and reconciling are untouched.
-The dummy has no network identity. In a networked game it reacts only on the screen of whoever hit it. It is a development aid, not a gameplay object.
+Hit points travel in victim-local space (`InverseTransformPoint` on the host, `TransformPoint` on each client's ragdoll transform) because smoothing and interpolation offset each machine's visual slightly; sending local space keeps the hit on the same limb everywhere. `ShowStrike` uses `[ObserversRpc(ExcludeServer = true, RunLocally = true)]` so the host reacts immediately without FishNet dropping a duplicate self-delivery.
+The dummy has no network identity and lives on the `Player` layer so `RagdollWorld` skips its capsule when copying level geometry while blasts still detect it (kept as its own prefab rather than stripping `Player.prefab`, because an unspawned `PlayerMotor` reports off-floor and editing nested networked prefabs breaks FishNet's prefab list). In a networked game it reacts only on the screen of whoever hit it. It is a development aid, not a gameplay object.
 
 **For weapon code:** on the host, after your own ray or overlap struck a player's capsule, call `GetComponentInParent<PlayerHits>().Strike(new HitInfo { Point, Direction, Impulse, Type })`. Calling it on a client only logs a warning.
 
@@ -85,7 +69,7 @@ Alex's weapons session has agreed the shape (2026-11-13); a host-side hit event 
 The file stays under `Scripts/Player/` because `Scripts/Combat/` is claimed by Adam's shooting lane, which may have a hit or damage type of its own and **has not answered yet**.
 A thrown prop's impulse is its mass times its speed at impact, not a per-prop table.
 
-**Why the caller states the impulse** instead of a bullet or a chair physically striking the ragdoll: the ragdoll lives in a physics scene of its own, where bullets and thrown props do not exist.
+**Why the caller states the impulse** instead of a bullet or a chair physically striking the ragdoll: the ragdoll lives in a physics scene of its own, where bullets and thrown props do not exist. Impulse (`N·s`) is used rather than velocity change because ragdoll parts have different masses (a forearm flies further than a chest for the same impulse), and `MinFlinchRecover` is clamped to `0.05 s` (six 120 Hz ragdoll steps, the shortest visible joint give-and-recover).
 
 ## Files
 

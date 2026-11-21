@@ -3,17 +3,13 @@ using System.Collections.Generic;
 using CloseTheDeal.Player;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
+using FishNet.Transporting;
 using UnityEngine;
 using UnityEngine.Events;
 
 namespace CloseTheDeal.Items
 {
-    /// <summary>
-    /// The wet floor sign: put it down and the floor around it really is wet. Anyone who runs
-    /// across it, from either firm, goes flying; walking is safe. Picking the sign up or
-    /// knocking it away clears the trap. The host decides every slip; everyone else is told
-    /// one synced flag and draws the puddle.
-    /// </summary>
+    /// <summary>Deployable floor hazard that trips running players until picked up or nudged. Design: docs/systems/ITEMS.md.</summary>
     public sealed class WetFloorSign : ItemBehaviour
     {
         [Tooltip("Size of the wet patch and how hard people slip. Read at runtime, never written.")]
@@ -35,19 +31,18 @@ namespace CloseTheDeal.Items
         const float FlatEnoughDegrees = 20f;
         const float UprightEnough = 0.7f;
 
-        sealed class SlipTarget
+        struct SlipTarget
         {
             public PlayerMotor Motor;
-            public Rigidbody Body;
             public float SafeUntil;
         }
 
         static readonly Collider[] Buffer = new Collider[16];
 
         readonly SyncVar<bool> _down = new();
-        // Who each collider belongs to, so the per-tick check never looks components up. Null = not a player.
-        readonly Dictionary<Collider, SlipTarget> _targets = new();
+        readonly List<SlipTarget> _targets = new(8);
         Vector3 _placedAt;
+        bool _ticking;
 
         /// <summary>Every machine. The sign was put down and the floor is wet.</summary>
         public event Action<WetFloorSign> PutDown;
@@ -66,22 +61,42 @@ namespace CloseTheDeal.Items
                 _puddle.SetActive(false);
         }
 
+        public override void OnStopNetwork()
+        {
+            base.OnStopNetwork();
+            if (_puddle != null)
+                _puddle.SetActive(false);
+        }
+
         public override void OnStartServer()
         {
             base.OnStartServer();
-            TimeManager.OnTick += ServerTick;
+            _down.Value = false;
+            _placedAt = Vector3.zero;
+            _targets.Clear();
+            _ticking = false;
         }
 
         public override void OnStopServer()
         {
             base.OnStopServer();
-            TimeManager.OnTick -= ServerTick;
+            SetServerTick(false);
             _targets.Clear();
         }
 
-        // ---- Host ----------------------------------------------------------------------------
+        void SetServerTick(bool active)
+        {
+            if (_ticking == active || TimeManager == null)
+                return;
 
-        /// <summary>Puts the sign down on flat floor just ahead of the carrier, facing them. Refused where there is no such floor.</summary>
+            _ticking = active;
+            if (active)
+                TimeManager.OnTick += ServerTick;
+            else
+                TimeManager.OnTick -= ServerTick;
+        }
+
+        /// <summary>Places the sign on flat floor ahead of the carrier, or denies if blocked.</summary>
         public override void ServerUse(ItemCarrier user)
         {
             Transform body = user.transform;
@@ -101,29 +116,47 @@ namespace CloseTheDeal.Items
             Quaternion facing = Quaternion.Euler(0f, body.eulerAngles.y + 180f, 0f);
             Item.ServerReleaseAt(ReleaseKind.Placed, floor.point, facing, Vector3.zero);
             _placedAt = floor.point;
+            _targets.Clear();
             _down.Value = true;
+            SetServerTick(true);
         }
 
         public override void ServerOnTaken(ItemCarrier by)
         {
             _down.Value = false;
+            SetServerTick(false);
+            _targets.Clear();
+        }
+
+        public override void ServerOnSentAway(bool usedUp)
+        {
+            _down.Value = false;
+            SetServerTick(false);
+            _targets.Clear();
         }
 
         public override void ServerOnReturned()
         {
             _down.Value = false;
+            SetServerTick(false);
+            _targets.Clear();
         }
 
         void ServerTick()
         {
             if (!_down.Value)
+            {
+                SetServerTick(false);
                 return;
+            }
 
             // Knocked over, shoved aside or gone: the floor is safe again.
             bool moved = (Item.Body.position - _placedAt).sqrMagnitude > _profile.NudgeTolerance * _profile.NudgeTolerance;
             if (moved || transform.up.y < UprightEnough || Item.State != PickupState.InWorld)
             {
                 _down.Value = false;
+                SetServerTick(false);
+                _targets.Clear();
                 return;
             }
 
@@ -134,33 +167,41 @@ namespace CloseTheDeal.Items
 
         void TrySlip(Collider collider)
         {
-            if (!_targets.TryGetValue(collider, out SlipTarget target))
+            Rigidbody body = collider.attachedRigidbody;
+            if (body == null || !body.TryGetComponent(out PlayerMotor motor))
+                return;
+
+            if (motor.State != MoveState.Grounded || motor.PlanarSpeed <= _profile.SlipAboveSpeed)
+                return;
+
+            float now = Time.time;
+            int foundIndex = -1;
+            for (int i = _targets.Count - 1; i >= 0; i--)
             {
-                PlayerMotor motor = collider.GetComponentInParent<PlayerMotor>();
-                target = motor != null ? new SlipTarget { Motor = motor, Body = motor.GetComponent<Rigidbody>() } : null;
-                _targets[collider] = target;
+                SlipTarget entry = _targets[i];
+                if (entry.Motor == null || now >= entry.SafeUntil)
+                {
+                    int last = _targets.Count - 1;
+                    _targets[i] = _targets[last];
+                    _targets.RemoveAt(last);
+                    if (foundIndex == last)
+                        foundIndex = i;
+                    continue;
+                }
+
+                if (entry.Motor == motor)
+                    foundIndex = i;
             }
 
-            if (target == null)
+            if (foundIndex >= 0)
                 return;
 
-            if (target.Motor == null)
-            {
-                _targets.Remove(collider);
-                return;
-            }
-
-            if (Time.time < target.SafeUntil || target.Motor.State != MoveState.Grounded || target.Motor.PlanarSpeed <= _profile.SlipAboveSpeed)
-                return;
-
-            Vector3 travel = target.Body.linearVelocity;
+            Vector3 travel = body.linearVelocity;
             travel.y = 0f;
-            target.SafeUntil = Time.time + _profile.RepeatSeconds;
-            target.Motor.ApplyKnockback(travel.normalized * _profile.SlipSpeed + Vector3.up * _profile.SlipLift, _profile.ControlLossSeconds);
-            ObserversSlipped(target.Body.position);
+            _targets.Add(new SlipTarget { Motor = motor, SafeUntil = now + _profile.RepeatSeconds });
+            motor.ApplyKnockback(travel.normalized * _profile.SlipSpeed + Vector3.up * _profile.SlipLift, _profile.ControlLossSeconds);
+            ObserversSlipped(body.position);
         }
-
-        // ---- Every machine -------------------------------------------------------------------
 
         void OnDownChanged(bool previous, bool next, bool asServer)
         {
@@ -188,7 +229,7 @@ namespace CloseTheDeal.Items
         }
 
         [ObserversRpc(RunLocally = true)]
-        void ObserversSlipped(Vector3 point)
+        void ObserversSlipped(Vector3 point, Channel channel = Channel.Unreliable)
         {
             ItemAudio.PlayAt(Item.Sounds, Item.Sounds?.Slip, point);
             Slipped?.Invoke(this, point);

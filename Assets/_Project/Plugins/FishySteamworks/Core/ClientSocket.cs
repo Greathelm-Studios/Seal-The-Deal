@@ -4,7 +4,6 @@ using FishNet.Managing.Logging;
 using FishNet.Transporting;
 using Steamworks;
 using System;
-using System.Threading;
 using UnityEngine;
 
 namespace FishySteamworks.Client
@@ -24,43 +23,9 @@ namespace FishySteamworks.Client
         /// Socket to use.
         /// </summary>
         private HSteamNetConnection _socket;
-        /// <summary>
-        /// Thread used to check for timeout.
-        /// </summary>
-        private Thread _timeoutThread = null;
-        /// <summary>
-        /// When connect should timeout in unscaled time.
-        /// </summary>
-        private float _connectTimeout = -1f;
         #endregion
 
-        #region Const.
-        /// <summary>
-        /// Maximum time to wait before a timeout occurs when trying ot connect.
-        /// </summary>
-        private const float CONNECT_TIMEOUT_DURATION = 8000;
-        #endregion
-
-        /// <summary>
-        /// Checks of a connect attempt should time out.
-        /// </summary>
-        private void CheckTimeout()
-        {
-            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
-            sw.Start();
-            do
-            {
-                //Timeout occurred.
-                if ((sw.ElapsedMilliseconds / 1000) > _connectTimeout)
-                    StopConnection();
-
-                Thread.Sleep(50);
-            } while (base.GetLocalConnectionState() == LocalConnectionState.Starting);
-            sw.Stop();
-
-            //If here then the thread no longer needs to run. Can abort itself.
-            _timeoutThread.Abort();
-        }
+        // Fork patch: removed unused _timeoutThread / Thread.Abort (see FORK.md).
 
         /// <summary>
         /// Starts the client connection.
@@ -73,6 +38,7 @@ namespace FishySteamworks.Client
         {
             try
             {
+                base.EnsureReceiveBuffers();
                 if (_onLocalConnectionStateCallback == null)
                     _onLocalConnectionStateCallback = Callback<SteamNetConnectionStatusChangedCallback_t>.Create(OnLocalConnectionState);
 
@@ -86,9 +52,6 @@ namespace FishySteamworks.Client
                 }
 
                 base.SetLocalConnectionState(LocalConnectionState.Starting, false);
-                _connectTimeout = Time.unscaledTime + CONNECT_TIMEOUT_DURATION;
-                _timeoutThread = new Thread(CheckTimeout);
-                _timeoutThread.Start();
                 _hostSteamID = new CSteamID(UInt64.Parse(address));
 
                 SteamNetworkingIdentity smi = new SteamNetworkingIdentity();
@@ -141,9 +104,7 @@ namespace FishySteamworks.Client
         /// </summary>
         internal bool StopConnection()
         {
-            //Manually abort thread to close it down quicker.
-            if (_timeoutThread != null && _timeoutThread.IsAlive)
-                _timeoutThread.Abort();
+            base.FreeOutboundBuffer();
 
             /* Try to close the socket before exiting early
             * We never want to leave sockets open. */
@@ -182,7 +143,7 @@ namespace FishySteamworks.Client
             {
                 for (int i = 0; i < messageCount; i++)
                 {
-                    // Close the Deal patch (FORK.md): skip a message GetMessage dropped as malformed.
+                    // Fork patch: skip malformed message dropped by GetMessage (see FORK.md).
                     if (!base.GetMessage(base.MessagePointers[i], InboundBuffer, out ArraySegment<byte> segment, out byte channel))
                         continue;
                     base.Transport.HandleClientReceivedDataArgs(new ClientReceivedDataArgs(segment, (Channel)channel, Transport.Index));

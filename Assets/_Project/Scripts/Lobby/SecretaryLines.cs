@@ -15,11 +15,7 @@ namespace CloseTheDeal.Lobby
         Start
     }
 
-    /// <summary>
-    /// What the secretary says, one list per moment; a line is picked at random, never twice in
-    /// a row. {name} becomes the player's name, {firm} their firm. Designer content: read at
-    /// runtime, never written. The shipped lines are proposals for the owner.
-    /// </summary>
+    /// <summary>Designer-owned dialogue pools and reading-speed tuning for the reception secretary.</summary>
     [CreateAssetMenu(menuName = "Seal the Deal/Lobby/Secretary Lines", fileName = "SecretaryLines")]
     public sealed class SecretaryLines : ScriptableObject
     {

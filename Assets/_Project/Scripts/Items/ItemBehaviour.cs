@@ -3,11 +3,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Items
 {
-    /// <summary>
-    /// What a particular item does beyond being carried and thrown: the grenade case's fuse,
-    /// the extinguisher's smoke, the wet floor sign's puddle. Sits next to Pickup on the
-    /// item's prefab. Every hook here runs on the host only.
-    /// </summary>
+    /// <summary>Base class for host-authoritative item-specific uses (fuse, smoke, floor trap) beside Pickup.</summary>
     [RequireComponent(typeof(Pickup))]
     public abstract class ItemBehaviour : NetworkBehaviour
     {

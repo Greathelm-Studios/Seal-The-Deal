@@ -19,24 +19,17 @@ namespace CloseTheDeal.UI.Title
         Fade,
     }
 
-    /// <summary>
-    /// Play(kind, onCovered, onDone). onCovered fires the moment the screen is fully hidden: change screens
-    /// there. onDone fires when the overlay is gone. Runs on unscaled time so it works while the game is
-    /// paused. A call made while one is playing waits and plays straight after it, so its screen change is
-    /// always covered. Design: docs/systems/UI_TITLE.md.
-    /// </summary>
+    /// <summary>Screen-to-screen full-screen transitions (CloudWipe, PaneSlide, FrameZoom, Fade).</summary>
     public static class UiTransition
     {
-        /// <summary>Turns every transition into the plain short fade and stills the title idle. The kit's
-        /// Settings > Accessibility > Reduce motion (UiSettings.ReducedMotion) is the one switch.</summary>
+        /// <summary>Shared accessibility switch with UiSettings.ReducedMotion.</summary>
         public static bool ReducedMotion
         {
             get => UiSettings.ReducedMotion;
             set => UiSettings.ReducedMotion = value;
         }
 
-        /// <summary>Called every frame of a FrameZoom with 0..1 while it closes and 1 while it clears, so the scene camera can
-        /// push in with it. It is never reset: the new screen (the lobby) sets its own camera when it loads.</summary>
+        /// <summary>Normalized 0..1 progress callback during FrameZoom for camera push-in.</summary>
         public static Action<float> ZoomProgress;
 
         public static bool IsPlaying => UiTransitionHost.Instance != null && UiTransitionHost.Instance.Playing;
@@ -70,6 +63,13 @@ namespace CloseTheDeal.UI.Title
         }
 
         public static void ClearPreview() => UiTransitionHost.Discard();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            ZoomProgress = null;
+            UiTransitionHost.ResetStatic();
+        }
     }
 
     /// <summary>The overlay canvas that draws the transitions. Built in code on first use; nothing to place in a scene.</summary>
@@ -85,15 +85,20 @@ namespace CloseTheDeal.UI.Title
         public static UiTransitionHost Instance { get; private set; }
         public bool Playing { get; private set; }
 
+        internal static void ResetStatic() => Instance = null;
+
         Canvas _canvas;
         Image[] _cells;
         float[] _threshold;
+        bool[] _cellShown;
+        Color[] _cellColor;
         Image[] _panes;
         Image[] _bars;      // frame: top, bottom, left, right
         Image[] _cross;     // mullion cross
         Image _fade;
 
         bool _preview;
+        UiTransitionKind? _drawnKind;
 
         public static UiTransitionHost Get(Camera camera = null)
         {
@@ -133,6 +138,8 @@ namespace CloseTheDeal.UI.Title
 
             _cells = new Image[Cols * Rows];
             _threshold = new float[Cols * Rows];
+            _cellShown = new bool[Cols * Rows];
+            _cellColor = new Color[Cols * Rows];
             for (int j = 0; j < Rows; j++)
             {
                 // A stepped cumulus profile: each row's front is pushed a few cells by a fixed hash, so the
@@ -143,6 +150,8 @@ namespace CloseTheDeal.UI.Title
                     int k = j * Cols + i;
                     _threshold[k] = (i - push + 8f) / (Cols + 8f);
                     _cells[k] = Cell(root, "Cell", i / (float)Cols, j / (float)Rows, (i + 1) / (float)Cols, (j + 1) / (float)Rows, Paper);
+                    _cellShown[k] = true;
+                    _cellColor[k] = Paper;
                 }
             }
 
@@ -182,11 +191,39 @@ namespace CloseTheDeal.UI.Title
 
         void HideAll()
         {
-            foreach (Image i in _cells) i.enabled = false;
-            foreach (Image i in _panes) i.gameObject.SetActive(false);
-            foreach (Image i in _bars) i.enabled = false;
-            foreach (Image i in _cross) i.enabled = false;
-            _fade.enabled = false;
+            HideVisuals();
+            _drawnKind = null;
+            if (_canvas != null)
+                _canvas.enabled = false;
+        }
+
+        void HideVisuals()
+        {
+            for (int k = 0; k < _cells.Length; k++)
+            {
+                if (_cellShown[k])
+                {
+                    _cells[k].enabled = false;
+                    _cellShown[k] = false;
+                }
+            }
+            foreach (Image i in _panes)
+            {
+                if (i.gameObject.activeSelf)
+                    i.gameObject.SetActive(false);
+            }
+            foreach (Image i in _bars)
+            {
+                if (i.enabled)
+                    i.enabled = false;
+            }
+            foreach (Image i in _cross)
+            {
+                if (i.enabled)
+                    i.enabled = false;
+            }
+            if (_fade.enabled)
+                _fade.enabled = false;
         }
 
         int _pending;
@@ -195,9 +232,7 @@ namespace CloseTheDeal.UI.Title
 
         public void Run(UiTransitionKind kind, Action onCovered, Action onDone)
         {
-            // Keys and the pad: the overlay already eats clicks, but Submit and the arrows go to the selected button
-            // through the EventSystem, so a second A press on Host would fire again under the cover. Hold them off
-            // from the call until the last queued transition is gone.
+            // Hold EventSystem navigation off until queued transitions finish so Confirm cannot fire twice under cover.
             if (_pending++ == 0 && EventSystem.current != null)
             {
                 _blocked = EventSystem.current;
@@ -221,10 +256,11 @@ namespace CloseTheDeal.UI.Title
             while (Playing)
                 yield return null;
             Playing = true;
+            HideAll();
+            _canvas.enabled = true;
             UiSound.Play(SoundFor(kind));   // each kind has its own sound; FrameZoom's is the game-start sting
             UiTransition.Timing(kind, out float cover, out float reveal);
-            // WHY a capped step and t = 0 on the first frame: the frame a press lands on is often a slow one (a
-            // screen being built), and its whole delta would skip the cover phase: the screen change would pop.
+            // Start at t=0 and cap step to 1/30 s so a slow click frame cannot skip the cover phase.
             for (float t = 0f; t < cover; t += Step())
             {
                 Draw(kind, true, Mathf.Clamp01(t / cover));
@@ -261,6 +297,8 @@ namespace CloseTheDeal.UI.Title
         /// <summary>One frame at t = 0..1 over the whole transition (capture and previews).</summary>
         public void Show(UiTransitionKind kind, float t)
         {
+            if (!_canvas.enabled)
+                _canvas.enabled = true;
             UiTransition.Timing(kind, out float cover, out float reveal);
             float time = t * (cover + reveal);
             if (time < cover) Draw(kind, true, time / cover); else Draw(kind, false, Mathf.Clamp01((time - cover) / reveal));
@@ -272,14 +310,22 @@ namespace CloseTheDeal.UI.Title
 
         void Draw(UiTransitionKind kind, bool covering, float p)
         {
-            HideAll();
+            if (!_canvas.enabled)
+                _canvas.enabled = true;
+            if (_drawnKind != kind)
+            {
+                HideVisuals();
+                _drawnKind = kind;
+            }
+
             switch (kind)
             {
                 case UiTransitionKind.CloudWipe: DrawCloud(covering, covering ? Out(p) : InOut(p)); break;
                 case UiTransitionKind.PaneSlide: DrawPanes(covering, covering ? Out(p) : InOut(p)); break;
                 case UiTransitionKind.FrameZoom: DrawFrame(covering, p); break;
                 default:
-                    _fade.enabled = true;
+                    if (!_fade.enabled)
+                        _fade.enabled = true;
                     _fade.color = new Color(Paper.r, Paper.g, Paper.b, covering ? p : 1f - p);
                     break;
             }
@@ -292,11 +338,30 @@ namespace CloseTheDeal.UI.Title
             {
                 float th = _threshold[k];
                 bool shown = covering ? front > th : front <= th;
-                if (!shown) continue;
-                _cells[k].enabled = true;
+                if (!shown)
+                {
+                    if (_cellShown[k])
+                    {
+                        _cells[k].enabled = false;
+                        _cellShown[k] = false;
+                    }
+                    continue;
+                }
+
+                if (!_cellShown[k])
+                {
+                    _cells[k].enabled = true;
+                    _cellShown[k] = true;
+                }
+
                 float edge = covering ? front - th : th - front;     // 0 at the leading edge
                 int row = k / Cols;
-                _cells[k].color = edge < 0.06f ? Haze : (edge < 0.14f || row < 2) ? Milk : Paper;
+                Color c = edge < 0.06f ? Haze : (edge < 0.14f || row < 2) ? Milk : Paper;
+                if (_cellColor[k] != c)
+                {
+                    _cellColor[k] = c;
+                    _cells[k].color = c;
+                }
             }
         }
 
@@ -304,7 +369,8 @@ namespace CloseTheDeal.UI.Title
         {
             for (int p = 0; p < 3; p++)
             {
-                _panes[p].gameObject.SetActive(true);
+                if (!_panes[p].gameObject.activeSelf)
+                    _panes[p].gameObject.SetActive(true);
                 // Shut: panes drop in from above and below alternately. Open: each leaves the other way.
                 float dir = p % 2 == 0 ? 1f : -1f;
                 float offset = covering ? (1f - e) * dir : -e * dir;
@@ -319,6 +385,8 @@ namespace CloseTheDeal.UI.Title
         {
             if (covering)
             {
+                if (_fade.enabled)
+                    _fade.enabled = false;
                 // Moves on the first frame (the press answers at once), then accelerates over the camera.
                 float e = 0.18f * p + 0.82f * p * p * p;
                 // The hole's half-size, as the same fraction of width and height: it keeps the screen's own shape.
@@ -334,11 +402,27 @@ namespace CloseTheDeal.UI.Title
                     Cross(_cross[0], cx - 0.0015f, cy - h, cx + 0.0015f, cy + h, c);
                     Cross(_cross[1], cx - h, cy - 0.0025f, cx + h, cy + 0.0025f, c);
                 }
+                else
+                {
+                    if (_cross[0].enabled) _cross[0].enabled = false;
+                    if (_cross[1].enabled) _cross[1].enabled = false;
+                }
                 UiTransition.ZoomProgress?.Invoke(p);
             }
             else
             {
-                _fade.enabled = true;
+                for (int b = 0; b < _bars.Length; b++)
+                {
+                    if (_bars[b].enabled)
+                        _bars[b].enabled = false;
+                }
+                for (int c = 0; c < _cross.Length; c++)
+                {
+                    if (_cross[c].enabled)
+                        _cross[c].enabled = false;
+                }
+                if (!_fade.enabled)
+                    _fade.enabled = true;
                 _fade.color = new Color(Paper.r, Paper.g, Paper.b, 1f - InOut(p));
                 UiTransition.ZoomProgress?.Invoke(1f);
             }

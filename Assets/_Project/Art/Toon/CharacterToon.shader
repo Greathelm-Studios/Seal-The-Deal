@@ -1,32 +1,3 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-11
-//  Prompt    : Alex: "do what you recommend, as long as it fits the art direction and that
-//              2000s corporate future aesthetic" (recommendation: soft building, graphic people)
-//  Modified  : Claude Fable 5.2, 2026-11-15 — the base and contour passes mark stencil bit 8 so
-//              blood splats skip characters (Harvey: "Exclude them too").
-//  Modified  : Claude Fable 5.2, 2026-11-15 — a per-camera near clip, so the body view can hide
-//              a player's own head from their own eye only (Harvey, shown his headless
-//              reflection: "Well this definitely cant happen").
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : The character half of the art bible's lighting formula, "soft world light + hard
-//              character value breaks" (bible §04, §05). Characters need a different lighting
-//              model from the building, which stays on URP Lit, so this is its own shader:
-//              one base field, one hard cut shadow, an optional hard highlight shape and an
-//              optional thin contour. Nothing else uses it.
-// -----------------------------------------------------------------------------
-//
-// Trade-off: hand-written HLSL rather than Shader Graph. Shader Graph has no node for URP's
-// clustered (Forward+) additional-light loop or for a second, front-culled contour pass, so
-// both would need custom function nodes and a renderer feature anyway. One text file is the
-// smaller thing to review and has no renderer asset to edit.
-//
-// Trade-off: the contour is an extruded back-face shell, not a full-screen edge filter. A
-// screen filter outlines every object unless a renderer feature and layer mask are added, and
-// the bible forbids "a thick black border around every object" (§05). The shell is per
-// material, so it is selective by construction, and it is extruded in screen pixels so it
-// keeps its width from across the street.
 Shader "Close the Deal/Character Toon"
 {
     Properties
@@ -39,10 +10,6 @@ Shader "Close the Deal/Character Toon"
         _ShadowColor("Shadow colour (pick it colder, not just darker)", Color) = (0.035, 0.050, 0.120, 1)
         _ShadowThreshold("Shadow size (0 = none, 1 = everything in shadow)", Range(0, 1)) = 0.5
         _ShadowSoftness("Shadow edge softness (keep tiny: it only hides jaggies)", Range(0.001, 0.2)) = 0.01
-        // WHY 0 by default: play happens indoors, under a slab, where the sun's cast shadow
-        // covers the whole body and the cut would vanish into one flat shadow tone. The bible
-        // allows the cheat ("visual clarity wins over physical correctness", §05): the cut
-        // follows the sun's direction even where the sun cannot physically reach.
         _ReceiveShadows("Cast shadows cut in too (0 = ignore, 1 = full)", Range(0, 1)) = 0
 
         [Header(Hard highlight shape)]
@@ -73,34 +40,22 @@ Shader "Close the Deal/Character Toon"
         TEXTURE2D(_BaseMap);
         SAMPLER(sampler_BaseMap);
 
-        // Set per camera by PlayerViewmodel while the body view is on: for the camera a player
-        // looks out of their own body with, fragments nearer the eye than this many metres are
-        // not drawn, which hides that player's own head, hair and collar from that one camera.
-        // 0 for every other camera, so mirrors, other players and shadows keep the whole body.
-        // A global, not a material property, so it stays outside UnityPerMaterial.
-        float _BodyViewNearClip;
-        // How far behind that camera the middle of the head is, metres. Set with the above.
-        float _BodyViewClipBack;
+        // Set per camera by PlayerViewmodel: for the camera a player looks out of their own body
+        // with, xyz is the world-space centre of their real head bone and w is radius^2. Fragments
+        // inside that sphere are clipped so the owner's head, hair and collar never poke through
+        // even when the ragdoll head moves faster than the smoothed camera. Zero for every other
+        // camera (mirrors, shadows, other players), so they always see the full head.
+        float4 _BodyViewHeadSphere;
 
-        // Skips what is inside a ball of radius _BodyViewNearClip around the middle of the
-        // owner's head. WHY a ball and not "everything nearer than a distance", which the first
-        // version did: a flat cut also sliced through the owner's own shoulder and sleeve,
-        // which sit beside the eye, and left the arm with an open end (Harvey: "It got worse").
-        // The ball covers the head and hair and stops short of the shoulders.
-        void ClipNearOwnEye(float4 positionCS)
+        void ClipNearOwnEye(float3 positionWS)
         {
-            // Where this pixel is, measured from the camera: sideways from its place on the
-            // screen and its depth (SV_POSITION.w is the distance along the view, in metres).
-            // abs() because only the distance matters, which also makes the screen's up-or-down
-            // convention irrelevant.
-            float2 fromCentre = abs(positionCS.xy / _ScaledScreenParams.xy * 2.0 - 1.0);
-            float2 sideways = fromCentre * positionCS.w / float2(UNITY_MATRIX_P[0][0], abs(UNITY_MATRIX_P[1][1]));
-            float ahead = positionCS.w + _BodyViewClipBack;
-            clip(dot(sideways, sideways) + ahead * ahead - _BodyViewNearClip * _BodyViewNearClip);
+            if (_BodyViewHeadSphere.w <= 0.0)
+                return;
+            float3 toHead = positionWS - _BodyViewHeadSphere.xyz;
+            clip(dot(toHead, toHead) - _BodyViewHeadSphere.w);
         }
 
-        // WHY one block shared by every pass: the SRP Batcher only batches a shader whose passes
-        // all declare the same UnityPerMaterial layout.
+        // Shared UnityPerMaterial layout across passes keeps SRP Batcher compatibility.
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
             half4 _BaseColor;
@@ -117,24 +72,18 @@ Shader "Close the Deal/Character Toon"
         CBUFFER_END
         ENDHLSL
 
-        // ---------------------------------------------------------------------------------
-        // Base field and cut shadow.
-        // ---------------------------------------------------------------------------------
         Pass
         {
             Name "ForwardLit"
             Tags { "LightMode" = "UniversalForward" }
-            // Marks every pixel a character covers, so the blood splat shader can skip them
-            // (BloodSplat.shader tests the same bit). Bit 8 is one of the four URP leaves to
-            // projects; nothing else in the game uses it.
+            // Mark stencil bit 8 on character pixels so BloodSplat.shader leaves characters unpainted.
             Stencil { Ref 8 WriteMask 8 Comp Always Pass Replace }
 
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Frag
 
-            // WHY no _MAIN_LIGHT_SHADOWS_SCREEN: the PC renderer has no screen-space shadows
-            // feature. If one is added, add that keyword and sample with the screen position.
+            // Add _MAIN_LIGHT_SHADOWS_SCREEN if the PC renderer enables screen-space shadows.
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
             #pragma multi_compile _ _ADDITIONAL_LIGHTS
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
@@ -146,13 +95,8 @@ Shader "Close the Deal/Character Toon"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
-            /// Half-Lambert remap: turns N.L from -1..1 into 0..1 so the threshold slider is
-            /// symmetric around the terminator (0.5 = the usual light/dark boundary).
             #define HALF_LAMBERT_SCALE 0.5
             #define HALF_LAMBERT_BIAS 0.5
-
-            /// Specular cosine at the largest highlight size. Picked by eye: at 0.8 the shape
-            /// covers roughly a quarter of a sphere, past which it stops reading as a highlight.
             #define HIGHLIGHT_WIDEST_COSINE 0.8
 
             struct Attributes
@@ -189,7 +133,6 @@ Shader "Close the Deal/Character Toon"
                 return output;
             }
 
-            /// 1 on the lit side of the cut, 0 on the shadow side, for one light.
             half CutBand(half3 normalWS, half3 lightDirWS, half attenuation)
             {
                 half wrapped = dot(normalWS, lightDirWS) * HALF_LAMBERT_SCALE + HALF_LAMBERT_BIAS;
@@ -201,7 +144,7 @@ Shader "Close the Deal/Character Toon"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-                ClipNearOwnEye(input.positionCS);
+                ClipNearOwnEye(input.positionWS);
 
                 half3 normalWS = normalize(input.normalWS);
                 half3 viewDirWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
@@ -211,14 +154,10 @@ Shader "Close the Deal/Character Toon"
                 half shadow = lerp(1.0h, mainLight.shadowAttenuation, _ReceiveShadows);
                 half cut = CutBand(normalWS, mainLight.direction, shadow);
 
-                // WHY a zero normal: it returns the average ambient colour with no direction in
-                // it. Sampling with the real normal would paint a soft gradient across the body,
-                // which the bible rules out ("no smooth character gradients", §05).
+                // SampleSH at zero normal gives flat directionless ambient without gradient shading.
                 half3 ambient = SampleSH(half3(0, 0, 0));
 
-                // WHY clamp at 1: the look pass runs the sun above 1 so white walls bloom. A
-                // character field is a chosen colour; room light may darken or tint it but must
-                // never push it past what the artist picked.
+                // Clamp incoming light to 1 so HDR room lighting never blows out character swatches.
                 half3 litLight = min(ambient + mainLight.color * mainLight.distanceAttenuation, 1.0h);
                 half3 shadowLight = min(ambient, 1.0h);
                 half3 litField = _BaseColor.rgb * lerp(1.0h, litLight, _LightInfluence);
@@ -226,8 +165,6 @@ Shader "Close the Deal/Character Toon"
                 half3 color = lerp(shadowField, litField, cut) * albedo;
 
                 #if defined(_ADDITIONAL_LIGHTS)
-                    // Local lights (a muzzle flash, an explosion, later a ceiling fitting) add a
-                    // second hard-edged patch of the base colour instead of a soft falloff.
                     InputData inputData = (InputData)0;
                     inputData.positionWS = input.positionWS;
                     inputData.normalWS = normalWS;
@@ -238,8 +175,7 @@ Shader "Close the Deal/Character Toon"
                     uint pixelLightCount = GetAdditionalLightsCount();
 
                     #if USE_CLUSTER_LIGHT_LOOP
-                    // Forward+ keeps extra directional lights outside the clusters; URP's own
-                    // lit shaders walk them first in exactly this way (Lighting.hlsl).
+                    // Forward+ keeps extra directional lights outside the clusters (matches URP Lighting.hlsl).
                     [loop] for (uint dirIndex = 0; dirIndex < min(URP_FP_DIRECTIONAL_LIGHTS_COUNT, MAX_VISIBLE_LIGHTS); dirIndex++)
                     {
                         Light dirLight = GetAdditionalLight(dirIndex, input.positionWS, shadowMask);
@@ -256,12 +192,10 @@ Shader "Close the Deal/Character Toon"
                     color += _BaseColor.rgb * albedo * localLight * _LightInfluence;
                 #endif
 
-                // Hard highlight: a designed shape on the lit side only, never a glossy falloff.
                 half3 halfDir = SafeNormalize(mainLight.direction + viewDirWS);
                 half highlightEdge = lerp(1.0h, HIGHLIGHT_WIDEST_COSINE, _HighlightSize);
                 half highlight = smoothstep(highlightEdge - _ShadowSoftness, highlightEdge + _ShadowSoftness, dot(normalWS, halfDir));
-                // WHY the step: at size 0 the edge sits at exactly 1 and smoothstep would still
-                // return 0.5 on a normal facing the half vector, leaving a speck.
+                // Guard against smoothstep returning 0.5 at edge == 1 when _HighlightSize is 0.
                 highlight *= cut * _HighlightColor.a * step(0.0001h, _HighlightSize);
                 color = lerp(color, _HighlightColor.rgb, highlight);
 
@@ -271,19 +205,11 @@ Shader "Close the Deal/Character Toon"
             ENDHLSL
         }
 
-        // ---------------------------------------------------------------------------------
-        // Contour: back faces pushed outward by a fixed number of screen pixels.
-        // To switch it off without a wasted draw, disable this pass on the material
-        // (the Close the Deal > Art > Build Character Toon Materials tool does that for
-        // every material whose width is 0).
-        // ---------------------------------------------------------------------------------
         Pass
         {
             Name "Contour"
-            // WHY this tag: URP's opaque pass draws SRPDefaultUnlit alongside UniversalForward,
-            // which gives a second pass with no renderer feature.
+            // URP opaque pass draws SRPDefaultUnlit alongside UniversalForward with no renderer feature.
             Tags { "LightMode" = "SRPDefaultUnlit" }
-            // Same mark as the base pass, so the contour's rim is not painted either.
             Stencil { Ref 8 WriteMask 8 Comp Always Pass Replace }
             Cull Front
 
@@ -293,7 +219,6 @@ Shader "Close the Deal/Character Toon"
             #pragma multi_compile_fog
             #pragma multi_compile_instancing
 
-            /// Clip space spans -1..1 across the screen, so one pixel is 2 / resolution.
             #define CLIP_UNITS_PER_SCREEN 2.0
 
             struct Attributes
@@ -301,8 +226,7 @@ Shader "Close the Deal/Character Toon"
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 float4 tangentOS : TANGENT;
-                // A smoothed normal baked by Close the Deal > Art > Bake Character Outline
-                // Normals, in tangent space. All zeros on a mesh that has not been baked.
+                // Tangent-space smoothed normal baked into UV3 by CharacterOutlineBake.
                 float3 smoothTS : TEXCOORD3;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -311,6 +235,7 @@ Shader "Close the Deal/Character Toon"
             {
                 float4 positionCS : SV_POSITION;
                 half fogFactor : TEXCOORD0;
+                float3 positionWS : TEXCOORD1;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -322,12 +247,10 @@ Shader "Close the Deal/Character Toon"
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
-                float4 positionCS = TransformObjectToHClip(input.positionOS.xyz);
-                // WHY a second normal: the shell is pushed out along the normal, and at a hard
-                // edge the artist's normals are split, so the shell splits and the line breaks
-                // into shards (seen on the first real character's hair). The baked normal is
-                // the same on both sides of every edge. It is stored relative to the vertex's
-                // own normal and tangent so it still points the right way on a rigged mesh.
+                float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                float4 positionCS = TransformWorldToHClip(positionWS);
+                output.positionWS = positionWS;
+                // Use baked tangent-space smoothed normal when present so hard edges do not split the contour.
                 float3 pushOS = input.normalOS;
                 if (dot(input.smoothTS, input.smoothTS) > 0.25)
                 {
@@ -336,20 +259,12 @@ Shader "Close the Deal/Character Toon"
                 }
                 float3 normalWS = TransformObjectToWorldNormal(pushOS);
 
-                // Direction of the normal on screen, in pixels, so the width is the same
-                // horizontally and vertically whatever the aspect ratio.
                 float2 screenDir = mul((float3x3)GetWorldToHClipMatrix(), normalWS).xy * _ScaledScreenParams.xy;
                 float screenLen = length(screenDir);
                 screenDir = screenLen > 0.00001 ? screenDir / screenLen : float2(0, 0);
 
-                // WHY multiply by w: the perspective divide then cancels it, so the line is
-                // _OutlineWidth pixels wide at 2 m and at 12 m across the street alike. A shell
-                // sized in metres shrinks to nothing at exactly the range the game is played at.
+                // Multiply by positionCS.w to keep screen-pixel width invariant across distance, capped in world metres.
                 float2 pixel = CLIP_UNITS_PER_SCREEN / _ScaledScreenParams.xy;
-                // WHY the cap: a line that stays 3 px wide on a figure that is 100 px tall buries
-                // the hair and hands in line (seen on the first real character, from 12 m). The
-                // line is as wide as asked up close, but never thicker in the world than
-                // _OutlineMaxSize, so it thins as the character shrinks on screen.
                 float pixelsPerMetre = _ScaledScreenParams.y * 0.5 * abs(UNITY_MATRIX_P[1][1]) / max(positionCS.w, 0.0001);
                 float width = min(_OutlineWidth, _OutlineMaxSize * pixelsPerMetre);
                 positionCS.xy += screenDir * pixel * width * positionCS.w;
@@ -363,15 +278,12 @@ Shader "Close the Deal/Character Toon"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-                ClipNearOwnEye(input.positionCS);
+                ClipNearOwnEye(input.positionWS);
                 return half4(MixFog(_OutlineColor.rgb, input.fogFactor), 1);
             }
             ENDHLSL
         }
 
-        // ---------------------------------------------------------------------------------
-        // Shadow caster: characters still throw ordinary shadows onto the soft building.
-        // ---------------------------------------------------------------------------------
         Pass
         {
             Name "ShadowCaster"
@@ -430,9 +342,6 @@ Shader "Close the Deal/Character Toon"
             ENDHLSL
         }
 
-        // ---------------------------------------------------------------------------------
-        // Depth and normals prepasses, so ambient occlusion and depth effects see characters.
-        // ---------------------------------------------------------------------------------
         Pass
         {
             Name "DepthOnly"
@@ -454,6 +363,7 @@ Shader "Close the Deal/Character Toon"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                float3 positionWS : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -464,13 +374,14 @@ Shader "Close the Deal/Character Toon"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
-                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                output.positionCS = TransformWorldToHClip(output.positionWS);
                 return output;
             }
 
             half4 Frag(Varyings input) : SV_Target
             {
-                ClipNearOwnEye(input.positionCS);
+                ClipNearOwnEye(input.positionWS);
                 return input.positionCS.z;
             }
             ENDHLSL
@@ -499,6 +410,7 @@ Shader "Close the Deal/Character Toon"
             {
                 float4 positionCS : SV_POSITION;
                 half3 normalWS : TEXCOORD0;
+                float3 positionWS : TEXCOORD1;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -509,14 +421,15 @@ Shader "Close the Deal/Character Toon"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
-                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                output.positionCS = TransformWorldToHClip(output.positionWS);
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 return output;
             }
 
             half4 Frag(Varyings input) : SV_Target
             {
-                ClipNearOwnEye(input.positionCS);
+                ClipNearOwnEye(input.positionWS);
                 // Same two encodings as URP's own depth-normals pass (UnlitDepthNormalsPass.hlsl).
                 #if defined(_GBUFFER_NORMALS_OCT)
                     float3 normalWS = normalize(input.normalWS);

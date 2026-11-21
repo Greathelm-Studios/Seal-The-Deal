@@ -1,16 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-15
-  Prompt    : Alex on the L2 KitOffice build: "looks good but bland and boring, the markings don't fully go round
-              the office floor and ceiling, I don't want them randomly placed, I want them to follow the structure
-              with purpose and intent, and have different markings that match our art style that add purpose and
-              intent narratively and gameplay-wise"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : A markings system for the L2 floor: every floor, wall and ceiling mark has a job (where am I,
-              where do I go, what is this, whose is this), follows the building's structure, and runs unbroken.
-              It replaces decoration placed piece by piece.
--->
 # L2 markings system
 
 **From:** Alex, drafted by Claude · **Date:** 2026-11-15 · **For:** the KitOffice L2 build · Read with [DECISION_L2.md](DECISION_L2.md) and the L2 plans.

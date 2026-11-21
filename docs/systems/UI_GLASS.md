@@ -1,15 +1,6 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code), lane 7 "Aero"
-  Generated : 2026-11-14
-  Prompt    : UI revamp: build pass B's frosted, see-through UI glass for URP with a no-blur fallback.
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : The owning doc for the UI glass material (AGENTS.md §7): what the player sees, files, presets,
-              measured contrast, frame cost, how to use it, limits.
--->
-# UI glass
+# UI Glass
 
-**Status:** Current (branch `claude/lane-ui-glass`, not merged) · **Last updated:** 2026-11-14
+**Status:** Current (branch `claude/lane-ui-glass`, not merged; unverified in Play Mode or builds) · **Last updated:** 2026-11-21
 
 ## What the player sees
 
@@ -71,6 +62,10 @@ Two 240-frame runs with blur on, averaged, against one with it off. Per-pass GPU
 
 The blur reads the camera colour once, writes a half-res and three quarter-res textures (four fullscreen passes, the last three at 1/16 of the pixels). It runs only while at least one `UiGlass` is enabled.
 
+## Ownership and netcode boundary
+
+UI glass is purely local client-side presentation. It reads no network or match state and writes only the local `ctd.ui.glassQuality` preference in `PlayerPrefs`.
+
 ## How it works
 
 ```
@@ -83,6 +78,13 @@ no pane alive / "No blur" / feature missing ──▶ passes skipped, _UiGlassBl
 ```
 
 Which camera feeds the glass: a Game camera that draws to the screen (not overlay cameras in a stack, not render-texture cameras such as mirrors or the title's sky camera), or `UiGlassBlurFeature.SourceCamera` when a tool sets one.
+
+Design rationale from implementation:
+- **Stale-texture safety (`UiGlassBlurFeature`):** `AddRenderPasses` resets `_UiGlassBlurOn` to `0` before enqueueing, and the final `"UiGlass Publish"` raster pass (`AllowPassCulling(false)`, `AllowGlobalStateModification(true)`) sets it to `1` in command order after the four blur passes finish. Any skipped frame, early-out, or backbuffer target automatically drops panes back to the plain tint instead of sampling stale data.
+- **HDR sun clamping (`UiGlassBlur.shader`):** The downsample pass clamps colour to `min(c * 0.25, 1)` so HDR sun highlights cannot bleed through the glass and bloom.
+- **UI backdrop isolation (`UiGlassBackdrop`):** Runs `[ExecuteAlways]` so its static `Active` counter cannot get stuck above zero in edit mode and suppress scene blur, caches the `RawImage` lookup, and deduplicates `AttachToTitles()` per frame (`_attachFrame`) when multiple panes enable together.
+- **Mesh UV1 and material ownership (`UiGlass`):** Enables `TexCoord1` on its parent canvas and writes the pane's pixel dimensions into `uv1` whenever `canvas.scaleFactor` changes, ignoring the `Image` sprite (`uv0` is rewritten to the pane rect). When `ownsMaterial` is off (`UiGlassPane` owns the material), `UiGlass` only writes `uv1` and tracks `ActivePanes`. In the editor, `OnValidate` defers `Apply()` via `delayCall` because destroying per-pane material instances is disallowed inside `OnValidate`.
+- **Linear alphas:** `UiGlassSetup` uses lower Linear-space alphas than the sRGB SVG mockups so light glass covers the same perceived amount in Linear rendering.
 
 - [UiGlassBlurFeature.cs](../../Assets/_Project/UI/Glass/Scripts/UiGlassBlurFeature.cs): the Render Graph renderer feature, on `Assets/Settings/PC_Renderer.asset` only.
 - [UiGlassBlur.shader](../../Assets/_Project/UI/Glass/UiGlassBlur.shader): the four blur passes.

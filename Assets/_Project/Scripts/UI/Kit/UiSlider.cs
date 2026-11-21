@@ -6,10 +6,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// A kit slider with a number field: uGUI's Slider (drag, click on the track, left / right steps) with the
-    /// kit's look, focus answers and a tick per step whose pitch follows the value. Always whole steps.
-    /// </summary>
+    /// <summary>Whole-step kit slider with live number readout and pitch-scaled tick audio.</summary>
     [AddComponentMenu("Seal the Deal/UI/Slider")]
     public sealed class UiSlider : Slider
     {
@@ -27,6 +24,7 @@ namespace CloseTheDeal.UI
         bool _pointerInside;
         bool _selected;
         int _shownStep = int.MinValue;
+        string _format;
 
         public UiControlFx Fx => _fx;
 
@@ -46,6 +44,7 @@ namespace CloseTheDeal.UI
         {
             _displayScale = displayScale;
             _suffix = suffix;
+            CacheFormat();
             _shownStep = int.MinValue;
             DrawField();
         }
@@ -61,12 +60,15 @@ namespace CloseTheDeal.UI
             base.Awake();
             wholeNumbers = true;
             transition = Transition.None;
+            CacheFormat();
         }
 
         protected override void OnEnable()
         {
             base.OnEnable();
             onValueChanged.AddListener(OnMoved);
+            if (!Application.isPlaying)
+                return;   // edit mode: leave the serialized layout and readout alone (see UiControl.OnEnable)
             _pointerInside = false;
             _selected = EventSystem.current != null && EventSystem.current.currentSelectedGameObject == gameObject;
             _fx.SetState(IsInteractable(), false, false, _selected, true);
@@ -88,20 +90,24 @@ namespace CloseTheDeal.UI
             Changed?.Invoke(DisplayValue);
         }
 
+        void CacheFormat() => _format = "{0}" + (_suffix ?? string.Empty);
+
         void DrawField()
         {
             int step = Mathf.RoundToInt(value);
             if (_field == null || step == _shownStep)
                 return;
             _shownStep = step;
-            _field.SetText("{0}" + _suffix, DisplayValue);
+            if (_format == null)
+                CacheFormat();
+            _field.SetText(_format, DisplayValue);
         }
 
         protected override void DoStateTransition(SelectionState state, bool instant)
         {
-            if (_fx == null)
-                return;
-            _fx.SetState(state != SelectionState.Disabled, _pointerInside, state == SelectionState.Pressed, _selected, instant || !Application.isPlaying);
+            if (_fx == null || !Application.isPlaying)
+                return;   // edit mode: leave the serialized layout alone (see UiControl.OnEnable)
+            _fx.SetState(state != SelectionState.Disabled, _pointerInside, state == SelectionState.Pressed, _selected, instant);
         }
 
         public override void OnPointerEnter(PointerEventData eventData)

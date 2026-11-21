@@ -1,38 +1,3 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Opus 5.5 (Claude Code)
-//  Generated : 2026-11-13
-//  Prompt    : Alex on the atrium water wall: "a glass pane with this type animated liquid inside instead
-//              of just a graphic. make it a shader and not physical geometry."
-//  Modified  : Claude Opus 5.5, 2026-11-13 — Alex: "I want the water to ACTUALLY look like water, but still
-//              stylised, rn it feels solid and slime like". Rewritten as a fake tank interior seen through the
-//              glass (parallax), with sharp caustic filaments, depth colour, light shafts, the underside of the
-//              surface, and glass streaks in place of the white gloss wash.
-//  Modified  : Claude Opus 5.5, 2026-11-13 — a top-down mode for the rooftop pool: an upward-facing face draws
-//              the pool seen from above (the floor's caustics through the water, surface glints, a pale rim
-//              at grazing angles) instead of the wall tank.
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : The water wall's liquid: an early-2000s "Aero" water tank drawn on the flat front face of the
-//              kit's Water_Wall panel. The pane behaves like the front glass of a shallow tank: you look into
-//              it, so the back wall, the bubbles and the surface shift with your viewpoint, and the water gets
-//              deeper in colour the further you look through it. All of it is drawn; the piece is one box.
-// -----------------------------------------------------------------------------
-//
-// Why the first version read as slime: one flat colour at 90 % alpha with soft wide caustics and a white
-// wash on top is how a painted gel looks. Water reads as water from depth cues: things inside move against
-// the glass as you move, colour deepens with the length of the path through it, light comes down in shafts,
-// caustics are thin bright filaments, and from below you see the silvery underside of the surface.
-//
-// Trade-off: a fake interior (a ray from the eye into an imaginary box behind the pane, like "interior
-// mapping" windows), not refraction of the real scene. Behind the pane is only the silver back plate, so
-// bending it would show a wobbling grey; the fake tank costs the same and shows water.
-//
-// Trade-off 2: drawn liquid, not geometry or particles. Modelled waves or a bubble particle system need
-// per-frame updates and extra draws; this is one transparent draw whatever the water does.
-//
-// Coordinates: "across" is world metres along the pane (from the normal, as in Glass Sheen), "up" is the
-// object's own Y in metres (the kit imports at scale 1, no rotation), so the fill level stays tied to the
-// panel wherever the piece is placed. Unlit, no shadow: it glows the same in sun and shade, the Aero look.
 Shader "Close the Deal/Aero Water Pane"
 {
     Properties
@@ -99,8 +64,7 @@ Shader "Close the Deal/Aero Water Pane"
             Tags { "LightMode" = "UniversalForward" }
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
-            // WHY back faces are culled: the panel is a thin closed box against a silver back plate, so only
-            // its front face is ever seen; drawing the back face too doubled the alpha.
+            // Cull back faces on the closed panel box so back glass does not double alpha.
             Cull Back
 
             HLSLPROGRAM
@@ -148,28 +112,18 @@ Shader "Close the Deal/Aero Water Pane"
                 float _EdgePower;
             CBUFFER_END
 
-            /// A face counts as the pane's front unless its normal points this far up or down (as Glass Sheen).
             #define FLAT_PANE_NORMAL_Y 0.9
-            /// Smallest share of the ray's inward step. WHY: at grazing angles the parallax offset grows without
-            /// limit; clamping keeps the far end of the tank from smearing across the whole pane.
+            // Clamp inward ray component at grazing angles so tank interior parallax does not smear across the pane.
             #define MIN_INWARD 0.25
-            /// Depths of the two bubble layers as a share of the tank. WHY: two depths that move differently
-            /// against the glass as you walk past are what sell the volume.
             #define BUBBLE_NEAR 0.25
             #define BUBBLE_FAR 0.7
-            /// Smallest bubble as a share of _BubbleSize. WHY 0.35: smaller reads as noise at 5-15 m.
             #define BUBBLE_MIN_FRACTION 0.35
-            /// Bubble rim thickness as a share of its radius: a thin ring, clear inside, like a real bubble.
             #define BUBBLE_RIM 0.28
-            /// How far bubbles sway as they rise, metres. WHY: dead-straight columns read as a grid.
             #define BUBBLE_SWAY 0.025
-            /// Second wave length as a share of the first. WHY 0.37: not a simple ratio, so they never repeat.
             #define WAVE2_LENGTH 0.37
             #define WAVE2_HEIGHT 0.35
-            /// Gap between the wide glass streak and the thin one beside it, as a share of the wide one.
             #define STREAK_GAP 0.45
             #define STREAK_THIN 0.25
-            /// Caustics are brightest just under the surface and fade to this share at the bottom.
             #define CAUSTIC_FLOOR 0.35
 
             struct Attributes
@@ -216,7 +170,6 @@ Shader "Close the Deal/Aero Water Pane"
                 return frac(sin(x * 127.1) * 43758.5453);
             }
 
-            /// Water surface height at `x` metres along the pane: two travelling sines.
             float Surface(float x, float t)
             {
                 float k = TWO_PI / _WaveLength;
@@ -225,8 +178,6 @@ Shader "Close the Deal/Aero Water Pane"
                     + sin(x * k / WAVE2_LENGTH + t * _WaveSpeed * k * 0.8) * _WaveHeight * WAVE2_HEIGHT;
             }
 
-            /// Caustic filaments: the edges of moving Voronoi cells (second-nearest minus nearest distance is
-            /// small along cell borders). Thin bright lines that merge and split, like light under water. 0-1.
             half Caustic(float2 p, float t)
             {
                 float2 cell = floor(p);
@@ -246,7 +197,6 @@ Shader "Close the Deal/Aero Water Pane"
                 return 1.0 - smoothstep(0.0, w, edge);
             }
 
-            /// One bubble layer at point `p` (metres on that layer). .x = ring and highlight, .y = inside.
             half2 Bubbles(float2 p, float t, float layer, float pixel)
             {
                 float cellSize = _BubbleCell * layer;
@@ -266,7 +216,6 @@ Shader "Close the Deal/Aero Water Pane"
                 return half2(saturate(disc - inner + spot), inner);
             }
 
-            /// Light shafts falling from the surface: soft vertical bands of random width that sway. 0-1.
             half Shafts(float x, float below, float t)
             {
                 float s = (x + below * _ShaftTilt) / _ShaftSpacing;
@@ -285,8 +234,6 @@ Shader "Close the Deal/Aero Water Pane"
                 return saturate(at / pixel + 0.5) * saturate((width - at) / pixel + 0.5) * step(0.0001, width);
             }
 
-            /// The pool seen from above: the ray goes down through _PoolDepth of water to the basin floor, which
-            /// carries the caustics; the surface adds moving glints and goes pale and solid at grazing angles.
             half4 PoolTop(float3 positionWS, half3 normalWS, half3 viewDirWS, float t, half fogFactor)
             {
                 float3 ray = -viewDirWS;
@@ -297,7 +244,6 @@ Shader "Close the Deal/Aero Water Pane"
                 half c = Caustic(floorP / _CausticScale, t * _CausticSpeed);
                 half c2 = Caustic(floorP / (_CausticScale * 1.7) + 3.7, -t * _CausticSpeed * 0.7);
                 half3 seen = lerp(_BackColor.rgb, _CausticColor.rgb, saturate(c + c2 * 0.6) * _CausticColor.a);
-                // WHY 0.5: a wading pool is shallow; full absorption would hide the floor that sells it as water.
                 half transmit = exp(-_PoolDepth * pathPerDepth * _Absorption * 0.5);
                 half3 col = lerp(_ShallowColor.rgb, seen, transmit);
                 half glint = Caustic(positionWS.xz / (_CausticScale * 0.6) + 11.3, t * _CausticSpeed * 1.8);
@@ -327,11 +273,10 @@ Shader "Close the Deal/Aero Water Pane"
                 float up = input.upOS;
                 float pixel = max(fwidth(up), 0.00001);
 
-                // The ray from the eye into the tank, per metre of depth behind the glass.
                 float3 ray = -viewDirWS;
                 float inward = max(dot(ray, -normalWS), MIN_INWARD);
                 float2 slope = float2(dot(ray, along), ray.y) / inward;
-                float pathPerDepth = length(float3(slope, 1.0));   // metres of water per metre of depth
+                float pathPerDepth = length(float3(slope, 1.0));
 
                 float surfFront = Surface(across, t);
                 half3 col;
@@ -339,13 +284,11 @@ Shader "Close the Deal/Aero Water Pane"
 
                 if (up > surfFront)
                 {
-                    // Above the water: the empty top of the tank, nearly clear.
                     col = _GlassColor.rgb;
                     alpha = _GlassColor.a;
                 }
                 else
                 {
-                    // Where does the ray end: on the tank's back wall, or on the underside of the surface?
                     float depthEnd = _TankDepth;
                     bool underside = false;
                     if (slope.y > 0.0)
@@ -353,7 +296,6 @@ Shader "Close the Deal/Aero Water Pane"
                         float dSurf = (surfFront - up) / slope.y;
                         if (dSurf < _TankDepth)
                         {
-                            // Second guess with the wave height where the ray actually meets it.
                             dSurf = (Surface(across + slope.x * dSurf, t) - up) / slope.y;
                             if (dSurf > 0.0 && dSurf < _TankDepth) { depthEnd = dSurf; underside = true; }
                         }
@@ -365,7 +307,6 @@ Shader "Close the Deal/Aero Water Pane"
                     half3 seen;
                     if (underside)
                     {
-                        // The silvery underside: bright, broken up by the same caustic light.
                         half c = Caustic(pEnd / (_CausticScale * 0.7), t * _CausticSpeed * 1.4);
                         seen = lerp(_UndersideColor.rgb, 1.0, c * 0.5);
                     }
@@ -377,20 +318,14 @@ Shader "Close the Deal/Aero Water Pane"
                         seen = lerp(_BackColor.rgb, _CausticColor.rgb, caustic * _CausticColor.a);
                     }
 
-                    // The water between the glass and what the ray hit: tints it more the longer the path,
-                    // and deeper down it is a deeper blue.
-                    // WHY sqrt: the colour should leave the pale surface band quickly, as real water does; a linear
-                    // ramp kept the top two thirds pale under the office's bright grade.
                     half3 waterTint = lerp(_ShallowColor.rgb, _DeepColor.rgb, sqrt(depth01));
                     half transmit = exp(-depthEnd * pathPerDepth * _Absorption);
                     col = lerp(waterTint, seen, transmit);
 
-                    // Light shafts in the water, sampled half way in.
                     float2 pMid = float2(across, up) + slope * (depthEnd * 0.5);
                     half shaft = Shafts(pMid.x, max(_FillLevel - pMid.y, 0.0), t);
                     col += _ShaftColor.rgb * shaft * _ShaftColor.a;
 
-                    // Bubbles at two depths; the far ones are tinted by the water in front of them.
                     float2 pNear = float2(across, up) + slope * (_TankDepth * BUBBLE_NEAR);
                     float2 pFar = float2(across, up) + slope * (_TankDepth * BUBBLE_FAR);
                     half2 bFar = Bubbles(pFar, t, 1.8, pixel);
@@ -404,12 +339,10 @@ Shader "Close the Deal/Aero Water Pane"
                     alpha = 1.0;
                 }
 
-                // The meniscus: a thin bright line where the surface meets the front glass.
                 half surfaceLine = saturate((_SurfaceWidth - abs(up - surfFront)) / pixel + 0.5);
                 col = lerp(col, _SurfaceColor.rgb, surfaceLine * _SurfaceColor.a);
                 alpha = max(alpha, surfaceLine * _SurfaceColor.a);
 
-                // The front glass: two diagonal streaks that slide as you move, and a pale edge-on rim.
                 float tilt = radians(_StreakAngle);
                 float acrossStreak = across * cos(tilt) + up * sin(tilt) + dot(viewDirWS, along) * 0.8;
                 float cell = acrossStreak - floor(acrossStreak / _StreakSpacing) * _StreakSpacing;

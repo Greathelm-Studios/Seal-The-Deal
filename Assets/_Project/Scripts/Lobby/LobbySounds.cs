@@ -4,12 +4,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// Gives the reception's moments their UI sounds from the shared sound set (UiSound): looking
-    /// at a desk or stand, using it, readying, signing in, a refusal, the short-handed confirm,
-    /// the start, and stepping into and out of the fitting room. The kit's own controls already
-    /// sound for themselves; this covers what is not a kit control. Local only.
-    /// </summary>
+    /// <summary>Plays reception and fitting-room UI sound events through UiSound. Design: docs/systems/LOBBY.md.</summary>
     [DisallowMultipleComponent]
     public sealed class LobbySounds : MonoBehaviour
     {

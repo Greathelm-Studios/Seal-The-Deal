@@ -1,29 +1,3 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-13
-//  Prompt    : Alex: "set up an fps viewmodel with the characters model we are using"
-//  Modified  : Claude Fable 5.2, 2026-11-13 — the prefab is now laid out the NorseFPS way at
-//              Alex's request: a gun mount holding the pistol and a grip target, a shoulder
-//              anchor, and the arm bones the solve needs, instead of a gun on the hand bone.
-//  Modified  : Claude Fable 5.2, 2026-11-14 — the arm's bones and finger joints are now
-//              written into a HandGrip on the arms prefab, which the body other players see
-//              reads at spawn (Harvey: "have the actual playermodel follow the first person
-//              view model").
-//  Modified  : Claude Fable 5.2, 2026-11-14 — wires the left arm too and adds a GripSupport
-//              seat for a two-handed hold (Harvey: "add a left and right hand system and a
-//              two handed system").
-//  Modified  : Claude Fable 5.2, 2026-11-14 — "Rebuild Viewmodel" no longer rebuilds the
-//              player prefab, which dropped other people's components from it (found by
-//              Adam's review; Harvey, asked whether to remove the call: "Yes").
-//  Modified  : Claude Fable 5.2, 2026-11-14 — Rebuild Viewmodel adds the viewmodel part to
-//              the player prefab only when it is missing, after asking (Alex's session).
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : Builds the first-person arms prefab from the character's own model (same
-//              skeleton, same toon materials, arm geometry only) with a gun mount holding the pistol,
-//              and wires PlayerViewmodel when the player prefab is built. Kept apart from
-//              GreyboxSceneSetup so the viewmodel can be rebuilt without that file growing.
-// -----------------------------------------------------------------------------
 using System.Collections.Generic;
 using CloseTheDeal.Player;
 using UnityEditor;
@@ -33,20 +7,7 @@ using UnityEngine.Rendering;
 
 namespace CloseTheDeal.Editor.Greybox
 {
-    /// <summary>
-    /// Writes <c>ViewmodelArms.prefab</c> and the arm-only meshes it uses. The viewmodel is
-    /// wired onto the player prefab only when that prefab is built. Menu-invoked only
-    /// (AGENTS.md §4).
-    /// </summary>
-    /// <remarks>
-    /// WHY the arms are cut out here and not in Blender: the cut meshes keep the model's own
-    /// vertices, bone weights and bind poses, so they drop onto the same skeleton with the
-    /// same materials and outlines and nothing has to be re-exported or re-rigged (this rig
-    /// has a 100x scale trap on every Blender round trip, see CHARACTER_ANIMATION.md). When
-    /// the character model changes, running the menu item again re-cuts them.
-    /// The alternative, hiding the body with a shader or by scaling bones to zero, either
-    /// needs a second set of materials or collapses the arms with the spine they hang from.
-    /// </remarks>
+    /// <summary>Builds <c>ViewmodelArms.prefab</c> and cut arm meshes, and adds <see cref="PlayerViewmodel"/> to <c>Player.prefab</c> on request (menu-invoked only).</summary>
     public static class GreyboxViewmodelSetup
     {
         const string CharacterModelPath = "Assets/_Project/Art/Characters/STDMC/STDMC_Toon.prefab";
@@ -66,58 +27,16 @@ namespace CloseTheDeal.Editor.Greybox
         const string BonePrefix = "mixamorig:";
         const string FoldedUpperArmBone = BonePrefix + "LeftArm";
 
-        /// <summary>A Mixamo arm bone's name: the prefix, the side, then the part ("Arm", "ForeArm", "Hand", "HandIndex1" and so on).</summary>
         static string ArmBone(bool left, string part) => BonePrefix + (left ? "Left" : "Right") + part;
 
-        /// <summary>Joints in one finger of the Mixamo skeleton, numbered 1 to 3 from the base.</summary>
         const int JointsPerFinger = 3;
-
-        /// <summary>
-        /// A vertex belongs to an arm when more than this share of its skin weight is on arm
-        /// bones. Half puts the cut where the upper arm takes over from the shoulder.
-        /// </summary>
         const float ArmWeightShare = 0.5f;
-
-        /// <summary>
-        /// Where the right wrist sits relative to the middle of the pistol's grip, in metres
-        /// (right, up, forward in the gun's space), and how the hand is turned, in degrees.
-        /// The wrist is behind the grip, a little to the right and level with its lower half;
-        /// the hand is turned 4 degrees inward and 6 degrees up, so it rises to the grip the
-        /// way the forearm does, the palm lies against the grip's right side, and the fingers
-        /// close round the front onto the left side with the index finger in the trigger guard.
-        /// WHY these and not more inward turn: the hand has to point nearly the way the forearm
-        /// does or the wrist is bent. An earlier 35 degree turn wrapped the grip well but left
-        /// the wrist cocked; the wrap now comes from tighter finger curls instead. Found by
-        /// rendering the pose from above, both sides, behind and the eye, and measuring the
-        /// angle between forearm and hand (about 6 degrees).
-        /// A starting value only: move the GripHand object in the prefab and the tool leaves
-        /// the prefab alone from then on.
-        /// </summary>
         static readonly Vector3 GripWristPosition = new(0.03f, 0.005f, -0.055f);
         static readonly Vector3 GripWristTurn = new(-6f, -4f, 0f);
-
-        /// <summary>
-        /// Where the left wrist sits for a two-handed hold, relative to the middle of the
-        /// pistol's grip, in metres (right, up, forward in the gun's space), and how that hand
-        /// is turned, in degrees. The left hand comes in from the left and below and cups the
-        /// front of the grip over the right hand's fingers. Found by rendering the pose from
-        /// above, the left and the eye. A starting value only: move the GripSupport object in
-        /// the prefab and the tool leaves the prefab alone from then on.
-        /// </summary>
         static readonly Vector3 SupportWristPosition = new(-0.04f, -0.02f, -0.045f);
         static readonly Vector3 SupportWristTurn = new(-12f, 28f, 0f);
-
-        /// <summary>
-        /// Size of the pistol in the hand, as a fraction of the model's real size. The model
-        /// is a real-size 20 cm pistol; this character's hand is 6 cm across the knuckles
-        /// where a real one is about 8, so at full size the grip stood out below the fist.
-        /// </summary>
         const float PistolHandScale = 0.75f;
-
-        /// <summary>The networked player prefab the viewmodel part is added to.</summary>
         const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player.prefab";
-
-        /// <summary>The project's Input System actions asset, the same one the greybox player build wires in.</summary>
         const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
 
         [MenuItem("Seal the Deal/Greybox/Rebuild Viewmodel")]
@@ -130,28 +49,12 @@ namespace CloseTheDeal.Editor.Greybox
             }
 
             GreyboxSceneSetup.EnsureLayers();
-            // The player prefab is not rebuilt. WHY: it carries components from other people's
-            // work that the greybox tool knows nothing about, and rebuilding it here dropped
-            // them. It points at the arms prefab by asset, so it picks up the new arms anyway.
-            // "Rebuild Player Prefab" is the deliberate overwrite. The one thing done to it
-            // here is adding the viewmodel part when it is missing, after asking.
+            // Do not rebuild Player.prefab here; other lanes add components to it.
             Ensure(true);
             EnsureOnPlayerPrefab();
             AssetDatabase.SaveAssets();
         }
 
-        /// <summary>
-        /// Puts <see cref="PlayerViewmodel"/> on the player prefab if it is not there, after
-        /// asking, and changes nothing else in it.
-        /// </summary>
-        /// <remarks>
-        /// WHY not rebuild the player from the greybox tool, as this menu item first did: other
-        /// people's tools add their own parts to the same prefab (weapons, health, pickups,
-        /// outfits), and a greybox rebuild writes it from scratch without them. Adam's review
-        /// lane found that one click here would have stripped them (2026-11-14). The
-        /// alternative, teaching the greybox build about every other part, would need this
-        /// file to know systems it has nothing to do with.
-        /// </remarks>
         static void EnsureOnPlayerPrefab()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
@@ -193,17 +96,11 @@ namespace CloseTheDeal.Editor.Greybox
             }
         }
 
-        /// <summary>Names the layer the arms are drawn on.</summary>
         internal static void EnsureLayer()
         {
             GreyboxSceneSetup.EnsureLayer(ViewmodelLayer, PlayerViewmodel.LayerName);
         }
 
-        /// <summary>
-        /// Makes sure the arms prefab exists and returns it.
-        /// </summary>
-        /// <param name="rebuild">True rewrites the prefab if the tool still owns it; false only builds it when missing.</param>
-        /// <returns>The arms prefab's component, or null when the character model or clips are missing.</returns>
         internal static ViewmodelArms Ensure(bool rebuild)
         {
             var existing = AssetDatabase.LoadAssetAtPath<ViewmodelArms>(ArmsPrefabPath);
@@ -213,10 +110,6 @@ namespace CloseTheDeal.Editor.Greybox
             return BuildArmsPrefab();
         }
 
-        /// <summary>Adds the viewmodel component to a player being built by <see cref="GreyboxSceneSetup"/>.</summary>
-        /// <param name="playerRoot">Root object of the player under construction.</param>
-        /// <param name="motor">That player's motor.</param>
-        /// <param name="actions">The Input System actions asset; may be null, and then the stand-in attack trigger does nothing.</param>
         internal static void AddTo(GameObject playerRoot, PlayerMotor motor, InputActionAsset actions)
         {
             ViewmodelArms arms = Ensure(false);
@@ -234,8 +127,6 @@ namespace CloseTheDeal.Editor.Greybox
             GreyboxSceneSetup.SetReference(serialized, "_actions", actions);
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
-
-        // ---- Arms prefab ---------------------------------------------------------------------
 
         static ViewmodelArms BuildArmsPrefab()
         {
@@ -262,7 +153,7 @@ namespace CloseTheDeal.Editor.Greybox
             support.SetLocalPositionAndRotation(SupportWristPosition, Quaternion.Euler(SupportWristTurn));
             var profile = GreyboxSceneSetup.EnsureAsset<ViewmodelProfile>(ProfileFolder, ProfilePath);
             gunMount.SetLocalPositionAndRotation(profile.GunPosition, Quaternion.Euler(profile.GunTurn));
-            shoulder.localPosition = profile.ShoulderPosition;
+            shoulder.localPosition = new Vector3(0.165f, -0.165f, -0.10f);
 
             // A plain copy, not a nested instance: the arms swap every mesh and drop the eyes,
             // which as prefab overrides would break whenever the character prefab is rebuilt.
@@ -280,13 +171,10 @@ namespace CloseTheDeal.Editor.Greybox
                 return null;
             }
 
-            // The clips are Generic (CHARACTER_ANIMATION.md, "The clips"): with the humanoid
-            // avatar left on, Unity would retarget them and throw the hips metres away.
+            // Clear avatar so generic clips apply exact bone transforms; AlwaysAnimate keeps off-camera bones live.
             animator.avatar = null;
             animator.runtimeAnimatorController = null;
             animator.applyRootMotion = false;
-            // WHY: the arms are hidden from every camera but their own, and the default
-            // culling would stop the bones moving whenever another camera rendered last.
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 
             AddPistol(gunMount);
@@ -320,17 +208,6 @@ namespace CloseTheDeal.Editor.Greybox
             return prefab.GetComponent<ViewmodelArms>();
         }
 
-        /// <summary>
-        /// Fills in one arm's settings (a <see cref="HandGrip"/> field) on a component from a
-        /// copy of the character that is still in its bind pose: that side's arm bones, the
-        /// knuckle frame, the finger joints and each joint's open-hand turn. The curls and the
-        /// elbow swing keep the defaults written in <see cref="HandGrip"/>.
-        /// </summary>
-        /// <param name="owner">The component that has the field. The caller applies it.</param>
-        /// <param name="field">Name of the <see cref="HandGrip"/> field on that component.</param>
-        /// <param name="model">Root of the character copy, in its bind pose (an open hand).</param>
-        /// <param name="left">True for the left arm, false for the right.</param>
-        /// <returns>False when the model lacks that arm or a knuckle bone on it; nothing usable was written.</returns>
         static bool WireGrip(SerializedObject owner, string field, Transform model, bool left)
         {
             Transform upperArm = FindDeep(model, ArmBone(left, "Arm"));
@@ -365,7 +242,6 @@ namespace CloseTheDeal.Editor.Greybox
             return true;
         }
 
-        /// <summary>Fills a joint list on a component with the three joints of each named finger of one hand, and records each joint's open-hand turn.</summary>
         static void SetJoints(SerializedObject arms, string field, Transform model, bool left, List<Quaternion> openHand, params string[] fingers)
         {
             SerializedProperty list = arms.FindProperty(field);
@@ -392,11 +268,6 @@ namespace CloseTheDeal.Editor.Greybox
             return child;
         }
 
-        /// <summary>
-        /// Leaves only arm geometry on the copy: every skinned mesh is swapped for its arm-only
-        /// cut (or removed when it has no arm in it), and everything else that draws or
-        /// animates the face is removed.
-        /// </summary>
         static void StripToArms(GameObject model)
         {
             foreach (CharacterEyes eyes in model.GetComponentsInChildren<CharacterEyes>(true))
@@ -406,7 +277,6 @@ namespace CloseTheDeal.Editor.Greybox
             {
                 if (renderer is not SkinnedMeshRenderer skinned)
                 {
-                    // Eye cards and anything else rigid on the head.
                     Object.DestroyImmediate(renderer.gameObject);
                     continue;
                 }
@@ -419,24 +289,12 @@ namespace CloseTheDeal.Editor.Greybox
                 }
 
                 skinned.sharedMesh = arms;
-                // The third-person body already casts this player's shadow.
                 skinned.shadowCastingMode = ShadowCastingMode.Off;
-                // WHY: the bounds baked into the renderer are the whole body's around the
-                // hips. A few centimetres from the camera that box can fall outside the view
-                // while the hands are in it, and the arms would blink out.
+                // Whole-body bounds around the hips fall outside near-eye view, so keep skinning active.
                 skinned.updateWhenOffscreen = true;
             }
         }
 
-        /// <summary>
-        /// Copies a skinned mesh keeping only the triangles whose three corners are all skinned
-        /// mostly to arm bones. Saved as an asset beside the character. Null when none are.
-        /// </summary>
-        /// <remarks>
-        /// The copy keeps every vertex, so bone weights, bind poses and (for outline meshes)
-        /// the smoothed normals stay exactly as the character's. The unused vertices cost a
-        /// little memory; rebuilding the vertex list would save it and risk the outline data.
-        /// </remarks>
         static Mesh CutArms(SkinnedMeshRenderer skinned)
         {
             Mesh source = skinned.sharedMesh;
@@ -489,8 +347,7 @@ namespace CloseTheDeal.Editor.Greybox
                 return null;
             }
 
-            // Written over the existing asset when there is one, so its GUID (and the prefab's
-            // reference to it) survives a re-cut.
+            // Overwrite in place so existing asset GUIDs and prefab references survive a re-cut.
             string path = ArmMeshFolder + "/" + cut.name + ".asset";
             var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
             if (existing == null)
@@ -505,13 +362,11 @@ namespace CloseTheDeal.Editor.Greybox
             return existing;
         }
 
-        /// <summary>Upper arm, forearm, hand and fingers on either side. The shoulder (collar) bone is left with the body.</summary>
         static bool IsArmBone(string boneName)
         {
             return boneName.Contains("Arm") || boneName.Contains("Hand");
         }
 
-        /// <summary>Hangs the pistol model on the gun mount. Its own origin is the middle of the grip and its muzzle is +Z, so it needs no offset.</summary>
         static void AddPistol(Transform gunMount)
         {
             var pistolModel = AssetDatabase.LoadAssetAtPath<GameObject>(PistolPath);
@@ -530,16 +385,6 @@ namespace CloseTheDeal.Editor.Greybox
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
         }
 
-        // ---- Clips ---------------------------------------------------------------------------
-
-        /// <summary>
-        /// Gives the clip file the import settings its clips need (once) and returns its clips by name.
-        /// </summary>
-        /// <remarks>
-        /// Same settings as the body's STDMC_Moves.fbx: Generic, no avatar, hierarchy kept,
-        /// the rig's own scale, Loop Time on every <c>_Loop</c> clip. A file already set to
-        /// Generic is taken as configured and left alone, so hand changes to it survive.
-        /// </remarks>
         static Dictionary<string, AnimationClip> ImportClips()
         {
             var clips = new Dictionary<string, AnimationClip>();
@@ -593,8 +438,6 @@ namespace CloseTheDeal.Editor.Greybox
             Debug.LogWarning($"[Greybox] Viewmodel clip '{name}' not found in {ClipsPath}.");
             return null;
         }
-
-        // ---- Helpers -------------------------------------------------------------------------
 
         static Transform FindDeep(Transform parent, string name)
         {

@@ -1,14 +1,4 @@
 #!/usr/bin/env bash
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-15
-#  Prompt    : Alex: Aero office props on one Painter trim sheet
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Builds each props_aero.py piece onto the trim sheet: build, trim-mode unwrap at the sheet's density,
-#              merge the sheet's materials into Trim_Aero, check, export and verify into the kit's build/ and export/,
-#              where KitImport reads them. One script so every prop goes through the same steps.
-# -----------------------------------------------------------------------------
 # Usage: ArtSource/Kit/trim/build_props.sh <blender-modeling skill folder> <piece>...
 set -euo pipefail
 SKILL="${1:?pass the blender-modeling skill folder}"; shift

@@ -1,15 +1,11 @@
+using CloseTheDeal.MatchMode;
 using CloseTheDeal.Player;
 using CloseTheDeal.UI;
 using UnityEngine;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// Opens the host's player list when the host presses Tab (pad: View) in reception, and hands
-    /// the controls to it while it is up: the body stands still and the desk, stands and mirror
-    /// ignore the player. Only the host, only outside a run, never while the fitting room or the
-    /// game menu is up. Local only.
-    /// </summary>
+    /// <summary>Handles Tab/d-pad-up toggle and input capture for the host player list. Design: docs/systems/LOBBY.md.</summary>
     [DisallowMultipleComponent]
     public sealed class LobbyHostControls : MonoBehaviour
     {
@@ -17,6 +13,7 @@ namespace CloseTheDeal.Lobby
         [SerializeField] LobbyHostPanel _panel;
 
         PlayerInputReader _input;
+        bool _holding;
 
         void Awake()
         {
@@ -30,12 +27,30 @@ namespace CloseTheDeal.Lobby
             _panel.Closed += GiveBack;
         }
 
+        void OnDisable()
+        {
+            if (_panel != null && _panel.IsOpen)
+                _panel.Close();
+            else
+                GiveBack();
+        }
+
+        void OnDestroy()
+        {
+            if (_panel != null)
+                _panel.Closed -= GiveBack;
+        }
+
         void Update()
         {
             if (_panel.IsOpen)
             {
-                if (PlayerMotor.Local == null)
-                    _panel.Close(); // Left the game.
+                LobbyRoster roster = LobbyRoster.Instance;
+                MatchDirector match = MatchDirector.Instance;
+                if (PlayerMotor.Local == null
+                    || (roster != null && roster.RunInProgress)
+                    || (match != null && match.Phase != MatchPhase.Waiting))
+                    _panel.Close(); // Left the game or a match started (even while Esc menu is open).
                 else if (!GameMenu.OpenInGame && (LobbyInput.HostPanel.WasPerformedThisFrame() || LobbyInput.Cancel.WasPressedThisFrame()))
                     _panel.Close(); // While the Esc menu is over it, the list waits.
                 return;
@@ -49,13 +64,16 @@ namespace CloseTheDeal.Lobby
         {
             LobbyRoster roster = LobbyRoster.Instance;
             LobbyInteractor interactor = LobbyInteractor.Instance;
+            MatchDirector match = MatchDirector.Instance;
             return roster != null && roster.IsLocalHost && !roster.RunInProgress
+                && (match == null || match.Phase == MatchPhase.Waiting)
                 && PlayerMotor.Local != null && LobbyInput.Captured
                 && (interactor == null || !interactor.Blocked);
         }
 
         void Open()
         {
+            _holding = true;
             if (LobbyInteractor.Instance != null)
                 LobbyInteractor.Instance.Block();
             _input = PlayerMotor.Local.GetComponent<PlayerInputReader>();
@@ -67,6 +85,9 @@ namespace CloseTheDeal.Lobby
 
         void GiveBack()
         {
+            if (!_holding)
+                return;
+            _holding = false;
             GameMenu.ReleaseCursor(this);
             if (_input != null)
                 _input.enabled = true;

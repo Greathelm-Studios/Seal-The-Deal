@@ -1,18 +1,11 @@
 using System;
 using System.IO;
+using CloseTheDeal.Profile;
 using UnityEngine;
 
 namespace CloseTheDeal.Customisation
 {
-    /// <summary>
-    /// The player's outfit and their runs-started count, kept on this PC in one small JSON file.
-    /// Choices are stored by slot and option asset name, not by list position, so reordering or
-    /// adding options in the catalog doesn't scramble an old save. A missing, unreadable or
-    /// unknown-version file loads as the default outfit with nothing on screen; an unreadable
-    /// one is kept beside it as ".corrupt" for a bug report.
-    /// The path is Application.persistentDataPath/outfit.json, or the one given after
-    /// -outfitSave on the command line (tests use this so they never touch a real save).
-    /// </summary>
+    /// <summary>Persistent JSON outfit and runs-started store backed by BackgroundFileWriter. Design: docs/systems/CUSTOMISATION.md.</summary>
     public static class OutfitSave
     {
         /// <summary>Raise when the file layout changes, and teach Load the old one.</summary>
@@ -52,6 +45,20 @@ namespace CloseTheDeal.Customisation
         }
 
         static string _pathOverride;
+        static bool _hasCached;
+        static OutfitCatalog _cachedCatalog;
+        static OutfitLoadout _cachedLoadout;
+        static int _cachedRunsStarted;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            _pathOverride = null;
+            _hasCached = false;
+            _cachedCatalog = null;
+            _cachedLoadout = default;
+            _cachedRunsStarted = 0;
+        }
 
         public static string FilePath
         {
@@ -67,7 +74,11 @@ namespace CloseTheDeal.Customisation
         {
             FileData data = Read();
             if (data == null)
-                return new Loaded(catalog.Default, 0, false);
+            {
+                var fresh = new Loaded(catalog.Default, 0, false);
+                Cache(catalog, fresh.Loadout, fresh.RunsStarted);
+                return fresh;
+            }
 
             int runs = Mathf.Max(0, data.runsStarted);
             OutfitLoadout loadout = catalog.Default;
@@ -77,26 +88,48 @@ namespace CloseTheDeal.Customisation
                     loadout = Apply(catalog, loadout, choice);
             }
 
-            return new Loaded(catalog.Sanitise(loadout, runs), runs, true);
+            var loaded = new Loaded(catalog.Sanitise(loadout, runs), runs, true);
+            Cache(catalog, loaded.Loadout, loaded.RunsStarted);
+            return loaded;
         }
 
         /// <summary>Writes the outfit, keeping the runs count already on disk.</summary>
         public static void SaveOutfit(OutfitCatalog catalog, OutfitLoadout loadout)
         {
-            FileData existing = Read();
-            Write(catalog, loadout, existing != null ? Mathf.Max(0, existing.runsStarted) : 0);
+            int runs;
+            if (_hasCached && _cachedCatalog == catalog)
+            {
+                runs = _cachedRunsStarted;
+            }
+            else
+            {
+                FileData existing = Read();
+                runs = existing != null ? Mathf.Max(0, existing.runsStarted) : 0;
+            }
+
+            Cache(catalog, loadout, runs);
+            Write(catalog, loadout, runs);
         }
 
-        /// <summary>Adds one to the runs count, keeping the outfit already on disk. Returns the new count.</summary>
+        /// <summary>Adds one to the runs count, keeping the outfit already in memory (loading once if needed). Returns the new count.</summary>
         public static int AddRunStarted(OutfitCatalog catalog)
         {
-            Loaded current = Load(catalog);
-            int runs = current.RunsStarted + 1;
-            Write(catalog, current.Loadout, runs);
+            if (!_hasCached || _cachedCatalog != catalog)
+                Load(catalog);
+
+            int runs = _cachedRunsStarted + 1;
+            _cachedRunsStarted = runs;
+            Write(catalog, _cachedLoadout, runs);
             return runs;
         }
 
-        // ---- File ----------------------------------------------------------------------------
+        static void Cache(OutfitCatalog catalog, OutfitLoadout loadout, int runsStarted)
+        {
+            _hasCached = true;
+            _cachedCatalog = catalog;
+            _cachedLoadout = loadout;
+            _cachedRunsStarted = runsStarted;
+        }
 
         static OutfitLoadout Apply(OutfitCatalog catalog, OutfitLoadout loadout, Choice choice)
         {
@@ -121,6 +154,7 @@ namespace CloseTheDeal.Customisation
 
         static FileData Read()
         {
+            BackgroundFileWriter.Flush();
             string path = FilePath;
             if (!File.Exists(path))
                 return null;
@@ -163,21 +197,8 @@ namespace CloseTheDeal.Customisation
             }
 
             string path = FilePath;
-            string temp = path + ".tmp";
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
-                File.WriteAllText(temp, JsonUtility.ToJson(data, true));
-                if (File.Exists(path))
-                    File.Replace(temp, path, null);
-                else
-                    File.Move(temp, path);
-            }
-            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
-            {
-                // The outfit still applies for this session; only keeping it for next launch failed.
-                Debug.LogWarning($"[Outfit] Couldn't save to {path} ({e.Message}). This outfit won't be there next launch.");
-            }
+            string json = JsonUtility.ToJson(data, true);
+            BackgroundFileWriter.Enqueue(path, json, "[Outfit]");
         }
 
         static void KeepCorrupt(string path)

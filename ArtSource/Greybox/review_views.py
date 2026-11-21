@@ -1,18 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-11
-#  Prompt    : "First-pass greybox from the 3D modeller brief: check views at eye height from both towers"
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Renders the brief's review views of floor_pair_greybox.blend at player eye height:
-#              the route to the stairs from inside, and the rival's view of the stair entrance from
-#              the same floor, one above and one below. It can also score how well the dark-suit
-#              stand-ins read from the rival tower, so glass and lighting changes are compared by
-#              number as well as by eye. Kept beside the model so every change is judged from the
-#              same cameras.
-#  Modified  : Claude Opus 5.5, 2026-11-11 — interior ceiling light, sun direction, glass alpha
-#              and open-bay options, and the stand-in read score.
-# -----------------------------------------------------------------------------
 """Usage:
   blender -b ArtSource/Greybox/floor_pair_greybox.blend -P ArtSource/Greybox/review_views.py -- <out folder> [options]
 

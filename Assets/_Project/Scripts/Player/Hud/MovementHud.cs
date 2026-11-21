@@ -1,4 +1,6 @@
 using System;
+using CloseTheDeal.Combat;
+using CloseTheDeal.MatchMode;
 using CloseTheDeal.UI;
 using TMPro;
 using UnityEngine;
@@ -143,12 +145,18 @@ namespace CloseTheDeal.Player.Hud
 
         /// <summary>Set once the player has slid this session; the slide hint never shows again until the game restarts.</summary>
         static bool _hasSlid;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => _hasSlid = false;
         float _sprintFor = -1f;
         float _hintHold;
         float _hintAlpha;
 
         void OnSprintChanged(bool sprinting)
         {
+            if (_slideHint == null)
+                return;
+
             _sprintFor = sprinting && !_hasSlid ? 0f : -1f;
             if (sprinting && !_hasSlid)
                 UiMotion.Wake(this);
@@ -173,7 +181,7 @@ namespace CloseTheDeal.Player.Hud
             string key = _reader.BindingText("Crouch", _reader.LastUsedGamepad);
             _slideHint.Set($"Sprinting: press {key} to slide.", UiStatusKind.Info);
             _hintHold = _slideHintSeconds;
-            UiSound.Play(UiSoundEvent.Notification);
+            UiSound.Play(UiSoundEvent.Tip);
         }
 
         /// <summary>The words for a refused climb: say why, in the house voice.</summary>
@@ -234,6 +242,7 @@ namespace CloseTheDeal.Player.Hud
             if (_deviceCaption != null)
                 _deviceCaption.text = pad ? "CONTROLLER" : "KEYBOARD AND MOUSE";
 
+            var device = pad ? UiGlyphs.KindOf(UnityEngine.InputSystem.Gamepad.current) : UiDeviceKind.KeyboardMouse;
             for (int i = 0; i < _rows.Length; i++)
             {
                 HelpRow row = _rows[i];
@@ -241,7 +250,14 @@ namespace CloseTheDeal.Player.Hud
                     continue;
 
                 string action = pad && !string.IsNullOrEmpty(row.PadAction) ? row.PadAction : row.Action;
-                string text = !pad && !string.IsNullOrEmpty(row.KeyboardText) ? row.KeyboardText : _reader.BindingText(action, pad);
+                // These lane-owned actions have fixed bindings independent of the movement actions asset.
+                string text = action switch
+                {
+                    "Reload" => UiGlyphs.Name(pad ? WeaponHolder.ReloadPadBinding : WeaponHolder.ReloadKeyboardBinding, device),
+                    "Interact" => UiGlyphs.Name(pad ? FirmMember.InteractPad : FirmMember.InteractKey, device),
+                    "Throw" => UiGlyphs.Name(pad ? FirmMember.DropPad : FirmMember.DropKey, device),
+                    _ => !pad && !string.IsNullOrEmpty(row.KeyboardText) ? row.KeyboardText : _reader.BindingText(action, pad)
+                };
                 row.Key.text = text;
                 float width = Mathf.Max(KeyCapMinWidth, Mathf.Ceil(row.Key.GetPreferredValues(text).x) + KeyCapPadding);
                 Resize(row.KeyCap, width);

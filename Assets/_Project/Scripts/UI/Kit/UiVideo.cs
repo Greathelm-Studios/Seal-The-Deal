@@ -4,12 +4,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The player's video settings, kept on this PC and applied at launch: display mode, resolution, vertical sync,
-    /// frame rate limit and graphics quality. Uses Unity's own Screen and QualitySettings; nothing a designer authored
-    /// is written. In the Editor the window belongs to the Editor, so display mode and resolution are saved but not
-    /// applied there (they apply in a build).
-    /// </summary>
+    /// <summary>Local video preferences (display mode, resolution, vsync, frame cap, quality) applied in builds.</summary>
     public static class UiVideo
     {
         const string ModeKey = "video.displayMode";
@@ -65,11 +60,7 @@ namespace CloseTheDeal.UI
             }
         }
 
-        /// <summary>
-        /// The resolution saved (never larger than this monitor: a size saved on a bigger one is clamped to it), or the
-        /// desktop's when none is. The desktop's comes from the display itself, not Screen.currentResolution, which in
-        /// exclusive full screen is the game's own mode.
-        /// </summary>
+        /// <summary>Saved resolution clamped to the current monitor's desktop dimensions.</summary>
         public static Vector2Int Resolution
         {
             get
@@ -80,10 +71,15 @@ namespace CloseTheDeal.UI
             }
             set
             {
-                PlayerPrefs.SetInt(WidthKey, value.x);
-                PlayerPrefs.SetInt(HeightKey, value.y);
+                SaveResolution(value);
                 ApplyDisplay();
             }
+        }
+
+        internal static void SaveResolution(Vector2Int size)
+        {
+            PlayerPrefs.SetInt(WidthKey, size.x);
+            PlayerPrefs.SetInt(HeightKey, size.y);
         }
 
         public static bool HasSavedResolution => PlayerPrefs.HasKey(WidthKey);
@@ -111,8 +107,7 @@ namespace CloseTheDeal.UI
 
             PlayerPrefs.DeleteKey(WidthKey);
             PlayerPrefs.DeleteKey(HeightKey);
-            if (!Application.isEditor)
-                Screen.SetResolution(size.x, size.y, Modes[Mode]); // the size it was really running at
+            ApplySize(size);
         }
 
         /// <summary>Back to following the desktop's resolution.</summary>
@@ -168,19 +163,19 @@ namespace CloseTheDeal.UI
 
         static void ApplyQuality() => QualitySettings.SetQualityLevel(Quality, true);
 
-        /// <summary>Quality levels carry their own vsync, so timing is applied after quality.</summary>
+        // Quality levels carry their own vsync, so timing must be applied after quality.
         static void ApplyTiming()
         {
             QualitySettings.vSyncCount = VSync ? 1 : 0;
             Application.targetFrameRate = VSync ? -1 : Caps[FrameCap];
         }
 
-        static void ApplyDisplay()
+        static void ApplyDisplay() => ApplySize(Resolution);
+
+        internal static void ApplySize(Vector2Int size)
         {
-            if (Application.isEditor)
-                return;
-            Vector2Int size = Resolution;
-            Screen.SetResolution(size.x, size.y, Modes[Mode]);
+            if (!Application.isEditor)
+                Screen.SetResolution(size.x, size.y, Modes[Mode]);
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

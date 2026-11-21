@@ -3,29 +3,15 @@ using UnityEngine;
 
 namespace CloseTheDeal.MatchMode
 {
-    /// <summary>
-    /// The neutral ground of the briefcase match: a plaza at street level between the two
-    /// receptions, where the briefcase spawns, and a skybridge across the gap on every
-    /// checkpoint floor, so a firm can cross to steal it. Built locally on every machine from
-    /// the built towers, like the towers themselves; nothing here is networked. Lives on the
-    /// Match object in scenes that play the mode; the tower geometry is never changed.
-    /// Design: docs/systems/MATCH.md.
-    /// </summary>
+    /// <summary>Locally builds the street-level plaza and checkpoint skybridges from built towers. Design: docs/systems/MATCH.md.</summary>
     [DisallowMultipleComponent]
     public sealed class MatchCrossings : MonoBehaviour
     {
-        /// <summary>Thickness of the plaza slab and the bridge decks, metres.</summary>
         const float Slab = 0.3f;
         const float Deck = 0.2f;
         const float RailThickness = 0.08f;
-
-        /// <summary>Height of the façade sill the decks sit flush with (TOWER.md: 0.6 m since 2026-11-12).</summary>
         const float SillHeight = 0.6f;
-
-        /// <summary>How far each deck runs onto the sills at either end, metres, so there is no seam to fall through.</summary>
         const float SillOverlap = 0.2f;
-
-        /// <summary>How high above the plaza and a bridge deck still counts as standing on it, metres.</summary>
         const float NeutralHeadroom = 3f;
 
         readonly Dictionary<int, Vector3> _bridgeCentres = new();
@@ -64,11 +50,6 @@ namespace CloseTheDeal.MatchMode
             }
         }
 
-        /// <summary>
-        /// A deck flush with the sills of both towers' checkpoint floors, with a rail each side.
-        /// It runs through the middle window bay, which is clear of pillars at the default 28 m
-        /// width (pillars every 4 m from the edge, TOWER.md); another width can put a pillar in it.
-        /// </summary>
         void BuildBridge(MatchArena arena, MatchProfile profile, int floor, Quaternion facing)
         {
             float gap = arena.Profile.Gap;
@@ -107,7 +88,7 @@ namespace CloseTheDeal.MatchMode
             _bridgeCentres.Clear();
             if (_root != null)
             {
-                // Off at once, so its colliders never stand beside the new ones for the rest of the frame.
+                // Deactivate immediately before Destroy so stale colliders don't overlap rebuilt ones this frame.
                 _root.SetActive(false);
                 Destroy(_root);
             }

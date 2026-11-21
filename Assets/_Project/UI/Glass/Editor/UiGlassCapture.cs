@@ -13,13 +13,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.Editor.UI
 {
-    /// <summary>
-    /// Renders the UI glass over a real scene and MEASURES text contrast from the captured pixels.
-    /// Shell: Unity -batchmode -projectPath &lt;worktree&gt; -executeMethod CloseTheDeal.Editor.UI.UiGlassCapture.RunFromCommandLine
-    ///        -glassScene &lt;scene path&gt; -glassOut &lt;folder&gt; [-glassPose name:x,y,z,pitch,yaw ...]
-    /// Per pose it writes the plain scene, the glass over it (blur on), the same with no blur, and a report line per preset:
-    /// navy text pixel vs the DARKEST background pixel under the text box (worst case for navy text), WCAG ratio.
-    /// </summary>
+    /// <summary>Headless capture and contrast/timing measurement tool for UI glass presets (docs/systems/UI_GLASS.md).</summary>
     public static class UiGlassCapture
     {
         const int W = 1920, H = 1080;
@@ -74,10 +68,7 @@ namespace CloseTheDeal.Editor.UI
         }
 
 
-        /// <summary>Frame cost of the blur: renders the same view with glass panes in Blur and NoBlur mode at 1080p and
-        /// 1440p, syncing the GPU every frame (1 px readback), and reports the per-frame difference in ms, plus the GPU
-        /// time Unity's recorders give for each blur pass when the platform reports it.
-        /// -executeMethod CloseTheDeal.Editor.UI.UiGlassCapture.TimeFromCommandLine -glassPose name:x,y,z,pitch,yaw -glassOut dir</summary>
+        /// <summary>Measures per-frame blur vs no-blur cost at 1080p and 1440p from the command line.</summary>
         public static void TimeFromCommandLine()
         {
             try
@@ -311,8 +302,6 @@ namespace CloseTheDeal.Editor.UI
         }
         static string Hex(Color32 c) => $"#{c.r:X2}{c.g:X2}{c.b:X2}";
 
-        /// <summary>Text colour = darkest pixel of the text box in the with-text capture; background = the darkest
-        /// pixel of the same box without text. WCAG ratio of the two (worst case for navy type).</summary>
         static (Color32, Color32, float) Measure(Texture2D bgOnly, Texture2D withText, RectInt box)
         {
             Color32 darkText = new Color32(255, 255, 255, 255), darkBg = new Color32(255, 255, 255, 255);

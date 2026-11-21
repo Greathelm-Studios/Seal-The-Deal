@@ -15,14 +15,7 @@ using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Editor.Lanes
 {
-    /// <summary>
-    /// Everything the briefcase game mode needs outside its scripts, from two menu items.
-    /// "Set Up GameMode" makes the firm and match assets, the briefcase prefab, the firm
-    /// component on Player.prefab and the lane's test scene (two short towers). "Add GameMode
-    /// To Open Scene" puts the match, its HUD and its menu section into whichever scene is
-    /// open, for any scene that already has the towers and the game UI. Both only add what is
-    /// missing; neither rebuilds or retunes anything already there (AGENTS.md §4).
-    /// </summary>
+    /// <summary>Additive setup for briefcase game mode assets, briefcase prefab, Player.prefab, and lane scene.</summary>
     public static class GameModeLaneSetup
     {
         const string ScenePath = "Assets/_Project/Scenes/Lanes/Lane_GameMode.unity";
@@ -62,6 +55,14 @@ namespace CloseTheDeal.Editor.Lanes
         [MenuItem("Seal the Deal/Lanes/Set Up GameMode")]
         public static void SetUp()
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                if (!Application.isBatchMode)
+                    EditorUtility.DisplayDialog("Set Up GameMode", "Stop Play Mode first.", "OK");
+                else
+                    Debug.LogWarning("[GameMode] Stop Play Mode first.");
+                return;
+            }
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
 
@@ -103,6 +104,20 @@ namespace CloseTheDeal.Editor.Lanes
         [MenuItem("Seal the Deal/Lanes/Add GameMode To Open Scene")]
         public static void AddToOpenScene()
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                if (!Application.isBatchMode)
+                    EditorUtility.DisplayDialog("Add GameMode To Open Scene", "Stop Play Mode first.", "OK");
+                else
+                    Debug.LogWarning("[GameMode] Stop Play Mode first.");
+                return;
+            }
+            if (!Application.isBatchMode && !EditorUtility.DisplayDialog(
+                    "Add GameMode To Open Scene",
+                    "This adds the Match, HUD and menu section (if missing) to the open scene and saves it.",
+                    "Add and Save", "Cancel"))
+                return;
+
             MatchProfile profile = EnsureAssets();
             EnsurePlayerPrefab();
             if (Object.FindAnyObjectByType<TowerBuilder>() == null)
@@ -119,9 +134,6 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log("[GameMode] Added the match to " + scene.path);
         }
 
-        // ---- Assets --------------------------------------------------------------------------
-
-        /// <summary>Firms, match profile and briefcase prefab. Existing assets are the designer's and are left exactly as they are; only an empty slot is filled.</summary>
         static MatchProfile EnsureAssets()
         {
             EnsureFolder("Assets/_Project/Profiles", "Match");
@@ -138,6 +150,7 @@ namespace CloseTheDeal.Editor.Lanes
                 profile.Firms = new[] { firmA, firmB };
                 profile.BriefcasePrefab = briefcase;
                 AssetDatabase.CreateAsset(profile, MatchProfilePath);
+                GeneratedAssetGuard.MarkGenerated(profile);
                 Debug.Log("[GameMode] Created " + MatchProfilePath);
             }
             else if (profile.BriefcasePrefab == null)
@@ -167,11 +180,11 @@ namespace CloseTheDeal.Editor.Lanes
             firm.MarkerColour = colour;
             firm.Tower = tower;
             AssetDatabase.CreateAsset(firm, path);
+            GeneratedAssetGuard.MarkGenerated(firm);
             Debug.Log("[GameMode] Created " + path);
             return firm;
         }
 
-        /// <summary>The lane scene's towers: the default tower's templates and dimensions, cut down to reception, two floors, a checkpoint, the boardroom and the roof.</summary>
         internal static TowerProfile EnsureLaneTower()
         {
             var lane = AssetDatabase.LoadAssetAtPath<TowerProfile>(LaneTowerPath);
@@ -189,16 +202,23 @@ namespace CloseTheDeal.Editor.Lanes
             lane.RandomFloors = 2;
             lane.CheckpointEvery = 2;
             AssetDatabase.CreateAsset(lane, LaneTowerPath);
+            GeneratedAssetGuard.MarkGenerated(lane);
             Debug.Log("[GameMode] Created " + LaneTowerPath);
             return lane;
         }
-
-        // ---- Briefcase prefab ----------------------------------------------------------------
 
         /// <summary>Overwrites the briefcase prefab from the tool, only while the tool still owns it (GeneratedAssetGuard). Saving over the path keeps its GUID.</summary>
         [MenuItem("Seal the Deal/Lanes/Rebuild GameMode Briefcase")]
         public static void RebuildBriefcase()
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                if (!Application.isBatchMode)
+                    EditorUtility.DisplayDialog("Rebuild GameMode Briefcase", "Stop Play Mode first.", "OK");
+                else
+                    Debug.LogWarning("[GameMode] Stop Play Mode first.");
+                return;
+            }
             if (!GeneratedAssetGuard.MayOverwrite(BriefcasePath))
                 return;
 
@@ -212,10 +232,6 @@ namespace CloseTheDeal.Editor.Lanes
             return existing != null ? existing.GetComponent<NetworkObject>() : BuildBriefcasePrefab();
         }
 
-        /// <summary>
-        /// A greybox briefcase: a case in the firm's colour with a dark handle and corners, no
-        /// stripes, so it never reads as the pickups lane's banded Grenade Case. Networked like furniture.
-        /// </summary>
         static NetworkObject BuildBriefcasePrefab()
         {
             Material leather = EnsureMaterial(LeatherPath, new Color(0.23f, 0.14f, 0.09f));
@@ -280,7 +296,6 @@ namespace CloseTheDeal.Editor.Lanes
             return renderer;
         }
 
-        /// <summary>A frosted see-through panel, so a closed floor can be seen but not reached. Kept clear of red, yellow and the firm colours.</summary>
         static Material EnsureGateMaterial()
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(GatePath);
@@ -300,17 +315,17 @@ namespace CloseTheDeal.Editor.Lanes
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
             material.SetColor("_BaseColor", new Color(0.86f, 0.9f, 0.95f, 0.45f));
             AssetDatabase.CreateAsset(material, GatePath);
+            GeneratedAssetGuard.MarkGenerated(material);
             return material;
         }
 
-        /// <summary>The briefcase beacon's material, on the lane's own see-through-everything shader.</summary>
         static Material EnsureBeaconMaterial()
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(BeaconPath);
             if (material != null)
                 return material;
 
-            Shader shader = Shader.Find("Close the Deal/Briefcase Beacon");
+            Shader shader = Shader.Find("Seal the Deal/Briefcase Beacon");
             if (shader == null)
             {
                 Debug.LogWarning("[GameMode] The briefcase beacon shader is missing; no beacon.");
@@ -319,6 +334,7 @@ namespace CloseTheDeal.Editor.Lanes
 
             material = new Material(shader) { name = "BriefcaseBeacon" };
             AssetDatabase.CreateAsset(material, BeaconPath);
+            GeneratedAssetGuard.MarkGenerated(material);
             return material;
         }
 
@@ -331,16 +347,10 @@ namespace CloseTheDeal.Editor.Lanes
             material = new Material(Shader.Find("Universal Render Pipeline/Lit")) { name = Path.GetFileNameWithoutExtension(path) };
             material.SetColor("_BaseColor", colour);
             AssetDatabase.CreateAsset(material, path);
+            GeneratedAssetGuard.MarkGenerated(material);
             return material;
         }
 
-        // ---- Player prefab -------------------------------------------------------------------
-
-        /// <summary>
-        /// Adds the firm component and the hand a carried briefcase hangs from, if they are
-        /// missing. A prefab the greybox tool still owns stays the tool's (re-fingerprinted),
-        /// so Rebuild Player Prefab still works on it: run this menu again afterwards.
-        /// </summary>
         static void EnsurePlayerPrefab()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
@@ -377,9 +387,6 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log("[GameMode] Added FirmMember and a carry anchor to " + PlayerPrefabPath);
         }
 
-        // ---- Scene ---------------------------------------------------------------------------
-
-        /// <summary>First time only: the menu's backdrop looks down the street between the two towers.</summary>
         internal static void FrameStreet(TowerProfile tower)
         {
             Camera cam = Camera.main;
@@ -406,12 +413,6 @@ namespace CloseTheDeal.Editor.Lanes
                 builder.gameObject.AddComponent<PropSpawner>();
         }
 
-        /// <summary>
-        /// Gives every networked scene object that has none its FishNet scene id. FishNet does
-        /// this itself when a person edits the scene, but not for objects a tool adds in a
-        /// headless run, and without it the object never starts on the network. Ids that
-        /// already exist are kept. FishNet's own method is internal, hence the reflection.
-        /// </summary>
         internal static void AssignSceneIds(Scene scene)
         {
             System.Reflection.MethodInfo create = typeof(NetworkObject).GetMethod(
@@ -431,7 +432,6 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log($"[GameMode] FishNet scene ids assigned to {arguments[2]} object(s) in {scene.name}.");
         }
 
-        /// <summary>The match object, its HUD and its menu section, each only if missing.</summary>
         static void AddMatch(MatchProfile profile)
         {
             MatchDirector match = Object.FindAnyObjectByType<MatchDirector>();
@@ -472,12 +472,9 @@ namespace CloseTheDeal.Editor.Lanes
             EnsureMenuSection(menu, match);
         }
 
-        // ---- HUD (built from the UI kit) -----------------------------------------------------
-
         const string KitFolder = "Assets/_Project/UI/Kit";
         const string KitTokensPath = "Assets/_Project/UI/Tokens/UiTokens.asset";
 
-        /// <summary>The kit's prefabs, sprites and tokens. Null when the UI kit isn't in this project yet (Seal the Deal > Lanes > Set Up UI).</summary>
         sealed class Kit
         {
             public UiTokens Tokens;
@@ -503,10 +500,6 @@ namespace CloseTheDeal.Editor.Lanes
             }
         }
 
-        /// <summary>
-        /// The match HUD under the game menu's Hud. A HUD this tool built before the kit (no tokens
-        /// wired) is replaced; one already on the kit is left alone.
-        /// </summary>
         static void EnsureHud(GameMenu menu, MatchDirector match)
         {
             Transform hud = menu.transform.Find("Hud");
@@ -625,9 +618,130 @@ namespace CloseTheDeal.Editor.Lanes
             Wire("_tokens", t);
             Wire("_root", root.gameObject);
             so.ApplyModifiedPropertiesWithoutUndo();
+            ApplyV3MatchHud(root);
         }
 
-        /// <summary>True when this component was already built by the kit version of this tool (its tokens are wired).</summary>
+        /// <summary>Applies the V3 match header and floor list to an authored match HUD; keeps its bindings and remaining HUD intact.</summary>
+        internal static void ApplyV3MatchHud(Transform root)
+        {
+            UiTokens t = AssetDatabase.LoadAssetAtPath<UiTokens>(KitTokensPath);
+            RectTransform clock = (RectTransform)root.Find("Clock");
+            RectTransform tracker = (RectTransform)root.Find("Tracker");
+            RectTransform ladder = (RectTransform)root.Find("Ladder");
+            var top = new Vector2(0.5f, 1f);
+            ladder.gameObject.SetActive(false);
+            tracker.gameObject.SetActive(false);
+            var hud = new SerializedObject(root.GetComponentInParent<MatchHud>(true));
+            hud.FindProperty("_compactFloors").boolValue = true;
+            hud.ApplyModifiedPropertiesWithoutUndo();
+
+            Anchored(clock, top, new Vector2(0, -18), new Vector2(144, 57));
+            foreach (var name in new[] { "Shadow", "Edge", "Surface", "HudFace" })
+            {
+                var layer = clock.Find(name);
+                if (layer != null)
+                    layer.gameObject.SetActive(false);
+            }
+            MatchText(clock, "Caption", 0, 0, 144, 17, 13, t.Navy, TextAlignmentOptions.Center);
+            MatchText(clock, "Time", 0, 7, 144, 48, 31, Color.white, TextAlignmentOptions.Center);
+            var time = clock.Find("Time").GetComponent<TMP_Text>();
+            time.characterSpacing = 0f;
+            const string clockInk = "Assets/_Project/UI/Fonts/HUD Clock.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(clockInk);
+            if (material == null)
+            {
+                material = new Material(time.fontSharedMaterial);
+                material.EnableKeyword("OUTLINE_ON");
+                material.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.18f);
+                material.SetColor(ShaderUtilities.ID_OutlineColor, t.Navy);
+                AssetDatabase.CreateAsset(material, clockInk);
+            }
+            time.fontSharedMaterial = material;
+            ConfigureBriefcaseArrows(root.Find("BriefcaseEdgeMarker"));
+
+            var prompt = (RectTransform)root.Find("Prompt");
+            MatchSurface(prompt, t.Paper, "KeyCap");
+            prompt.Find("HudFace").SetAsFirstSibling();
+            UiKitAssets.Place((RectTransform)prompt.Find("KeyCap"), 12, 5, 48, 30);
+            MatchText(prompt, "Key", 12, 5, 48, 30, 18, t.Navy, TextAlignmentOptions.Center);
+            MatchText(prompt, "Label", 70, 0, 290, 40, 20, t.Navy);
+            foreach (var part in new[] { "KeyCap", "Key", "Label" })
+            {
+                var rect = (RectTransform)prompt.Find(part);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(rect);
+                if (rect.TryGetComponent<TMP_Text>(out var label))
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(label);
+            }
+
+            var banner = (RectTransform)root.Find("Banner");
+            Anchored(banner, new Vector2(0.5f, 1f), new Vector2(0, -98), new Vector2(670, 60));
+            MatchSurface(banner, t.CobaltDeep, "Text");
+            MatchText(banner, "Text", 16, 0, 638, 60, 24, Color.white, TextAlignmentOptions.Center);
+
+            var notice = (RectTransform)root.Find("Notice");
+            Anchored(notice, new Vector2(0.5f, 0f), new Vector2(0, 54), new Vector2(540, 70));
+            MatchSurface(notice, t.Paper, "Line");
+            var line = (RectTransform)notice.Find("Line");
+            UiKitAssets.Place(line, 0, 0, 540, 70);
+            UiKitAssets.Place((RectTransform)line.Find("Mark"), 12, 18, 3, 34);
+            UiKitAssets.Place((RectTransform)line.Find("MarkOutline"), 12, 18, 3, 34);
+            MatchText(line, "Text", 26, 2, 498, 66, 20, t.Navy);
+        }
+
+        static void ConfigureBriefcaseArrows(Transform marker)
+        {
+            if (marker == null)
+                return;
+            var body = marker.Find("Body");
+            var pointer = (RectTransform)body.Find("Pointer");
+            var arrow = pointer.GetComponent<UnityEngine.UI.Image>();
+            arrow.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_TitleV3Chevron.png");
+            arrow.preserveAspect = true;
+            pointer.sizeDelta = new Vector2(17, 25);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(pointer);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(arrow);
+            var partner = body.Find("OppositeChevron");
+            if (partner == null)
+                partner = Object.Instantiate(pointer, body, false);
+            partner.name = "OppositeChevron";
+            partner.localRotation = Quaternion.Euler(0, 0, 180);
+            var component = marker.GetComponent<UiEdgeMarker>();
+            UiKitAssets.Set(component, "_oppositeChevron", partner.GetComponent<UnityEngine.UI.Image>());
+            PrefabUtility.RecordPrefabInstancePropertyModifications(component);
+        }
+
+        static void MatchSurface(RectTransform panel, Color colour, string before)
+        {
+            var face = (RectTransform)panel.Find("HudFace");
+            if (face == null)
+            {
+                face = UiKitAssets.Fill(panel, "HudFace");
+                UiKitAssets.Img(face, null, colour);
+                face.SetSiblingIndex(panel.Find(before).GetSiblingIndex());
+            }
+            var image = face.GetComponent<UnityEngine.UI.Image>();
+            image.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_Round16.png");
+            image.type = UnityEngine.UI.Image.Type.Sliced;
+            colour.a = 0.88f;
+            image.color = colour;
+            foreach (var name in new[] { "Surface", "Shadow", "Edge" })
+            {
+                var layer = panel.Find(name);
+                if (layer != null)
+                    layer.gameObject.SetActive(false);
+            }
+        }
+
+        static void MatchText(Transform parent, string path, float x, float y, float w, float h,
+            float size, Color colour, TextAlignmentOptions alignment = TextAlignmentOptions.MidlineLeft)
+        {
+            var text = parent.Find(path).GetComponent<TMP_Text>();
+            UiKitAssets.Place(text.rectTransform, x, y, w, h);
+            text.fontSize = size;
+            text.color = colour;
+            text.alignment = alignment;
+        }
+
         static bool OnKit(Component component)
         {
             return component != null && new SerializedObject(component).FindProperty("_tokens").objectReferenceValue != null;
@@ -656,13 +770,6 @@ namespace CloseTheDeal.Editor.Lanes
             return group;
         }
 
-        // ---- Menu section (built from the UI kit) -----------------------------------------------
-
-        /// <summary>
-        /// The match's section on the game menu card: a plate with the headline, the reason as the
-        /// kit's status line, and the kit's primary button. A section this tool built before the kit
-        /// is replaced; the panel's words (set per scene in the Inspector) are kept.
-        /// </summary>
         static void EnsureMenuSection(GameMenu menu, MatchDirector match)
         {
             Transform card = menu.transform.Find("Menu/Card");
@@ -696,7 +803,6 @@ namespace CloseTheDeal.Editor.Lanes
             WireMenuSection(kit, section, panel, menu, match);
         }
 
-        /// <summary>Headline, reason line and button on the section's plate, wired to the panel.</summary>
         static void WireMenuSection(Kit kit, RectTransform section, MatchMenuPanel panel, GameMenu menu, MatchDirector match)
         {
             UiTokens t = kit.Tokens;
@@ -711,6 +817,8 @@ namespace CloseTheDeal.Editor.Lanes
             RectTransform actionRect = (RectTransform)action.transform;
             UiKitAssets.Place(actionRect, 20f, 120f, 584f, t.PrimaryHeight);
             TMP_Text actionLabel = action.transform.Find("Plate/Label")?.GetComponent<TMP_Text>();
+            if (section.parent.name == "MatchSlot")
+                StyleMatchSummary(section, t);
 
 
             var so = new SerializedObject(panel);
@@ -725,9 +833,29 @@ namespace CloseTheDeal.Editor.Lanes
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        // ---- Small helpers -------------------------------------------------------------------
-
-        /// <summary>The clock's amber cap-warning fill, laid behind its caption and time, hidden until the warning.</summary>
+        internal static void StyleMatchSummary(RectTransform section, UiTokens t)
+        {
+            foreach (var name in new[] { "Edge", "Surface", "Shadow" })
+            {
+                var layer = section.Find(name);
+                if (layer != null)
+                    layer.gameObject.SetActive(false);
+            }
+            var title = section.Find("Headline").GetComponent<TMP_Text>();
+            title.font = t.Heading.Font;
+            title.fontStyle = t.Heading.Style;
+            title.characterSpacing = t.Heading.Tracking;
+            title.fontSize = 33;
+            title.enableAutoSizing = true;
+            title.fontSizeMax = 33;
+            title.fontSizeMin = 22;
+            UiKitAssets.Place(title.rectTransform, 0, 0, 1060, 59);
+            UiKitAssets.Place((RectTransform)section.Find("Reason"), 0, 67, 1060, 62);
+            UiKitAssets.Place((RectTransform)section.Find("Reason/Text"), 22, 0, 1038, 62);
+            var button = section.Find("MatchActionButton").GetComponent<UiButton>();
+            UiKitAssets.Place((RectTransform)button.transform, 0, 138, 530, t.PrimaryHeight);
+            UiKitScreens.AddV3FocusMark(button);
+        }
         static UnityEngine.UI.Image ClockWarning(Kit kit, Transform clock)
         {
             Transform caption = clock.Find("Caption");
@@ -741,7 +869,6 @@ namespace CloseTheDeal.Editor.Lanes
 
         const string EdgeMarkerPrefabPath = "Assets/_Project/UI/Kit/EdgeMarker.prefab";
 
-        /// <summary>The kit's edge marker for the briefcase, stretched over the whole HUD (UI_KIT.md "Edge marker"). Null when the kit has none yet.</summary>
         static UiEdgeMarker EdgeMarker(Transform parent)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(EdgeMarkerPrefabPath);
@@ -753,7 +880,6 @@ namespace CloseTheDeal.Editor.Lanes
             return marker;
         }
 
-        /// <summary>A kit HUD from before the kit had an edge marker: add only that.</summary>
         static void AddEdgeMarkerIfMissing(MatchHud hud, Transform hudRoot)
         {
             var serialized = new SerializedObject(hud);
@@ -770,7 +896,6 @@ namespace CloseTheDeal.Editor.Lanes
                 FillIfEmpty(hud, "_edgeMarker", marker);
         }
 
-        /// <summary>A kit HUD from before the cap warning moved onto an amber plate: add only that fill.</summary>
         static void AddClockWarningIfMissing(MatchHud hud, Transform hudRoot)
         {
             var serialized = new SerializedObject(hud);
@@ -787,7 +912,6 @@ namespace CloseTheDeal.Editor.Lanes
             FillIfEmpty(hud, "_clockWarning", image);
         }
 
-        /// <summary>Sets an object slot only when nobody has filled it (AGENTS.md §4).</summary>
         static void FillIfEmpty(Object target, string field, Object value)
         {
             var serialized = new SerializedObject(target);

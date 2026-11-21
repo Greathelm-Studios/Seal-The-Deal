@@ -1,9 +1,3 @@
-// AI-GENERATED SOURCE FILE
-// Generator : Codex (GPT-6)
-// Generated : 2026-11-15
-// Prompt    : ArtSource/Kit/posters/REQUEST.md; eight-slide pitch display, approved mood D in blue.
-// Reviewed  : NOT YET REVIEWED BY A HUMAN
-// Summary   : Local unlit atlas playback with world-position phase, crossfade and subtle screen sheen.
 Shader "Close the Deal/Animated/Office Slides"
 {
     Properties
@@ -18,8 +12,7 @@ Shader "Close the Deal/Animated/Office Slides"
     }
     SubShader
     {
-        // WHY: individual object origins set the phase; keep them through geometry batching.
-        // UnityPerMaterial still allows the SRP Batcher to bind the shared material efficiently.
+        // Preserve per-object world origins for independent deck phase without breaking SRP Batcher.
         Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry+10" "DisableBatching"="True" }
         Pass
         {
@@ -71,8 +64,6 @@ Shader "Close the Deal/Animated/Office Slides"
                 output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
                 output.uv = input.uv;
                 float3 origin = TransformObjectToWorld(float3(0, 0, 0));
-                // WHY: an affine world-position phase keeps the two specified rooms out of step,
-                // without property blocks, cloned materials or a runtime controller.
                 output.phase = frac(dot(origin, WorldPhaseCyclesPerMetre));
                 output.fog = ComputeFogFactor(output.positionCS.z);
                 return output;
@@ -81,21 +72,18 @@ Shader "Close the Deal/Animated/Office Slides"
             half3 Slide(float index, float2 uv)
             {
                 float column = index - floor(index / AtlasColumns) * AtlasColumns;
-                // WHY: the source PNG reads top-left first, whereas texture V grows from the bottom.
+                // Flip row order because PNG atlases start top-left while texture V grows upward.
                 float row = AtlasRows - 1.0 - floor(index / AtlasColumns);
                 float2 tileSize = 1.0 / float2(AtlasColumns, AtlasRows);
                 float2 tileOrigin = float2(column, row) * tileSize;
-                // WHY: inset by half a source texel so bilinear filtering cannot sample a neighbour.
+                // Inset by half a texel and sample mip 0 so neighbouring slides never bleed across borders.
                 float2 inset = _BaseMap_TexelSize.xy * 0.5;
                 float2 atlasUV = tileOrigin + inset + saturate(uv) * (tileSize - 2.0 * inset);
-                // WHY: mipmaps mix adjacent slides. Explicit base-level sampling keeps exact deck text
-                // isolated even if an existing authored atlas retains Unity's default mipmap setting.
                 return SAMPLE_TEXTURE2D_LOD(_BaseMap, sampler_BaseMap, atlasUV, 0).rgb;
             }
 
             half4 Frag(Varyings input) : SV_Target
             {
-                // Inspector limits are repeated here only to keep divisions valid for scripted materials.
                 float duration = max(_SlideSeconds, MinimumSlideSeconds);
                 float fadeSeconds = min(max(_FadeSeconds, MinimumFadeSeconds), duration);
                 float deck = _Time.y / duration + input.phase * SlideCount;

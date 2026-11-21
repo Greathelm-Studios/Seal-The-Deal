@@ -20,13 +20,7 @@ using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Editor.Lanes
 {
-    /// <summary>
-    /// Everything the pickups lane adds to the project, from one menu item: the item profiles
-    /// and prefabs, the Pickup on the greybox furniture, the ItemCarrier on the player, and
-    /// the lane's test scene. It only adds what is missing: an asset or component that is
-    /// already there is left exactly as it is (AGENTS.md §4), so it is safe to run again after
-    /// a merge or after the greybox tool has rebuilt a prefab.
-    /// </summary>
+    /// <summary>Additive setup for item profiles/prefabs, prop pickups, ItemCarrier on Player.prefab, and Lane_Pickups.</summary>
     public static class PickupsLaneSetup
     {
         public const string ScenePath = "Assets/_Project/Scenes/Lanes/Lane_Pickups.unity";
@@ -59,8 +53,6 @@ namespace CloseTheDeal.Editor.Lanes
         static readonly Color InkMuted = new(0.92f, 0.93f, 0.95f, 0.75f);
 
         static int PropLayer => GreyboxSceneSetup.PropLayer;
-
-        // ---- Menu ----------------------------------------------------------------------------
 
         [MenuItem("Seal the Deal/Lanes/Set Up Pickups")]
         public static void SetUp()
@@ -157,9 +149,6 @@ namespace CloseTheDeal.Editor.Lanes
             return assets;
         }
 
-        // ---- Profiles ------------------------------------------------------------------------
-
-        /// <summary>Loads the profile, or creates it with the given starting values. An existing one is the designer's and is never changed.</summary>
         static T Profile<T>(string name, System.Action<T> starting) where T : ScriptableObject
         {
             string path = $"{ProfileFolder}/{name}.asset";
@@ -187,9 +176,6 @@ namespace CloseTheDeal.Editor.Lanes
             });
         }
 
-        // ---- Existing prefabs ----------------------------------------------------------------
-
-        /// <summary>Adds a Pickup to a greybox furniture prefab if it has none. Returns the prefab.</summary>
         static GameObject MakeFurnitureCarryable(string propName, CarryProfile carry, ItemDefinition definition)
         {
             string path = $"{PropFolder}/{propName}.prefab";
@@ -237,12 +223,6 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log("[Pickups] Added ItemCarrier to " + PlayerPrefabPath + ".");
         }
 
-        /// <summary>
-        /// Opens a prefab, applies one change and saves it. A prefab the greybox tool still owns
-        /// stays tool-owned afterwards (it is re-fingerprinted), so the greybox rebuilds keep
-        /// working on it; re-run this menu after such a rebuild. A prefab a person has edited
-        /// keeps its hand-edited status.
-        /// </summary>
         static void EditPrefab(string path, System.Action<GameObject> change)
         {
             bool toolOwned = HasGreyboxLabel(path) && GeneratedAssetGuard.MayOverwrite(path);
@@ -266,16 +246,12 @@ namespace CloseTheDeal.Editor.Lanes
             return false;
         }
 
-        // ---- New item prefabs ----------------------------------------------------------------
-
-        /// <summary>True when the prefab does not exist yet. One that exists is never rewritten: delete it to have the tool make a fresh one.</summary>
         static bool ShouldWrite(string path, out GameObject existing)
         {
             existing = MoveToSwitchboard(path, AssetDatabase.LoadAssetAtPath<GameObject>(path));
             return existing == null;
         }
 
-        /// <summary>A networked, host-simulated prop with a Visual child for its meshes, ready for colliders and a Pickup.</summary>
         static GameObject NewItemRoot(string name, float mass, float throwResistance, out Transform visual)
         {
             var root = new GameObject(name) { layer = PropLayer };
@@ -309,11 +285,6 @@ namespace CloseTheDeal.Editor.Lanes
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>
-        /// Item prefabs this tool wrote before props moved to Switchboard carry FishNet's
-        /// NetworkTransform, which Switchboard refuses to stream. Swaps it for a NetBody in
-        /// place, keeping the prefab's GUID and everything else on it.
-        /// </summary>
         static GameObject MoveToSwitchboard(string path, GameObject existing)
         {
             if (existing == null || existing.GetComponent<NetworkTransform>() == null)
@@ -360,7 +331,6 @@ namespace CloseTheDeal.Editor.Lanes
             box.size = size;
         }
 
-        /// <summary>One mesh of an item's look: a primitive with no collider of its own.</summary>
         static GameObject Part(Transform parent, PrimitiveType shape, string name, Vector3 position, Vector3 scale, Material material, Vector3 euler = default)
         {
             GameObject part = GameObject.CreatePrimitive(shape);
@@ -408,13 +378,6 @@ namespace CloseTheDeal.Editor.Lanes
             return SavePrefab(root, path);
         }
 
-        // ---- Loose props with no definition: everything about them is worked out at runtime ----
-
-        /// <summary>
-        /// A plant pot built the way any loose prop from another tool arrives: no Visual child,
-        /// no item definition, no carry rules. Its name, hold and throw come from its size and
-        /// its 4 kg body (LooseItemDefinition).
-        /// </summary>
         static GameObject BuildPlantPot()
         {
             string path = PrefabFolder + "/PlantPot.prefab";
@@ -439,7 +402,6 @@ namespace CloseTheDeal.Editor.Lanes
             return SavePrefab(root, path);
         }
 
-        /// <summary>A desk tablet: the lightest loose prop, so it flies fastest and hurts least.</summary>
         static GameObject BuildTablet()
         {
             string path = PrefabFolder + "/Tablet.prefab";
@@ -458,7 +420,6 @@ namespace CloseTheDeal.Editor.Lanes
             return SavePrefab(root, path);
         }
 
-        /// <summary>A networked, host-simulated prop with its meshes straight under the root, as another tool would make it.</summary>
         static GameObject NewLooseRoot(string name, float mass)
         {
             var root = new GameObject(name) { layer = PropLayer };
@@ -632,7 +593,6 @@ namespace CloseTheDeal.Editor.Lanes
             return SavePrefab(root, path);
         }
 
-        /// <summary>A large soft cloud that stays where it was laid and thins out over a few seconds (art bible §17).</summary>
         static ParticleSystem BuildSmoke(Transform parent, Vector3 nozzle)
         {
             var go = new GameObject("Smoke") { layer = parent.gameObject.layer };
@@ -728,7 +688,6 @@ namespace CloseTheDeal.Editor.Lanes
             return SavePrefab(root, path);
         }
 
-        /// <summary>The practice target: a standing figure with a health bar. Networked so a joining player sees the same health.</summary>
         static GameObject BuildDummy()
         {
             string path = PrefabFolder + "/DamageDummy.prefab";
@@ -770,8 +729,6 @@ namespace CloseTheDeal.Editor.Lanes
             audio.maxDistance = 40f;
             return audio;
         }
-
-        // ---- Materials -----------------------------------------------------------------------
 
         static Material Mat(string name, Color colour, float smoothness, string shaderName = LitShader)
         {
@@ -831,8 +788,6 @@ namespace CloseTheDeal.Editor.Lanes
             return material;
         }
 
-        // ---- Scene ---------------------------------------------------------------------------
-
         static void BuildScene(Assets assets)
         {
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) != null)
@@ -867,13 +822,6 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log($"[Pickups] Built {ScenePath}: {props} props on the floor, {cap} the cap of {PropsPerFloorCap}.");
         }
 
-        /// <summary>
-        /// FishNet only spawns a networked object placed in a scene if it carries a scene id,
-        /// and it hands those out from editor callbacks that skip a scene with no path yet,
-        /// which is every object placed here before the first save. This asks FishNet for the
-        /// ids once the scene has its path; it is the same call as FishNet's own Reserialize
-        /// NetworkObjects menu, which is not public, so it is reached by name.
-        /// </summary>
         static void GiveSceneIds(Scene scene)
         {
             MethodInfo create = typeof(NetworkObject).GetMethod("CreateSceneId", BindingFlags.Static | BindingFlags.NonPublic,
@@ -891,7 +839,6 @@ namespace CloseTheDeal.Editor.Lanes
             EditorSceneManager.SaveScene(scene);
         }
 
-        /// <summary>A slice of office floor 12 m up: three walls, and a window side that is open above a waist-high sill.</summary>
         static void BuildRoom()
         {
             var room = new GameObject("Office slice").transform;
@@ -931,14 +878,6 @@ namespace CloseTheDeal.Editor.Lanes
             block.isStatic = true;
         }
 
-        /// <summary>
-        /// Switchboard streams props only once a tower is built, and places every body inside
-        /// that tower's box. The lane floor is a hand-built slice, not a generated tower, so it
-        /// gets a real TowerBuilder whose profile stacks empty floors: the stream starts and the
-        /// slice sits inside the box (a default-sized tower's box reaches 26 m sideways, 36 m deep
-        /// and 76 m up from its base, and the slice is 18 by 12 m at 12 m up). The same networked
-        /// tower object, seed and build event as a real run; nothing is drawn for it.
-        /// </summary>
         static void AddTowerFrame()
         {
             TowerProfile profile = LaneTowerProfile();
@@ -986,7 +925,6 @@ namespace CloseTheDeal.Editor.Lanes
             return prefab.GetComponent<FloorTemplate>();
         }
 
-        /// <summary>Furniture, every item on a desk or by a wall, and the practice targets. Returns how many props were placed.</summary>
         static int PlaceContents(Assets assets)
         {
             var parent = new GameObject("Props and items").transform;
@@ -1043,7 +981,6 @@ namespace CloseTheDeal.Editor.Lanes
             go.transform.SetPositionAndRotation(new Vector3(0f, FloorTop + 6f, -10f), Quaternion.Euler(35f, 0f, 0f));
         }
 
-        /// <summary>The lane scene always plays on this PC without Steam, so two copies of the game can meet in it.</summary>
         static void ForceLocalTestMode()
         {
             SteamLobby lobby = Object.FindAnyObjectByType<SteamLobby>();
@@ -1055,18 +992,11 @@ namespace CloseTheDeal.Editor.Lanes
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>The item HUD in the open scene (Set Up Integration calls this).</summary>
         internal static void BuildPromptCanvas() => ItemHudSetup.AddToOpenScene();
 
         /// <summary>Shell: -executeMethod CloseTheDeal.Editor.Lanes.PickupsLaneSetup.AddItemHudToIntegrationScene</summary>
         public static void AddItemHudToIntegrationScene() => ItemHudSetup.AddToIntegrationSceneFromShell();
 
-        /// <summary>
-        /// The item HUD (prompt, refusals, hands slot), built from the UI kit's Plate and
-        /// KeyHint prefabs and tokens, under the game menu's Hud so it hides with the rest of the
-        /// HUD. A scene with no game menu gets its own overlay canvas. Replaces the old
-        /// two-line ItemPromptLabel canvas if the scene still has one.
-        /// </summary>
         internal static class ItemHudSetup
         {
             const string OldCanvasName = "Item Prompts";
@@ -1245,14 +1175,6 @@ namespace CloseTheDeal.Editor.Lanes
                 AssetDatabase.CreateFolder(parent, name);
         }
 
-        /// <summary>
-        /// The one item sound set (Profiles/Items/ItemSounds.asset), linked from the carry
-        /// profile. Fills only what is empty: the game mixer's SFX bus once the UI sound lane's
-        /// mixer is in the project, and each clip from Audio/Items/Item_&lt;Slot&gt;.wav once the
-        /// sound generator has written it, and links the set from the carry profile if its
-        /// Sounds slot is empty (the one change this tool makes to an existing asset: an empty
-        /// slot it owns). A slot someone has set is never changed.
-        /// </summary>
         static class ItemSoundsSetup
         {
             const string SetPath = ProfileFolder + "/ItemSounds.asset";
@@ -1319,12 +1241,6 @@ namespace CloseTheDeal.Editor.Lanes
             }
         }
 
-        /// <summary>
-        /// Any loose object in the game can be picked up and thrown (Alex, 2026-11-13). A prop
-        /// needs only the components below; its name, hold and throw are worked out at runtime
-        /// from its size and mass (LooseItemDefinition), and a hand-made item definition on its
-        /// Pickup overrides them. Design: docs/systems/ITEMS.md, "Any loose prop".
-        /// </summary>
         static class ThrowableProps
         {
             const string ProjectFolder = "Assets/_Project";
@@ -1374,11 +1290,6 @@ namespace CloseTheDeal.Editor.Lanes
             [MenuItem("Seal the Deal/Items/Make Selected Prefabs Throwable", true)]
             static bool CanMakeSelectedThrowable() => Selection.objects.Length > 0;
 
-            /// <summary>
-            /// Adds what a loose object needs, keeping anything already there: the Prop layer, a
-            /// collider if it has none, a body (with a guessed mass, logged, if it had none),
-            /// FishNet's NetworkObject, Switchboard's NetBody, Prop and Pickup.
-            /// </summary>
             static void MakeThrowable(string path)
             {
                 var notes = new System.Collections.Generic.List<string>();
@@ -1456,17 +1367,7 @@ namespace CloseTheDeal.Editor.Lanes
     using FishNet;
     using UnityEngine.InputSystem.LowLevel;
 
-    /// <summary>
-    /// Plays Lane_Pickups by script and writes down what happened: a report of checks and a
-    /// folder of frames from a camera looking into the room. It drives the same owner-side
-    /// calls the buttons make (ItemCarrier.LocalTake and friends), so everything it does goes
-    /// through the host exactly as a player's input would. Run it from the menu, or from the
-    /// shell with -executeMethod CloseTheDeal.Editor.Lanes.PickupsLaneRun.RunFromShell
-    /// -pickupsRole solo|host|client -pickupsOut &lt;folder&gt;. Host and client are two copies of
-    /// the project started within a few seconds of each other; they meet over the local
-    /// connection and keep in step by the clock.
-    /// It is a checking tool: nothing here ships, and it changes no asset.
-    /// </summary>
+    /// <summary>Batch Play Mode verification runner for pickups in Lane_Pickups.unity.</summary>
     public static class PickupsLaneRun
     {
         const string ActiveKey = "PickupsLaneRun.Active";
@@ -1542,10 +1443,6 @@ namespace CloseTheDeal.Editor.Lanes
                 EditorApplication.update += Pump;
         }
 
-        /// <summary>
-        /// Stopping Play in the middle of a check ends the check: otherwise the next Play, in any
-        /// scene, would pick the script up again and drive the player.
-        /// </summary>
         static void OnPlayModeChanged(PlayModeStateChange change)
         {
             if (change != PlayModeStateChange.EnteredEditMode || !SessionState.GetBool(ActiveKey, false))
@@ -1585,7 +1482,6 @@ namespace CloseTheDeal.Editor.Lanes
             Finish();
         }
 
-        /// <summary>Runs the script up to its next wait. A step that is itself a list of steps is run to its end before the outer one carries on.</summary>
         static bool Step()
         {
             while (Stack.Count > 0)
@@ -1679,8 +1575,6 @@ namespace CloseTheDeal.Editor.Lanes
                 EditorApplication.ExitPlaymode();
         }
 
-        // ---- Report --------------------------------------------------------------------------
-
         static void Note(string line)
         {
             Report.AppendLine(line);
@@ -1704,8 +1598,6 @@ namespace CloseTheDeal.Editor.Lanes
         }
 
         static string V(Vector3 v) => $"({v.x:0.00}, {v.y:0.00}, {v.z:0.00})";
-
-        // ---- Recording -----------------------------------------------------------------------
 
         static void StartRecording()
         {
@@ -1740,15 +1632,8 @@ namespace CloseTheDeal.Editor.Lanes
             File.WriteAllBytes(path, _readback.EncodeToJPG(85));
         }
 
-        // ---- The item HUD, captured in the integration scene ----------------------------------------
-
         static readonly (int Width, int Height)[] HudSizes = { (1920, 1080), (1280, 720) };
 
-        /// <summary>
-        /// The kit item HUD in Lane_Integration: the prompt on a chair, "too heavy" on a desk, the
-        /// hands slot sliding in, and the hands-full refusal, each at 1920x1080 and 1280x720,
-        /// plus the UI sounds asked for. Hosts on this lane's own port.
-        /// </summary>
         static IEnumerator HudScript()
         {
             Note($"ROLE hud: {SceneManager.GetActiveScene().name} hosting with its own player; the item HUD is added for this run only.");
@@ -1876,7 +1761,6 @@ namespace CloseTheDeal.Editor.Lanes
             CloseTheDeal.UI.UiSound.Played -= onSound;
         }
 
-        /// <summary>The loose item nearest this player that matches, or null.</summary>
         static Pickup FindLoose(Func<Pickup, bool> match, ItemCarrier near)
         {
             Pickup best = null;
@@ -1896,7 +1780,6 @@ namespace CloseTheDeal.Editor.Lanes
             return best;
         }
 
-        /// <summary>Stands the player 1.3 m from the item on its floor, on the side facing the room's middle, looking at it.</summary>
         static IEnumerator LookFromNear(ItemCarrier me, Pickup item, Vector3? awayFrom = null)
         {
             Bounds bounds = item.Body.GetComponentInChildren<Collider>().bounds;
@@ -1920,10 +1803,6 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 0.5f;
         }
 
-        /// <summary>
-        /// Batchmode cannot lock the mouse, so the game menu stays open over the HUD. For the
-        /// captures only: the HUD is shown and the menu's other panels hidden.
-        /// </summary>
         static void ShowHudForCapture(ItemHud hud)
         {
             var menu = UnityEngine.Object.FindAnyObjectByType<CloseTheDeal.UI.GameMenu>(FindObjectsInactive.Include);
@@ -1945,7 +1824,6 @@ namespace CloseTheDeal.Editor.Lanes
                 HudShot($"{name}_{height}p", width, height);
         }
 
-        /// <summary>The player's view with the HUD on it: the HUD's canvas is drawn by the player's camera for this one frame.</summary>
         static void HudShot(string name, int width, int height)
         {
             Camera cam = Camera.main;
@@ -1996,7 +1874,6 @@ namespace CloseTheDeal.Editor.Lanes
             Note($"wrote {name}.png");
         }
 
-        /// <summary>A still from the player's own eyes.</summary>
         static void FirstPersonStill(string name)
         {
             Camera cam = Camera.main;
@@ -2011,8 +1888,6 @@ namespace CloseTheDeal.Editor.Lanes
             RenderTexture.ReleaseTemporary(still);
         }
 
-        // ---- Driving the player --------------------------------------------------------------
-
         static readonly FieldInfo YawField = typeof(PlayerCamera).GetField("_yaw", BindingFlags.Instance | BindingFlags.NonPublic);
         static readonly FieldInfo PitchField = typeof(PlayerCamera).GetField("_pitch", BindingFlags.Instance | BindingFlags.NonPublic);
 
@@ -2024,7 +1899,6 @@ namespace CloseTheDeal.Editor.Lanes
             return go != null ? go.GetComponent<Pickup>() : null;
         }
 
-        /// <summary>Host only: stands a player somewhere. The owner's own view is turned to match when it is this machine's player.</summary>
         static void Stand(ItemCarrier who, Vector3 position, float yaw, float pitch = 0f)
         {
             var body = who.GetComponent<Rigidbody>();
@@ -2057,7 +1931,6 @@ namespace CloseTheDeal.Editor.Lanes
             InputSystem.QueueStateEvent(keyboard, new KeyboardState(keys));
         }
 
-        /// <summary>What the item HUD's prompt reads, key first, as "F · Pick up Chair"; empty while it is hidden.</summary>
         static string PromptText()
         {
             ItemHud hud = UnityEngine.Object.FindAnyObjectByType<ItemHud>();
@@ -2097,11 +1970,6 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 1.5f;
         }
 
-        /// <summary>
-        /// Other copies of the game on this Mac (an open editor pressing Host, other lanes' runs)
-        /// use the default local port; this lane's runs keep to their own, 17783 unless
-        /// -pickupsPort says otherwise, so a host here never joins someone else's game.
-        /// </summary>
         static void UseOwnPort()
         {
             ushort port = ushort.TryParse(Arg("-pickupsPort"), out ushort chosen) ? chosen : (ushort)17783;
@@ -2110,8 +1978,6 @@ namespace CloseTheDeal.Editor.Lanes
                 tugboat.SetPort(port);
             Note($"local port {port}");
         }
-
-        // ---- Solo: every feature and edge case on one machine (host with its own player) -----
 
         static IEnumerator SoloScript()
         {
@@ -2414,11 +2280,6 @@ namespace CloseTheDeal.Editor.Lanes
 
         static readonly Vector3[] StandOffsets = { new(0f, 0f, -1.2f), new(0f, 0f, 1.2f), new(1.4f, 0f, 0f), new(-1.4f, 0f, 0f) };
 
-        /// <summary>
-        /// Host only: stands the player next to an item wherever it has ended up, and takes it,
-        /// trying another side when something else covers it from the first (a blast leaves
-        /// furniture lying across things, and a covered item is rightly refused).
-        /// </summary>
         static IEnumerator TakeWhereItIs(ItemCarrier who, Pickup item)
         {
             Vector3 at = item.transform.position;
@@ -2451,10 +2312,6 @@ namespace CloseTheDeal.Editor.Lanes
                     $"held: {(who.Held != null ? who.Held.name : "nothing")}, item at {V(at)}, last stood at {V(stand)}, state {who.Motor.State}, refused: {(refused.HasValue ? refused.ToString() : "no answer")}");
         }
 
-        /// <summary>
-        /// A plant pot and a tablet that nobody wrote a definition for: named from the prefab,
-        /// held by their size, thrown by their weight, and a thrown pot hurts a dummy.
-        /// </summary>
         static IEnumerator LooseProps(ItemCarrier me, DamageDummy dummy)
         {
             Pickup pot = Find("Plant Pot");
@@ -2496,13 +2353,6 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 0.6f;
         }
 
-        /// <summary>
-        /// Calls the carry code's per-frame and per-tick work directly (the owner's input read,
-        /// the item following the hands, both host ticks) many times and counts what it
-        /// allocates on this thread. Earlier runs compared whole editor frames carrying and
-        /// empty-handed; those numbers include the editor itself and moved by 80 to 170 bytes
-        /// between windows either way, so they could not say whether carrying allocates.
-        /// </summary>
         static IEnumerator CarryAllocations(ItemCarrier me, string what)
         {
             Pickup held = me.Held;
@@ -2540,9 +2390,6 @@ namespace CloseTheDeal.Editor.Lanes
             return (Action)Delegate.CreateDelegate(typeof(Action), target, method);
         }
 
-        // ---- Host and client: two machines ----------------------------------------------------
-
-        /// <summary>The next half-minute on the clock that is at least a few seconds away: both machines work it out alike.</summary>
         static DateTime SharedStart()
         {
             long seconds = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds() + 6;

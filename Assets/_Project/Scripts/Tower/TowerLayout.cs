@@ -9,11 +9,7 @@ namespace CloseTheDeal.Tower
         public int TemplateIndex;
     }
 
-    /// <summary>
-    /// Turns a seed into the ordered list of floors, bottom to top. Pure and deterministic:
-    /// the same profile and seed give the same list on every machine, which is what lets the
-    /// host send one number instead of a building.
-    /// </summary>
+    /// <summary>Pure deterministic seed-to-floor-list generator shared by host and clients.</summary>
     public static class TowerLayout
     {
         public static void Build(TowerProfile profile, uint seed, List<FloorSpec> into)
@@ -45,7 +41,6 @@ namespace CloseTheDeal.Tower
             into.Add(new FloorSpec { Kind = FloorKind.Roof });
         }
 
-        /// <summary>Random office template, never the same one twice in a row when there is a choice.</summary>
         static int PickOffice(ref Unity.Mathematics.Random random, int count, int previous)
         {
             if (count <= 1)

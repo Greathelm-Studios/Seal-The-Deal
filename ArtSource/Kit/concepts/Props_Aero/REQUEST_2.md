@@ -1,13 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-15
-  Prompt    : Alex, adding to the props request: "chairs, desk, computers, monitors, elevator, doors, etc"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Second brief to Codex, run beside the first (REQUEST.md): computers first, then doors and the lift,
-              so they are agreed as pictures with Alex before anyone remodels them. Distinct file names so the two
-              runs don't overwrite each other.
--->
 # Computers, doors and lift, Aero / Soft Club — request to Codex (part 2)
 
 **From:** Alex (environment artist), drafted by Claude · **Date:** 2026-11-15 · **Status:** Waiting for Codex

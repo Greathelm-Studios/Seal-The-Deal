@@ -1,12 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-15
-  Prompt    : Alex on the L2 twin-core court layout: "this works"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Records Alex's approval of the L2 office floor layout so rebuilding KitOffice starts from a
-              written decision, with the open points that still need settling.
--->
 # Office floor layout: L2 approved
 
 **Date:** 2026-11-15 · **Decided by:** Alex ("this works") · **Applies to:** [L2/plan.png](L2/plan.png), [L2/flow.png](L2/flow.png), [L2/stack.png](L2/stack.png), [BRIEF_L2.md](BRIEF_L2.md)

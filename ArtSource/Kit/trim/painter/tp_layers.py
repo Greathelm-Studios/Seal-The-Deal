@@ -1,12 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-15
-#  Prompt    : Alex: "making a trimsheet in substance ... you can use substance painter"
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Painter step 3: the trim sheet's layer stack, painted by the baked ID map.
-#              Run from ArtSource/Kit/trim/painter with: python sp.py tp_layers.py
-# -----------------------------------------------------------------------------
 # Painter step 3: the trim sheet's layer stack, painted by the baked ID map. Clean and graphic (art bible §11: shape,
 # colour and light, not grime): one fill per surface, brushed roughness on silver, cyan emission on LEDs, a soft light
 # edge on rounded edges and a faint cool cavity so keys, slots and holes sit in. Legacy-colour project: fills take

@@ -194,6 +194,21 @@ MonoBehaviour:
     volume: 1
     pitchVariance: 0
     minGap: 0.1
+  - evt: 37
+    clip: {fileID: 8300000, guid: 7cc4a9482360c4210a830456d69c365d, type: 3}
+    volume: 1
+    pitchVariance: 0.015
+    minGap: 0.05
+  - evt: 38
+    clip: {fileID: 8300000, guid: e9c831c41718645bc8772475928dd84c, type: 3}
+    volume: 1
+    pitchVariance: 0.015
+    minGap: 0.05
+  - evt: 39
+    clip: {fileID: 8300000, guid: 287d95e45157b4c348860aa0fb3d3852, type: 3}
+    volume: 1
+    pitchVariance: 0.015
+    minGap: 0.05
   maxVoices: 8
   globalMinGap: 0.012
   hoverSemitones:

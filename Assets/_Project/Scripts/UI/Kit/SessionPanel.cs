@@ -5,17 +5,10 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The wait between pressing Host or Join and standing in reception, drawn in the title's middle and right columns
-    /// (the window and its sky stay): what is happening in the lobby's own words, a progress track that is honest
-    /// (while connecting it fills over the 15 s the join waits before giving up; elsewhere only the chevrons step,
-    /// because nothing measurable is happening), and Cancel (Esc / B), which leaves. Opens and closes with the game
-    /// menu's state (UiRoot); text changes only on lobby events and once a second while connecting.
-    /// </summary>
+    /// <summary>Displays lobby creation/join progress over the title screen with a Cancel button.</summary>
     [AddComponentMenu("Seal the Deal/UI/Session Panel")]
     public sealed class SessionPanel : UiScreen
     {
-        /// <summary>Opens and closes under lane 8's CloudWipe (docs/systems/UI_KIT.md "Screens").</summary>
         public override CloseTheDeal.UI.Title.UiTransitionKind? Through => CloseTheDeal.UI.Title.UiTransitionKind.CloudWipe;
 
         [Header("Parts")]
@@ -47,7 +40,6 @@ namespace CloseTheDeal.UI
         string _lastStatus = string.Empty;
         bool _showing;
 
-        /// <summary>Given by the UI root: the lobby this panel reports on and the title it sits on.</summary>
         internal void Bind(SteamLobby lobby, TitleScreen title)
         {
             _lobby = lobby;
@@ -109,7 +101,6 @@ namespace CloseTheDeal.UI
                 _title.MakeRoom(false);
         }
 
-        /// <summary>Esc / B cancels, with the Back sound.</summary>
         public override void OnCancel()
         {
             UiSound.Play(UiSoundEvent.Back);
@@ -118,7 +109,6 @@ namespace CloseTheDeal.UI
 
         void OnCancelPressed() => Leave();
 
-        /// <summary>True once the player cancelled: the panel's close is silent (Back already answered).</summary>
         internal bool Cancelled { get; private set; }
 
         void Leave()
@@ -134,7 +124,7 @@ namespace CloseTheDeal.UI
             Refresh();
         }
 
-        /// <summary>Re-reads the lobby: on its events, never per frame.</summary>
+        /// <summary>Refreshes panel text from current SteamLobby state.</summary>
         public void Refresh()
         {
             if (_lobby == null)
@@ -212,7 +202,6 @@ namespace CloseTheDeal.UI
             return _showing && _lobby.IsActive; // hidden (in a game), it sleeps so the screen can switch off
         }
 
-        /// <summary>One chevron lit at a time, stepping every 0.4 s; all half-lit with Reduce motion (no stepping).</summary>
         void StepChevrons()
         {
             if (_chevrons.Length == 0 || _tokens == null)

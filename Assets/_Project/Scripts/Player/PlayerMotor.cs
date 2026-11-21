@@ -1,6 +1,7 @@
 using FishNet.Managing.Timing;
 using FishNet.Object;
 using FishNet.Object.Prediction;
+using FishNet.Serializing;
 using FishNet.Transporting;
 using FishNet.Utility.Template;
 using UnityEngine;
@@ -26,8 +27,6 @@ namespace CloseTheDeal.Player
     [RequireComponent(typeof(Rigidbody), typeof(CapsuleCollider), typeof(PlayerInputReader))]
     public sealed partial class PlayerMotor : TickNetworkBehaviour
     {
-        // ---- Replicated data ---------------------------------------------------------------
-
         public struct OneShots
         {
             public bool Jump;
@@ -62,15 +61,15 @@ namespace CloseTheDeal.Player
         {
             public PredictionRigidbody Body;
             public MoveState State;
-            public uint StateTicksLeft;
+            public ushort StateTicksLeft;
             public MantleData Mantle;
             /// <summary>A throw the host has decided but the body's next tick has not applied yet.</summary>
             public Vector3 PendingKnock;
             public JumpTimers Jump;
-            /// <summary>-1 to +1: how far the player is leaning, and which way.</summary>
-            public float Lean;
-            /// <summary>0 standing to 1 fully crouched.</summary>
-            public float Crouch;
+            /// <summary>-127 to +127: quantized lean (-1 to +1).</summary>
+            public sbyte Lean;
+            /// <summary>0 to 255: quantized crouch (0 standing to 1 fully crouched).</summary>
+            public byte Crouch;
             public FeedbackCounters Counters;
             public SlideData Slide;
             uint _tick;
@@ -134,8 +133,6 @@ namespace CloseTheDeal.Player
             public float Gap;
         }
 
-        // ---- Inspector -----------------------------------------------------------------------
-
         [Tooltip("Designer tuning for walking, jumping and climbing. Read at runtime, never written.")]
         [SerializeField] MovementProfile _profile;
 
@@ -151,9 +148,7 @@ namespace CloseTheDeal.Player
         [Tooltip("Tick to squash the body down when this player crouches, so a crouch shows on a body with no animation. Untick once the character has a crouch animation of its own.")]
         [SerializeField] bool _squashBodyWhenCrouched = true;
 
-        // ---- Runtime -------------------------------------------------------------------------
-
-        const float GroundSlopeLimit = 50f;
+        const float GroundSlopeLimit = 58f;
         const float MantleTimeoutMultiplier = 2f;
         const float ArriveDistance = 0.05f;
         const float ProbeInset = 0.05f;
@@ -161,13 +156,19 @@ namespace CloseTheDeal.Player
         const byte MantleRise = 0;
         const byte MantleStepOnto = 1;
         const float LeanShotRadius = 0.1f;
-        /// <summary>Fastest the body is pulled down onto a floor that dropped away under it, metres per second. Two ticks cover the deepest snap.</summary>
         const float MaxSnapSpeed = 12f;
-        /// <summary>A gap under the feet smaller than this is left to physics, metres.</summary>
         const float SnapSlack = 0.005f;
-        /// <summary>Widest change of direction the floor turn swings through, degrees; anything wider is a reversal and brakes.</summary>
         const float MaxGroundTurnAngle = 100f;
 
+
+        /// <summary>All currently active player bodies in the scene.</summary>
+        public static readonly System.Collections.Generic.List<PlayerMotor> All = new(8);
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            All.Clear();
+        }
 
         /// <summary>The body this client controls, for local readouts. Null on a pure host with no player.</summary>
         public static PlayerMotor Local { get; private set; }
@@ -175,19 +176,8 @@ namespace CloseTheDeal.Player
         /// <summary>Raised when the local player's body arrives (the new one) or leaves (null). A HUD subscribes here instead of polling <see cref="Local"/>.</summary>
         public static event System.Action<PlayerMotor> LocalChanged;
 
-        /// <summary>
-        /// How many ticks past another player's last known input this machine keeps repeating
-        /// it (presses left out) while it runs that body ahead. About a third of a second covers
-        /// a 100 ms round trip with FishNet's interpolation; beyond it the body is assumed to
-        /// have let go of everything, so a player who drops out coasts to a stop.
-        /// </summary>
         const uint SpectatorRepeatTicks = 20;
 
-        /// <summary>
-        /// Whether the host also fills a client's missing ticks with its last real input (true) or
-        /// runs them empty, as FishNet hands them over (false). Other clients always fill. Kept
-        /// switchable while the two are measured against each other; see PLAYER_MOVEMENT.md.
-        /// </summary>
         internal static bool HostFillsMissingInput = true;
 
         readonly PredictionRigidbody _body = new();
@@ -216,15 +206,9 @@ namespace CloseTheDeal.Player
         public float PlanarSpeed => Planar(_rigidbody.linearVelocity).magnitude;
         public MovementProfile Profile => _profile;
 
-        /// <summary>The designer's profile from the prefab, kept while a runtime copy is in use.</summary>
         MovementProfile _authoredProfile;
 
-        /// <summary>
-        /// Moves with a runtime copy of the profile instead of the designer's asset (a heavy
-        /// carried load's slower numbers), or with the designer's again when given null. Never
-        /// pass the designer's asset after changing it: copy it (AGENTS.md §4). The owner and the
-        /// host must make the same call on the same tick, or prediction and host disagree.
-        /// </summary>
+        /// <summary>Moves with a runtime copy of the profile (never mutate the designer's asset); null restores the authored profile.</summary>
         public void UseProfile(MovementProfile runtimeCopy)
         {
             _profile = runtimeCopy != null ? runtimeCopy : _authoredProfile;
@@ -237,15 +221,7 @@ namespace CloseTheDeal.Player
         /// <summary>0 standing to 1 fully crouched. Moves once per tick.</summary>
         public float Crouch => _crouch;
 
-        /// <summary>
-        /// Where this player is aiming, as a world direction from their eye; zero until their first
-        /// input arrives. For showing the aim (the body's gun arm), never for deciding a hit.
-        /// </summary>
-        /// <remarks>
-        /// Taken from the input each tick runs on, so it is there on every machine: the owner's own
-        /// input, the input the host receives, and the input other clients are forwarded. Nothing
-        /// extra is sent for it.
-        /// </remarks>
+        /// <summary>World aim direction from the eye (zero until first input arrives); for body visuals only, never hit detection.</summary>
         public Vector3 AimDirection { get; private set; }
 
         /// <summary>Height of the eye above the feet when standing, in metres.</summary>
@@ -266,8 +242,6 @@ namespace CloseTheDeal.Player
 
         float CrouchedHeight => Mathf.Clamp(_profile.CrouchHeight, _capsule.radius * 2f, _standHeight);
 
-        // ---- Lifecycle -----------------------------------------------------------------------
-
         void Awake()
         {
             _rigidbody = GetComponent<Rigidbody>();
@@ -279,6 +253,17 @@ namespace CloseTheDeal.Player
             _standHeight = _capsule.height;
             _body.Initialize(_rigidbody);
             AwakeFeedback();
+        }
+
+        void OnEnable()
+        {
+            if (!All.Contains(this))
+                All.Add(this);
+        }
+
+        void OnDisable()
+        {
+            All.Remove(this);
         }
 
         public override void OnStartNetwork()
@@ -310,7 +295,6 @@ namespace CloseTheDeal.Player
                 return;
 
             Local = this;
-            LocalChanged?.Invoke(this);
             _input.enabled = true;
             if (!IsServerStarted)
             {
@@ -320,6 +304,8 @@ namespace CloseTheDeal.Player
             ShowOwnBody(false);
             if (PlayerCamera.Instance != null)
                 PlayerCamera.Instance.Follow(_cameraTarget, _input, this);
+            // Fire after ShowOwnBody(false) and Camera.Follow so PlayerViewmodel.Show() wins body visibility.
+            LocalChanged?.Invoke(this);
         }
 
         public override void OnStopClient()
@@ -341,19 +327,12 @@ namespace CloseTheDeal.Player
                 PlayerCamera.Instance.Release(_cameraTarget);
         }
 
-        /// <summary>
-        /// Shows or hides this player's own body on its owner's screen. Used by the body view
-        /// (PlayerViewmodel.BodyView), where the owner looks out of the real body instead of at
-        /// separate arms. Drawing only: nothing here is simulated or networked.
-        /// </summary>
-        /// <param name="shown">True draws the whole body; false goes back to its shadow only.</param>
+        /// <summary>Shows or hides this player's own body on the owner's screen (true = full body, false = shadow only).</summary>
         public void SetOwnBodyShown(bool shown)
         {
             if (Local == this)
                 ShowOwnBody(shown);
         }
-
-        // ---- Ticks ---------------------------------------------------------------------------
 
         protected override void TimeManager_OnTick()
         {
@@ -391,12 +370,12 @@ namespace CloseTheDeal.Player
             {
                 Body = _body,
                 State = _state,
-                StateTicksLeft = _stateTicksLeft,
+                StateTicksLeft = (ushort)System.Math.Min(_stateTicksLeft, ushort.MaxValue),
                 Mantle = _mantle,
                 PendingKnock = _pendingKnock,
                 Jump = _jump,
-                Lean = _lean,
-                Crouch = _crouch,
+                Lean = (sbyte)Mathf.RoundToInt(Mathf.Clamp(_lean, -1f, 1f) * 127f),
+                Crouch = (byte)Mathf.RoundToInt(Mathf.Clamp01(_crouch) * 255f),
                 Counters = _counters,
                 Slide = _slide
             });
@@ -437,12 +416,18 @@ namespace CloseTheDeal.Player
             EndTick();
         }
 
-        /// <summary>Finds the floor and starts this tick's timers.</summary>
         void BeginTick(MoveInput input)
         {
-            // A walking body keeps hold of a floor that drops away a little, so stairs and ramp tops don't launch it.
-            float reach = _state == MoveState.Grounded ? Mathf.Max(_profile.GroundProbe, _profile.StepDownSnap) : _profile.GroundProbe;
-            _ground = ProbeGround(reach);
+            if (_state == MoveState.Mantling)
+            {
+                _ground = default;
+            }
+            else
+            {
+                // A walking body keeps hold of a floor that drops away a little, so stairs and ramp tops don't launch it.
+                float reach = _state == MoveState.Grounded ? Mathf.Max(_profile.GroundProbe, _profile.StepDownSnap) : _profile.GroundProbe;
+                _ground = ProbeGround(reach);
+            }
 
             // Remember the press for a moment, so one made just before landing still jumps.
             if (input.OneShots.Jump)
@@ -451,10 +436,6 @@ namespace CloseTheDeal.Player
             CountLanding();
         }
 
-        /// <summary>
-        /// Counted on the tick, before a hop can launch again, so every landing of a chain of
-        /// hops is reported once, on every machine, however briefly the feet touched.
-        /// </summary>
         void CountLanding()
         {
             if (_state == MoveState.Mantling)
@@ -495,8 +476,8 @@ namespace CloseTheDeal.Player
             _mantle = data.Mantle;
             _pendingKnock = data.PendingKnock;
             _jump = data.Jump;
-            _lean = data.Lean;
-            _crouch = data.Crouch;
+            _lean = data.Lean / 127f;
+            _crouch = data.Crouch / 255f;
             _counters = data.Counters;
             _slide = data.Slide;
 
@@ -509,17 +490,11 @@ namespace CloseTheDeal.Player
             ApplyCrouchToCapsule();
         }
 
-        /// <summary>The body's latest predicted position, just before the host's correction is applied.</summary>
         void NoteTipBeforeReconcile(uint clientTick, uint serverTick)
         {
             _tipBeforeReconcile = _rigidbody.position;
         }
 
-        /// <summary>
-        /// How far the host's correction moved the body's latest predicted position, once the
-        /// unconfirmed inputs have been replayed on top of it: the snap the player would see.
-        /// FishNet runs the replay between its pre- and post-reconcile events.
-        /// </summary>
         void MeasureCorrection(uint clientTick, uint serverTick)
         {
             float metres = Vector3.Distance(_tipBeforeReconcile, _rigidbody.position);
@@ -530,16 +505,6 @@ namespace CloseTheDeal.Player
             CorrectionCount++;
         }
 
-        /// <summary>
-        /// Ticks of a body this machine doesn't control that carry no real input: on other
-        /// clients, the few ticks FishNet runs past the last input that has arrived; on the host,
-        /// a client's tick whose input hasn't arrived yet. FishNet hands those over as empty input
-        /// (still flagged Ticked, but not Created). Run as empty, a held crouch, lean, slide or
-        /// sprint lets go and the body faces north until the next real input or host state puts
-        /// it back, which is what other players used to see. Instead the last real input is
-        /// repeated, presses left out, for up to <see cref="SpectatorRepeatTicks"/>; after that
-        /// the body lets go of everything but keeps its facing.
-        /// </summary>
         MoveInput FillMissingInput(MoveInput input, ReplicateState state)
         {
             if (IsOwner || (IsServerStarted && !HostFillsMissingInput))
@@ -560,8 +525,6 @@ namespace CloseTheDeal.Player
             guess.SetTick(input.GetTick());
             return guess;
         }
-
-        // ---- States --------------------------------------------------------------------------
 
         void GroundedStep(MoveInput input, float dt)
         {
@@ -588,12 +551,62 @@ namespace CloseTheDeal.Player
 
             if (!SlideStep(input, ref planar, dt))
                 planar = Run(input, planar, dt);
-            _body.Velocity(AlongGround(CapOwnSpeed(planar, speedBefore), dt));
+            Vector3 desired = CapOwnSpeed(planar, speedBefore);
+            Vector3 slopeNormal = _ground.Normal;
+            if (desired.sqrMagnitude > 0.01f && _profile.StepUpHeight > 0f)
+                slopeNormal = StepOrRampAhead(desired, dt, slopeNormal);
+            _body.Velocity(AlongGround(desired, slopeNormal, dt));
             // Hold still on a slope: nothing else stops a frictionless body creeping down the stairs.
             _body.AddForce(-Physics.gravity, ForceMode.Acceleration);
         }
 
-        /// <summary>The floor grips, then the held direction pushes: stop when nothing is held, turn sharply when something is.</summary>
+        Vector3 StepOrRampAhead(Vector3 planar, float dt, Vector3 currentNormal)
+        {
+            float speed = planar.magnitude;
+            Vector3 dir = planar / speed;
+            float radius = _capsule.radius;
+            float castRadius = radius - ProbeInset;
+            Vector3 feet = _rigidbody.position;
+            float lookAhead = Mathf.Max(speed * dt + 0.06f, 0.14f);
+
+            // Probe just above the bottom of the capsule for a ramp base or stair riser.
+            Vector3 lowOrigin = feet + Vector3.up * (radius + ProbeInset * 0.5f);
+            if (!Physics.SphereCast(lowOrigin, castRadius, dir, out RaycastHit ahead, lookAhead, _groundMask, QueryTriggerInteraction.Ignore))
+                return currentNormal;
+
+            float aheadAngle = Vector3.Angle(ahead.normal, Vector3.up);
+            if (aheadAngle <= GroundSlopeLimit)
+            {
+                // Entering a walkable stair ramp from a flatter floor: angle velocity up it now.
+                return ahead.normal.y < currentNormal.y ? ahead.normal : currentNormal;
+            }
+
+            // Vertical riser / step lip: probe down from StepUpHeight above the feet just past the hit.
+            float stepHeight = _profile.StepUpHeight;
+            float forwardStep = ahead.distance + 0.08f;
+            Vector3 topProbeOrigin = feet + dir * forwardStep + Vector3.up * (stepHeight + radius);
+            if (!Physics.SphereCast(topProbeOrigin, castRadius, Vector3.down, out RaycastHit top, stepHeight + ProbeInset, _groundMask, QueryTriggerInteraction.Ignore))
+                return currentNormal;
+
+            if (Vector3.Angle(top.normal, Vector3.up) > GroundSlopeLimit)
+                return currentNormal;
+
+            float rise = top.point.y - feet.y;
+            if (rise <= 0.01f || rise > stepHeight)
+                return currentNormal;
+
+            // Confirm the capsule fits at the stepped-up position before moving.
+            float height = _capsule.height;
+            Vector3 steppedFeet = feet + Vector3.up * (rise + 0.01f);
+            Vector3 p0 = steppedFeet + Vector3.up * radius;
+            Vector3 p1 = steppedFeet + Vector3.up * Mathf.Max(height - radius, radius);
+            if (Physics.CheckCapsule(p0, p1, castRadius, _groundMask, QueryTriggerInteraction.Ignore))
+                return currentNormal;
+
+            _body.MovePosition(steppedFeet);
+            return top.normal;
+        }
+
         Vector3 Run(MoveInput input, Vector3 planar, float dt)
         {
             float speed = planar.magnitude;
@@ -608,20 +621,11 @@ namespace CloseTheDeal.Player
             return Accelerate(planar, wish, WishSpeed(input), _profile.GroundAcceleration, dt);
         }
 
-        /// <summary>
-        /// Holds what the player's own movement can build to the profile's top speed. A body
-        /// already going faster (thrown by a blast) keeps that speed and only loses it to grip.
-        /// </summary>
         Vector3 CapOwnSpeed(Vector3 planar, float speedBefore)
         {
             return Vector3.ClampMagnitude(planar, Mathf.Max(speedBefore, _profile.MaxSpeed));
         }
 
-        /// <summary>
-        /// Swings the floor speed toward the held direction without losing any of it, at the
-        /// profile's turn rate, so a sprint holds its speed round the spiral stairs and other
-        /// tight curves. A reversal (more than 100° away) is left to acceleration, which brakes.
-        /// </summary>
         Vector3 TurnAlongGround(Vector3 planar, Vector3 wish, float dt)
         {
             if (_profile.GroundTurnRate <= 0f || wish.sqrMagnitude < 0.01f || planar.sqrMagnitude < 0.01f)
@@ -633,11 +637,6 @@ namespace CloseTheDeal.Player
             return Vector3.RotateTowards(planar, wish.normalized * planar.magnitude, _profile.GroundTurnRate * Mathf.Deg2Rad * dt, 0f);
         }
 
-        /// <summary>
-        /// Adds speed along the held direction, but only up to the wanted speed measured along
-        /// that direction. Speed across it is left alone, which is the whole of momentum
-        /// movement: turning while pushing sideways keeps adding, pushing forward does not.
-        /// </summary>
         static Vector3 Accelerate(Vector3 planar, Vector3 wish, float wishSpeed, float acceleration, float dt)
         {
             float push = wish.magnitude;
@@ -649,19 +648,13 @@ namespace CloseTheDeal.Player
             return room > 0f ? planar + direction * Mathf.Min(acceleration * dt, room) : planar;
         }
 
-        /// <summary>
-        /// The floor speed the player asked for, tilted to run along the slope under the feet
-        /// rather than into or off it, and pulled down onto a floor that has dropped away.
-        /// </summary>
-        Vector3 AlongGround(Vector3 planar, float dt)
+        Vector3 AlongGround(Vector3 planar, Vector3 normal, float dt)
         {
-            Vector3 normal = _ground.Normal;
             float climb = -(normal.x * planar.x + normal.z * planar.z) / normal.y;
-            float snap = _ground.Gap > SnapSlack ? Mathf.Min(_ground.Gap / dt, MaxSnapSpeed) : 0f;
+            float snap = climb <= 0f && _ground.Gap > SnapSlack ? Mathf.Min(_ground.Gap / dt, MaxSnapSpeed) : 0f;
             return new Vector3(planar.x, climb - snap, planar.z);
         }
 
-        /// <summary>Launches at full jump speed, keeping the planar speed the player already has.</summary>
         void Jump(Vector3 planar)
         {
             Enter(MoveState.Airborne);
@@ -701,7 +694,6 @@ namespace CloseTheDeal.Player
             AddExtraGravity(JumpGravity(vertical));
         }
 
-        /// <summary>Letting go of jump while still rising keeps only part of the upward speed: a tap hops, a hold leaps. Once per jump.</summary>
         float CutJumpOnRelease(float vertical, bool jumpHeld)
         {
             if (!_jump.Rising)
@@ -740,13 +732,7 @@ namespace CloseTheDeal.Player
                 Enter(_ground.Found ? MoveState.Grounded : MoveState.Airborne);
         }
 
-        /// <summary>
-        /// Throws the player and takes their control away for a while. Host only: the host
-        /// is the sole judge of hits, and the result reaches everyone through the reconcile.
-        /// The throw is held until this body's own tick applies it: a blast usually lands
-        /// during another player's tick, and any force queued then would be cleared by this
-        /// body's next velocity write before physics ever saw it. A climb in progress is dropped.
-        /// </summary>
+        /// <summary>Host-only knockback; queued until this body's own tick so velocity writes don't clear the force.</summary>
         public void ApplyKnockback(Vector3 velocityChange, float controlLossSeconds)
         {
             if (!IsServerStarted)
@@ -757,7 +743,6 @@ namespace CloseTheDeal.Player
             _stateTicksLeft = System.Math.Max(1u, TimeManager.TimeToTicks(controlLossSeconds, TickRounding.RoundUp));
         }
 
-        /// <summary>Last thing before the physics step, so no velocity write this tick can clear it.</summary>
         void ApplyPendingKnock()
         {
             if (_pendingKnock == Vector3.zero)
@@ -767,19 +752,12 @@ namespace CloseTheDeal.Player
             _pendingKnock = Vector3.zero;
         }
 
-        // ---- Lean and crouch -----------------------------------------------------------------
-
-        /// <summary>Leans toward the held side at the profile pace; only on the floor, so a jump or a blast straightens you up.</summary>
         void LeanStep(MoveInput input, float dt)
         {
             float target = _state == MoveState.Grounded ? Mathf.Clamp(input.Lean, -1, 1) : 0f;
             _lean = Mathf.MoveTowards(_lean, target, _profile.LeanSpeed * dt);
         }
 
-        /// <summary>
-        /// Ducks while crouch is held, on the floor or in the air, and stands again when it is
-        /// let go and there is headroom. A climb or a blast stands the player up.
-        /// </summary>
         void CrouchStep(MoveInput input, float dt)
         {
             bool inControl = _state == MoveState.Grounded || _state == MoveState.Airborne;
@@ -803,7 +781,6 @@ namespace CloseTheDeal.Player
             return !Physics.CheckCapsule(low, high, radius - ProbeInset, _groundMask, QueryTriggerInteraction.Ignore);
         }
 
-        /// <summary>The collider shrinks from the top, feet staying put. The prefab's own height is kept as the standing height and never written.</summary>
         void ApplyCrouchToCapsule()
         {
             float height = Mathf.Lerp(_standHeight, CrouchedHeight, _crouch);
@@ -832,9 +809,6 @@ namespace CloseTheDeal.Player
             return head + direction * reach;
         }
 
-        // ---- Helpers -------------------------------------------------------------------------
-
-        /// <summary>The floor under the feet within the reach, if it is flat enough to stand on.</summary>
         GroundHit ProbeGround(float reach)
         {
             float radius = _capsule.radius - ProbeInset;
@@ -876,7 +850,6 @@ namespace CloseTheDeal.Player
             return _profile.MaxFallSpeed > 0f ? Mathf.Max(verticalSpeed, -_profile.MaxFallSpeed) : verticalSpeed;
         }
 
-        /// <summary>The jump's arc: lighter rising, a moment's hang at the top, heavier falling.</summary>
         float JumpGravity(float vertical)
         {
             if (Mathf.Abs(vertical) < _profile.ApexHangSpeed)
@@ -884,7 +857,6 @@ namespace CloseTheDeal.Player
             return vertical > 0f ? _profile.AirGravityMultiplier : _profile.FallGravityMultiplier;
         }
 
-        /// <summary>Brings Unity's own gravity to the given multiple of it: tops it up above 1, holds some of it off below 1.</summary>
         void AddExtraGravity(float multiplier)
         {
             if (!Mathf.Approximately(multiplier, 1f))
@@ -912,5 +884,106 @@ namespace CloseTheDeal.Player
         }
 
         static Vector3 Planar(Vector3 v) => new(v.x, 0f, v.z);
+    }
+
+    /// <summary>
+    /// Custom FishNet serializer for <see cref="PlayerMotor.MoveReconcile"/>: packs boolean flags
+    /// into one byte and omits <see cref="PlayerMotor.MantleData"/> when not mantling and
+    /// <see cref="PlayerMotor.MoveReconcile.PendingKnock"/> when zero.
+    /// </summary>
+    public static class MoveReconcileSerializers
+    {
+        public static void WriteMoveReconcile(this Writer w, PlayerMotor.MoveReconcile value)
+        {
+            w.WritePredictionRigidbody(value.Body);
+
+            bool hasKnock = value.PendingKnock.sqrMagnitude > 0f;
+            bool hasStateTicks = value.StateTicksLeft > 0;
+            bool hasSlideCooldown = value.Slide.BoostCooldownTicks > 0;
+            byte flags = (byte)(
+                ((byte)value.State & 0x3)
+                | (value.Jump.Rising ? 0x4 : 0)
+                | (value.Counters.InAir ? 0x8 : 0)
+                | (value.Slide.Active ? 0x10 : 0)
+                | (hasKnock ? 0x20 : 0)
+                | (hasStateTicks ? 0x40 : 0)
+                | (hasSlideCooldown ? 0x80 : 0));
+            w.WriteUInt8Unpacked(flags);
+
+            if (hasStateTicks)
+                w.WriteUInt16Unpacked(value.StateTicksLeft);
+
+            if (value.State == MoveState.Mantling)
+            {
+                w.WriteVector3(value.Mantle.Target);
+                w.WriteVector3(value.Mantle.Exit);
+                w.WriteUInt8Unpacked(value.Mantle.Phase);
+                w.WriteUInt8Unpacked((byte)value.Mantle.Kind);
+            }
+
+            if (hasKnock)
+                w.WriteVector3(value.PendingKnock);
+
+            w.WriteUInt8Unpacked(value.Jump.Coyote);
+            w.WriteUInt8Unpacked(value.Jump.Buffer);
+            w.WriteInt8Unpacked(value.Lean);
+            w.WriteUInt8Unpacked(value.Crouch);
+            w.WriteUInt8Unpacked(value.Counters.Jumps);
+            w.WriteUInt8Unpacked(value.Counters.Mantles);
+            w.WriteUInt8Unpacked(value.Counters.Refusals);
+            w.WriteUInt8Unpacked((byte)value.Counters.LastRefusal);
+            w.WriteUInt8Unpacked(value.Counters.Landings);
+            w.WriteSingleUnpacked(value.Counters.LastLandSpeed);
+
+            if (hasSlideCooldown)
+                w.WriteUInt16Unpacked(value.Slide.BoostCooldownTicks);
+        }
+
+        public static PlayerMotor.MoveReconcile ReadMoveReconcile(this Reader r)
+        {
+            var data = new PlayerMotor.MoveReconcile
+            {
+                Body = r.ReadPredictionRigidbody()
+            };
+
+            byte flags = r.ReadUInt8Unpacked();
+            data.State = (MoveState)(flags & 0x3);
+            data.Jump.Rising = (flags & 0x4) != 0;
+            data.Counters.InAir = (flags & 0x8) != 0;
+            data.Slide.Active = (flags & 0x10) != 0;
+            bool hasKnock = (flags & 0x20) != 0;
+            bool hasStateTicks = (flags & 0x40) != 0;
+            bool hasSlideCooldown = (flags & 0x80) != 0;
+
+            if (hasStateTicks)
+                data.StateTicksLeft = r.ReadUInt16Unpacked();
+
+            if (data.State == MoveState.Mantling)
+            {
+                data.Mantle.Target = r.ReadVector3();
+                data.Mantle.Exit = r.ReadVector3();
+                data.Mantle.Phase = r.ReadUInt8Unpacked();
+                data.Mantle.Kind = (MantleKind)r.ReadUInt8Unpacked();
+            }
+
+            if (hasKnock)
+                data.PendingKnock = r.ReadVector3();
+
+            data.Jump.Coyote = r.ReadUInt8Unpacked();
+            data.Jump.Buffer = r.ReadUInt8Unpacked();
+            data.Lean = r.ReadInt8Unpacked();
+            data.Crouch = r.ReadUInt8Unpacked();
+            data.Counters.Jumps = r.ReadUInt8Unpacked();
+            data.Counters.Mantles = r.ReadUInt8Unpacked();
+            data.Counters.Refusals = r.ReadUInt8Unpacked();
+            data.Counters.LastRefusal = (MantleRefusal)r.ReadUInt8Unpacked();
+            data.Counters.Landings = r.ReadUInt8Unpacked();
+            data.Counters.LastLandSpeed = r.ReadSingleUnpacked();
+
+            if (hasSlideCooldown)
+                data.Slide.BoostCooldownTicks = r.ReadUInt16Unpacked();
+
+            return data;
+        }
     }
 }

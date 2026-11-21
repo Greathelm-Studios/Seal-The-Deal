@@ -8,10 +8,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.Editor.UI
 {
-    /// <summary>
-    /// Low-level building blocks for the kit's tools: the tokens asset, folders, and helpers that lay out rects,
-    /// images and text at 1920 x 1080 coordinates (x, y from the top-left), plus setting serialized references.
-    /// </summary>
+    /// <summary>Asset, 1080p rect-layout, and SerializedObject helpers for UI kit prefab builders.</summary>
     internal static class UiKitAssets
     {
         internal const string Root = "Assets/_Project/UI";
@@ -31,10 +28,6 @@ namespace CloseTheDeal.Editor.UI
             AssetDatabase.CreateFolder(parent, Path.GetFileName(path));
         }
 
-        /// <summary>
-        /// The tokens asset: created with the feel table's values when missing, and never overwritten after that
-        /// (designer-owned). Fonts are filled only where empty.
-        /// </summary>
         internal static UiTokens EnsureTokens()
         {
             EnsureFolder(Root + "/Tokens");
@@ -63,10 +56,6 @@ namespace CloseTheDeal.Editor.UI
 
         internal const string ThinPath = Root + "/Tokens/Type_Thin.mat";
 
-        /// <summary>
-        /// Until a thin display face is licensed and imported, the display roles thin the bundled sans by pulling its SDF
-        /// edge in (face dilate below 0). A material made once; a designer can tune or replace it.
-        /// </summary>
         static bool FillMaterial(ref UiTypeRole role, TMP_FontAsset font, string path, float dilate)
         {
             if (role.Material != null || font == null || (role.Font != null && role.Font != font))
@@ -92,8 +81,6 @@ namespace CloseTheDeal.Editor.UI
             return true;
         }
 
-        // ---- Layout ------------------------------------------------------------------------------
-
         internal static RectTransform Node(Transform parent, string name)
         {
             var go = new GameObject(name, typeof(RectTransform));
@@ -103,7 +90,6 @@ namespace CloseTheDeal.Editor.UI
             return rect;
         }
 
-        /// <summary>A rect at x, y from the parent's top-left, w x h pixels.</summary>
         internal static RectTransform At(Transform parent, string name, float x, float y, float w, float h)
         {
             RectTransform rect = Node(parent, name);
@@ -119,7 +105,6 @@ namespace CloseTheDeal.Editor.UI
             rect.sizeDelta = new Vector2(w, h);
         }
 
-        /// <summary>Fills the parent, inset by the given pixels (negative = grow past it).</summary>
         internal static RectTransform Fill(Transform parent, string name, float inset = 0f)
         {
             RectTransform rect = Node(parent, name);
@@ -136,7 +121,6 @@ namespace CloseTheDeal.Editor.UI
             rect.offsetMax = new Vector2(-inset, -inset);
         }
 
-        /// <summary>A 1920 x 1080 frame centred in its parent: the design space every screen lays out in.</summary>
         internal static RectTransform DesignFrame(Transform parent, string name)
         {
             RectTransform rect = Node(parent, name);
@@ -186,15 +170,12 @@ namespace CloseTheDeal.Editor.UI
             return Text(At(parent, name, x, y, w, h), content, role, colour, align, wrap);
         }
 
-        /// <summary>A container covering its parent, with a Canvas Group: one line of a screen's staggered reveal.</summary>
         internal static RectTransform RevealLine(Transform parent, string name)
         {
             RectTransform rect = Fill(parent, name);
             rect.gameObject.AddComponent<CanvasGroup>();
             return rect;
         }
-
-        // ---- Serialized references ----------------------------------------------------------------
 
         internal static void Set(Object target, string property, Object value)
         {
@@ -240,7 +221,6 @@ namespace CloseTheDeal.Editor.UI
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>Saves a built hierarchy as a prefab when the guard allows (new, or still untouched since the tool wrote it).</summary>
         internal static GameObject SavePrefab(GameObject root, string path)
         {
             EnsureFolder(Path.GetDirectoryName(path)?.Replace('\\', '/'));
@@ -256,7 +236,6 @@ namespace CloseTheDeal.Editor.UI
             return prefab;
         }
 
-        /// <summary>Places an instance of a kit prefab under parent (kept linked, so edits to the prefab flow through).</summary>
         internal static T Instance<T>(GameObject prefab, Transform parent, string name) where T : Component
         {
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);

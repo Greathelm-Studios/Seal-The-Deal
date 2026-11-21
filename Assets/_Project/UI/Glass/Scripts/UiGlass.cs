@@ -3,14 +3,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// Put this on a uGUI Image (any sprite, usually none) that uses a CloseTheDeal/UI/Glass material. It writes the
-    /// pane size in pixels into uv1 so the shader can draw a 1 px highlight, a hairline border and a rounded corner,
-    /// and keeps the blur feature's pane count so scenes without glass pay nothing. The canvas needs TexCoord1 in
-    /// Additional Shader Channels (this component adds it).
-    /// Hold text in a SEPARATE child Graphic, in Deep Navy: glass never carries text itself.
-    /// The Image's sprite is ignored: uv0 is rewritten to the pane rectangle (the shape comes from the shader's radius).
-    /// </summary>
+    /// <summary>Drives CloseTheDeal/UI/Glass panes: writes pixel size into uv1 and tracks active panes for blur.</summary>
     [RequireComponent(typeof(Graphic))]
     [ExecuteAlways]
     [AddComponentMenu("Seal the Deal/UI Glass")]

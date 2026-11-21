@@ -1,16 +1,6 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Codex (GPT-6)
-  Generated : 2026-11-12
-  Prompt    : Give the STDMC player character animated 2D eye cards.
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Owns the eye-card art contract, setup, tuning and validation.
-  Modified  : Claude Opus 5.5 (Claude Code), 2026-11-13 — Alex's eye sheet replaces the
-              placeholders; cards 1.75x the first pass, tilted and set like Alex's references; green irises.
--->
 # Character eyes
 
-**Status:** Current · **Last updated:** 2026-11-13
+**Status:** Current · **Last updated:** 2026-11-21
 
 STDMC has two large angular eyes with heavy upper lids, green irises and a bored resting look.
 They sit right at the fringe's lower edge with strands of hair across them, as in Alex's concept sheet.
@@ -27,7 +17,7 @@ Expressions change in hard cuts.
 
 The cards are authored under the humanoid head and inherit its final transform.
 The eye script reads that pose in LateUpdate at order 120, after procedural animation at 100 and ragdoll at 110.
-Travel comes from the smoothed visual position. The local player uses camera direction for aim; observers use the visual body’s facing.
+Travel comes from the smoothed visual position (ignoring jumps above 3x sprint speed as teleports/corrections). The local player uses camera direction for aim; observers use the visual body’s facing. Counter-turn lag compares this frame's face axes against the previous frame's forward vector; idle vertical glances are scaled to 0.6x horizontal because the eye opening is wider than tall, and additive target clamping lets strong travel or turning override idle glances. Horizontal glance is negated for shader UV space (U increases to the viewer's right), and updates skip cards that are off-screen or beyond 20 m from the camera.
 The player’s existing first-person body hider discovers the card renderers at spawn and hides them outright because they cast no shadows.
 
 ## Eye art

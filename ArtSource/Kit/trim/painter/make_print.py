@@ -1,13 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-15
-#  Prompt    : Alex: the props "doesnt match the references still" (no logo, labels or printed packaging)
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Draws the trim sheet's print artwork (the AONAGI ring, an asset tag, the copier's 複写 / COPY display
-#              and three fictional drink-can wraps) into a full-sheet-sized image that the Painter layer script uses as
-#              the Print band's fill. Positions come from trim_layout.json "print", so the art and the UVs agree.
-# -----------------------------------------------------------------------------
 """python make_print.py  ->  ./swatches/print_atlas_v2.png (2048 x 2048, the Print band filled, the rest pearl)."""
 import json
 import math

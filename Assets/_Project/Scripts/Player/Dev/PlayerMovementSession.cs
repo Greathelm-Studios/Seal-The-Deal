@@ -94,8 +94,6 @@ namespace CloseTheDeal.Player.Dev
             return at >= 0 && at + 1 < args.Length ? args[at + 1] : null;
         }
 
-        // ---- Session shell -------------------------------------------------------------------
-
         IEnumerator Start()
         {
             PrepareRun();
@@ -351,8 +349,6 @@ namespace CloseTheDeal.Player.Dev
             Note($"{(ok ? "PASS" : "FAIL")}  {what}  [{detail}]");
         }
 
-        // ---- Watching ------------------------------------------------------------------------
-
         void HookLocal(PlayerMotor motor)
         {
             motor.Jumped += () => _localJumps++;
@@ -530,8 +526,6 @@ namespace CloseTheDeal.Player.Dev
             _hasRemotePosition = true;
         }
 
-        // ---- Made-up devices -----------------------------------------------------------------
-
         void Press(params Key[] keys)
         {
             foreach (Key key in keys)
@@ -677,8 +671,6 @@ namespace CloseTheDeal.Player.Dev
                 Check(failAs, false, $"not within {limit:0} s");
         }
 
-        // ---- Frames --------------------------------------------------------------------------
-
         void Capture(string name, Camera camera = null)
         {
             if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
@@ -754,8 +746,6 @@ namespace CloseTheDeal.Player.Dev
             foreach (Canvas canvas in overlays)
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         }
-
-        // ---- HUD: movement's UI, captured ----------------------------------------------------
 
         IEnumerator HudRole()
         {
@@ -872,8 +862,6 @@ namespace CloseTheDeal.Player.Dev
             Capture(name, _observer);
         }
 
-        // ---- Scene lookups -------------------------------------------------------------------
-
         static Bounds CourseBounds(string name)
         {
             GameObject found = GameObject.Find(name);
@@ -937,10 +925,6 @@ namespace CloseTheDeal.Player.Dev
             yield return StairsUpCheck();
             yield return StairsDownCheck();
         }
-
-        // ---- Solo: every move, measured ------------------------------------------------------
-
-        // ---- Film: the same route before and after a feel change --------------------------------
 
         bool _recording;
         int _filmFrame;
@@ -1489,9 +1473,6 @@ namespace CloseTheDeal.Player.Dev
             Check("stays on the treads on the way down", downAir == 0 && Feet.y < centre.y + 0.2f, $"airborne ticks {downAir}, feet at {Feet.y:0.00} m");
         }
 
-        // ---- Momentum ------------------------------------------------------------------------
-
-        /// <summary>Hold jump out of a sprint: three hops in a row, with nothing lost on the landings.</summary>
         IEnumerator HopChecks()
         {
             yield return Place(new Vector3(-19f, 0.05f, 4f), 90f);
@@ -1664,8 +1645,6 @@ namespace CloseTheDeal.Player.Dev
             yield return Until(() => Me.State == MoveState.Grounded && Me.PlanarSpeed < 0.1f, 5f, null);
         }
 
-        // ---- Speed traces --------------------------------------------------------------------
-
         System.Text.StringBuilder _trace;
         string _traceName;
         float _traceStart;
@@ -1806,8 +1785,6 @@ namespace CloseTheDeal.Player.Dev
             Check("a second spawn is idle and has the camera", Me.State == MoveState.Grounded && Me.PlanarSpeed < 0.1f && Vector3.Distance(View.transform.position, Feet) < 2f,
                 $"state {Me.State}, speed {Me.PlanarSpeed:0.00} m/s, camera {Vector3.Distance(View.transform.position, Feet):0.00} m from the feet");
         }
-
-        // ---- Host and client -----------------------------------------------------------------
 
         PlayerMotor FindOther()
         {

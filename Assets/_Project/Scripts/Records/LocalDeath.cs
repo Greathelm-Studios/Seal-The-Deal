@@ -25,12 +25,7 @@ namespace CloseTheDeal.Records
         }
     }
 
-    /// <summary>
-    /// This player's own deaths and falls, for a death screen: who, how, how long until they are
-    /// back and where. Built from the host's kill-feed line (sent only while a match runs) and the
-    /// body's respawn; it decides nothing. A death screen gives way to the result when
-    /// MatchDirector.OnMatchEnded fires, dead or not. Sits beside MatchRecords. Design: docs/systems/RECORDS.md.
-    /// </summary>
+    /// <summary>Local player's death and fall-out summary events for the death HUD card. Design: docs/systems/RECORDS.md.</summary>
     [DisallowMultipleComponent]
     public sealed class LocalDeath : MonoBehaviour
     {
@@ -49,9 +44,9 @@ namespace CloseTheDeal.Records
 
         MatchRecords _records;
 
-        void OnEnable() => Health.AnyRespawned += OnRespawned;
+        void Awake() => Health.AnyRespawned += OnRespawned;
 
-        void OnDisable()
+        void OnDestroy()
         {
             Health.AnyRespawned -= OnRespawned;
             if (_records != null)
@@ -65,6 +60,7 @@ namespace CloseTheDeal.Records
                 return;
             _records = MatchRecords.Instance;
             _records.Kill += OnKill;
+            enabled = false;
         }
 
         static FirmMember Me => FirmMember.Local;

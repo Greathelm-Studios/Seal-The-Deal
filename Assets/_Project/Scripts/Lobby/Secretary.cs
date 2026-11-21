@@ -4,17 +4,18 @@ using UnityEngine;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// The secretary at the reception desk. Reads lines as subtitles when someone arrives,
-    /// readies up or signs in, and when the run starts; turns her head toward whoever she is
-    /// addressing. There is no voice audio yet: every line raises LineSpoken, so a voice can
-    /// attach later by moment. Local presentation only; what triggers her is synced by the roster.
-    /// </summary>
+    /// <summary>Reception desk secretary emitting deadpan subtitles and head turns on roster moments. Design: docs/systems/LOBBY.md.</summary>
     [DisallowMultipleComponent]
     public sealed class Secretary : MonoBehaviour
     {
         /// <summary>A line was spoken on this machine: the moment (for picking a clip), the finished text and how long it stays up in seconds.</summary>
         public static event Action<SecretaryMoment, string, float> LineSpoken;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            LineSpoken = null;
+        }
 
         [Tooltip("What she says.")]
         [SerializeField] SecretaryLines _lines;
@@ -56,7 +57,6 @@ namespace CloseTheDeal.Lobby
             Turn();
         }
 
-        /// <summary>The roster is a networked scene object; it may start after us, so we hook up when it is there.</summary>
         void Hook()
         {
             LobbyRoster roster = LobbyRoster.Instance;
@@ -140,7 +140,6 @@ namespace CloseTheDeal.Lobby
             CloseTheDeal.Narration.Subtitles.Show(new CloseTheDeal.Narration.SubtitleLine("Reception", text, ReadingSeconds(text), 10, moment.ToString()));
         }
 
-        /// <summary>A random line, never the same one twice running for the same moment.</summary>
         int RandomPick(SecretaryMoment moment, int count)
         {
             int pick = UnityEngine.Random.Range(0, count);
@@ -161,11 +160,6 @@ namespace CloseTheDeal.Lobby
             return Mathf.Max(MinimumSeconds, words * _lines.SecondsPerWord);
         }
 
-        /// <summary>
-        /// She addresses the camera: everyone watching reads the line as said to them, and the
-        /// head turn sells it. Turning toward the actual speaker would need their position, which
-        /// is fine to add once a rigged head exists.
-        /// </summary>
         void LookAtLocalPlayer()
         {
             if (_turnPivot == null || PlayerMotor.Local == null)

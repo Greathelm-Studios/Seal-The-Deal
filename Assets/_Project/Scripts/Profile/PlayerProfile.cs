@@ -92,11 +92,7 @@ namespace CloseTheDeal.Profile
         NoWinner
     }
 
-    /// <summary>
-    /// This player's career on this PC: totals, bests, the last few matches and which first-run
-    /// hints they have already been shown. Only ProfileStore changes it, and only from a match
-    /// record the host sent. Read it through ProfileStore.Current. Design: docs/systems/PROFILE.md.
-    /// </summary>
+    /// <summary>Serializable career profile (totals, last 20 matches, seen hints) managed by ProfileStore. Design: docs/systems/PROFILE.md.</summary>
     [Serializable]
     public sealed class PlayerProfile
     {
@@ -131,8 +127,6 @@ namespace CloseTheDeal.Profile
         }
 
         public bool HasSeen(string hintId) => seenHints != null && seenHints.Contains(hintId);
-
-        // ---- Changes (ProfileStore only) ---------------------------------------------------------
 
         internal static PlayerProfile Fresh(DateTime nowUtc) => new() { version = CurrentVersion, createdUtc = nowUtc.ToString("o") };
 

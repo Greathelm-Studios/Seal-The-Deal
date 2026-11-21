@@ -1,12 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-11
-  Prompt    : "Take the blockout office snap kit into art production; phase 1: concept turnarounds through Codex"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : The brief Alex hands to Codex for concept turnarounds of the visible kit pieces. It lives
-              beside the concepts so the sizes and constraints the drawings answer to stay with them.
--->
 # Concept turnarounds for the office snap kit — request to Codex
 
 **From:** Alex (environment artist), drafted by Claude · **Date:** 2026-11-11 · **Status:** Waiting for Codex

@@ -5,25 +5,25 @@ using UnityEngine.InputSystem.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// What the UI needs to know about input beyond uGUI's own events: whether the confirm button is still held
-    /// (so closing a menu with Enter or the pad's A never also fires or jumps), Cancel presses, and which kind
-    /// of device the player used last (focus marks show only after a key or pad press: "hidden focus").
-    /// Reads the EventSystem's own UI actions, so it follows whatever the UI map binds.
-    /// </summary>
+    /// <summary>Tracks active input modality (keys/pad vs mouse), UI Submit hold, and Cancel presses.</summary>
     public static class UiInput
     {
-        /// <summary>True when the last thing the player touched was a key or a pad, not the mouse. Starts true, so the
-        /// first screen shows where focus is until the mouse moves.</summary>
+        /// <summary>True when the last input was keyboard or gamepad (starts true so initial screen shows focus).</summary>
         public static bool UsingKeysOrPad { get; private set; } = true;
 
         static bool _capturing;
         static int _captureEndFrame = -10;
 
-        /// <summary>
-        /// True while a settings row is listening for a new key (and for the frame after), so Esc and the arrows reach
-        /// the rebind, not the menu.
-        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            UsingKeysOrPad = true;
+            _capturing = false;
+            _captureEndFrame = -10;
+            _switchFrame = -1;
+        }
+
+        /// <summary>True while rebinding listens for a key (plus one trailing frame so Esc/arrows don't leak to the menu).</summary>
         public static bool Capturing
         {
             get => _capturing || Time.frameCount <= _captureEndFrame + 1;
@@ -45,10 +45,7 @@ namespace CloseTheDeal.UI
         static InputSystemUIInputModule Module =>
             EventSystem.current != null ? EventSystem.current.currentInputModule as InputSystemUIInputModule : null;
 
-        /// <summary>
-        /// True while any control bound to UI Submit is down. The pad's south button is also
-        /// Jump in the Player map, so the menu waits for this to read false before handing the mouse back.
-        /// </summary>
+        /// <summary>True while UI Submit is pressed (prevents A/Jump overlap when closing a menu).</summary>
         public static bool SubmitHeld
         {
             get
@@ -108,7 +105,10 @@ namespace CloseTheDeal.UI
             {
                 UiGlyphs.Note(keyboard != null && keyboard.anyKey.wasPressedThisFrame ? keyboard : pad);
                 if (!UsingKeysOrPad)
+                {
                     _switchFrame = Time.frameCount;
+                    UiFocusFrame.WakeUp();
+                }
                 UsingKeysOrPad = true;
                 UiMotion.NoteInput();
             }
@@ -121,7 +121,11 @@ namespace CloseTheDeal.UI
         }
 
         /// <summary>For the capture tool and checks: pretend the player just used a key or pad.</summary>
-        public static void ForceKeysOrPad(bool value) => UsingKeysOrPad = value;
+        public static void ForceKeysOrPad(bool value)
+        {
+            UsingKeysOrPad = value;
+            UiFocusFrame.WakeUp();
+        }
 
         static bool PadActive(Gamepad pad)
         {

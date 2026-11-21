@@ -1,8 +1,15 @@
-# UI sound
+# UI Sound
 
-**Status:** ready for review, **unheard**: these were synthesised by script and never listened to by anyone. Adam judges them by ear.
+**Status:** Ready for review (unheard by a human; verified only via scripted batch meter checks) · **Last updated:** 2026-11-21
 
-The game's UI voice: a clean 2001 corporate future. Glassy ticks, soft sine and triangle tones with a fast decay, a breath of filtered noise for air, sparse. Feel (not sound) is taken from how the Wii and DS menus answer every input: short, soft, tonal, each event distinct. Nothing is sampled or copied.
+## What the player sees and hears
+
+Every menu hover, focus move, button press, toggle, slider step, screen transition, lobby state change, and combat hit/kill feedback triggers a short, tonal UI sound routed to the `UI` mixer bus, with an optional seamless ambient bed under the title screen and lobby reception.
+The game's UI voice is a clean 2001 corporate future: glassy ticks, soft sine and triangle tones with a fast decay, and a breath of filtered noise for air. Feel (not sound) is taken from how Wii and DS menus answer every input: short, soft, tonal, each event distinct. Nothing is sampled or copied.
+
+## Ownership and netcode boundary
+
+UI sound is purely local client-side presentation. Nothing here reads or writes game state or network traffic, and mixer bus volumes are persisted only locally in `PlayerPrefs` (`ctd.audio.*`).
 
 ## How it works
 
@@ -21,7 +28,11 @@ UiSound (hub, Scripts/UI/Kit, lane 5) --> UiSoundPlayer --> AudioSource pool -->
 - Hover run: each hover in a run climbs the pentatonic scale (C D E G A, via pitch); a pause of 0.6 s starts the run again.
 - Slider: one tick clip, pitch follows the value from -5 to +12 semitones.
 - Set: [UiSoundSet](../../Assets/_Project/Scripts/UI/Sound/UiSoundSet.cs) asset at `Assets/_Project/Resources/UI/UiSoundSet.asset`, built by **Seal the Deal > UI > Set Up Sound**. That menu also sets the clips' import settings: mono, decompress on load, PCM under 0.45 s and ADPCM above, preloaded.
-- Mixer: `Assets/_Project/Audio/UI/GameMixer.mixer`: Master with children Music, SFX, Voice, UI. Exposed volumes: `MasterVolume`, `MusicVolume`, `SfxVolume`, `VoiceVolume`, `UiVolume` (dB). A volume slider calls `UiAudio.SetVolume(AudioBus.Ui, 0..1)` (**no settings row calls it yet**: the audio rows are the UI lane's); it writes dB (1 = 0 dB, 0 = -80 dB) and remembers the value in PlayerPrefs (written to disk by `UiAudio.Flush()` when the game loses focus or quits, and when the settings screen closes, never per slider step); saved volumes are restored after the first scene loads.
+- Mixer: `Assets/_Project/Audio/UI/GameMixer.mixer`: Master with children Music, SFX, Voice, UI. Exposed volumes: `MasterVolume`, `MusicVolume`, `SfxVolume`, `VoiceVolume`, `UiVolume` (dB). A volume slider calls `UiAudio.SetVolume(AudioBus.Ui, 0..1)`; it writes dB (1 = 0 dB, 0 = -80 dB) and remembers the value in PlayerPrefs (written to disk by `UiAudio.Flush()` when the game loses focus or quits, and when the settings screen closes, never per slider step). Saved volumes are restored after the first scene loads (`AfterSceneLoad`) and re-applied one frame later in the sound runner's `Start()` because Unity's `AudioMixer` can ignore parameter writes made before it has started.
+- Architecture and setup rationale:
+  - **Menu state polling cadence:** `UiSoundPlayer.Runner` checks `GameMenu`, `UiRoot`, and `LobbyRoster.Instance` at 4 Hz (`0.25 s`) rather than every frame, caching scene lookups on `sceneLoaded`, playing `TitleAppear` once when entering the title, and giving the ambient bed `priority = 200` so the mixer drops it first if voices run short.
+  - **Import guard and compression:** `UiSoundLaneSetup` writes `ImportMark` (`ctd-sound-import-1`) into `AudioImporter.userData` so hand-tuned import settings are preserved on re-runs. Short UI clips use `DecompressOnLoad` (zero decode spike when firing) and `PCM`; stings over `0.45 s` (except loops, which stay `PCM` for exact seams) use `ADPCM`; the 64 s `Ambience` bed streams compressed `Vorbis` (`loadInBackground = true`) instead of holding ~6 MB of PCM in memory.
+  - **Sound set preservation:** `UiSoundLaneSetup.EnsureSet` populates missing events with starting gaps/variances (`Tuning` table, zero variance on melodic tones) and leaves existing clips, volumes, variances, and gaps untouched once tuned.
 - Host authority: sound is presentation only. Nothing here reads or writes game state or the network.
 
 ## The sounds
@@ -66,6 +77,9 @@ Key: C major pentatonic (C D E G A), so any run of sounds is consonant. Confirms
 | `TransitionPaneSlide` | 280 ms | -7.7 dBFS | -14.0 dB | ui | three glass taps E6 D6 C6 + slide |
 | `TransitionFrameZoom` | 860 ms | -6.1 dBFS | -11.0 dB | sting | rising whoosh landing on C5 G5 C6 E6: the game starts |
 | `TransitionFade` | 130 ms | -7.9 dBFS | -14.0 dB | ui | small puff of air (reduced motion) |
+| `PlayerJoined` | 300 ms | -11.5 dBFS | -24.6 dB | ui | recorded (効果音ラボ decision35): someone joins the reception |
+| `PlayerLeft` | 450 ms | -10.8 dBFS | -24.1 dB | ui | recorded (効果音ラボ decision40): someone leaves the reception |
+| `Tip` | 320 ms | -8.6 dBFS | -21.7 dB | ui | recorded (効果音ラボ decision42): a gameplay hint appears (the slide hint); Notification stays for warnings and prompts |
 
 Combat sounds sit at 2.6 to 4.2 kHz so they cut through gunfire; the tick stays short because full auto fires up to 10 hits a second.
 
@@ -192,6 +206,9 @@ python3 ArtSource/Audio/ui/make_ui_sounds.py --table    # also prints this table
 
 The output is deterministic (fixed noise seeds): two runs give byte-identical files. Edit the `EVENTS` table (notes, durations, timbre) and re-run, then run **Set Up Sound** if clips were added. That menu only adds: it sets a new clip's import settings once, adds entries for new events, and leaves existing entries, hand-tuned values and the mixer alone.
 
-## Not in this set
+## Known limitations
 
-Gun shots, reloads, impacts and glass are a later weapons sound pass (see WEAPONS.md). Music and voice have buses but no content yet.
+- Synthesised clips were judged "very artificial" by Adam and are placeholders awaiting approved open-licence recordings.
+- Self-test (`RunSelfTest`) verified mixer routing, focus gating, and burst capping via meter output in batch mode, not by human listening in live Play Mode or on a client.
+- The ambient bed ships at `ambienceLevel = 0` (off) and loops at 64 s to keep the LFS file around 6 MB.
+- Music and voice buses exist in `GameMixer.mixer` without final content. Gun shots, reloads, impacts, and glass are a later weapons sound pass (see `WEAPONS.md`).

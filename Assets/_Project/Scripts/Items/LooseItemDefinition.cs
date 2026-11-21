@@ -1,28 +1,71 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 
 namespace CloseTheDeal.Items
 {
-    /// <summary>
-    /// Works out an item definition for a loose prop that was not given one: its name from the
-    /// prefab's name, its weight from its body's mass, how it sits in the hands from the size
-    /// of what is drawn, and how it flies from its weight and the carry profile's loose-prop
-    /// numbers. Derived at runtime, never saved (AGENTS.md §4); a hand-made definition on the
-    /// Pickup always wins. One is made per distinct prop (name, mass and size), not per copy.
-    /// Design: docs/systems/ITEMS.md, "Any loose prop".
-    /// </summary>
+    /// <summary>Derives and caches runtime ItemDefinitions for loose props without an authored asset. Design: docs/systems/ITEMS.md.</summary>
     public static class LooseItemDefinition
     {
-        static readonly Dictionary<string, ItemDefinition> Made = new();
+        readonly struct DefinitionKey : IEquatable<DefinitionKey>
+        {
+            readonly CarryProfile _rules;
+            readonly string _displayName;
+            readonly int _massCentis;
+            readonly int _sizeX;
+            readonly int _sizeY;
+            readonly int _sizeZ;
+
+            public DefinitionKey(CarryProfile rules, string displayName, float massKg, Vector3 size)
+            {
+                _rules = rules;
+                _displayName = displayName;
+                _massCentis = Mathf.RoundToInt(massKg * 100f);
+                _sizeX = Mathf.RoundToInt(size.x * 100f);
+                _sizeY = Mathf.RoundToInt(size.y * 100f);
+                _sizeZ = Mathf.RoundToInt(size.z * 100f);
+            }
+
+            public bool Equals(DefinitionKey other) =>
+                ReferenceEquals(_rules, other._rules)
+                && _massCentis == other._massCentis
+                && _sizeX == other._sizeX
+                && _sizeY == other._sizeY
+                && _sizeZ == other._sizeZ
+                && string.Equals(_displayName, other._displayName, StringComparison.Ordinal);
+
+            public override bool Equals(object obj) => obj is DefinitionKey other && Equals(other);
+
+            public override int GetHashCode() => HashCode.Combine(_rules, _displayName, _massCentis, _sizeX, _sizeY, _sizeZ);
+        }
+
+        static readonly Dictionary<DefinitionKey, ItemDefinition> Made = new();
+        static readonly Dictionary<string, string> ReadableNames = new();
         static readonly string[] NamePrefixes = { "SM_", "PF_", "Prop_", "Kit_", "Loose_" };
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            foreach (ItemDefinition definition in Made.Values)
+            {
+                if (definition != null)
+                    UnityEngine.Object.DestroyImmediate(definition);
+            }
+            Made.Clear();
+            ReadableNames.Clear();
+        }
 
         /// <summary>A definition for a prop of this name, mass and size, shared by every prop that matches.</summary>
         public static ItemDefinition For(string objectName, float massKg, Bounds localBounds, CarryProfile rules)
         {
-            string displayName = ReadableName(objectName);
-            Vector3 size = localBounds.size;
-            string key = $"{rules.GetInstanceID()}|{displayName}|{massKg:0.00}|{size.x:0.00}|{size.y:0.00}|{size.z:0.00}";
+            if (!ReadableNames.TryGetValue(objectName, out string displayName))
+            {
+                displayName = ReadableName(objectName);
+                ReadableNames[objectName] = displayName;
+            }
+
+            var key = new DefinitionKey(rules, displayName, massKg, localBounds.size);
             if (Made.TryGetValue(key, out ItemDefinition existing) && existing != null)
                 return existing;
 
@@ -66,11 +109,6 @@ namespace CloseTheDeal.Items
             return d;
         }
 
-        /// <summary>
-        /// Something wider than a hand span or heavier than one hand lifts takes both hands, one
-        /// on each side at a little above half its height, palms facing in. Anything smaller is
-        /// held in the right hand from underneath, palm up.
-        /// </summary>
         static void SeatHands(ItemDefinition d, Bounds bounds, float massKg)
         {
             Vector3 c = bounds.center;

@@ -8,12 +8,7 @@ using UnityEngine.Events;
 
 namespace CloseTheDeal.Items
 {
-    /// <summary>
-    /// The grenade case: pick it up, arm it, throw it. It beeps faster and faster and then
-    /// explodes wherever it is, the armer's hands included. The host owns the fuse and the
-    /// explosion; everyone else is told the tick it goes off and beeps along locally.
-    /// Not the objective briefcase: see docs/systems/ITEMS.md for how the two are told apart.
-    /// </summary>
+    /// <summary>Host-fused explosive gadget with local countdown beeps and blast flash. Design: docs/systems/ITEMS.md.</summary>
     public sealed class GrenadeCase : ItemBehaviour
     {
         [Tooltip("Fuse length, damage and the blast that throws players and furniture. Read at runtime, never written.")]
@@ -47,7 +42,6 @@ namespace CloseTheDeal.Items
         static readonly Color LightOn = new(1f, 0.15f, 0.1f);
         static readonly Color LightOff = new(0.25f, 0.03f, 0.02f);
 
-        /// <summary>The tick the case goes off. 0 while it is not armed.</summary>
         readonly SyncVar<uint> _detonateTick = new();
 
         MaterialPropertyBlock _block;
@@ -56,6 +50,7 @@ namespace CloseTheDeal.Items
         float _flashLeft;
         Vector3 _flashPoint;
         float _flashSize;
+        bool _ticking;
 
         /// <summary>Every machine. The case was armed.</summary>
         public event Action<GrenadeCase> Armed;
@@ -93,25 +88,52 @@ namespace CloseTheDeal.Items
             ItemAudio.Configure(_audio, Item.Sounds);
         }
 
+        public override void OnStopNetwork()
+        {
+            base.OnStopNetwork();
+            _nextBeepIn = 0f;
+            _lightOffIn = 0f;
+            _flashLeft = 0f;
+            if (_flash != null)
+                _flash.gameObject.SetActive(false);
+            ShowLight(false);
+            enabled = false;
+        }
+
         /// <summary>Out of play before it went off (it fell out of the building): it is disarmed, not left to go off at its home.</summary>
         public override void ServerOnSentAway(bool usedUp)
         {
             _detonateTick.Value = 0;
+            SetServerTick(false);
         }
 
         public override void OnStartServer()
         {
             base.OnStartServer();
-            TimeManager.OnTick += ServerTick;
+            _detonateTick.Value = 0;
+            _nextBeepIn = 0f;
+            _lightOffIn = 0f;
+            _flashLeft = 0f;
+            _ticking = false;
         }
 
         public override void OnStopServer()
         {
             base.OnStopServer();
-            TimeManager.OnTick -= ServerTick;
+            SetServerTick(false);
         }
 
-        // ---- Host ----------------------------------------------------------------------------
+        void SetServerTick(bool active)
+        {
+            if (_ticking == active || TimeManager == null)
+                return;
+
+            _ticking = active;
+            if (active)
+                TimeManager.OnTick += ServerTick;
+            else
+                TimeManager.OnTick -= ServerTick;
+        }
 
         public override void ServerUse(ItemCarrier user)
         {
@@ -119,17 +141,25 @@ namespace CloseTheDeal.Items
                 return;
 
             _detonateTick.Value = TimeManager.Tick + TimeManager.TimeToTicks(_profile.FuseSeconds, TickRounding.RoundUp);
+            SetServerTick(true);
         }
 
         public override void ServerOnReturned()
         {
             _detonateTick.Value = 0;
+            SetServerTick(false);
         }
 
         void ServerTick()
         {
             uint at = _detonateTick.Value;
-            if (at != 0 && TimeManager.Tick >= at)
+            if (at == 0)
+            {
+                SetServerTick(false);
+                return;
+            }
+
+            if (TimeManager.Tick >= at)
                 ServerExplode();
         }
 
@@ -138,6 +168,7 @@ namespace CloseTheDeal.Items
             // Wherever the case is right now: on the floor, in the air, or in someone's hands.
             Vector3 point = Item.Body.worldCenterOfMass;
             _detonateTick.Value = 0;
+            SetServerTick(false);
 
             if (_profile.Blast == null)
             {
@@ -146,15 +177,13 @@ namespace CloseTheDeal.Items
                 return;
             }
 
-            Knockback.Explode(point, _profile.Blast, ItemLayers.PlayerMask, ItemLayers.PropMask, KnockBuffer);
+            Knockback.Explode(point, _profile.Blast, ItemLayers.PlayerMask, ItemLayers.PropMask, KnockBuffer, Item.LastHolderClientId);
             ItemBlast.Damage(point, _profile.Blast.Radius, _profile.Damage, _profile.EdgeDamage, Item.LastHolderClientId);
             ObserversExploded(point, _profile.Blast.Radius);
             Item.ServerUseUp();
         }
 
         static readonly Collider[] KnockBuffer = new Collider[64];
-
-        // ---- Every machine -------------------------------------------------------------------
 
         void OnDetonateTickChanged(uint previous, uint next, bool asServer)
         {
@@ -193,7 +222,6 @@ namespace CloseTheDeal.Items
             _onExploded.Invoke();
         }
 
-        /// <summary>Runs only while armed or flashing. Beeps speed up as the fuse runs down.</summary>
         void Update()
         {
             float dt = Time.deltaTime;
@@ -235,7 +263,6 @@ namespace CloseTheDeal.Items
             _onBeep.Invoke();
         }
 
-        /// <summary>This case's own clip, else the shared set's. Null plays nothing.</summary>
         static AudioClip Pick(AudioClip own, AudioClip shared) => own != null ? own : shared;
 
         void ShowLight(bool on)
@@ -249,7 +276,6 @@ namespace CloseTheDeal.Items
             _light.SetPropertyBlock(_block);
         }
 
-        /// <summary>The flash grows to the blast's size where it went off, whatever the case itself is doing by then.</summary>
         void StepFlash(float dt)
         {
             _flashLeft -= dt;

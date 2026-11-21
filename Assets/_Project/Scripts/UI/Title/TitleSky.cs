@@ -5,13 +5,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI.Title
 {
-    /// <summary>
-    /// The live sky behind the title screen's window frame. In any scene with the UI kit's title screen it adds
-    /// itself: a camera that draws only the scene's own sky (the Office Look sky shader: clouds drift, planes
-    /// cross), slowly breathing, into a render texture shown in TitleScreen.BackdropSlot. The camera renders only
-    /// while the title is on screen, draws no scene geometry and no lights of its own, so it costs nothing in a
-    /// game and cannot leak into gameplay. Design: docs/systems/UI_TITLE.md.
-    /// </summary>
+    /// <summary>Renders the scene skybox into TitleScreen.BackdropSlot while the title screen is active.</summary>
     public sealed class TitleSky : MonoBehaviour
     {
         [Header("View")]
@@ -50,6 +44,10 @@ namespace CloseTheDeal.UI.Title
         RenderTexture _texture;
         bool _showing;
         Quaternion _base;
+        int _lastScreenW;
+        int _lastScreenH;
+        Vector2 _lastSlotSize;
+        float _lastScale;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Install()
@@ -130,18 +128,33 @@ namespace CloseTheDeal.UI.Title
             _image.enabled = show;
             _title.SetLiveBackdrop(show);
             if (show)
+            {
                 TitleSkyOverride.Acquire(_planeEverySeconds);
+                EnsureTexture();
+            }
             else
+            {
                 TitleSkyOverride.Release();
+                ReleaseTexture();
+            }
         }
 
-        /// <summary>The render texture matches the slot's size on screen, so the sky is drawn 1:1.</summary>
         void EnsureTexture()
         {
-            // Measured from the slot's corners on screen, so it is 1:1 in an overlay canvas and in a camera canvas
-            // alike (the canvas scale factor alone came out at 2/3 of the slot in a camera canvas: a soft, upscaled sky).
+            // Measure screen-pixel corners so the RT is 1:1 in both overlay and camera canvases.
             if (_canvas == null)
                 _canvas = _title.BackdropSlot.GetComponentInParent<Canvas>().rootCanvas;
+            Vector2 slotSize = _title.BackdropSlot.rect.size;
+            float scale = _canvas.scaleFactor;
+            if (_texture != null && Screen.width == _lastScreenW && Screen.height == _lastScreenH
+                && slotSize == _lastSlotSize && Mathf.Approximately(scale, _lastScale))
+                return;
+
+            _lastScreenW = Screen.width;
+            _lastScreenH = Screen.height;
+            _lastSlotSize = slotSize;
+            _lastScale = scale;
+
             Camera eye = _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _canvas.worldCamera;
             _title.BackdropSlot.GetWorldCorners(_corners);
             Vector2 a = RectTransformUtility.WorldToScreenPoint(eye, _corners[0]);
@@ -150,40 +163,57 @@ namespace CloseTheDeal.UI.Title
             int h = Mathf.Max(16, Mathf.RoundToInt(Mathf.Abs(b.y - a.y)));
             if (_texture != null && _texture.width == w && _texture.height == h)
                 return;
-            if (_texture != null)
-            {
-                _camera.targetTexture = null;
-                _texture.Release();
-                Destroy(_texture);
-            }
+            ReleaseTexture();
             _texture = new RenderTexture(w, h, 16) { name = "Title sky" };
             _camera.targetTexture = _texture;
             _camera.aspect = w / (float)h;
             _image.texture = _texture;
         }
 
-        void OnDestroy()
+        void ReleaseTexture()
         {
-            if (_showing)
-                TitleSkyOverride.Release();
+            if (_camera != null)
+                _camera.targetTexture = null;
+            if (_image != null)
+                _image.texture = null;
             if (_texture != null)
             {
                 _texture.Release();
                 Destroy(_texture);
+                _texture = null;
             }
+            _lastScreenW = 0;
+            _lastScreenH = 0;
+        }
+
+        void OnDestroy()
+        {
+            if (_showing)
+                TitleSkyOverride.Release();
+            ReleaseTexture();
         }
     }
 
-    /// <summary>
-    /// The one place that swaps the scene's sky for a title-screen copy (more planes). Shared by TitleSky and
-    /// TitleBackdrop so neither can restore the other's copy: the first user makes the copy, the last puts the
-    /// original back. The sky asset itself is never written.
-    /// </summary>
+    /// <summary>Ref-counted runtime skybox copy for title-screen plane cadence without mutating the asset.</summary>
     public static class TitleSkyOverride
     {
         static readonly int PlaneEvery = Shader.PropertyToID("_PlaneEvery");
         static Material _original, _copy;
         static int _users;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            if (_copy != null)
+            {
+                if (RenderSettings.skybox == _copy)
+                    RenderSettings.skybox = _original;
+                if (Application.isPlaying) Object.Destroy(_copy); else Object.DestroyImmediate(_copy);
+            }
+            _copy = null;
+            _original = null;
+            _users = 0;
+        }
 
         public static void Acquire(float planeEverySeconds)
         {

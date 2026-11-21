@@ -1,62 +1,25 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-13
-//  Prompt    : Alex: "make the dummy and arsenal section be on the ceiling. to access it,
-//              you should [take] an elevator" (then: "open rooftop")
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : The lift between KitOffice's ground floor and its rooftop range. Its own file and
-//              system because nothing else in the game moves the floor under a predicted player:
-//              the host decides when a ride starts, and every machine works the car's height out
-//              from that one start tick, so the car itself is never sent over the network.
-// -----------------------------------------------------------------------------
+using CloseTheDeal.Player;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using UnityEngine;
 
 namespace CloseTheDeal.Lift
 {
-    /// <summary>The host's word on the lift: where the last ride left from and when. Sent only when a ride is scheduled.</summary>
+    /// <summary>Host-synced lift state: departure stop, departure host tick, and active ride flag.</summary>
     public struct LiftRide
     {
-        /// <summary>Stop the ride leaves from: 0 the lower stop, 1 the upper. Before any ride, the stop the car waits at.</summary>
         public byte FromStop;
-        /// <summary>Host tick at which the doors start to close. Meaningless until <see cref="Departed"/> is true.</summary>
         public uint DepartTick;
-        /// <summary>False until the first ride is scheduled, so the unsynced default reads as "waiting at the lower stop".</summary>
         public bool Departed;
     }
 
-    /// <summary>
-    /// A two-stop lift. Players walk into the car, the doors close, it rides to the other stop and the doors open.
-    /// Design, ownership and limits: docs/systems/ELEVATOR.md.
-    /// </summary>
-    /// <remarks>
-    /// <para>Ownership (AGENTS.md §3): the host alone schedules a ride, by writing one <see cref="LiftRide"/>.
-    /// Clients never decide anything; they compute the same car height and door positions from the ride's start
-    /// tick. Synced: that one value, on change (a few bytes per ride). Nothing is sent per tick.</para>
-    /// <para>WHY the car is a function of the tick rather than a streamed transform: the player body is
-    /// client-predicted and re-simulated on every reconcile. A streamed car would be in the wrong place during
-    /// those replays and the rider would be corrected every tick. A pure function of the tick can be put back
-    /// exactly for each replayed tick. The alternative, a closed-door ride where the host teleports the riders,
-    /// lost because it cannot carry loose props and hides the ride; it stays the fallback if this jitters.</para>
-    /// <para>Call order: the scene builder wires every reference; nothing is resolved at runtime. The car's and
-    /// the door leaves' authored positions are read once in Awake and never written back (AGENTS.md §4): the car
-    /// and leaves are the declared moving parts.</para>
-    /// </remarks>
+    /// <summary>Two-stop lift driven deterministically from a host-synced departure tick. Design: docs/systems/ELEVATOR.md.</summary>
     [DisallowMultipleComponent]
     public sealed class Elevator : NetworkBehaviour
     {
-        /// <summary>Number of stops. Two by design: the smallest lift that does the job.</summary>
         const int StopCount = 2;
-        /// <summary>Door leaves per stop: a bi-parting pair.</summary>
         const int LeavesPerStop = 2;
-        /// <summary>
-        /// Seconds between the host scheduling a ride and the doors starting to move, so the scheduled start
-        /// reaches every client before it happens. 0.25 s covers a 250 ms one-way delay, well over a residential link.
-        /// </summary>
         const float ScheduleLeadSeconds = 0.25f;
-        /// <summary>Most players the overlap checks can report. 8 is the game's player cap (AGENTS.md §2).</summary>
         const int MaxPlayers = 8;
 
         [Header("Parts (wired by the scene builder)")]
@@ -91,29 +54,23 @@ namespace CloseTheDeal.Lift
         [Tooltip("How close to a call spot a player must stand to call the car, in metres.")]
         [Range(0.5f, 4f)] [SerializeField] float _callRadius = 1.5f;
 
+        const float PollIntervalSeconds = 0.1f;
+
         readonly SyncVar<LiftRide> _ride = new();
-        readonly Collider[] _hits = new Collider[MaxPlayers];
+        readonly Collider[] _hits = new Collider[MaxPlayers * 2];
         readonly Vector3[] _doorClosed = new Vector3[StopCount * LeavesPerStop];
-        /// <summary>Each leaf's fully-open offset from its closed position, metres, in its parent's space. Derived, never written back.</summary>
         readonly Vector3[] _doorOpenOffset = new Vector3[StopCount * LeavesPerStop];
 
-        /// <summary>The car's authored position, world metres: the lower stop. Read once, never written back.</summary>
         Vector3 _carRest;
-        /// <summary>Seconds the car spends getting up to speed (and again slowing down), derived from the tuning.</summary>
         float _accelSeconds;
-        /// <summary>Seconds at top speed between speeding up and slowing down; 0 on a ride too short to reach it.</summary>
         float _cruiseSeconds;
-        /// <summary>Seconds from the doors starting to close to their being fully open at the other stop.</summary>
         float _rideSeconds;
-        /// <summary>Seconds the car is actually moving.</summary>
         float _travelSeconds;
-        /// <summary>Client only: this machine's tick minus the host tick it stands for, taken from the last reconcile.</summary>
         long _localAheadOfHost;
         bool _haveReconciled;
-        /// <summary>True once the car and doors have been put at rest for the current ride, so idle ticks do nothing.</summary>
         bool _restPlaced;
-        /// <summary>Host only: ticks a rider or caller has been waiting.</summary>
         int _dwellTicks;
+        int _pollTicks;
 
         /// <summary>The stop the car is at or heading to: 0 lower, 1 upper.</summary>
         public int TargetStop => _ride.Value.Departed ? OtherStop(_ride.Value.FromStop) : _ride.Value.FromStop;
@@ -124,12 +81,10 @@ namespace CloseTheDeal.Lift
             for (int i = 0; i < _doorLeaves.Length; i++)
             {
                 _doorClosed[i] = _doorLeaves[i].localPosition;
-                // WHY rotated: the slide is authored in the leaf's own space (a mirrored pair both open along
-                // their own +X), but localPosition is in the parent's space.
+                // Slide is authored in leaf space (mirrored pair opens along +X), while localPosition is in parent space.
                 _doorOpenOffset[i] = _doorLeaves[i].localRotation * _doorSlides[i];
             }
 
-            // Speed profile: speed up, hold, slow down. A ride too short to reach top speed has no hold.
             float accelDistance = 0.5f * _speed * _speed / _acceleration;
             if (2f * accelDistance >= _travel)
             {
@@ -159,6 +114,9 @@ namespace CloseTheDeal.Lift
             PredictionManager.OnPreReconcile += OnPreReconcile;
             PredictionManager.OnPreReplicateReplay += OnPreReplicateReplay;
             _restPlaced = false;
+            _haveReconciled = false;
+            _localAheadOfHost = 0;
+            _pollTicks = 0;
         }
 
         public override void OnStopNetwork()
@@ -172,17 +130,16 @@ namespace CloseTheDeal.Lift
         public override void OnStartServer()
         {
             base.OnStartServer();
-            // A new session starts with the car waiting at the lower stop, wherever the last one left it.
+            // Reset ride state per session so the car starts waiting at the lower stop.
             _ride.Value = default;
             _dwellTicks = 0;
+            _pollTicks = 0;
         }
 
         void OnRideChanged(LiftRide previous, LiftRide next, bool asServer)
         {
             _restPlaced = false;
         }
-
-        // ---- Ticks ---------------------------------------------------------------------------
 
         void OnTick()
         {
@@ -194,20 +151,18 @@ namespace CloseTheDeal.Lift
 
         void OnPreReconcile(uint clientTick, uint serverTick)
         {
-            // WHY: the reconcile pairs one of this machine's ticks with the host tick that produced the state.
-            // The difference is how far ahead this client runs, which turns its own tick into the host's.
+            // Reconcile pairs clientTick with the host tick so clients can map LocalTick to host tick.
             _localAheadOfHost = (long)clientTick - serverTick;
             _haveReconciled = true;
         }
 
         void OnPreReplicateReplay(uint clientTick, uint serverTick)
         {
-            // FishNet is about to re-run physics for a past tick: put the car back where it was then.
+            // FishNet re-runs physics for past ticks during replay; restore the car to that tick first.
             if (!IsServerStarted)
                 Place(serverTick, true);
         }
 
-        /// <summary>The host tick this machine's current tick stands for.</summary>
         uint HostTickNow()
         {
             if (IsServerStarted)
@@ -218,16 +173,11 @@ namespace CloseTheDeal.Lift
             return tick > 0 ? (uint)tick : 0u;
         }
 
-        /// <summary>
-        /// Sets the car and doors up for the physics step of host tick <paramref name="hostTick"/>: the step
-        /// carries the car to where it is at the next tick, pushing whoever stands on it.
-        /// </summary>
-        /// <param name="rewind">True in a replay: first put the car where it was at the start of that tick.</param>
         void Place(uint hostTick, bool rewind)
         {
             LiftRide ride = _ride.Value;
             bool resting = !ride.Departed || SecondsInto(ride, hostTick + 1) <= 0f || SecondsInto(ride, hostTick) >= _rideSeconds;
-            // Early-out (AGENTS.md §6): a lift standing at a stop with its doors set costs nothing per tick.
+            // Early-out once the resting pose is applied so idle ticks do no work.
             if (resting && _restPlaced)
                 return;
 
@@ -243,29 +193,36 @@ namespace CloseTheDeal.Lift
             _restPlaced = resting;
         }
 
-        // ---- Host: who starts a ride ---------------------------------------------------------
-
         void HostStep(uint tick)
         {
             LiftRide ride = _ride.Value;
             if (ride.Departed && SecondsInto(ride, tick) < _rideSeconds)
             {
                 _dwellTicks = 0;
+                _pollTicks = 0;
                 return;
             }
 
+            int pollInterval = Mathf.Max(1, TicksFor(PollIntervalSeconds));
+            _pollTicks++;
+            if (_pollTicks < pollInterval)
+                return;
+
+            _pollTicks = 0;
+
             int here = TargetStop;
             Vector3 cabin = _car.transform.TransformPoint(_cabinCentre);
-            bool riders = Physics.OverlapBoxNonAlloc(cabin, _cabinSize * 0.5f, _hits, _car.rotation, _playerMask, QueryTriggerInteraction.Ignore) > 0;
-            // Riders win over a caller: the car is theirs until they step out.
-            bool called = !riders && Physics.OverlapSphereNonAlloc(_callPoints[OtherStop(here)].position, _callRadius, _hits, _playerMask, QueryTriggerInteraction.Ignore) > 0;
+            int cabinHits = Physics.OverlapBoxNonAlloc(cabin, _cabinSize * 0.5f, _hits, _car.rotation, _playerMask, QueryTriggerInteraction.Ignore);
+            bool riders = HasPlayer(cabinHits);
+            // Riders take priority over callers until they step out.
+            bool called = !riders && HasPlayer(Physics.OverlapSphereNonAlloc(_callPoints[OtherStop(here)].position, _callRadius, _hits, _playerMask, QueryTriggerInteraction.Ignore));
             if (!riders && !called)
             {
                 _dwellTicks = 0;
                 return;
             }
 
-            _dwellTicks++;
+            _dwellTicks += pollInterval;
             if (_dwellTicks < TicksFor(_dwellSeconds))
                 return;
 
@@ -273,19 +230,26 @@ namespace CloseTheDeal.Lift
             _ride.Value = new LiftRide { FromStop = (byte)here, DepartTick = tick + (uint)TicksFor(ScheduleLeadSeconds), Departed = true };
         }
 
-        // ---- The ride as a function of the tick ----------------------------------------------
+        bool HasPlayer(int hitCount)
+        {
+            for (int i = 0; i < hitCount; i++)
+            {
+                Rigidbody body = _hits[i].attachedRigidbody;
+                if (body != null && body.TryGetComponent<PlayerMotor>(out _))
+                    return true;
+            }
+            return false;
+        }
 
         static int OtherStop(int stop) => StopCount - 1 - stop;
 
         int TicksFor(float seconds) => Mathf.CeilToInt(seconds / (float)TimeManager.TickDelta);
 
-        /// <summary>Seconds since the ride's doors started closing at <paramref name="hostTick"/>; negative before then.</summary>
         float SecondsInto(LiftRide ride, uint hostTick)
         {
             return (float)(((long)hostTick - ride.DepartTick) * TimeManager.TickDelta);
         }
 
-        /// <summary>Where the car's pivot is at <paramref name="hostTick"/>, world metres.</summary>
         Vector3 CarPosition(LiftRide ride, uint hostTick)
         {
             float height = ride.FromStop == 0 ? 0f : _travel;
@@ -297,7 +261,6 @@ namespace CloseTheDeal.Lift
             return _carRest + Vector3.up * height;
         }
 
-        /// <summary>Metres travelled <paramref name="seconds"/> after the car starts moving: speed up, hold, slow down.</summary>
         float DistanceAfter(float seconds)
         {
             if (seconds <= 0f)
@@ -316,7 +279,6 @@ namespace CloseTheDeal.Lift
             return _travel - 0.5f * _acceleration * left * left;
         }
 
-        /// <summary>How open the doors at <paramref name="stop"/> are at <paramref name="hostTick"/>: 0 shut, 1 fully open.</summary>
         float DoorOpen(LiftRide ride, int stop, uint hostTick)
         {
             if (!ride.Departed)

@@ -5,13 +5,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Integration
 {
-    /// <summary>
-    /// The shared reception players wait in before and between matches, standing at street level
-    /// beside the towers. The match counts it as in play (neutral ground), so nobody waiting
-    /// there is treated as fallen out. The ready board, desk prompts and fitting room only answer
-    /// while this machine's own player stands inside it. Local on every machine; nothing is sent.
-    /// Lives on the reception's root. Design: docs/systems/INTEGRATION.md.
-    /// </summary>
+    /// <summary>Marks the shared reception room as neutral ground and gates lobby interaction outside it. Design: docs/systems/INTEGRATION.md.</summary>
     [DisallowMultipleComponent]
     public sealed class LobbyRoom : MonoBehaviour
     {
@@ -22,6 +16,12 @@ namespace CloseTheDeal.Integration
         [SerializeField] Vector3 _size = new(24f, 4.5f, 16f);
 
         public static LobbyRoom Instance { get; private set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+        }
 
         MatchDirector _match;
         bool _blockingLobby;
@@ -59,7 +59,6 @@ namespace CloseTheDeal.Integration
             return Mathf.Abs(local.x) <= half.x && local.y >= -0.5f && local.y <= _size.y && Mathf.Abs(local.z) <= half.z;
         }
 
-        /// <summary>The towers were (re)built: the arena forgot its neutral ground, so the room is added back.</summary>
         void AddToArena()
         {
             MatchArena arena = _match.Arena;
@@ -77,7 +76,6 @@ namespace CloseTheDeal.Integration
             arena.AddNeutral(bounds);
         }
 
-        /// <summary>This machine's player outside the room means the lobby's board and prompts stand down.</summary>
         void Update()
         {
             PlayerMotor local = PlayerMotor.Local;

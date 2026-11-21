@@ -22,11 +22,7 @@ namespace CloseTheDeal.Onboarding
         MatchRecorded
     }
 
-    /// <summary>
-    /// What a new player is told, and when: one hint per moment, shown once per player and
-    /// remembered in their profile. Designer content: read at runtime, never written. The
-    /// shipped hints are proposals for the owner. Design: docs/systems/ONBOARDING.md.
-    /// </summary>
+    /// <summary>Designer-owned list of first-run onboarding hints and pacing gap. Design: docs/systems/ONBOARDING.md.</summary>
     [CreateAssetMenu(menuName = "Seal the Deal/Onboarding/Hints", fileName = "OnboardingHints")]
     public sealed class OnboardingHints : ScriptableObject
     {

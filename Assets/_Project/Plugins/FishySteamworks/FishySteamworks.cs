@@ -199,8 +199,12 @@ namespace FishySteamworks
         {
             if (server)
                 return _server.GetLocalConnectionState();
-            else
-                return _client.GetLocalConnectionState();
+
+            // Fork patch: report clientHost state when acting as host (see FORK.md).
+            LocalConnectionState hostClientState = _clientHost.GetLocalConnectionState();
+            return hostClientState != LocalConnectionState.Stopped
+                ? hostClientState
+                : _client.GetLocalConnectionState();
         }
         /// <summary>
         /// Gets the current ConnectionState of a remote client on the server.

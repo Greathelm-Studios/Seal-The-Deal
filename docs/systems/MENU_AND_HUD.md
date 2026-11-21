@@ -1,8 +1,8 @@
-# MENU AND HUD
+# Menu and HUD
 
-**Status:** Current · **Last updated:** 2026-11-13 · **Verified against:** the UI kit slice 1 commit
+**Status:** Current (verified against UI kit slice 1; client-side in-game menu and HUD still need two-instance live testing) · **Last updated:** 2026-11-21
 
-## What happens in the game
+## What the player sees
 
 The game opens on the UI kit's title screen ([UI_KIT.md](UI_KIT.md)): **Host game**, **Join on this PC** (local test mode only), **Settings** and **Quit to desktop**, the Steam or local mode line and the status line. There are no lobby codes. In a scene without the kit, the playtest card shows instead. Hosting, joining, loading and every failure are the kit's (session and problem panels over the title, UI_KIT.md). In a game, Esc opens the kit's in-game menu, a glass pane over the running game (UI_KIT.md "What the player sees"): Back to game, Invite friends (Steam only), Settings and Leave game (asks first, host and client words differ), reception's seats while waiting, and the match lane's section. Only a scene without the kit still shows the old dark playtest card.
 
@@ -11,6 +11,10 @@ In game the menu is gone: the crosshair in the centre (drawn from Settings › A
 In a scene with the briefcase match ([MATCH.md](MATCH.md)) the in-game menu also carries the match lane's section (in its match slot, `KitUI/InGameMenu/Content/MatchSlot`; Set Up UI moves an existing section there from the old card): where the match stands, the result and how it was won, and the host's **Start the match** / **Rematch** (clients read "The host can start a rematch."). The match opens the menu when it ends. The HUD adds the clock (top centre), both firms' briefcase and checkpoint (top right, yours first, cyan and amber), the countdown, the F / G prompt under the crosshair and one-off lines at the bottom.
 
 Greybox: this is a playtest tool, not the final lobby. The final one lives in the reception with the secretary (GDD).
+
+## Ownership and netcode boundary
+
+`GameMenu` and `PredictionDebugHud` are local client-side presentation. `GameMenu` watches local player presence (`PlayerMotor.Local != null`) and `SteamLobby` events to own the local cursor lock, input gating, and HUD visibility. `HoldCursor` and `ReleaseCursor` are reference-counted local cursor holds per owner (with destroyed owners pruned automatically and all holds cleared on game transitions). `PredictionDebugHud` polls local `PlayerMotor.Local` and `SwitchboardStats` at 10 Hz (`0.1 s`), rebuilding strings only when sampled values change.
 
 ## Rules the menu keeps
 
@@ -31,7 +35,8 @@ Flat dark card, amber for the one primary action per state, white text with a mu
 
 - [GameMenu.cs](../../Assets/_Project/Scripts/UI/GameMenu.cs): state, buttons, the mouse. Text is rebuilt only on lobby events, never per frame.
 - [PredictionDebugHud.cs](../../Assets/_Project/Scripts/UI/PredictionDebugHud.cs): the network readout; see NETCODE.md "What to watch". Hidden by Settings › Accessibility › Show network stats (on by default while netcode is tested).
-- [GreyboxUiSetup.cs](../../Assets/_Project/Editor/Greybox/GreyboxUiSetup.cs) `Ensure` and Rebuild Game UI also add the UI kit (Seal the Deal > Lanes > Set Up UI) and keep it pointed at the menu.
+- [GreyboxUiSetup.cs](../../Assets/_Project/Editor/Greybox/GreyboxUiSetup.cs) `Ensure` and Rebuild Game UI also add the UI kit (Seal the Deal > Lanes > Set Up UI) and keep it pointed at the menu. `Ensure` leaves an existing `GameUI` alone unless it detects legacy pre-TMP `LobbyCanvas` or pre-codeless `JoinCodeGroup` widgets; `Rebuild Game UI` prompts with a confirmation dialog in interactive Editor sessions because scene objects cannot carry `GeneratedAssetGuard` asset labels.
+- [GreyboxSceneSetup.cs](../../Assets/_Project/Editor/Greybox/GreyboxSceneSetup.cs) keeps `SetUpScene` separate from `EnsurePlayRig` so `Greybox.unity` preserves its build order (`Tower` between `NetworkManager` and `UI`), and nests `STDMC_Toon.prefab` inside `Player.prefab` so character model updates propagate without rebuilding `Player.prefab`.
 - [GreyboxUiSetup.cs](../../Assets/_Project/Editor/Greybox/GreyboxUiSetup.cs): builds the whole `GameUI` canvas. **Seal the Deal > Greybox > Rebuild Game UI** deletes and rebuilds it after asking, so change layout, copy and colours there rather than in the scene; hand edits in the scene are lost on a rebuild.
 - [GreyboxUiPreview.cs](../../Assets/_Project/Editor/Greybox/GreyboxUiPreview.cs): **Capture UI Preview** renders the start, hosting, local and in-game states to PNGs without entering Play Mode.
 

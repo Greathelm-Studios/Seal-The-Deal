@@ -1,12 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-11
-  Prompt    : Alex on round 2 of the window bay: "None, push further"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Round-3 brief to Codex. Round 2's directions were trims and its renders flat; this asks for
-              bigger architectural moves and proper staging, so the window bay has an identity to model.
--->
 # Round 3 — window bay: push further
 
 **From:** Alex, drafted by Claude · **Date:** 2026-11-11 · Builds on [FEEDBACK_01.md](FEEDBACK_01.md) and [REQUEST.md](REQUEST.md); this wins where they differ.

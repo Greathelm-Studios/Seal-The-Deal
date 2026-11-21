@@ -19,18 +19,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.Editor.Lanes
 {
-    /// <summary>
-    /// The lobby lane's one editor tool. Seal the Deal > Lanes > Set Up Lobby:
-    /// 1. writes the outfit catalog, lobby rules and secretary lines under Profiles/Customisation
-    ///    (only those that don't exist yet; a designer's edits are never overwritten),
-    /// 2. writes the outfit character prefab and puts it on Player.prefab with PlayerOutfit
-    ///    (skipped with a warning if a person has edited Player.prefab, GeneratedAssetGuard),
-    /// 3. builds Scenes/Lanes/Lane_Lobby.unity from the office kit: the shared ground-floor
-    ///    reception with desk, secretary, firm stands, lifts, directory and the tailor's corner,
-    ///    the player rig, the lobby systems and their UI. It asks before replacing the scene.
-    /// Re-run it after a merge to put this lane's parts back on Player.prefab.
-    /// Design: docs/systems/LOBBY.md, docs/systems/CUSTOMISATION.md.
-    /// </summary>
+    /// <summary>Additive setup for customisation catalog, OutfitCharacter, Player.prefab outfit, and Lane_Lobby.unity.</summary>
     public static class LobbyLaneSetup
     {
         const string ScenePath = "Assets/_Project/Scenes/Lanes/Lane_Lobby.unity";
@@ -56,8 +45,6 @@ namespace CloseTheDeal.Editor.Lanes
         // Art bible §03 swatches.
         static readonly Color Paper = Hex(0xF3F4F4), Silver = Hex(0xC9CED3), Navy = Hex(0x111B38), Cobalt = Hex(0x244FB9);
         static readonly Color Cyan = Hex(0x20D4E6), NearBlack = Hex(0x101116), Ink2 = Hex(0x4A5468), Ink3 = Hex(0x5B6576);
-
-        // ---- Menu ----------------------------------------------------------------------------
 
         [MenuItem("Seal the Deal/Lanes/Set Up Lobby")]
         public static void SetUpFromMenu()
@@ -90,8 +77,6 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log("[Lobby] Set Up Lobby finished: " + ScenePath);
         }
 
-        // ---- Assets --------------------------------------------------------------------------
-
         internal static void EnsureFolders()
         {
             EnsureFolder("Assets/_Project/Profiles", "Customisation");
@@ -107,11 +92,6 @@ namespace CloseTheDeal.Editor.Lanes
                 AssetDatabase.CreateFolder(parent, name);
         }
 
-        /// <summary>
-        /// The lobby rules asset, with the two match firm definitions filled in when its firm list
-        /// is empty (a designer's own list is never touched). The firms' names and colours live in
-        /// those definitions, Profiles/Match, and nowhere else.
-        /// </summary>
         internal static LobbyRules EnsureRules()
         {
             var rules = EnsureAsset<LobbyRules>(RulesPath, null);
@@ -134,7 +114,6 @@ namespace CloseTheDeal.Editor.Lanes
             return rules;
         }
 
-        /// <summary>Creates the asset only if nothing is there yet; an existing one is the designer's.</summary>
         internal static T EnsureAsset<T>(string path, System.Action<T> fill) where T : ScriptableObject
         {
             var existing = AssetDatabase.LoadAssetAtPath<T>(path);
@@ -147,7 +126,6 @@ namespace CloseTheDeal.Editor.Lanes
             return asset;
         }
 
-        /// <summary>One option per colour. Unlock counts are runs started on this PC.</summary>
         struct OptionSpec
         {
             public string Name;
@@ -200,10 +178,8 @@ namespace CloseTheDeal.Editor.Lanes
             return option;
         }
 
-        /// <summary>Bible §05: the shadow side is colder, not just darker.</summary>
         static Color ShadowOf(Color c) => new(c.r * 0.55f + 0.02f, c.g * 0.58f + 0.03f, c.b * 0.70f + 0.09f, 1f);
 
-        /// <summary>CHARACTER_SHADER.md: the contour is the opposite value to the surface.</summary>
         static Color ContourOf(Color c) => c.grayscale > 0.45f ? Navy : Silver;
 
         // STDMC's body is one mesh with seven materials; which material is which part was found
@@ -307,12 +283,6 @@ namespace CloseTheDeal.Editor.Lanes
                 });
         }
 
-        // ---- Character -----------------------------------------------------------------------
-
-        /// <summary>
-        /// Prefabs/Lobby/OutfitCharacter: STDMC fitted to 1.8 m, feet at 0, facing +Z, under a
-        /// "Fit" pivot the outfit bob moves. Rewritten only while the tool still owns it.
-        /// </summary>
         internal static GameObject EnsureCharacterPrefab(OutfitCatalog catalog)
         {
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterPrefabPath);
@@ -342,7 +312,6 @@ namespace CloseTheDeal.Editor.Lanes
             return prefab;
         }
 
-        /// <summary>The bounds of every renderer under the model, so a model split into parts is measured whole.</summary>
         static Bounds CombinedBounds(Transform model)
         {
             Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
@@ -365,7 +334,6 @@ namespace CloseTheDeal.Editor.Lanes
                 list.GetArrayElementAtIndex(i).objectReferenceValue = renderers[i];
         }
 
-        /// <summary>Scales the model to CharacterHeight and stands it on y = 0, centred, using its rendered bounds.</summary>
         static void FitToHeight(Transform model)
         {
             Bounds b = CombinedBounds(model);
@@ -376,13 +344,6 @@ namespace CloseTheDeal.Editor.Lanes
             model.localPosition += new Vector3(parent.x - b.center.x, parent.y - b.min.y, parent.z - b.center.z);
         }
 
-        /// <summary>
-        /// Puts the outfit character on Player.prefab under the Lean pivot (so it tilts with the
-        /// lean), hides the greybox capsule and nose, and adds PlayerOutfit. The edit only adds
-        /// and is safe to repeat, so it is made even when a person has touched the prefab; the
-        /// tool's "I own this" label is then kept only if the tool still owned the prefab
-        /// (GeneratedAssetGuard), exactly as the pickups lane does.
-        /// </summary>
         internal static void PatchPlayerPrefab(GameObject character)
         {
             bool toolOwned = GeneratedAssetGuard.MayOverwrite(PlayerPrefabPath);
@@ -427,13 +388,6 @@ namespace CloseTheDeal.Editor.Lanes
 
         const string MigrationTitle = "Seal the Deal: one figure per player";
 
-        /// <summary>
-        /// One-off migration, 14 Nov 2026 (AgentHub #543, owner's go-ahead): Player.prefab drew every
-        /// player twice, the lobby's greybox Outfit figure on top of the real character at
-        /// Graphics/Lean/Body. This deletes Graphics/Lean/Outfit, gives Body an OutfitView if it has
-        /// none, and points PlayerOutfit's View at it. Nothing else on the prefab is touched. It
-        /// asks before acting and does nothing when there is nothing to fix.
-        /// </summary>
         [MenuItem("Seal the Deal/Lanes/Migrations/Player: Outfit on the Real Model (once)")]
         static void MigrateOutfitToModelMenu()
         {
@@ -444,7 +398,6 @@ namespace CloseTheDeal.Editor.Lanes
             MigrateOutfitToModel();
         }
 
-        /// <summary>The migration's work, also reachable from -executeMethod for the one batch run that applies it.</summary>
         internal static void MigrateOutfitToModel()
         {
             GameObject root = PrefabUtility.LoadPrefabContents(PlayerPrefabPath);
@@ -484,11 +437,6 @@ namespace CloseTheDeal.Editor.Lanes
             }
         }
 
-        /// <summary>
-        /// True when Lean/Body already holds a real character (the toon STDMC model Alex's player
-        /// build puts there): then the outfit is attached to it instead of adding a second figure.
-        /// The greybox capsule has one material, a model has several.
-        /// </summary>
         static bool FindModelBody(Transform lean, out Transform model)
         {
             model = null;
@@ -513,7 +461,6 @@ namespace CloseTheDeal.Editor.Lanes
             return false;
         }
 
-        /// <summary>An existing model gets the outfit on its own object. Nothing is added to the hierarchy and nothing is hidden; a figure this tool added earlier is removed.</summary>
         static OutfitView AttachToModel(Transform lean, Transform model)
         {
             // Only adds (AGENTS.md §4): a greybox figure an earlier run added stays, and is reported.
@@ -534,7 +481,6 @@ namespace CloseTheDeal.Editor.Lanes
             return view;
         }
 
-        /// <summary>The greybox player has only a capsule: stand the outfit character in it and hide the capsule and nose.</summary>
         static OutfitView AddOutfitCharacter(Transform lean, GameObject character)
         {
             Transform outfit = lean.Find("Outfit");
@@ -566,8 +512,6 @@ namespace CloseTheDeal.Editor.Lanes
             foreach (Transform child in t)
                 SetLayer(child, layer);
         }
-
-        // ---- Scene ---------------------------------------------------------------------------
 
         static Material _paper, _navy, _cobalt, _silver, _glass, _cyan, _plaza;
 
@@ -605,11 +549,6 @@ namespace CloseTheDeal.Editor.Lanes
             EditorSceneManager.SaveScene(scene);
         }
 
-        /// <summary>
-        /// FishNet gives scene objects their network ids when a person edits the scene, but not for
-        /// objects a tool adds in a headless run; without them the roster never starts on the
-        /// network. Needs the scene saved first. FishNet's method is internal, hence reflection.
-        /// </summary>
         static void AssignSceneIds(Scene scene)
         {
             System.Reflection.MethodInfo create = typeof(NetworkObject).GetMethod("CreateSceneId",
@@ -639,7 +578,6 @@ namespace CloseTheDeal.Editor.Lanes
 
         static Material KitMaterial(string name) => AssetDatabase.LoadAssetAtPath<Material>($"{KitMaterials}/{name}.mat");
 
-        /// <summary>A plain URP Lit material for the two colours the kit has no material for.</summary>
         static Material EnsureFlatMaterial(string name, Color colour)
         {
             string path = $"{MaterialFolder}/{name}.mat";
@@ -670,7 +608,6 @@ namespace CloseTheDeal.Editor.Lanes
             return t;
         }
 
-        /// <summary>A box made from a cube, sized in metres, standing on its base at <paramref name="footprint"/>.</summary>
         static GameObject Box(Transform parent, string name, Vector3 footprint, Vector3 size, Material material, bool solid = true)
         {
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -728,7 +665,6 @@ namespace CloseTheDeal.Editor.Lanes
                 Kit(lights, "Ceiling_LightStrip", i * Bay + ox, SoffitHeight, -j * Bay - oz);
         }
 
-        /// <summary>A plaza under the windows and the two towers' massing, so reception reads as the bottom of the climb.</summary>
         static void Outside(Transform root)
         {
             Transform outside = Group(root, "Outside");
@@ -752,7 +688,6 @@ namespace CloseTheDeal.Editor.Lanes
             Object.DestroyImmediate(go.GetComponent<MeshFilter>());
         }
 
-        /// <summary>The back wall, left to right: the big G, two lifts, the cobalt directory, plain white.</summary>
         internal static void BackWall(Transform root)
         {
             Transform back = Group(root, "Back wall");
@@ -777,7 +712,6 @@ namespace CloseTheDeal.Editor.Lanes
                 new Vector3(14f, 2.2f, BackWallZ + 0.02f), 0.24f, Paper, TextAlignmentOptions.TopLeft, new Vector2(2.6f, 2.2f));
         }
 
-        /// <summary>World text on a wall, facing into the room (+Z).</summary>
         static TextMeshPro Label(Transform parent, string text, Vector3 centre, float size, Color colour, TextAlignmentOptions align, Vector2 box)
         {
             var go = new GameObject("Text " + text.Split('\n')[0]);
@@ -794,7 +728,6 @@ namespace CloseTheDeal.Editor.Lanes
             return tmp;
         }
 
-        /// <summary>The mundane layer (bible §10): a water cooler, a copier, waiting benches.</summary>
         internal static void Dressing(Transform root)
         {
             Transform props = Group(root, "Dressing");
@@ -872,7 +805,6 @@ namespace CloseTheDeal.Editor.Lanes
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>The sign's material in the firm's own colour, rewritten each run so a changed firm colour follows.</summary>
         static Material FirmSignMaterial(int firm, Color colour)
         {
             string path = $"{MaterialFolder}/Lobby_Firm{firm}.mat";
@@ -918,7 +850,6 @@ namespace CloseTheDeal.Editor.Lanes
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>The tailor's corner: two glass partitions, a full-length mirror on the side wall, a rail of suits and a plinth.</summary>
         internal static void TailorCorner(Transform root, GameObject character)
         {
             Transform corner = Group(root, "Tailor's corner");
@@ -957,7 +888,6 @@ namespace CloseTheDeal.Editor.Lanes
             go.transform.SetPositionAndRotation(new Vector3(12f, 1.6f, -1f), Quaternion.Euler(5f, 180f, 0f));
         }
 
-        /// <summary>Eight spawn points in two rows inside the entrance, so a full lobby doesn't spawn on top of itself.</summary>
         internal static void SpreadSpawns()
         {
             var spawner = Object.FindAnyObjectByType<TeamSpawner>();
@@ -994,14 +924,6 @@ namespace CloseTheDeal.Editor.Lanes
             local.AddComponent<LobbySounds>();
         }
 
-        // ---- UI (built from the UI kit: docs/systems/UI_KIT.md) ---------------------------------
-
-        /// <summary>
-        /// The reception's UI on its own canvas, under the game menu (10) and the kit's title
-        /// canvas (20): the ready board, the prompt and the subtitles as kit plates, and the
-        /// fitting room and the host's player list as kit screens on this canvas's own stack, with
-        /// a kit focus frame. Only kit prefabs, tokens and sprites; no colours or fonts of its own.
-        /// </summary>
         internal static void BuildUi(LobbyRules rules)
         {
             CloseTheDeal.Editor.UI.UiKitSetup.BuildAssets();
@@ -1035,7 +957,6 @@ namespace CloseTheDeal.Editor.Lanes
             BuildRemovedNotice(t);
         }
 
-        /// <summary>A small canvas above the kit's title (20): the "the host removed you" plate a removed player sees over the title.</summary>
         static void BuildRemovedNotice(UiTokens t)
         {
             var go = new GameObject("LobbyNotice", typeof(RectTransform)) { layer = 5 };
@@ -1060,7 +981,6 @@ namespace CloseTheDeal.Editor.Lanes
             UiKitAssets.Set(notice, "_line", line);
         }
 
-        /// <summary>A rect anchored to a corner or edge of the screen (anchor and pivot the same point), offset in reference pixels.</summary>
         static RectTransform Anchored(Transform parent, string name, Vector2 anchor, Vector2 offset, Vector2 size)
         {
             RectTransform rect = UiKitAssets.Node(parent, name);
@@ -1070,7 +990,6 @@ namespace CloseTheDeal.Editor.Lanes
             return rect;
         }
 
-        /// <summary>A kit plate filling <paramref name="parent"/>: the white surface every HUD piece sits on.</summary>
         static void PlateUnder(RectTransform parent)
         {
             var plate = UiKitAssets.Instance<RectTransform>(CloseTheDeal.Editor.UI.UiKitComponents.Plate, parent, "Plate");
@@ -1134,7 +1053,6 @@ namespace CloseTheDeal.Editor.Lanes
             hud.FindProperty("_subtitleText").objectReferenceValue = UiKitAssets.Label(subtitle, "Line", 28f, 38f, 1044f, 52f, string.Empty, t.Body, t.Navy, TextAlignmentOptions.TopLeft, true);
         }
 
-        /// <summary>A kit screen covering the canvas, with its own Canvas Group (the stack fades it).</summary>
         static RectTransform ScreenRoot(Transform canvas, string name)
         {
             RectTransform root = UiKitAssets.Fill(canvas, name);
@@ -1196,7 +1114,6 @@ namespace CloseTheDeal.Editor.Lanes
             return screen;
         }
 
-        /// <summary>One kit settings-style row: hover highlight, cobalt rule, the category name on the left, a stepper on the right.</summary>
         static UiStepper StepperRow(RectTransform parent, int index, float y, UiTokens t, out TMP_Text label)
         {
             RectTransform row = UiKitAssets.At(parent, "Row " + (index + 1), 40f, y, 580f, t.RowHeight);
@@ -1230,7 +1147,6 @@ namespace CloseTheDeal.Editor.Lanes
             UiKitAssets.Set(screen, "_firstFocus", first);
         }
 
-        /// <summary>Up / down through the rows, the last row down to Keep; Keep and Put back side by side.</summary>
         static void LinkFormNavigation(UiStepper[] rows, UiButton keep, UiButton putBack)
         {
             for (int i = 0; i < rows.Length; i++)

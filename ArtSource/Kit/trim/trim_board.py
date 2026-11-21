@@ -1,15 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code, blender-modeling skill)
-#  Generated : 2026-11-15
-#  Prompt    : Alex: "making a trimsheet in substance or something that can be used on most modular kits and props,
-#              since we arent going realistic we can do more with trimsheets" ... "you can use substance painter"
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : The bake source for the AONAGI Aero trim sheet: a flat 2 x 2 m low plane (its UVs are the sheet) and a
-#              high-poly board whose bands hold the sheet's relief (keys, vent slots, perforations, buttons, ribs,
-#              panel seams) in ID-coloured materials. Painter bakes the high onto the low and paints by ID
-#              (trim_painter/*.py). Band order and sizes come from trim_layout.json, which the props' UVs also read.
-# -----------------------------------------------------------------------------
 """Trim board for the AONAGI Aero trim sheet.
 
 Build:  node <skill>/scripts/mdl.mjs build ArtSource/Kit/trim/trim_board.py --out <dir>/TrimBoard.blend

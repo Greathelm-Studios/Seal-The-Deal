@@ -43,12 +43,7 @@ namespace CloseTheDeal.Items
         TooSoon = 6
     }
 
-    /// <summary>
-    /// A player's hands: one slot for a carried thing. The owner looks, presses and asks; the
-    /// host decides who gets a contested item, when it is thrown and when it is knocked loose.
-    /// A client never gives itself anything. Lives on the player prefab.
-    /// Design and ownership: docs/systems/ITEMS.md.
-    /// </summary>
+    /// <summary>Host-authoritative player hand slot for carrying, throwing, and using pickups. Design: docs/systems/ITEMS.md.</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PlayerMotor), typeof(CapsuleCollider))]
     public sealed class ItemCarrier : NetworkBehaviour
@@ -74,30 +69,16 @@ namespace CloseTheDeal.Items
         /// <summary>This machine. Local changed: this client's player spawned (the new hands) or left (null). Bind the HUD here instead of checking Local every frame.</summary>
         public static event Action<ItemCarrier> LocalChanged;
 
-        /// <summary>
-        /// Host only. A player has just taken an item. Guns are granted here: the weapon holder
-        /// listens, gives the player the gun from pickup.Definition and calls pickup.ServerUseUp().
-        /// </summary>
+        /// <summary>Host only. Raised after a player takes an item (used by GunPickups to equip guns).</summary>
         public static event Action<ItemCarrier, Pickup> ServerItemTaken;
 
-        /// <summary>
-        /// Every machine. Lets another system share these hands (the match briefcase): return true
-        /// when this item cannot be taken because the hands already hold that other thing. The
-        /// owner then shows no pick-up prompt and answers F with "hands full"; the host refuses
-        /// the take the same way. Null means the hands hold items only.
-        /// </summary>
+        /// <summary>Every machine. Returns true when another system (e.g. briefcase) occupies the hands for this pickup.</summary>
         public static Func<ItemCarrier, Pickup, bool> HandsTakenElsewhere;
 
-        /// <summary>
-        /// Owner only. Lets another system answer the interact key first (a lobby desk, or the
-        /// briefcase in reach): return true and no item is prompted or asked for this frame.
-        /// </summary>
+        /// <summary>Owner only. Returns true when another system claims the interact key this frame.</summary>
         public static Func<ItemCarrier, bool> InteractClaimedElsewhere;
 
-        /// <summary>
-        /// This machine. True when the local player last used a gamepad, so prompts name pad
-        /// buttons. One source for the whole HUD: the movement lane's PlayerInputReader.
-        /// </summary>
+        /// <summary>True when the local player last used a gamepad.</summary>
         public static bool UsingPad => Local != null && Local._reader != null && Local._reader.LastUsedGamepad;
 
         /// <summary>This machine. The player switched between keyboard and mouse (false) and a gamepad (true).</summary>
@@ -122,6 +103,7 @@ namespace CloseTheDeal.Items
         MotorSpeedOverride _speed;
         Pickup _held;
         float _canTakeAt;
+        bool _serverTicking;
 
         // Owner only.
         InputAction _interact;
@@ -172,15 +154,27 @@ namespace CloseTheDeal.Items
         public override void OnStartServer()
         {
             base.OnStartServer();
-            TimeManager.OnTick += ServerTick;
+            SetServerTick(_held != null);
         }
 
         public override void OnStopServer()
         {
             base.OnStopServer();
-            TimeManager.OnTick -= ServerTick;
+            SetServerTick(false);
             // Leaving the game, or the host shutting down: whatever is carried stays in the level.
             ServerForceDrop();
+        }
+
+        void SetServerTick(bool active)
+        {
+            if (_serverTicking == active || TimeManager == null)
+                return;
+
+            _serverTicking = active;
+            if (active)
+                TimeManager.OnTick += ServerTick;
+            else
+                TimeManager.OnTick -= ServerTick;
         }
 
         public override void OnStartClient()
@@ -189,10 +183,7 @@ namespace CloseTheDeal.Items
             if (!IsOwner)
                 return;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            // Adam's call (2026-11-15): while Alex's stand-in DevCarry exists (Editor and
-            // development builds, the same condition it boots under) it alone owns F and G, as
-            // it did before this lane merged. Without this both grab the same prop on F and G
-            // drops and throws it in one frame. Release builds keep this lane's carrying.
+            // Editor/Dev builds keep DevCarry owning F/G so both don't act in one frame; release uses ItemCarrier.
             return;
 #endif
 #pragma warning disable CS0162 // unreachable in Editor and development builds, see above
@@ -224,15 +215,9 @@ namespace CloseTheDeal.Items
             }
         }
 
-        // ---- Owner: input ---------------------------------------------------------------------
-
-        /// <summary>
-        /// This lane's own inputs, defined here until they move into the shared actions asset:
-        /// interact, throw, drop and use.
-        /// </summary>
         void CreateInput()
         {
-            // Pad north, like the shared actions asset, the briefcase and the lobby (west is Reload there).
+            // Pad north matches shared actions, briefcase, and lobby (west is Reload).
             _interact = Button("Interact", "<Keyboard>/f", "<Gamepad>/buttonNorth");
             _throw = Button("Throw", "<Mouse>/leftButton", "<Gamepad>/rightTrigger");
             _drop = Button("Drop", "<Keyboard>/g", "<Gamepad>/dpad/down");
@@ -242,7 +227,6 @@ namespace CloseTheDeal.Items
                 _sharedAttack = _sharedActions.FindActionMap(SharedMapName)?.FindAction(SharedAttackName);
         }
 
-        /// <summary>The movement lane's reader says the player switched between keyboard and mouse and a pad.</summary>
         void OnDeviceChanged(bool pad)
         {
             UsingPadChanged?.Invoke(pad);
@@ -267,7 +251,6 @@ namespace CloseTheDeal.Items
             _interact = _throw = _drop = _use = null;
         }
 
-        /// <summary>Full hands cannot shoot: the throw button is the fire button.</summary>
         void HoldFire(bool hold)
         {
             if (_sharedAttack == null)
@@ -330,22 +313,40 @@ namespace CloseTheDeal.Items
                 return null;
 
             Transform view = cam.transform;
-            if (!Physics.SphereCast(view.position, _profile.LookRadius, view.forward, out RaycastHit hit, _profile.Reach, ItemLayers.LookMask, QueryTriggerInteraction.Ignore))
+            if (Physics.Raycast(view.position, view.forward, out RaycastHit hit, _profile.Reach, ItemLayers.LookMask, QueryTriggerInteraction.Ignore))
             {
-                _lookCollider = null;
-                _lookPickup = null;
+                Pickup direct = PickupFromHit(hit.collider);
+                if (IsPickable(direct))
+                    return direct;
+            }
+
+            if (Physics.SphereCast(view.position, _profile.LookRadius, view.forward, out hit, _profile.Reach, ItemLayers.LookMask, QueryTriggerInteraction.Ignore))
+            {
+                Pickup near = PickupFromHit(hit.collider);
+                if (IsPickable(near))
+                    return near;
                 return null;
             }
 
+            _lookCollider = null;
+            _lookPickup = null;
+            return null;
+        }
+
+        Pickup PickupFromHit(Collider collider)
+        {
             // Looked up again only when the crosshair moves onto a different collider.
-            if (hit.collider != _lookCollider)
+            if (collider != _lookCollider)
             {
-                _lookCollider = hit.collider;
-                _lookPickup = hit.collider.GetComponentInParent<Pickup>();
+                _lookCollider = collider;
+                Rigidbody rb = collider.attachedRigidbody;
+                _lookPickup = rb != null && rb.TryGetComponent(out Pickup p) ? p : null;
             }
 
-            return _lookPickup != null && _lookPickup.State == PickupState.InWorld && _lookPickup.Offered ? _lookPickup : null;
+            return _lookPickup;
         }
+
+        static bool IsPickable(Pickup pickup) => pickup != null && pickup.State == PickupState.InWorld && pickup.Offered;
 
         void UpdatePrompt(Pickup target)
         {
@@ -361,7 +362,6 @@ namespace CloseTheDeal.Items
             SetPrompt(tooHeavy ? PromptKind.TooHeavy : PromptKind.PickUp, target.Definition);
         }
 
-        /// <summary>Owner only. Brightens the liftable thing the prompt is about, and nothing else.</summary>
         void Highlight(Pickup target)
         {
             if (target == _highlighted)
@@ -392,9 +392,7 @@ namespace CloseTheDeal.Items
             return cam != null ? cam.transform.forward : transform.forward;
         }
 
-        // ---- Owner: asking the host -----------------------------------------------------------
-
-        /// <summary>Owner only. Asks the host for the item. The answer arrives as HeldChanged or Denied.</summary>
+        /// <summary>Owner only. Requests the host to pick up <paramref name="target"/>.</summary>
         public void LocalTake(Pickup target)
         {
             if (IsOwner && target != null)
@@ -442,7 +440,6 @@ namespace CloseTheDeal.Items
             ServerItemTaken?.Invoke(this, pickup);
         }
 
-        /// <summary>The host's rules for a grab, in the order a player would want to hear them.</summary>
         DenyReason? WhyNotTake(Pickup pickup)
         {
             if (pickup == null || !pickup.IsSpawned || pickup.State != PickupState.InWorld)
@@ -461,11 +458,7 @@ namespace CloseTheDeal.Items
             return InReach(pickup) ? null : DenyReason.TooFar;
         }
 
-        /// <summary>
-        /// Close enough, and nothing solid between the eye and it that is not itself a pickup:
-        /// no grabbing through walls, floors or locked doors (doors share the Prop layer, so a
-        /// building-only mask would miss them).
-        /// </summary>
+        // Doors share the Prop layer, so use LookMask to block grabs through walls, floors, and locked doors.
         bool InReach(Pickup pickup)
         {
             Vector3 eye = transform.position + Vector3.up * _motor.EyeHeight;
@@ -474,19 +467,20 @@ namespace CloseTheDeal.Items
             if ((nearest - eye).sqrMagnitude > reach * reach)
                 return false;
 
-            // Seen if a line from the eye to its middle or to its nearest point reaches the item
-            // before anything else: another prop half over it still leaves it takeable, but a wall
-            // between always blocks (a leaning prop's box poking through a thin wall is not enough,
-            // since a line that ends short of the item without touching it does not count).
             Vector3 middle = pickup.Body.worldCenterOfMass;
             if (!Physics.Linecast(eye, middle, out RaycastHit first, ItemLayers.LookMask, QueryTriggerInteraction.Ignore))
                 return true;
-            return first.collider.GetComponentInParent<Pickup>() == pickup
+            return IsPickup(first.collider, pickup)
                 || (Physics.Linecast(eye, nearest + (middle - nearest) * 0.1f, out RaycastHit edge, ItemLayers.LookMask, QueryTriggerInteraction.Ignore)
-                    && edge.collider.GetComponentInParent<Pickup>() == pickup);
+                    && IsPickup(edge.collider, pickup));
         }
 
-        /// <summary>An item already in the hands, or the hands shared with something else that holds them.</summary>
+        static bool IsPickup(Collider collider, Pickup pickup)
+        {
+            Rigidbody rb = collider.attachedRigidbody;
+            return rb != null && rb.TryGetComponent(out Pickup hit) && hit == pickup;
+        }
+
         bool HandsFullFor(Pickup pickup)
         {
             return _held != null || (HandsTakenElsewhere != null && HandsTakenElsewhere(this, pickup));
@@ -498,9 +492,10 @@ namespace CloseTheDeal.Items
             if (_held == null)
                 return;
 
-            Vector3 direction = aim.sqrMagnitude > 0.25f ? aim.normalized : transform.forward;
+            bool finite = float.IsFinite(aim.x) && float.IsFinite(aim.y) && float.IsFinite(aim.z);
+            Vector3 direction = finite && aim.sqrMagnitude > 0.25f ? aim.normalized : transform.forward;
             Vector3 velocity = direction * _held.Definition.ThrowSpeed + _rigidbody.linearVelocity * _profile.InheritVelocity;
-            _held.ServerRelease(ReleaseKind.Thrown, velocity);
+            _held.ServerRelease(ReleaseKind.Thrown, velocity, direction);
         }
 
         [ServerRpc]
@@ -516,7 +511,7 @@ namespace CloseTheDeal.Items
             if (_held == null)
                 return;
 
-            ItemBehaviour behaviour = _held.GetComponent<ItemBehaviour>();
+            ItemBehaviour behaviour = _held.Behaviour;
             if (behaviour != null)
                 behaviour.ServerUse(this);
         }
@@ -534,12 +529,7 @@ namespace CloseTheDeal.Items
                 TargetDenied(Owner, reason);
         }
 
-        // ---- Host ----------------------------------------------------------------------------
-
-        /// <summary>
-        /// Host only. Whatever is carried is knocked out of the hands and stays in the level.
-        /// Called when the carrier is knocked about or leaves; call it on death too.
-        /// </summary>
+        /// <summary>Host only. Drops whatever is carried at the carrier's current pose.</summary>
         public void ServerForceDrop()
         {
             if (!IsServerStarted || _held == null)
@@ -551,19 +541,24 @@ namespace CloseTheDeal.Items
 
         void ServerTick()
         {
-            if (_held != null && _profile.DropWhenKnocked && _motor.State == MoveState.Knocked)
+            if (_held == null)
+            {
+                SetServerTick(false);
+                return;
+            }
+
+            if (_profile.DropWhenKnocked && _motor.State == MoveState.Knocked)
                 ServerForceDrop();
         }
 
-        // ---- Every machine -------------------------------------------------------------------
-
-        /// <summary>
-        /// Where a carried item sits, in world space. The view pose is what is drawn: the
-        /// owner's own camera, pitch included, or another player's smoothed body. The other is
-        /// the host's solid pose, from the ticked body, which is where a release starts from.
-        /// Either way a wall in front pushes the item back toward the body.
-        /// </summary>
+        /// <summary>World-space carry pose for visuals (view=true) or solid host physics (view=false), pushed back from walls.</summary>
         public void GetHoldPose(ItemDefinition item, bool view, out Vector3 position, out Quaternion rotation)
+        {
+            GetHoldPose(item, view, !view || IsOwner, out position, out rotation);
+        }
+
+        /// <summary>Same as above, optionally skipping the wall-pushback cast (used for remote carriers' visuals).</summary>
+        public void GetHoldPose(ItemDefinition item, bool view, bool checkWalls, out Vector3 position, out Quaternion rotation)
         {
             Vector3 eye;
             Quaternion frame;
@@ -580,14 +575,32 @@ namespace CloseTheDeal.Items
                 frame = Quaternion.Euler(0f, body.eulerAngles.y, 0f);
             }
 
+            ComputeHoldPose(item, eye, frame, checkWalls, out position, out rotation);
+        }
+
+        /// <summary>Host only. Spawn pose for a throw, deriving pitch from <paramref name="aimDirection"/>.</summary>
+        internal void GetThrowPose(ItemDefinition item, Vector3 aimDirection, out Vector3 position, out Quaternion rotation)
+        {
+            Vector3 eye = transform.position + Vector3.up * _motor.EyeHeight;
+            float horizontal = Mathf.Sqrt(aimDirection.x * aimDirection.x + aimDirection.z * aimDirection.z);
+            float pitch = -Mathf.Atan2(aimDirection.y, horizontal) * Mathf.Rad2Deg;
+            Quaternion frame = Quaternion.Euler(pitch, transform.eulerAngles.y, 0f);
+            ComputeHoldPose(item, eye, frame, true, out position, out rotation);
+        }
+
+        static void ComputeHoldPose(ItemDefinition item, Vector3 eye, Quaternion frame, bool checkWalls, out Vector3 position, out Quaternion rotation)
+        {
             Vector3 reach = frame * item.HeldOffset;
-            float distance = reach.magnitude;
-            if (distance > 0.001f)
+            if (checkWalls)
             {
-                Vector3 direction = reach / distance;
-                float wall = NearestSolid(eye, item.HoldClearance, direction, distance);
-                if (wall < distance)
-                    reach = direction * wall;
+                float distance = reach.magnitude;
+                if (distance > 0.001f)
+                {
+                    Vector3 direction = reach / distance;
+                    float wall = NearestSolid(eye, item.HoldClearance, direction, distance);
+                    if (wall < distance)
+                        reach = direction * wall;
+                }
             }
 
             position = eye + reach;
@@ -596,19 +609,24 @@ namespace CloseTheDeal.Items
 
         static readonly RaycastHit[] HoldHits = new RaycastHit[32];
 
-        /// <summary>
-        /// Host only. Something just left these hands: this player takes nothing for a moment,
-        /// whatever it is, so cycling two items cannot throw faster than the cooldown.
-        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Local = null;
+            LocalChanged = null;
+            ServerItemTaken = null;
+            HandsTakenElsewhere = null;
+            InteractClaimedElsewhere = null;
+            UsingPadChanged = null;
+            Array.Clear(HoldHits, 0, HoldHits.Length);
+        }
+
+        /// <summary>Host only. Enforces a short retake cooldown after releasing an item.</summary>
         internal void ServerNoteLetGo(float seconds)
         {
             _canTakeAt = Time.time + seconds;
         }
 
-        /// <summary>
-        /// How far the hands can reach before something solid that is not a loose item: the
-        /// building, and locked doors (which share the Prop layer with loose things).
-        /// </summary>
         static float NearestSolid(Vector3 eye, float radius, Vector3 direction, float distance)
         {
             int count = Physics.SphereCastNonAlloc(eye, radius, direction, HoldHits, distance, ItemLayers.LookMask, QueryTriggerInteraction.Ignore);
@@ -616,9 +634,13 @@ namespace CloseTheDeal.Items
             for (int i = 0; i < count; i++)
             {
                 RaycastHit hit = HoldHits[i];
-                // A distance of 0 is something the sphere already overlaps at the eye: ignored, as a single cast would.
-                if (hit.distance > 0f && hit.distance < nearest && hit.collider.GetComponentInParent<Pickup>() == null)
-                    nearest = hit.distance;
+                // Ignore distance == 0 overlaps already touching the eye sphere.
+                if (hit.distance > 0f && hit.distance < nearest)
+                {
+                    Rigidbody rb = hit.collider.attachedRigidbody;
+                    if (rb == null || !rb.TryGetComponent<Pickup>(out _))
+                        nearest = hit.distance;
+                }
             }
 
             return nearest;
@@ -628,6 +650,8 @@ namespace CloseTheDeal.Items
         internal void NotifyHeld(Pickup pickup)
         {
             _held = pickup;
+            if (IsServerStarted)
+                SetServerTick(true);
             ApplyWeight(pickup.Definition.WeightKg);
             if (IsOwner)
                 HoldFire(true);
@@ -642,6 +666,8 @@ namespace CloseTheDeal.Items
                 return;
 
             _held = null;
+            if (IsServerStarted)
+                SetServerTick(false);
             Load = 0f;
             _speed.Clear();
             if (IsOwner)
@@ -650,7 +676,6 @@ namespace CloseTheDeal.Items
             _onLetGo.Invoke();
         }
 
-        /// <summary>Heavier things slow the carrier: full speed up to the free weight, the profile's slowest at the weight limit.</summary>
         void ApplyWeight(float weightKg)
         {
             Load = Mathf.InverseLerp(_profile.FreeCarryWeight, _profile.MaxCarryWeight, weightKg);

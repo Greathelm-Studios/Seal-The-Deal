@@ -4,13 +4,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Narration
 {
-    /// <summary>
-    /// The secretary during a match: picks a line for each moment that matters (the start, the
-    /// first pick-up and kill, steals, floors opening, a checkpoint moving, window kills, the
-    /// clock, the result) and shows it through Subtitles. Every machine decides its own lines
-    /// from synced match state and the host's kill feed; nothing is sent. Reception lines stay
-    /// with the lobby's Secretary. Design: docs/systems/NARRATION.md.
-    /// </summary>
+    /// <summary>Emits local secretary subtitles for key match moments read from synced match state and records. Design: docs/systems/NARRATION.md.</summary>
     [DisallowMultipleComponent]
     public sealed class MatchSecretary : MonoBehaviour
     {
@@ -41,6 +35,8 @@ namespace CloseTheDeal.Narration
                 _records = MatchRecords.Instance;
                 _records.Kill += OnKill;
             }
+            if (_match != null && _records != null)
+                enabled = false;
         }
 
         void OnDestroy()
@@ -71,8 +67,6 @@ namespace CloseTheDeal.Narration
             _match.OnCapWarning += OnCapWarning;
             _match.OnBriefcaseReturned += OnReturned;
         }
-
-        // ---- Moments -------------------------------------------------------------------------
 
         static int LocalFirm => FirmMember.Local != null ? FirmMember.Local.Firm : MatchDirector.NoFirm;
 
@@ -141,9 +135,6 @@ namespace CloseTheDeal.Narration
             Say(MatchMoment.FirstKill, new Fill { Killer = MatchRecords.NameOf(entry.KillerClientId), Victim = MatchRecords.NameOf(entry.VictimClientId) });
         }
 
-        // ---- Saying it -----------------------------------------------------------------------
-
-        /// <summary>What fills a line's {tokens}. Unset or NoFirm leaves a token empty.</summary>
         struct Fill
         {
             public static Fill None => default;

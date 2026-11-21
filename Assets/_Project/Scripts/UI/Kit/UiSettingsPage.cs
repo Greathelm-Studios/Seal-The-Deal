@@ -4,10 +4,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// One tab of the settings screen: its rows read the saved values when it opens, write them on change, and can put
-    /// them back to defaults. The settings screen owns the tab bar, the footer and the right-hand detail column.
-    /// </summary>
+    /// <summary>Base class for a tab page inside SettingsScreen.</summary>
     public abstract class UiSettingsPage : MonoBehaviour
     {
         [Tooltip("The kit's tokens.")]
@@ -61,11 +58,7 @@ namespace CloseTheDeal.UI
         /// <summary>Puts this tab's values back to how the game shipped.</summary>
         public abstract void ResetToDefaults();
 
-        /// <summary>
-        /// Adds one line per value on this tab that differs from how the game shipped ("Music, 40%, shipped 80%", in three columns),
-        /// for the summary under the rows. Pages whose rows fill the screen (Controls) leave it empty and set
-        /// ShowsChanges false.
-        /// </summary>
+        /// <summary>Appends formatted lines describing settings on this tab that differ from defaults.</summary>
         public virtual void DescribeChanges(System.Collections.Generic.List<string> lines) { }
 
         /// <summary>False when the rows fill the page and the changes summary has no room.</summary>

@@ -6,18 +6,19 @@ using UnityEngine;
 
 namespace CloseTheDeal.Tower
 {
-    /// <summary>
-    /// Scene object that owns the run's seed and stacks both buildings under itself.
-    /// The host picks the seed when the server starts; the seed reaches clients before their
-    /// start callbacks, so everyone builds identical towers locally. The geometry is plain
-    /// static objects, never networked. Design: docs/systems/TOWER.md.
-    /// </summary>
+    /// <summary>Host-seeded procedural builder for both team towers. Design: docs/systems/TOWER.md.</summary>
     [DisallowMultipleComponent]
     public sealed class TowerBuilder : NetworkBehaviour
     {
         public const int TeamCount = 2;
 
         public static TowerBuilder Instance { get; private set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+        }
 
         /// <summary>Both buildings stand. Raised on every machine after its own local build.</summary>
         public event Action OnBuilt;
@@ -49,6 +50,7 @@ namespace CloseTheDeal.Tower
 
         void OnDestroy()
         {
+            DestroyMergedMeshes();
             if (Instance == this)
                 Instance = null;
         }
@@ -85,10 +87,7 @@ namespace CloseTheDeal.Tower
             Build(_seed.Value);
         }
 
-        /// <summary>
-        /// Host only. Picks a new seed and builds both towers again, for a fresh match: new
-        /// layouts, and the props and locked doors put back. Clients rebuild when the seed arrives.
-        /// </summary>
+        /// <summary>Host only. Picks a new seed and rebuilds both towers; clients rebuild when the SyncVar updates.</summary>
         public void Rebuild()
         {
             if (!IsServerStarted)
@@ -101,7 +100,6 @@ namespace CloseTheDeal.Tower
             Build(_seed.Value);
         }
 
-        /// <summary>A pure client follows the host's rebuild; the first seed is handled in OnStartClient.</summary>
         void OnSeedChanged(uint previous, uint next, bool asServer)
         {
             if (!asServer && !IsServerStarted && _built)
@@ -111,7 +109,7 @@ namespace CloseTheDeal.Tower
         public override void OnStartClient()
         {
             base.OnStartClient();
-            // The host built as the server already; a pure client builds from the synced seed.
+            // Host already built as server; pure clients build from the synced seed.
             if (!IsServerStarted)
                 Build(_seed.Value);
         }
@@ -185,9 +183,7 @@ namespace CloseTheDeal.Tower
                 CollectStillParts(floor);
             }
 
-            // Floors are instantiated at runtime, so Unity's build-time static batching never
-            // sees them: without this every box is its own draw call, again per shadow cascade.
-            // Only what each template lists as never moving is merged, since merging freezes it.
+            // Static batch NeverMoves parts at runtime; instantiated floors skip build-time batching.
             if (_stillParts.Count > 0)
             {
                 NoteOwnMeshes();
@@ -231,9 +227,7 @@ namespace CloseTheDeal.Tower
             {
                 if (_buildings[team] != null)
                 {
-                    // Off the tower at once: Destroy waits for the end of the frame, and anything
-                    // that walks the tower's children in between (the glass registry numbers panes
-                    // by building order) must see only the new buildings, as a fresh client does.
+                    // Detach before Destroy so listeners during rebuild never walk stale children.
                     _buildings[team].SetActive(false);
                     _buildings[team].transform.SetParent(null, false);
                     Destroy(_buildings[team]);
@@ -246,11 +240,7 @@ namespace CloseTheDeal.Tower
             _built = false;
         }
 
-        /// <summary>
-        /// The meshes StaticBatchingUtility.Combine just made belong to no asset, so destroying
-        /// the building leaves them behind; they are noted here, straight after the merge, and
-        /// freed with the building, or every rematch would leak a tower's worth of mesh.
-        /// </summary>
+        // Snapshot authored sharedMeshes before Combine so only newly generated meshes are freed on Clear/Destroy.
         void NoteOwnMeshes()
         {
             _ownMeshes.Clear();
@@ -258,7 +248,6 @@ namespace CloseTheDeal.Tower
                 _ownMeshes.Add(part.TryGetComponent(out MeshFilter filter) ? filter.sharedMesh : null);
         }
 
-        /// <summary>Only meshes Combine swapped in: a part it skipped keeps its asset mesh, which must never be destroyed.</summary>
         void RecordMergedMeshes()
         {
             for (int i = 0; i < _stillParts.Count; i++)

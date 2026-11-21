@@ -1,69 +1,27 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Sonnet 5.5 (Claude Code)
-//  Generated : 2026-11-15
-//  Prompt    : Harvey: "create a blood splatter shader that fits in within the games artstyle
-//              that paints around objects and ontop of them when hit by these attacks."
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : Listens for bodies being struck and throws cartoon blood onto the surfaces behind
-//              them and the floor under them, using the "Close the Deal/Blood Splat" projector
-//              shader. A pool of boxes, a cap on how many exist, a pop-in and a shrink-away.
-//              It creates itself; no scene or prefab needs to know about it.
-// -----------------------------------------------------------------------------
 using System.Collections.Generic;
 using CloseTheDeal.Player;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Effects
 {
-    /// <summary>
-    /// Pooled blood splat spawner. Hears <see cref="HitFeed.Struck"/> and, for bullets and melee
-    /// hits, paints blood on the level behind and under the struck body.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>Ownership (AGENTS.md §3):</b> purely cosmetic and local. Every machine hears the hit
-    /// from <see cref="HitFeed"/> and draws its own splats; nothing is networked, no splat has a
-    /// collider and nothing reads one back. Splats are not the same on two machines (the random
-    /// seeds differ), which is fine because nothing depends on them.
-    /// </para>
-    /// <para>
-    /// Each splat is a plain cube drawn with the projector shader, which paints whatever surface
-    /// is inside the cube. WHY a cube and not a flat quad: the splat then wraps over the floor
-    /// and desk in front of a wall instead of floating in front of it.
-    /// </para>
-    /// <para>
-    /// Created by <see cref="Boot"/> as a hidden object that survives scene loads. Tuning is in
-    /// <see cref="BloodProfile"/>; the profile and material are loaded from a Resources folder
-    /// and fall back to defaults in code when missing.
-    /// </para>
-    /// </remarks>
+    /// <summary>Pooled local blood splat projector listening to HitFeed.Struck.</summary>
     public sealed class BloodSplatSystem : MonoBehaviour
     {
-        /// <summary>Resources name of the material; <c>Seal the Deal &gt; Art &gt; Build Blood Assets</c> writes it.</summary>
         const string MaterialResource = "BloodSplat";
-
-        /// <summary>Resources name of the profile; the same menu item writes it.</summary>
         const string ProfileResource = "BloodProfile";
-
-        const string ShaderName = "Close the Deal/Blood Splat";
-
-        /// <summary>How many surfaces one ray can report. WHY 12: a spray through a cluttered office crosses several props before the wall; the nearest that is not the victim wins.</summary>
-        const int RayBuffer = 12;
-
-        /// <summary>
-        /// Where in the box, along its depth, the surface sits: a fifth of the depth in front of the
-        /// wall, the rest behind it. WHY: the box needs room in front for desks and legs that
-        /// stand off the wall, and a margin behind for depth-buffer error.
-        /// </summary>
+        const string ShaderName = "Seal the Deal/Blood Splat";
+        const float MaxSplatDistance = 60f;
         const float SurfaceOffsetFraction = 0.2f;
 
         static readonly int ColorId = Shader.PropertyToID("_Color");
         static readonly int CutColorId = Shader.PropertyToID("_CutColor");
         static readonly int ParamsId = Shader.PropertyToID("_Params");
+        static readonly string[] ExcludedLayers = { "Player", "Ragdoll", "Viewmodel", "UI" };
 
         static BloodSplatSystem instance;
+        static Camera _mainCamera;
 
         sealed class Splat
         {
@@ -78,14 +36,24 @@ namespace CloseTheDeal.Effects
             public bool Settled;
         }
 
-        readonly List<Splat> live = new List<Splat>();
+        Splat[] ring;
+        int ringHead;
+        int ringCount;
         readonly Stack<Splat> pool = new Stack<Splat>();
-        readonly RaycastHit[] hits = new RaycastHit[RayBuffer];
         MaterialPropertyBlock block;
         Material material;
         Mesh cube;
         BloodProfile profile;
         int surfaceMask;
+        bool _ownsMaterial;
+        bool _ownsProfile;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            instance = null;
+            _mainCamera = null;
+        }
 
         /// <summary>Makes the system when a Play Mode or build session has loaded its first scene.</summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -132,12 +100,38 @@ namespace CloseTheDeal.Effects
             material = LoadMaterial();
         }
 
-        void OnEnable() => HitFeed.Struck += OnStruck;
+        void OnEnable()
+        {
+            HitFeed.Struck += OnStruck;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
+        }
 
-        void OnDisable() => HitFeed.Struck -= OnStruck;
+        void OnDisable()
+        {
+            HitFeed.Struck -= OnStruck;
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        }
+
+        void OnSceneUnloaded(Scene scene)
+        {
+            _mainCamera = null;
+            ClearLive();
+        }
 
         void OnDestroy()
         {
+            if (_ownsMaterial && material != null)
+            {
+                Destroy(material);
+                material = null;
+            }
+            if (_ownsProfile && profile != null)
+            {
+                Destroy(profile);
+                profile = null;
+            }
+            _ownsMaterial = false;
+            _ownsProfile = false;
             if (instance == this)
                 instance = null;
         }
@@ -161,6 +155,11 @@ namespace CloseTheDeal.Effects
                         // Defaults in code: the field initialisers in BloodProfile.
                         profile = ScriptableObject.CreateInstance<BloodProfile>();
                         profile.hideFlags = HideFlags.HideAndDontSave;
+                        _ownsProfile = true;
+                    }
+                    else
+                    {
+                        _ownsProfile = false;
                     }
                 }
 
@@ -168,13 +167,13 @@ namespace CloseTheDeal.Effects
             }
         }
 
-        /// <summary>Everything a ray may hit: the level and its props, but not players (the victim's own body would eat every ray) and not UI or first-person arms.</summary>
+        /// <summary>Everything a ray may hit: the level and its props, but not players/ragdolls (the victim's own body would eat every ray) and not UI or first-person arms.</summary>
         static int BuildSurfaceMask()
         {
             int mask = Physics.DefaultRaycastLayers;
-            foreach (string layer in new[] { "Player", "Viewmodel", "UI" })
+            for (int i = 0; i < ExcludedLayers.Length; i++)
             {
-                int index = LayerMask.NameToLayer(layer);
+                int index = LayerMask.NameToLayer(ExcludedLayers[i]);
                 if (index >= 0)
                     mask &= ~(1 << index);
             }
@@ -184,37 +183,41 @@ namespace CloseTheDeal.Effects
 
         static Mesh BuildCube()
         {
-            // WHY borrow a primitive's mesh: it is the one unit cube every build is sure to have,
-            // and the primitive itself (with its collider) is thrown away at once.
             GameObject primitive = GameObject.CreatePrimitive(PrimitiveType.Cube);
             Mesh mesh = primitive.GetComponent<MeshFilter>().sharedMesh;
             Destroy(primitive);
             return mesh;
         }
 
-        static Material LoadMaterial()
+        Material LoadMaterial()
         {
             var loaded = Resources.Load<Material>(MaterialResource);
             if (loaded != null)
+            {
+                _ownsMaterial = false;
                 return loaded;
+            }
 
             // The material asset is missing: make one from the shader. In a build the shader is
             // only present if something references it, so this path is for the Editor.
             Shader shader = Shader.Find(ShaderName);
             if (shader == null)
             {
+                _ownsMaterial = false;
                 Debug.LogWarning($"[Blood] Neither the material '{MaterialResource}' in a Resources folder nor the shader '{ShaderName}' was found; no blood will draw. Run Seal the Deal > Art > Build Blood Assets.");
                 return null;
             }
 
+            _ownsMaterial = true;
             return new Material(shader) { name = "BloodSplat (runtime)", enableInstancing = true, hideFlags = HideFlags.HideAndDontSave };
         }
-
-        // ---- Spraying ----
 
         void Spray(in HitInfo hit, Transform victim)
         {
             if (material == null)
+                return;
+
+            if (TryCameraPosition(out Vector3 eyePos) && (hit.Point - eyePos).sqrMagnitude > MaxSplatDistance * MaxSplatDistance)
                 return;
 
             BloodProfile p = Profile;
@@ -242,6 +245,26 @@ namespace CloseTheDeal.Effects
                 Place(floor.point, floor.normal, dir, size * p.FloorSize * Random.Range(1f - p.SizeVariation, 1f + p.SizeVariation), stretch, p);
         }
 
+        static bool TryCameraPosition(out Vector3 position)
+        {
+            if (PlayerCamera.Instance != null)
+            {
+                position = PlayerCamera.Instance.transform.position;
+                return true;
+            }
+
+            if (_mainCamera == null)
+                _mainCamera = Camera.main;
+            if (_mainCamera != null)
+            {
+                position = _mainCamera.transform.position;
+                return true;
+            }
+
+            position = Vector3.zero;
+            return false;
+        }
+
         /// <summary>A random direction within <paramref name="degrees"/> of <paramref name="dir"/>, spread evenly over the cone's circle.</summary>
         static Vector3 InCone(Vector3 dir, float degrees)
         {
@@ -253,28 +276,11 @@ namespace CloseTheDeal.Effects
         /// <summary>Nearest surface along the ray that is not part of the victim.</summary>
         bool Cast(Vector3 origin, Vector3 direction, float reach, Transform victim, out RaycastHit best)
         {
-            best = default;
-            int n = Physics.RaycastNonAlloc(origin, direction, hits, reach, surfaceMask, QueryTriggerInteraction.Ignore);
-            float nearest = float.MaxValue;
-            bool found = false;
-            for (int i = 0; i < n; i++)
-            {
-                RaycastHit h = hits[i];
-                if (h.distance >= nearest)
-                    continue;
-                // A ragdoll part can sit on another layer than the player's root; skip anything of the victim's.
-                if (victim != null && h.collider.transform.IsChildOf(victim))
-                    continue;
+            if (!Physics.Raycast(origin, direction, out best, reach, surfaceMask, QueryTriggerInteraction.Ignore))
+                return false;
 
-                nearest = h.distance;
-                best = h;
-                found = true;
-            }
-
-            return found;
+            return victim == null || !best.collider.transform.IsChildOf(victim);
         }
-
-        // ---- Placing and the pool ----
 
         void Place(Vector3 point, Vector3 normal, Vector3 throwDir, float size, float stretch, BloodProfile p)
         {
@@ -312,14 +318,44 @@ namespace CloseTheDeal.Effects
             s.Transform.localScale = new Vector3(0.001f, 0.001f, p.Depth);
             s.Renderer.enabled = true;
             Apply(s, 1f, p);
-            live.Add(s);
+
+            int tail = (ringHead + ringCount) % ring.Length;
+            ring[tail] = s;
+            ringCount++;
+        }
+
+        void EnsureRingCapacity(int capacity)
+        {
+            int target = Mathf.Max(4, capacity);
+            if (ring == null)
+            {
+                ring = new Splat[target];
+                return;
+            }
+
+            if (ring.Length >= target)
+                return;
+
+            var grown = new Splat[target];
+            for (int i = 0; i < ringCount; i++)
+                grown[i] = ring[(ringHead + i) % ring.Length];
+            ring = grown;
+            ringHead = 0;
         }
 
         /// <summary>A splat to use: from the pool, new, or the oldest live one when the cap is reached.</summary>
         Splat Acquire(BloodProfile p)
         {
-            while (live.Count >= p.MaxLiveSplats && live.Count > 0)
-                Release(0);
+            int maxLive = Mathf.Max(4, p.MaxLiveSplats);
+            EnsureRingCapacity(maxLive);
+
+            if (ringCount >= maxLive)
+            {
+                Splat evicted = PopOldest();
+                while (ringCount >= maxLive)
+                    ReleaseOldest();
+                return evicted;
+            }
 
             if (pool.Count > 0)
                 return pool.Pop();
@@ -334,16 +370,34 @@ namespace CloseTheDeal.Effects
             r.lightProbeUsage = LightProbeUsage.Off;
             r.reflectionProbeUsage = ReflectionProbeUsage.Off;
             r.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
-            r.allowOcclusionWhenDynamic = false;
+            r.allowOcclusionWhenDynamic = true;
             return new Splat { Transform = go.transform, Renderer = r };
         }
 
-        void Release(int index)
+        Splat PopOldest()
         {
-            Splat s = live[index];
-            live.RemoveAt(index);
+            Splat s = ring[ringHead];
+            ring[ringHead] = null;
+            ringHead = (ringHead + 1) % ring.Length;
+            ringCount--;
+            return s;
+        }
+
+        void ReleaseOldest()
+        {
+            Splat s = PopOldest();
+            if (s == null)
+                return;
+
             s.Renderer.enabled = false;
             pool.Push(s);
+        }
+
+        void ClearLive()
+        {
+            while (ringCount > 0)
+                ReleaseOldest();
+            ringHead = 0;
         }
 
         /// <summary>Writes one splat's look to its renderer. <paramref name="life"/> is 1 fresh, 0 gone.</summary>
@@ -358,20 +412,21 @@ namespace CloseTheDeal.Effects
 
         void Update()
         {
-            if (live.Count == 0)
+            if (ringCount == 0)
                 return;
 
             BloodProfile p = Profile;
             float now = Time.time;
-            for (int i = live.Count - 1; i >= 0; i--)
+            float totalLife = p.Lifetime + p.ShrinkTime;
+
+            // Live splats expire in FIFO order from ringHead.
+            while (ringCount > 0 && now - ring[ringHead].Born >= totalLife)
+                ReleaseOldest();
+
+            for (int i = 0; i < ringCount; i++)
             {
-                Splat s = live[i];
+                Splat s = ring[(ringHead + i) % ring.Length];
                 float age = now - s.Born;
-                if (age >= p.Lifetime + p.ShrinkTime)
-                {
-                    Release(i);
-                    continue;
-                }
 
                 if (!s.Settled)
                 {

@@ -1,15 +1,15 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Glass
 {
-    /// <summary>
-    /// Plays the shard burst where a pane breaks. Local visuals only, never networked: every
-    /// machine throws its own shards from the same break. The bursts are reused, so a wall
-    /// of windows going at once allocates nothing once the pool has warmed up.
-    /// </summary>
+    /// <summary>Pooled local shard particle bursts played when glass panes shatter.</summary>
     public sealed class GlassShards : MonoBehaviour
     {
+        const int MaxActiveBursts = 32;
+        const int MaxPooledPerPrefab = 24;
+
         static GlassShards _instance;
 
         readonly Dictionary<ParticleSystem, Stack<ParticleSystem>> _free = new();
@@ -20,6 +20,22 @@ namespace CloseTheDeal.Glass
         static void ResetStatics()
         {
             _instance = null;
+        }
+
+        void OnEnable()
+        {
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
+        }
+
+        void OnDisable()
+        {
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        }
+
+        void OnSceneUnloaded(Scene scene)
+        {
+            for (int i = _playing.Count - 1; i >= 0; i--)
+                RecycleAt(i);
         }
 
         /// <summary>
@@ -50,6 +66,9 @@ namespace CloseTheDeal.Glass
                 _free.Add(prefab, free);
             }
 
+            while (_playing.Count >= MaxActiveBursts)
+                RecycleAt(0);
+
             ParticleSystem burst = free.Count > 0 ? free.Pop() : Instantiate(prefab, transform);
             burst.transform.SetPositionAndRotation(centre, facing);
             burst.gameObject.SetActive(true);
@@ -71,14 +90,33 @@ namespace CloseTheDeal.Glass
             for (int i = _playing.Count - 1; i >= 0; i--)
             {
                 ParticleSystem burst = _playing[i];
-                if (burst.particleCount > 0)
+                if (burst != null && burst.particleCount > 0)
                     continue;
 
-                burst.gameObject.SetActive(false);
-                _free[_playingPrefabs[i]].Push(burst);
-                _playing.RemoveAt(i);
-                _playingPrefabs.RemoveAt(i);
+                RecycleAt(i);
             }
+        }
+
+        void RecycleAt(int index)
+        {
+            ParticleSystem burst = _playing[index];
+            ParticleSystem prefab = _playingPrefabs[index];
+            int last = _playing.Count - 1;
+            _playing[index] = _playing[last];
+            _playingPrefabs[index] = _playingPrefabs[last];
+            _playing.RemoveAt(last);
+            _playingPrefabs.RemoveAt(last);
+
+            if (burst == null)
+                return;
+
+            burst.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            burst.gameObject.SetActive(false);
+
+            if (_free.TryGetValue(prefab, out Stack<ParticleSystem> free) && free.Count < MaxPooledPerPrefab)
+                free.Push(burst);
+            else
+                Destroy(burst.gameObject);
         }
     }
 }

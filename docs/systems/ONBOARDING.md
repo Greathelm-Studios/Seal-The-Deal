@@ -1,32 +1,28 @@
 # ONBOARDING
 
-**Status:** Current (in `buffer`; built by the gaps lane) · **Last updated:** 2026-11-14
+**Status:** Current · **Last updated:** 2026-11-21
 
 ## What the player sees
 
-A new player is told the rules they can't guess, once each, the first time each comes up: what reception is for, that one briefcase decides the match, that carrying it opens floors, how to get it back from the rival, what happens when they die and when they fall out, and that their matches are kept. Each hint shows once per player and is remembered in their profile ([PROFILE.md](PROFILE.md)), so a second session doesn't repeat them.
+First-run hints explain non-obvious game rules once per player: reception's purpose, that one briefcase decides the match, that carrying it opens floors, how to steal it back, what happens on death and fall-out, and that career matches are saved. Seen hint IDs persist in `ProfileStore` ([PROFILE.md](PROFILE.md)) so returning sessions never repeat them.
 
-Nothing draws hints yet: the UI kit's hint panel listens to `FirstRunHints.HintShown`. **A hint is only marked seen when something is listening**, so a build without the panel never uses them up.
+Hints are only marked seen when a UI listener is subscribed to `FirstRunHints.HintShown`, so scenes without a hint panel never consume hints unseen. Movement/combat key help and the first shut-gate explanation (`FirstGateRefusal`, [MATCH.md](MATCH.md)) live in their own systems.
 
-Key help (move, jump, aim, fire) is the movement lane's controls help, not here. The first shut gate already explains itself (game mode's `FirstGateRefusal`), so it isn't repeated.
+## Ownership and netcode boundary (`AGENTS.md §3`)
 
-## Who owns what
+Local only: nothing is sent over the network. Triggers read already-synced local state (`LobbyRoom` containment, `MatchDirector` phase and briefcase picks, `Health.AnyDied`, `FirmMember.OnNotice`, and `ProfileStore.MatchRecorded`).
 
-Local only. Every trigger is read from state that is already synced: the local player in reception, the match phase, the briefcase status, the local body's death, the host's fall notice, and the profile recording a match.
+## Architecture and design rationale
 
-## Contract
+- **Queued delivery (`FirstRunHints`):** Simultaneous triggers queue into `_queue` (deduplicated by hint `Id` and `ProfileStore.Current.HasSeen`) and dequeue one at a time separated by `line.Seconds + OnboardingHints.GapSeconds`.
+- **Hint contract:** `FirstRunHints.HintShown` (`Action<HintLine>` with `Id`, formatted `Text`, and `Seconds`).
 
-`FirstRunHints.HintShown` (static `Action<HintLine>`: `Id`, `Text` with keys filled in, `Seconds`). Hints that arrive together queue, one at a time, **Gap Seconds** apart. `ProfileStore.Current.HasSeen(id)` tells whether one was shown.
+## Files and tuning
 
-## Designer values
-
-`Assets/_Project/Profiles/Onboarding/OnboardingHints.asset`: per hint an **Id** (what the profile remembers; renaming it shows it again once), **When**, **Text** (`{interact}`, `{drop}` become the keys) and **Seconds**; plus **Gap Seconds**. On the Records prefab (`Prefabs/Gaps/Records.prefab`), `FirstRunHints` has **Reception Check Seconds**. Every shipped hint is a proposal for Adam.
-
-## Scripts
-
-[Assets/_Project/Scripts/Onboarding/](../../Assets/_Project/Scripts/Onboarding/): `OnboardingHints.cs` (data), `FirstRunHints.cs` (triggers and queue).
+- Scripts under [Assets/_Project/Scripts/Onboarding/](../../Assets/_Project/Scripts/Onboarding/): `OnboardingHints.cs`, `FirstRunHints.cs` (hosted on `Prefabs/Gaps/Records.prefab`, `ReceptionCheckSeconds = 0.5 s`).
+- Tuning: `Assets/_Project/Profiles/Onboarding/OnboardingHints.asset` (per-hint `Id`, `When`, `Text` supporting `{interact}` and `{drop}`, `Seconds`, plus `GapSeconds`). Shipped lines are proposals for Adam.
 
 ## Known limitations
 
-- Keys are the keyboard labels from `FirmMember` (F, G); a pad player reads keyboard keys.
-- Hints are per PC profile, not per Steam account.
+- Hint key tokens currently format keyboard labels from `FirmMember` (`F`, `G`) rather than switching dynamically for gamepad users.
+- Seen hints are stored per PC profile rather than per Steam account.

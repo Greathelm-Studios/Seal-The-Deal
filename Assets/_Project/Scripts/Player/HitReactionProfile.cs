@@ -1,41 +1,14 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-13
-//  Prompt    : Alex: "a test dummy ... to test animations of being hit by certain powers of
-//              weapons", with the reactions tuned on "a profile asset of your own"
-//  Modified  : Claude Opus 5.5, 2026-11-15 — melee hits get their own feel: part of the push
-//              thrown over the whole upper body and a longer recovery; Impulse share now goes
-//              up to 5 for the players' exaggerated flinch (Harvey: "add hit
-//              reactions when hit by guns/melee weapons for the players ... there should be an
-//              exaggeration of it")
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : The designer's tuning panel for how a body reacts to hits. Its own asset, apart
-//              from AnimationProfile, because hit reactions are tuned against weapons and the
-//              animation profile is tuned against movement, by different people at different
-//              times.
-// -----------------------------------------------------------------------------
 using UnityEngine;
 
 namespace CloseTheDeal.Player
 {
-    /// <summary>
-    /// Designer-owned tuning for hit reactions on the active ragdoll. Runtime only reads it
-    /// (AGENTS.md §4).
-    /// </summary>
-    /// <remarks>
-    /// Every default here is a first guess picked from frame strips of the test dummy, not from
-    /// play. Which hits should only flinch and which should knock a body down is a design
-    /// question that is still open; this asset holds only the flinch.
-    /// </remarks>
+    /// <summary>Designer-owned tuning for active ragdoll hit flinches and placeholder knock-down rules.</summary>
     [CreateAssetMenu(menuName = "Seal the Deal/Hit Reaction Profile", fileName = "HitReactionProfile")]
     public sealed class HitReactionProfile : ScriptableObject
     {
-        /// <summary>The shortest recovery the flinch allows, seconds; see <see cref="FlinchRecover"/>'s tooltip. WHY 0.05: six ragdoll physics steps, the least in which a joint can visibly give and come back.</summary>
         public const float MinFlinchRecover = 0.05f;
 
         [Header("Flinch: the push")]
-        // WHY up to 5: the players' exaggerated flinch starts at 4 (twice the dummy's 2).
         [Tooltip("How much of a hit's push the body takes, as a multiple. 1 = all of it, as the weapon reports it. Lower = every hit moves the body less; higher = everything hits like a truck, for a cartoon flinch.")]
         [Range(0f, 5f)] public float ImpulseShare = 1f;
 
@@ -55,8 +28,6 @@ namespace CloseTheDeal.Player
         [Tooltip("How long a fully slack joint takes to get its strength back, in seconds. Lower = snappy twitches; higher = the body stays rubbery after a hit. Never shorter than 0.05.")]
         [Min(MinFlinchRecover)] public float FlinchRecover = 0.35f;
 
-        // WHY its own section: a shot should snap the one part it struck, a swing should throw
-        // the whole top half. The values above are the shot's; these change only melee hits.
         [Header("Melee hits")]
         [Tooltip("How much of a melee hit's push is shared over the whole upper body (chest, head and both arms) instead of landing only where it struck, as a fraction. 0 = a swing lands like a heavy shot; 1 = the whole top half is thrown as one and folds at the waist.")]
         [Range(0f, 1f)] public float MeleeBodyShare = 0.6f;
@@ -64,9 +35,6 @@ namespace CloseTheDeal.Player
         [Tooltip("How long joints slackened by a melee hit take to get their strength back, in seconds. Longer than a shot's recovery gives a heavier, groggier hit. Never shorter than 0.05.")]
         [Min(MinFlinchRecover)] public float MeleeRecover = 0.8f;
 
-        // WHY "placeholder": which hits floor a body, for how long, and how it gets up are
-        // design rules the GDD has not settled (it says only "on explosions and heavy hits,
-        // then recover quickly"). These values exist so the rules can be tried on the dummy.
         [Header("Knock-down (placeholder rules, not yet decided)")]
         [Tooltip("A hit at least this hard, in newton-seconds, knocks the body off its feet. 0 = nothing ever does. At 150 a thrown desk (about 320) and any blast (235 to 590) floor it, and a thrown chair (about 80) does not.")]
         [Min(0f)] public float KnockDownImpulse = 150f;

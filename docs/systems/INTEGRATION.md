@@ -1,97 +1,61 @@
 # INTEGRATION
 
-**Status:** Current (branch `integration`, not merged) · **Last updated:** 2026-11-13
+**Status:** Current · **Last updated:** 2026-11-21
 
-The lanes played as one game in `Assets/_Project/Scenes/Lanes/Lane_Integration.unity`. The glue is in [Assets/_Project/Scripts/Integration/](../../Assets/_Project/Scripts/Integration/) (namespace `CloseTheDeal.Integration`); the scene is built by [IntegrationLaneSetup.cs](../../Assets/_Project/Editor/Lanes/IntegrationLaneSetup.cs).
+Plays the Seal the Deal lanes as one game in `Assets/_Project/Scenes/Lanes/Lane_Integration.unity`.
 
 ## What the player sees
 
-Hosting or joining puts you in the **reception**: the lobby lane's shared room, standing at street level past the end of the towers, its glass front looking down the street at both towers' bases. Your pistol is holstered: nobody can fire in reception.
+Hosting or joining puts you in the shared **reception** at street level past the end of the towers, looking down the street at both tower bases. Weapons are holstered in reception so nobody can fire there.
 
-Sign in with a firm at a stand (F), ready up at the desk (F), change outfit at the mirror. When everyone is ready and both firms have someone, the host holds F at the desk. Everyone is moved into their own firm's tower reception and the 5-second countdown runs. The ready board disappears once you leave reception.
+Sign in with a firm at a stand (`F`), ready up at the desk (`F`), and change outfits at the mirror. When everyone is ready and both firms have a player, the host holds `F` at the desk. Everyone moves into their firm's tower reception, the 5-second countdown runs, and the ready board clears outside reception.
 
-On floors 1 to 3 of both towers, at the same spot in each, lie a **pistol**, an **AR-15**, a **Grenade Case**, a **fire extinguisher**, a **wet floor sign**, a **cubicle panel** and **chairs**, on top of the furniture the floors already have. They move to new spots every match. Reception holds no loot.
+On floors 1 to 3 of both towers, identical spots hold a **pistol**, an **AR-15**, a **Grenade Case**, a **fire extinguisher**, a **wet floor sign**, a **cubicle panel**, and **chairs**, shifting to new spots each match.
 
-- **Guns go to your weapon slots, not your hands.** F on a gun: it is in slot 1 or 2 at once, full magazine. A gun you already carry is refilled. With both slots full, the new gun replaces the one in your hand and that one drops in front of you.
-- **The briefcase and a carried item share your hands.** Holding one, F on the other says "Hands full · G to drop". G drops whichever you hold. When the briefcase and an item are both in reach, F takes the briefcase.
-- **Carrying an item, you can't fire** (left mouse throws). **Carrying the briefcase, you can.**
-- Dying drops the briefcase and whatever you carry; you keep your guns.
+- **Guns go to weapon slots, not hands:** `F` on a gun puts it in slot 1 or 2 with a full magazine, refills a gun you already carry, or swaps with the held gun and drops it in front of you.
+- **Briefcase and carried items share hands:** holding one makes `F` on the other report "Hands full, G to drop". `G` drops whichever you hold. When both are in reach, `F` takes the briefcase.
+- **Fire restrictions:** carrying an item disables firing (left click throws); carrying the briefcase allows firing.
+- **Death drops:** dying drops the briefcase and any carried item, while keeping guns.
 
-Every match starts level: the pistol only, a full magazine and full health, whatever you finished the last one with.
+Every match resets everyone to the starting loadout, full magazines, and full health. Carrying the briefcase onto a roof wins the match; 8 seconds after the result, everyone returns to reception empty-handed with the desk reopened. The host's Esc menu also offers **"Start now, skipping the desk"** (and rematch shortcut) for solo testing.
 
-Carry the briefcase onto a roof and your firm wins. The result shows; 8 seconds later everyone is back in reception, empty-handed, the desk open and every ready cleared, for the next match.
-
-The host's Esc menu still has **"Start now, skipping the desk"** (and "Rematch now, skipping the desk" after a result). It is a shortcut for testing alone, since the desk needs both firms. Everyone else's menu reads "Ready up at the reception desk."
-
-## The four joins
-
-```
- Reception (Waiting) ──desk hold, everyone ready──▶ LobbyRoster.RunStartRequested ──▶ LobbyRunFlow ──▶ MatchDirector.HostStartRun(client id → firm)
-        ▲                                                                                   │  refused (a match is already on) ─▶ desk reopened
-        │                                                                                   ▼
-        └── 8 s after the result: everyone teleported back, desk reopened ◀── Ended ◀── Running ◀── Countdown (everyone in their firm's tower reception)
-
- F on a pickup ──host──▶ ItemCarrier.ServerItemTaken ──gun?──▶ GunPickups: refill / free slot / swap; pickup despawned; swapped gun spawned by FloorLoot
- F ──owner──▶ lobby target? ─▶ lobby │ briefcase in reach? ─▶ briefcase (FirmMember) │ else item (ItemCarrier)
-             host: item refused if the briefcase fills the hands (not guns); briefcase refused if an item fills them
- Tower built ──host──▶ FloorLoot clears last match's loot and places the loot table on floors 1–3 of both towers
-```
-
-1. **Lobby start → match** (`LobbyRunFlow`). Host only. Listens to the static `LobbyRoster.RunStartRequested` (unsubscribed on disable) and calls `MatchDirector.HostStartRun`. The lobby's firm 0 / 1 is the match's building A / B: `LobbyRoster.ToFirmMap` gives client id → firm index, and `HostStartRun` sets `FirmMember.Firm` (the index of the building climbed) and the `TeamSpawner` seat, then rebuilds the towers, which moves every player to `TowerBuilder.TryGetSpawn(firm, slot)` (their tower's reception) and starts the countdown. The rebuild is synchronous, so a second start in the same frame finds the countdown already set and is refused. A refused lobby start calls `ServerReturnToLobby()` so the desk does not stay "starting". Players arriving before a match or after a result are put at the reception's spawn points (`TeamSpawner.OnPlayerSpawning`); mid-match arrivals keep the match's spawn (their firm's checkpoint or tower reception). A player dead when moved respawns where they were moved to. At every countdown, however the match was started, each player's hands are emptied and they get the scene's starting guns (full magazines) and full health back; a player still dead then comes back at full health in their reception when their 5 s respawn ends.
-2. **Gun pickups → weapon slots** (`GunPickups`, `GunPickupMap`). `ItemDefinition` has no link to Combat, so the map asset `Profiles/Integration/GunPickupMap.asset` pairs `Item_Pistol` / `Item_AR15` with `Pistol` / `AR15` and their pickup prefabs. On `ItemCarrier.ServerItemTaken` the host calls `WeaponHolder.Equip(weapon, slot)` and `Pickup.ServerUseUp()` (despawns: guns never return). `Equip` writes the holder's slot SyncVars, which reach the owner and everyone else.
-3. **One thing in the hands** (`SharedHands`, `PlayerParts`). Hooks the lanes now expose: `ItemCarrier.HandsTakenElsewhere` and `InteractClaimedElsewhere`, `MatchDirector.HandsFull`, `WeaponHolder.FireHeld`. Keys: F interact, G drop, everywhere (pad: north, d-pad down). Every lane-local key reads the one menu gate, `PlayerInputReader.Captured` (the lobby's own `LobbyInput.Captured` is the same test).
-4. **One scene** (`IntegrationLaneSetup`). Built from the game mode's builder (short `LaneTower` towers, plaza, skybridges, gates, a real `TowerBuilder` and `PropSpawner`, so Switchboard streams props), then the shooting lane's **Add Shooting To Open Scene** (glass registry; the starting loadout here is the pistol only), the pickups lane's prefabs and item prompt, and the lobby lane's reception, desk, stands, fitting room, roster and screens, each from that lane's own builder. `LobbyRoom` marks reception as in play for the match (neutral ground) so nobody waiting there counts as fallen out, and stands the ready board down outside it. Shooting targets are left out: they would stand in the loot's way.
-
-## Who owns what (AGENTS.md §3)
+## Ownership and netcode boundary (`AGENTS.md §3`)
 
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
-| Lobby start → match start | **Host** | Nothing new: the match's phase SyncVar and the roster's run flag | Once per match |
-| Back to reception after a result | **Host** teleports every body | Rides each body's state | Once per match |
-| Loot on floors 1–3 | **Host** spawns after each tower build, despawns at the next | One FishNet spawn per thing (16 with the default table); motion through Switchboard while moving | Once per match |
-| A gun taken | **Host** | The holder's slot SyncVars (1 byte each) and the pickup's despawn | Per pickup |
-| Swapped-out gun | **Host** spawns it | One spawn | Per swap |
-| Hands rules, fire hold, reception board | Every machine from synced state; the **host's** checks decide | Nothing | — |
+| Lobby start to match start | Host | Match phase `SyncVar` and roster run flag | Once per match |
+| Return to reception after result | Host teleports every body | Rides each player's state | Once per match |
+| Loot on floors 1 to 3 | Host spawns after each tower build, despawns on rebuild | One FishNet spawn per item (16 with default table); motion via Switchboard | Once per match (queued) |
+| Gun taken | Host | `WeaponHolder` slot `SyncVar`s (1 byte each) and pickup despawn | Per pickup |
+| Swapped-out gun | Host spawns it | One FishNet spawn | Per swap |
+| Hands rules, fire hold, reception gating | Computed on every machine from synced state; host checks decide | Nothing | Never |
 
-## Rules chosen (Adam to confirm)
+## Architecture and design rationale
 
-- **Start with the pistol only**; the AR-15 is found on floor 2. Every match start puts everyone back to that and full health.
-- **Picking up a gun you already carry refills it** and uses the pickup up.
-- **Full slots: the new gun replaces the gun in hand**, which drops in front of you as a pickup.
-- **A picked-up gun goes to the free slot without being drawn**; press 1 or 2 to use it.
-- **The briefcase and items share one pair of hands**; the briefcase wins F when both are in reach; a lobby desk, stand or mirror wins over both.
-- **Guns are not in the hands**: a briefcase carrier can pick up and fire guns. With an item in your hands you can neither fire nor pick up a gun (drop the item first).
-- **Nobody fires in reception.**
-- **Back to reception 8 s after a result**, empty-handed (the briefcase stays where the match ended until the next match moves it).
-- **The Esc menu's start is kept as a host shortcut** that skips the desk.
-- **Reception stands beside the towers**, not inside either tower's ground floor (one shared room, as you asked for the lobby).
+1. **Lobby start to match (`LobbyRunFlow`):** Host listens to static `LobbyRoster.RunStartRequested` (unsubscribed in `OnDisable` to prevent duplicate handlers across Play sessions). Lobby firm `0`/`1` maps to building A/B via `LobbyRoster.ToFirmMap(entrants)` into `MatchDirector.HostStartRun`. Because tower rebuilds are synchronous, a duplicate start in the same frame is refused and calls `LobbyRoster.ServerReturnToLobby()` so the desk never locks in "starting". Pre-match/post-result arrivals spawn at `_lobbySpawns`; mid-match arrivals use match checkpoints. `FreshStart` empties hands, restores starting guns, restores health, and overrides respawn position for anyone still dead.
+2. **Queued floor loot (`FloorLoot`, `FloorLootTable`):** On `MatchDirector.OnArenaChanged` (seeded from `_tower.Seed`), `FloorLoot` calls `Physics.SyncTransforms()` so newly positioned towers are visible to physics queries, then spreads placement across frames (`FloorsPerFrame = 2` floors per `Update`) using raycasts and `CheckBox` clearance against walls, windows, stairs, and other items in both towers. Mid-match swapped guns use `ServerSpawnLoose` after pruning already-despawned entries.
+3. **Gun pickups (`GunPickups`, `GunPickupMap`):** `GunPickupMap` decouples `Items` from `Combat` by mapping `ItemDefinition` to `WeaponDefinition` and dropped pickup prefab. Unlisted guns fall back to normal hand carry and are denied if the player holds the briefcase.
+4. **Shared hands and component cache (`SharedHands`, `PlayerParts`):** `SharedHands` registers static hooks (`HandsTakenElsewhere`, `InteractClaimedElsewhere`, `HandsFull`, `FireHeld`) and cleans them up in `OnDisable`. `PlayerParts` caches `ItemCarrier` and `FirmMember` lookups per player component and clears caches on `FirmMember.OnRosterChanged`.
+5. **Reception neutral zone (`LobbyRoom`):** Re-adds the reception `Bounds` as neutral ground to `MatchArena` whenever the towers rebuild, and calls `LobbyInteractor.Block`/`Unblock` when the local player steps outside reception.
 
-## Designer values
+## Rules and tuning
 
-- `Profiles/Integration/FloorLootTable.asset`: what lies on which floor, and how far from walls, window, stairs and each other.
-- `Profiles/Integration/GunPickupMap.asset`: which pickup gives which gun, and what drops on a swap.
-- On the scene's **Integration** object: `Back To Lobby Seconds` (8) and the reception spawn points (`LobbyRunFlow`), `Swap Toss Speed` (`GunPickups`).
-- On **Reception**: the room's centre and size (`LobbyRoom`), set by the tool.
-- The menu's words are on the match menu section (`MatchMenuPanel`: Start Label, Rematch Label, Waiting For Start, Waiting For Rematch).
+- **Designer assets:** `Profiles/Integration/FloorLootTable.asset` (per-floor loot entries and margins: `WallMargin`, `WindowMargin`, `StairClearance`, `Clearance`, `Spacing`, `Tries`), `Profiles/Integration/GunPickupMap.asset`.
+- **Scene tuning:** On **Integration** (`LobbyRunFlow._backToLobbySeconds = 8`, `_lobbySpawns`; `GunPickups._swapTossSpeed = 2`), and on **Reception** (`LobbyRoom._centre`, `_size`).
+- **Menu strings:** On `MatchMenuPanel` (`Start Label`, `Rematch Label`, `Waiting For Start`, `Waiting For Rematch`).
 
-## Rebuilding the scene
+## Files and setup
 
-**Seal the Deal > Lanes > Set Up Integration** rebuilds `Lane_Integration.unity` (asks first if it exists). From the shell:
-
-```
-Unity -batchmode -projectPath <checkout> -executeMethod CloseTheDeal.Editor.Lanes.IntegrationLaneSetup.SetUpFromCommandLine
-```
-
-It creates the two Integration assets only if missing and never changes an existing asset. Each lane's step only adds what is missing. `Player.prefab` is add-only here: the lobby's outfit goes on only when the player has no `PlayerOutfit` (one that has is reported and left alone), and every lane step it calls is watched: a step that changes the prefab is named in a warning, so its owner can make it add-only. **Run Integration Check (solo)** on the same menu plays the scene by script; from the shell, `-executeMethod CloseTheDeal.Editor.Lanes.IntegrationLaneRun.RunFromShell -local -integrationRole solo|host|client -integrationOut <folder>` (host and client as two copies of the project).
+- Scripts under [Assets/_Project/Scripts/Integration/](../../Assets/_Project/Scripts/Integration/): `FloorLoot.cs`, `FloorLootTable.cs`, `GunPickupMap.cs`, `GunPickups.cs`, `LobbyRoom.cs`, `LobbyRunFlow.cs`, `PlayerParts.cs`, `SharedHands.cs`.
+- Scene setup: [IntegrationLaneSetup.cs](../../Assets/_Project/Editor/Lanes/IntegrationLaneSetup.cs), menu **Seal the Deal > Lanes > Set Up Integration** (or CLI `-executeMethod CloseTheDeal.Editor.Lanes.IntegrationLaneSetup.SetUpFromCommandLine`). **Run Integration Check (solo)** automates a check run.
 
 ## Known limitations
 
-- **Tower windows do not break in this scene.** The floor templates' window glass has no collider (the kit's `Window_4m` collides only at its sill), so the glass registry finds nothing to break in the towers: the check run counted one breakable pane in the whole scene. Shots and players pass through the window openings. It needs the template owner or the shooting lane to give tower window glass a collider; `Lane_Shooting` builds its own glass.
-- **Firm names disagree**: the lobby says Cobalt and Cyan (`LobbyRules.asset`), the match says Ashcombe & Pryce and Halloran Voss (`Firm_*.asset`). Same firms by index; both sets are proposals.
-- **Alone, the desk can't start a match** (`Require Both Firms` on `LobbyRules.asset`); use the menu's shortcut.
-- **Taking a gun fires the pickup's "knocked loose" release on every machine** (the pickup is in the hands for one call before it is used up), so a drop sound hung on it would play.
-- **Guns taken are gone for the match**; a fresh set comes with the next match. A dead player keeps theirs.
-- **Loot placement checks for room only when the towers are built**; furniture shoved about later can end up on top of it.
-- **One F press asks for both the briefcase and an item**, and the host decides by reach. If the host has the briefcase in reach but the player's own screen did not (lag at the edge of reach), the host gives the briefcase, not the item the prompt showed.
-- **At the reception's edge** the owner and the host can disagree for a moment about whether a player is inside, so a shot fired while stepping out may show on the shooter's screen and be refused by the host. Players only leave reception by being moved, so this needs a broken window guard to happen.
-- **Nothing here is seen over Steam, on two computers, or with more than one client.**
+- **Tower windows do not break in `Lane_Integration`:** Floor template window glass currently lacks a breakable collider, so the glass registry finds no tower panes there and shots/players pass through window openings.
+- **Firm names disagree:** Lobby rules use Cobalt and Cyan (`LobbyRules.asset`), while match definitions use Ashcombe & Pryce and Halloran Voss (`Firm_*.asset`).
+- **Desk requires both firms:** Solo testing must use the Esc menu start shortcut when `Require Both Firms` is enabled on `LobbyRules.asset`.
+- **Gun pickup drop sound edge case:** Picking up a gun momentarily places it in hand before `ServerUseUp()`, firing the release callback once.
+- **Consumed guns stay gone for the match:** Used gun pickups do not respawn until the next match; dead players keep equipped guns.
+- **Placement uses initial layout only:** Shoved furniture can later overlap spawn spots chosen at match start.
+- **Edge-of-reach and reception-edge sync:** Lag at reach boundaries can make the host pick the briefcase when the client prompt showed an item, and stepping across reception's edge can briefly disagree on whether firing is allowed.
+- **Not yet verified over Steam on multiple machines or with more than two clients.**

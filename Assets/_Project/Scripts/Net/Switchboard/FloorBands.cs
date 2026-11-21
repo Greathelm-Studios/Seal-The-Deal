@@ -26,12 +26,7 @@ namespace CloseTheDeal.Net
         }
     }
 
-    /// <summary>
-    /// The Tower object's frame, captured once after a build. Turns world positions into
-    /// Tower-local positions and floor cells, and carries the fixed box poses are packed into.
-    /// Pure: it holds numbers copied from the Tower transform and TowerProfile and never
-    /// writes to either.
-    /// </summary>
+    /// <summary>Captured Tower frame mapping world positions to Tower-local space and floor cells.</summary>
     public readonly struct TowerFrame
     {
         /// <summary>Extra room around both towers, in metres, that a thrown body can still be shown in.</summary>
@@ -55,11 +50,7 @@ namespace CloseTheDeal.Net
             LocalBounds = localBounds;
         }
 
-        /// <summary>
-        /// Captures the frame. floorCount is the number of floors in one tower (lobby to roof).
-        /// Box: local X within ±(Width/2 + margin); local Z within ±(Gap/2 + MainDepth + SpineDepth + margin);
-        /// local Y from -margin to floorCount * FloorHeight + margin.
-        /// </summary>
+        /// <summary>Captures a TowerFrame from the tower root, profile, and floor count.</summary>
         public static TowerFrame From(Transform towerRoot, TowerProfile profile, int floorCount)
         {
             float halfWidth = profile.Width * 0.5f + MarginMetres;
@@ -98,10 +89,7 @@ namespace CloseTheDeal.Net
 
     public static class FloorBands
     {
-        /// <summary>
-        /// Near when the body is in the viewer's tower within nearSameTower floors, or in the
-        /// other tower within nearRivalTower floors. Far otherwise.
-        /// </summary>
+        /// <summary>Returns Near when the body is within nearSameTower/nearRivalTower floors of the viewer.</summary>
         public static Band Between(FloorCell viewer, FloorCell body, int nearSameTower, int nearRivalTower)
         {
             int floorDistance = Mathf.Abs(viewer.Floor - body.Floor);

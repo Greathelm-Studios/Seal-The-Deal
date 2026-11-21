@@ -6,12 +6,7 @@ using UnityEngine.InputSystem.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// A key hint ("[F] Pick up", "[Esc] Back") that shows the key for the device the player is on: the keyboard key,
-    /// or the button as printed on their Xbox or PlayStation pad, read from the action's real binding (custom keys
-    /// included). Set an action (or fixed keyboard / pad names) to make it live; with none it shows whatever its text says, as before. The cap
-    /// widens to fit the label and the words move along with it. Changes only when the device or the keys change.
-    /// </summary>
+    /// <summary>Device-aware key/button cap hint that resizes its cap and label when input device or rebinds change.</summary>
     [AddComponentMenu("Seal the Deal/UI/Key Hint")]
     public sealed class UiKeyHint : MonoBehaviour
     {
@@ -65,8 +60,7 @@ namespace CloseTheDeal.UI
             Refresh();
         }
 
-        /// <summary>The EventSystem (whose UI actions Submit and Cancel come from) may enable after this hint does.</summary>
-        void Start() => Refresh();
+        void Start() => Refresh(); // EventSystem UI actions may enable after OnEnable.
 
         void OnDisable()
         {
@@ -93,6 +87,12 @@ namespace CloseTheDeal.UI
             }
             if (string.IsNullOrEmpty(text))
                 text = "\u2014"; // nothing bound on this device: a dash, never the other device's key
+            SetKeyText(text);
+        }
+
+        /// <summary>Displays a key supplied by a gameplay prompt and fits the cap to its device label.</summary>
+        public void SetKeyText(string text)
+        {
             if (text == _shown)
                 return;
             _shown = text;

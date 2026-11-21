@@ -5,13 +5,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// Greybox readout for the local player's body: state, speed, how far the host's last
-    /// correction moved it, and ping. Exists so the first network tests can tell "feels
-    /// wrong" from "is wrong". Rebuilds its text at most ten times a second, and only when
-    /// a value changed. The player can hide it with Settings > Accessibility > Show network stats;
-    /// hidden, it reads nothing at all.
-    /// </summary>
+    /// <summary>HUD readout of local player state, prediction corrections, ping, and Switchboard prop stats.</summary>
     public sealed class PredictionDebugHud : MonoBehaviour
     {
         struct Sample
@@ -66,7 +60,6 @@ namespace CloseTheDeal.UI
             UiSettings.Changed -= ApplySetting;
         }
 
-        /// <summary>The readout's backing chip is the text's parent; showing or hiding it follows the saved setting.</summary>
         void ApplySetting()
         {
             if (_text == null)

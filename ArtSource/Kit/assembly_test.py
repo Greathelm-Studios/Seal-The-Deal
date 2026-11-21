@@ -1,14 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-11
-#  Prompt    : "Start the snap kit" (brief step 2: check the first pieces build two bays and a corner)
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Snaps built kit pieces together by the convention alone (grid positions and 90 degree
-#              turns, no hand nudging), then fires rays along every seam to find gaps, and renders
-#              the result from inside and outside. It exists so a change to any kit number is
-#              re-proved the same way instead of being eyeballed in a scene.
-# -----------------------------------------------------------------------------
 """Usage: blender -b --factory-startup -P ArtSource/Kit/assembly_test.py -- <kit build folder> <out folder>
 
 Places, in Unity floor-local terms: a two-bay façade corner (2 m and 4 m slab rows, two window bays,

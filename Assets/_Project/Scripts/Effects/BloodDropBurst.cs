@@ -1,67 +1,39 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-15
-//  Prompt    : Harvey: "Add a particle effect where blood splatters off of a player when
-//              they're hit, from that spot and somewhat from their body."
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : Throws drops of blood through the air off a struck body: most from the spot that
-//              was hit, some from the rest of the body. One particle system for every hit in the
-//              scene. It creates itself; no scene or prefab needs to know about it.
-// -----------------------------------------------------------------------------
 using CloseTheDeal.Player;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.Effects
 {
-    /// <summary>
-    /// The blood in the air. Hears <see cref="HitFeed.Struck"/> and, for bullets and melee hits,
-    /// bursts drops off the struck body. <see cref="BloodSplatSystem"/> paints where it lands.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>Ownership (AGENTS.md §3):</b> purely cosmetic and local, like the splats. Every machine
-    /// hears the hit and throws its own drops; nothing is networked and the drops touch nothing.
-    /// </para>
-    /// <para>
-    /// WHY one shared particle system and not one per hit: every drop is the same square with
-    /// its own place and speed, so one system draws all of them in one batch and a busy fight
-    /// creates no objects. Alternative considered: drops that collide with the level and leave
-    /// marks; the splat system already paints the surfaces, and world collision for particles
-    /// costs physics queries for something that lasts half a second.
-    /// </para>
-    /// </remarks>
+    /// <summary>Spawns local stretched blood drop particles on HitFeed.Struck for bullet and melee hits.</summary>
     [DisallowMultipleComponent]
     public sealed class BloodDropBurst : MonoBehaviour
     {
-        /// <summary>The drop material, by name inside a Resources folder. Written by Seal the Deal > Art > Build Blood Assets.</summary>
         const string MaterialResource = "BloodDrop";
-
-        /// <summary>The tuning asset shared with the splats, by name inside a Resources folder.</summary>
         const string ProfileResource = "BloodProfile";
-
-        const string ShaderName = "Close the Deal/Blood Drop";
-
-        /// <summary>The body's height range the "from the body" drops start in, metres above the victim's feet: about knee to shoulder on the 1.8 m character.</summary>
+        const string ShaderName = "Seal the Deal/Blood Drop";
         const float BodyLow = 0.6f;
         const float BodyHigh = 1.5f;
-
-        /// <summary>How far out from the body's centre line the "from the body" drops start, metres: about the surface of the torso.</summary>
         const float BodyRadius = 0.2f;
-
-        /// <summary>How much of a drop's length comes from its speed, seconds. At 5 m/s a drop is drawn about 12 cm longer than it is wide.</summary>
         const float StretchPerSpeed = 0.025f;
-
-        /// <summary>Drops that would start closer to this machine's eye than this, metres, are left out. WHY: in the body view the eye is in the struck body, and a 5 cm drop 20 cm from the lens fills a quarter of the screen.</summary>
         const float NearEye = 0.5f;
+        const float MaxDropDistance = 60f;
 
         static BloodDropBurst instance;
+        static Camera _mainCamera;
         static readonly int CutColorId = Shader.PropertyToID("_CutColor");
 
         ParticleSystem drops;
         Material material;
         BloodProfile profile;
+        bool _ownsProfile;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            instance = null;
+            _mainCamera = null;
+        }
 
         /// <summary>Makes the system when a Play Mode or build session has loaded its first scene.</summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -93,19 +65,53 @@ namespace CloseTheDeal.Effects
                 // Defaults in code: the field initialisers in BloodProfile.
                 profile = ScriptableObject.CreateInstance<BloodProfile>();
                 profile.hideFlags = HideFlags.HideAndDontSave;
+                _ownsProfile = true;
+            }
+            else
+            {
+                _ownsProfile = false;
             }
 
             material = LoadMaterial();
             if (material != null)
+            {
+                material.SetColor(CutColorId, profile.CutColor);
                 drops = BuildSystem();
+            }
         }
 
-        void OnEnable() => HitFeed.Struck += OnStruck;
+        void OnEnable()
+        {
+            HitFeed.Struck += OnStruck;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
+        }
 
-        void OnDisable() => HitFeed.Struck -= OnStruck;
+        void OnDisable()
+        {
+            HitFeed.Struck -= OnStruck;
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        }
+
+        void OnSceneUnloaded(Scene scene)
+        {
+            _mainCamera = null;
+            if (drops != null)
+                drops.Clear();
+        }
 
         void OnDestroy()
         {
+            if (material != null)
+            {
+                Destroy(material);
+                material = null;
+            }
+            if (_ownsProfile && profile != null)
+            {
+                Destroy(profile);
+                profile = null;
+            }
+            _ownsProfile = false;
             if (instance == this)
                 instance = null;
         }
@@ -114,7 +120,7 @@ namespace CloseTheDeal.Effects
         {
             var loaded = Resources.Load<Material>(MaterialResource);
             if (loaded != null)
-                return loaded;
+                return new Material(loaded) { name = "BloodDrop (runtime)", hideFlags = HideFlags.HideAndDontSave };
 
             // The material asset is missing: make one from the shader. In a build the shader is
             // only present if something references it, so this path is for the Editor.
@@ -128,10 +134,9 @@ namespace CloseTheDeal.Effects
             return new Material(shader) { name = "BloodDrop (runtime)", hideFlags = HideFlags.HideAndDontSave };
         }
 
-        /// <summary>One particle system that never emits by itself: every drop is placed by <see cref="Burst"/>.</summary>
         ParticleSystem BuildSystem()
         {
-            // Inactive while it is set up, so the system does not start playing with its defaults.
+            // Inactive while configured so the system does not play with default settings.
             var holder = new GameObject("Drops");
             holder.SetActive(false);
             holder.transform.SetParent(transform, false);
@@ -180,6 +185,15 @@ namespace CloseTheDeal.Effects
             if (drops == null)
                 return;
 
+            int maxParticles = drops.main.maxParticles;
+            int remaining = maxParticles - drops.particleCount;
+            if (remaining <= 0)
+                return;
+
+            bool hasEye = TryCameraPosition(out Vector3 eyePos);
+            if (hasEye && (hit.Point - eyePos).sqrMagnitude > MaxDropDistance * MaxDropDistance)
+                return;
+
             BloodProfile p = profile;
             bool melee = hit.Type == HitType.Melee;
             // A harder hit throws more; the square root keeps a 300 N·s hit from throwing fifteen times a pistol's.
@@ -187,24 +201,24 @@ namespace CloseTheDeal.Effects
             Vector3 dir = hit.Direction.sqrMagnitude > 1e-4f ? hit.Direction.normalized : (victim != null ? victim.forward : Vector3.forward);
             float cone = Mathf.Min(p.DropSpread * (melee ? 2f : 1f), 85f);
 
-            material.SetColor(CutColorId, p.CutColor);
             var drop = new ParticleSystem.EmitParams { startColor = p.BloodColor };
 
             int fromWound = Mathf.Min(Mathf.RoundToInt(p.DropsFromWound * strength), p.MaxDropsPerHit);
-            for (int i = 0; i < fromWound; i++)
+            for (int i = 0; i < fromWound && remaining > 0; i++)
             {
                 // Most fly on the way the hit was going; a share sprays back at the attacker, slower and wider.
                 bool back = Random.value < p.BackSpray;
                 Vector3 way = back ? InCone(-dir, Mathf.Min(cone * 1.6f, 85f)) : InCone(dir, cone);
                 float speed = p.DropSpeed * Random.Range(0.4f, 1f) * (back ? 0.5f : 1f);
-                Emit(ref drop, hit.Point, way * speed, p);
+                if (Emit(ref drop, hit.Point, way * speed, p, hasEye, eyePos))
+                    remaining--;
             }
 
-            if (victim == null)
+            if (victim == null || remaining <= 0)
                 return;
 
             int fromBody = Mathf.Min(Mathf.RoundToInt(p.DropsFromBody * strength), p.MaxDropsPerHit - fromWound);
-            for (int i = 0; i < fromBody; i++)
+            for (int i = 0; i < fromBody && remaining > 0; i++)
             {
                 // Shaken off the rest of the body: outward from its centre line, pushed a little
                 // the way the hit went and a little up, at a fraction of the wound's speed.
@@ -212,21 +226,42 @@ namespace CloseTheDeal.Effects
                 var outward = new Vector3(ring.x, 0f, ring.y);
                 Vector3 from = victim.position + Vector3.up * Random.Range(BodyLow, BodyHigh) + outward * BodyRadius;
                 Vector3 way = (outward + dir * 0.6f + Vector3.up * 0.5f).normalized;
-                Emit(ref drop, from, way * (p.DropSpeed * Random.Range(0.2f, 0.5f)), p);
+                if (Emit(ref drop, from, way * (p.DropSpeed * Random.Range(0.2f, 0.5f)), p, hasEye, eyePos))
+                    remaining--;
             }
         }
 
-        void Emit(ref ParticleSystem.EmitParams drop, Vector3 position, Vector3 velocity, BloodProfile p)
+        static bool TryCameraPosition(out Vector3 position)
         {
-            PlayerCamera eye = PlayerCamera.Instance;
-            if (eye != null && (eye.transform.position - position).sqrMagnitude < NearEye * NearEye)
-                return;
+            if (PlayerCamera.Instance != null)
+            {
+                position = PlayerCamera.Instance.transform.position;
+                return true;
+            }
+
+            if (_mainCamera == null)
+                _mainCamera = Camera.main;
+            if (_mainCamera != null)
+            {
+                position = _mainCamera.transform.position;
+                return true;
+            }
+
+            position = Vector3.zero;
+            return false;
+        }
+
+        bool Emit(ref ParticleSystem.EmitParams drop, Vector3 position, Vector3 velocity, BloodProfile p, bool hasEye, Vector3 eyePos)
+        {
+            if (hasEye && (eyePos - position).sqrMagnitude < NearEye * NearEye)
+                return false;
 
             drop.position = position;
             drop.velocity = velocity;
             drop.startSize = p.DropSize * Random.Range(0.5f, 1.3f);
             drop.startLifetime = p.DropLife * Random.Range(0.6f, 1.2f);
             drops.Emit(drop, 1);
+            return true;
         }
 
         /// <summary>A random direction within <paramref name="degrees"/> of <paramref name="dir"/>, spread evenly over the cone's circle.</summary>

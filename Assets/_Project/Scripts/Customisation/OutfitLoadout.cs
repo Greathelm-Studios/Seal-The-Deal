@@ -2,10 +2,7 @@ using System;
 
 namespace CloseTheDeal.Customisation
 {
-    /// <summary>
-    /// A whole outfit as small ids: one byte per slot, up to 8 slots, packed into 8 bytes.
-    /// This is all that crosses the network for an outfit; meshes and materials never do.
-    /// </summary>
+    /// <summary>Packed 8-byte outfit loadout (one byte per slot) replicated over the network.</summary>
     public readonly struct OutfitLoadout : IEquatable<OutfitLoadout>
     {
         public const int MaxSlots = 8;

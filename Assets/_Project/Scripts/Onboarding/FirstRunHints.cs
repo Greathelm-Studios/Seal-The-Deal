@@ -23,13 +23,7 @@ namespace CloseTheDeal.Onboarding
         }
     }
 
-    /// <summary>
-    /// Tells a new player the rules they can't guess, once each: what reception is for, the
-    /// briefcase, opening floors, getting it back, dying and falling out, and that matches are
-    /// kept. A hint is remembered in the profile as seen only when something on screen is
-    /// listening to HintShown, so a build without the hint panel never uses them up. Local only;
-    /// every trigger is read from synced state. Design: docs/systems/ONBOARDING.md.
-    /// </summary>
+    /// <summary>Triggers and queues one-time onboarding hints once a UI listener is subscribed. Design: docs/systems/ONBOARDING.md.</summary>
     [DisallowMultipleComponent]
     public sealed class FirstRunHints : MonoBehaviour
     {
@@ -44,15 +38,20 @@ namespace CloseTheDeal.Onboarding
 
         readonly Queue<HintLine> _queue = new();
         MatchDirector _match;
-        Health _localHealth;
         float _nextShow;
         float _nextReceptionCheck;
+        bool _receptionSeen;
+        string _receptionHintId;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics() => HintShown = null;
 
         void OnEnable()
         {
+            _receptionHintId = _hints != null && _hints.For(HintTrigger.ArrivedInReception) != null
+                ? _hints.For(HintTrigger.ArrivedInReception).Id
+                : null;
+            _receptionSeen = string.IsNullOrEmpty(_receptionHintId) || ProfileStore.Current.HasSeen(_receptionHintId);
             FirmMember.OnNotice += OnNotice;
             Health.AnyDied += OnDied;
             ProfileStore.MatchRecorded += OnRecorded;
@@ -74,7 +73,7 @@ namespace CloseTheDeal.Onboarding
         {
             if (_match == null && MatchDirector.Instance != null)
                 Hook(MatchDirector.Instance);
-            if (Time.unscaledTime >= _nextReceptionCheck)
+            if (!_receptionSeen && Time.unscaledTime >= _nextReceptionCheck)
                 CheckReception();
             if (_queue.Count > 0 && Time.unscaledTime >= _nextShow)
                 ShowNext();
@@ -87,11 +86,14 @@ namespace CloseTheDeal.Onboarding
             _match.OnBriefcasePickedUp += OnPickedUp;
         }
 
-        // ---- Triggers ------------------------------------------------------------------------
-
         void CheckReception()
         {
             _nextReceptionCheck = Time.unscaledTime + _receptionCheckSeconds;
+            if (string.IsNullOrEmpty(_receptionHintId) || ProfileStore.Current.HasSeen(_receptionHintId))
+            {
+                _receptionSeen = true;
+                return;
+            }
             FirmMember me = FirmMember.Local;
             if (me != null && LobbyRoom.Instance != null && LobbyRoom.Instance.Contains(me.Position))
                 Offer(HintTrigger.ArrivedInReception);
@@ -114,9 +116,7 @@ namespace CloseTheDeal.Onboarding
         void OnDied(Health health, DamageInfo info)
         {
             FirmMember me = FirmMember.Local;
-            if (me != null && _localHealth == null)
-                _localHealth = me.GetComponent<Health>();
-            if (health == _localHealth && health != null)
+            if (me != null && health != null && health.gameObject == me.gameObject)
                 Offer(HintTrigger.Died);
         }
 
@@ -127,8 +127,6 @@ namespace CloseTheDeal.Onboarding
         }
 
         void OnRecorded(MatchSummary summary, PlayerProfile profile) => Offer(HintTrigger.MatchRecorded);
-
-        // ---- Showing -------------------------------------------------------------------------
 
         void Offer(HintTrigger? when)
         {
@@ -164,6 +162,8 @@ namespace CloseTheDeal.Onboarding
 
             HintShown.Invoke(line);
             ProfileStore.MarkHintSeen(line.Id);
+            if (line.Id == _receptionHintId)
+                _receptionSeen = true;
             _nextShow = Time.unscaledTime + line.Seconds + _hints.GapSeconds;
         }
     }

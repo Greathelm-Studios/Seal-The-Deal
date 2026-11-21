@@ -1,16 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
+using UnityEngine.SceneManagement;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The player behind the UI sound hub (UiSound in Scripts/UI/Kit, lane 5): clips, mixer bus, voice limits, hover-run pitch.
-    /// Callers use UiSound.Play(UiSoundEvent.Confirm); the hub forwards here.
-    /// Plays through the mixer's UI bus, never while the game is unfocused, never louder than the set says,
-    /// and a burst of the same event (rapid hovers) is thinned by a per-event minimum gap and a voice cap.
-    /// Sound is a presentation effect only: nothing here touches game state or the network.
-    /// </summary>
+    /// <summary>Mixer-routed UI sound player with voice pooling, per-event throttling, and menu ambient bed.</summary>
     public static class UiSoundPlayer
     {
         /// <summary>The set in use. Loaded from Resources/UI/UiSoundSet on first use.</summary>
@@ -29,6 +24,15 @@ namespace CloseTheDeal.UI
 
         /// <summary>How many sounds were actually started / dropped by the gap and voice rules (for tests).</summary>
         public static int Started, Dropped;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            IgnoreFocus = false;
+            Started = 0;
+            Dropped = 0;
+            Runner.ResetStatic();
+        }
 
         public static void Play(UiSoundEvent e) => Play(e, 1f, 0f);
 
@@ -69,6 +73,7 @@ namespace CloseTheDeal.UI
         sealed class Runner : MonoBehaviour
         {
             static Runner instance;
+            public static void ResetStatic() => instance = null;
             public UiSoundSet set;
             public float lastHover = -99f;
             public int hoverStep;
@@ -100,14 +105,38 @@ namespace CloseTheDeal.UI
 
             void Start() => UiAudio.ApplySaved();
 
-            // ---- Ambient bed and the title sting -------------------------------------------------------------
-            // Looked at four times a second, not every frame: is the player at the menus (the title and its screens
-            // before a game) or in the lobby reception before the run starts? Reaching the title plays TitleAppear once.
             AudioSource bed;
             float nextLook, bedTarget;
             bool atTitle;
+            bool sceneLookedUp;
             GameMenu menu;
             UiRoot root;
+
+            void OnEnable()
+            {
+                SceneManager.sceneLoaded += OnSceneLoaded;
+                sceneLookedUp = false;
+            }
+
+            void OnDisable()
+            {
+                SceneManager.sceneLoaded -= OnSceneLoaded;
+            }
+
+            void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+            {
+                sceneLookedUp = false;
+                ResolveSceneRefs();
+            }
+
+            void ResolveSceneRefs()
+            {
+                if (sceneLookedUp)
+                    return;
+                sceneLookedUp = true;
+                menu = FindAnyObjectByType<GameMenu>();
+                root = FindAnyObjectByType<UiRoot>();
+            }
 
             void Update()
             {
@@ -119,6 +148,12 @@ namespace CloseTheDeal.UI
                 }
                 if (bed == null)
                     return;
+                if (Mathf.Approximately(bed.volume, bedTarget))
+                {
+                    if (bedTarget <= 0f && bed.isPlaying)
+                        bed.Stop();
+                    return;
+                }
                 float step = set.ambienceFade > 0f ? Time.unscaledDeltaTime / set.ambienceFade : 1f;
                 bed.volume = Mathf.MoveTowards(bed.volume, bedTarget, step * Mathf.Max(set.ambienceLevel, 0.0001f));
                 if (bed.volume <= 0f && bedTarget <= 0f && bed.isPlaying)
@@ -127,8 +162,7 @@ namespace CloseTheDeal.UI
 
             void Look()
             {
-                if (menu == null) menu = FindAnyObjectByType<GameMenu>();
-                if (root == null) root = FindAnyObjectByType<UiRoot>();
+                ResolveSceneRefs();
                 bool title = menu != null && menu.OutOfGame && root != null && root.Stack.Count > 0;
                 var roster = CloseTheDeal.Lobby.LobbyRoster.Instance;
                 bool reception = roster != null && !roster.RunInProgress;
@@ -160,6 +194,7 @@ namespace CloseTheDeal.UI
 
             public bool Begin(UiSoundEvent e, UiSoundSet.Entry en, float gain, float semitones)
             {
+                ResolveSceneRefs();
                 float now = Time.realtimeSinceStartup;
                 // Screen sounds (a screen or panel opening, a transition, the title) sit on their own layer: a button that
                 // opens a screen plays its Confirm and the screen its whoosh in the same frame, and both must be heard.

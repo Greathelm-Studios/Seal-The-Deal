@@ -1,11 +1,3 @@
-<!--
-AI-GENERATED SOURCE FILE
-Generator : Codex (GPT-6)
-Generated : 2026-11-15
-Prompt : REQUEST_ANIM.md and ../posters/REQUEST.md, approved mood D in blue; no Unity launch.
-Reviewed : NOT YET REVIEWED BY A HUMAN
-Summary : Integration handoff, tuning and estimated cost of KitOffice's decorative animation and pitch displays.
--->
 # Seal the Deal — KitOffice animated background
 
 **Status:** Current · **Last updated:** 2026-11-15

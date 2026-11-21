@@ -3,11 +3,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// The reception's rules: which firm definitions the two firms are, how lopsided they may get, and when the host can
-    /// start. Designer content (AGENTS.md §4): read at runtime, never written.
-    /// Every rule here is a proposal waiting on the owner; see docs/systems/LOBBY.md.
-    /// </summary>
+    /// <summary>Designer-owned reception balance, start-hold, and interaction reach tuning. Design: docs/systems/LOBBY.md.</summary>
     [CreateAssetMenu(menuName = "Seal the Deal/Lobby/Lobby Rules", fileName = "LobbyRules")]
     public sealed class LobbyRules : ScriptableObject
     {

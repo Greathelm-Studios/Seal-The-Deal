@@ -15,15 +15,27 @@ using Object = UnityEngine.Object;
 
 namespace CloseTheDeal.Editor.UI
 {
-    /// <summary>
-    /// The wide pass's capture runs, one per slice (-uiCaptureMode wide1: the edge marker and device-aware key hints;
-    /// wide2: the title on the live sky and the settings fixes; wide3: hosting, joining, loading and every problem,
-    /// with a real local host and a real failed join on this PC).
-    /// Same rules as
-    /// the main run: Lane_Integration in Play Mode, headless with graphics, PASS / FAIL lines and a sound log.
-    /// </summary>
+    /// <summary>Wide-pass capture scripts for edge marker, device hints, live sky title, transitions, and in-game menu.</summary>
     public static partial class UiKitCapture
     {
+        static System.Net.Sockets.UdpClient _silentUdp;
+
+        static void CloseSilentUdp()
+        {
+            if (_silentUdp == null)
+                return;
+            try { _silentUdp.Close(); }
+            catch { }
+            _silentUdp = null;
+            EditorApplication.playModeStateChanged -= OnSilentUdpPlayModeChanged;
+        }
+
+        static void OnSilentUdpPlayModeChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.ExitingPlayMode || state == PlayModeStateChange.EnteredEditMode)
+                CloseSilentUdp();
+        }
+
         static IEnumerator WideScript(string mode)
         {
             yield return Until(() => Object.FindAnyObjectByType<UiRoot>() != null);
@@ -67,8 +79,6 @@ namespace CloseTheDeal.Editor.UI
             UiGlyphs.Force(UiDeviceKind.KeyboardMouse);
         }
 
-        // ---- Slice 1: edge marker ---------------------------------------------------------------------
-
         static readonly List<UiEdgeMarker> Markers = new();
 
         static UiEdgeMarker NewMarker(string name, UiMarkKind kind)
@@ -84,10 +94,6 @@ namespace CloseTheDeal.Editor.UI
         static GameObject UiKitAssetsPrefab(string name) =>
             AssetDatabase.LoadAssetAtPath<GameObject>(UiKitAssets.KitFolder + "/" + name + ".prefab");
 
-        /// <summary>
-        /// Six marks over an empty canvas (the grey stands in for the game): one in view, four out of view in each
-        /// direction (one behind the camera, mirrored), and one straight behind (the bottom edge). At three sizes.
-        /// </summary>
         static IEnumerator EdgeMarkers()
         {
             _root.Stack.Clear();
@@ -160,8 +166,6 @@ namespace CloseTheDeal.Editor.UI
             yield return null;
         }
 
-        // ---- Slice 1: key hints by device ----------------------------------------------------------------
-
         static IEnumerator KeyHintDevices()
         {
             foreach (UiEdgeMarker m in Markers)
@@ -205,8 +209,6 @@ namespace CloseTheDeal.Editor.UI
             Settle(1.2f);
             yield return null;
         }
-
-        // ---- Slice 1 clip ----------------------------------------------------------------------------------
 
         static int _frame;
 
@@ -268,8 +270,6 @@ namespace CloseTheDeal.Editor.UI
             yield return null;
         }
 
-        // ---- Slice 2: the title on the live sky, settings fixes ---------------------------------------------
-
         static IEnumerator TitleLiveSky()
         {
             TitleScreen title = _root.Title;
@@ -294,11 +294,8 @@ namespace CloseTheDeal.Editor.UI
             CheckInside(title.transform, 2560, 1080, "title at 2560x1080");
         }
 
-        // ---- The in-game menu (slice 4) ---------------------------------------------------------------------
-
         static Camera _world;
 
-        /// <summary>The game's own camera (drawing to the screen), drawn first so the glass pane has the world behind it.</summary>
         static Camera WorldCamera()
         {
             foreach (Camera c in Camera.allCameras)
@@ -310,7 +307,6 @@ namespace CloseTheDeal.Editor.UI
             return Camera.main;
         }
 
-        /// <summary>A frame with the world under the UI: the game camera into the capture texture, then the UI over it.</summary>
         static Texture2D GrabGame(int w, int h)
         {
             Resize(w, h);
@@ -372,13 +368,6 @@ namespace CloseTheDeal.Editor.UI
             InputSystem.QueueStateEvent(_keyboard, new KeyboardState(keys.ToArray()));
         }
 
-        /// <summary>
-        /// Slice 4 on a real local host (port 17785, asserted to be the server): the HUD's kit key hint and readout,
-        /// the menu opened mid-sprint (the player stops), the glass pane over the game at three sizes with reception's
-        /// seats and the match section in its slot, a state sheet of its buttons, Settings and back from in game, the
-        /// host's leave question, Esc / Start closing it, a clip of all of it, the sounds through the mixer, and leaving.
-        /// Batch mode can't lock the cursor, so the game menu is switched off while the menu should read closed.
-        /// </summary>
         static IEnumerator InGameMenu(SteamLobby lobby)
         {
             string folder = Path.Combine(_out, "ingame");
@@ -533,15 +522,9 @@ namespace CloseTheDeal.Editor.UI
             hudCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
         }
 
-        // ---- Lane 8's transitions from the screen stack ----------------------------------------------------
-
         static int _filmFrame;
         static readonly List<string> TransitionLog = new();
 
-        /// <summary>
-        /// One real frame filmed: the kit's motion steps 1/30 s by hand, and lane 8's transition steps by itself (its
-        /// step is capped at 1/30 s and batch frames are slower than that), so the clip plays at 30 fps.
-        /// </summary>
         static void FilmFrame(string folder)
         {
             UiMotion.Tick(Step);
@@ -562,11 +545,6 @@ namespace CloseTheDeal.Editor.UI
             }
         }
 
-        /// <summary>
-        /// Settings opens and closes under PaneSlide, hosting opens under CloudWipe, and the game starts under FrameZoom,
-        /// all filmed from the transition's own overlay (bound to the capture camera, so it is in the frames). Checks
-        /// that each change waited for its cover, and that Esc during a transition does nothing.
-        /// </summary>
         static IEnumerator StackTransitions(SteamLobby lobby)
         {
             string folder = Path.Combine(_out, "transitions");
@@ -637,10 +615,6 @@ namespace CloseTheDeal.Editor.UI
             UiScreenStack.UseTransitions = false;
         }
 
-        /// <summary>
-        /// The title's window frame on the live sky at 1080p, 720p and 21:9 (prefix chosen on the command line, so a
-        /// before / after pair comes from the same code), with the frame's measured bar widths in the log.
-        /// </summary>
         static IEnumerator TitleFrame(string prefix)
         {
             TitleScreen title = _root.Title;
@@ -752,8 +726,6 @@ namespace CloseTheDeal.Editor.UI
             Note($"clip_wide2: {_frame} frames at 30 fps");
         }
 
-        // ---- Slice 3: hosting, joining, loading, problems ------------------------------------------------------
-
         static IEnumerator SessionScreens(SteamLobby lobby)
         {
             ushort port = ushort.TryParse(Arg("-lanePort"), out ushort p) ? p : (ushort)17785;
@@ -784,7 +756,10 @@ namespace CloseTheDeal.Editor.UI
             // 1. A join to a port where something takes the packets but never answers (a silent UDP socket): the
             // client really waits, so the connecting state, its clock and Cancel can be seen; then the problem.
             ushort silentPort = (ushort)(port + 1);
-            var silent = new System.Net.Sockets.UdpClient(silentPort);
+            CloseSilentUdp();
+            _silentUdp = new System.Net.Sockets.UdpClient(silentPort);
+            EditorApplication.playModeStateChanged -= OnSilentUdpPlayModeChanged;
+            EditorApplication.playModeStateChanged += OnSilentUdpPlayModeChanged;
             tugboat?.SetPort(silentPort);
             int sound0 = Sounds.Count;
             lobby.JoinLocal();
@@ -842,7 +817,7 @@ namespace CloseTheDeal.Editor.UI
                 !lobby.IsActive && _root.Stack.Top == title && lobby.Problem == LobbyProblem.None && lobby.StatusText == "You left the game.",
                 $"active {lobby.IsActive}, top {_root.Stack.Top?.name}, status '{lobby.StatusText}'");
             Film(folder, 0.6f);
-            silent.Close();
+            CloseSilentUdp();
             tugboat?.SetPort(port);
 
             // 4. Host: the session panel says hosting, then the window closes over the view and the game starts.
@@ -873,10 +848,6 @@ namespace CloseTheDeal.Editor.UI
             UiSoundPlayer.IgnoreFocus = false;
         }
 
-        /// <summary>
-        /// Films lane 8's transition through its own preview path onto the capture camera (the live overlay draws on an
-        /// overlay canvas the capture camera can't see). The game view behind it isn't in the capture.
-        /// </summary>
         static void FilmTransition(string folder, CloseTheDeal.UI.Title.UiTransitionKind kind)
         {
             float length = CloseTheDeal.UI.Title.UiTransition.Duration(kind);
@@ -891,7 +862,6 @@ namespace CloseTheDeal.Editor.UI
             CloseTheDeal.UI.Title.UiTransition.ClearPreview();
         }
 
-        /// <summary>A target crossing behind you: the mark slides round the bottom edge to the other side, not a jump.</summary>
         static IEnumerator MarkerSideSwitch(string folder)
         {
             var marker = NewMarker("SideSwitch", UiMarkKind.Rival);
@@ -911,10 +881,6 @@ namespace CloseTheDeal.Editor.UI
             yield return null;
         }
 
-        /// <summary>
-        /// Every problem the lobby can report, drawn by the real panel. Only Unreachable happens on one PC without
-        /// Steam; the others are filled in by the panel's own Show(problem) for the sheet and say so.
-        /// </summary>
         static IEnumerator ProblemSheet(SteamLobby lobby)
         {
             UiMotion.Paused = true;

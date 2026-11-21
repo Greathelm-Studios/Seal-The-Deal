@@ -1,43 +1,14 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-13
-//  Prompt    : Alex: "a test dummy in the scene to test animations of being hit by certain
-//              powers of weapons (bullets bombs explosions props, etc)"
-//  Modified  : Claude Opus 5.5, 2026-11-14 — says whether the dummy can be hit and
-//              what each hit did (Alex: "nothing happens"; the cause was a code reload
-//              during Play, which the bench could not show); with its Dummy slot empty it
-//              hits the dummy nearest the camera (Alex: the dummy had moved to the roof)
-//              2026-11-15 — a Melee hit preset (Harvey: "add hit reactions when hit by
-//              guns/melee weapons for the players")
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : An Editor window that hits the test dummy with a chosen kind and strength of
-//              hit at a chosen body part and direction, so reactions can be judged before the
-//              weapons exist. An Editor window rather than in-game keys so it adds no input
-//              bindings and ships in no build.
-// -----------------------------------------------------------------------------
 using CloseTheDeal.Player;
 using UnityEditor;
 using UnityEngine;
 
 namespace CloseTheDeal.Editor.Dev
 {
-    /// <summary>
-    /// The hit test bench: <c>Seal the Deal &gt; Dev &gt; Hit Bench</c>. Pick a preset or set the
-    /// values, press Hit while playing.
-    /// </summary>
-    /// <remarks>
-    /// It builds the same <see cref="HitInfo"/> a weapon will and hands it to
-    /// <see cref="HitDummy.Hit"/>, so what is judged here is what a weapon delivering that
-    /// impulse will produce. It only works in Play Mode: the ragdoll does not exist outside it.
-    /// Nothing here is saved or networked.
-    /// </remarks>
+    /// <summary>Editor window (<c>Seal the Deal &gt; Dev &gt; Hit Bench</c>) to test hit reactions on <see cref="HitDummy"/> in Play Mode.</summary>
     public sealed class HitBenchWindow : EditorWindow
     {
-        /// <summary>Which side of the dummy the hit comes from.</summary>
         enum From { Front, Back, Left, Right, Above, Below }
 
-        /// <summary>The body parts the bench can aim at, and where each is on the standing dummy.</summary>
         static readonly string[] Spots =
         {
             "Head", "Chest", "Hips",
@@ -45,12 +16,6 @@ namespace CloseTheDeal.Editor.Dev
             "Left thigh", "Left shin", "Right thigh", "Right shin"
         };
 
-        /// <summary>
-        /// Each spot's place on the standing dummy, metres from its feet: x to the dummy's right
-        /// (its left is negative), y up. WHY rough: estimated from the 1.8 m model's
-        /// proportions; the ragdoll takes the hit on whichever part is nearest the point, so
-        /// these only need to be nearer the intended part than any other.
-        /// </summary>
         static readonly Vector2[] SpotOffsets =
         {
             new Vector2(0f, 1.65f), new Vector2(0f, 1.3f), new Vector2(0f, 1f),
@@ -58,20 +23,8 @@ namespace CloseTheDeal.Editor.Dev
             new Vector2(-0.1f, 0.75f), new Vector2(-0.1f, 0.3f), new Vector2(0.1f, 0.75f), new Vector2(0.1f, 0.3f)
         };
 
-        /// <summary>Height of the middle of the body above its feet, metres; blasts are placed level with it. Half the 1.8 m model.</summary>
         const float BodyMiddle = 0.9f;
-
-        /// <summary>The slider's top, newton-seconds. WHY 1000: comfortably above the hardest preset.</summary>
         const float MaxImpulse = 1000f;
-
-        /// <summary>
-        /// Preset strengths, newton-seconds, and blast distances and reach, metres. WHY these:
-        /// placeholders worked out from weight times speed, until real weapons report their
-        /// own. A chair of 8 kg at 10 m/s; a desk of 40 kg at 8 m/s; a blast throwing the 49 kg
-        /// ragdoll at the test blast's 12 m/s in the middle and 40% of that at its edge; a
-        /// pistol shot is far above a real bullet's 3 or so, so that it shows. The 3 m reach is
-        /// the test blast's radius. A melee hit is the stand-in V swing's 60, three pistol shots.
-        /// </summary>
         const float PistolImpulse = 20f, MeleeImpulse = 60f, ChairImpulse = 80f, DeskImpulse = 320f,
             NearBlastImpulse = 590f, FarBlastImpulse = 235f,
             NearBlastDistance = 1f, FarBlastDistance = 2.7f, BlastReach = 3f;
@@ -83,10 +36,8 @@ namespace CloseTheDeal.Editor.Dev
         From _from = From.Front;
         float _blastDistance = NearBlastDistance;
         float _blastRadius = BlastReach;
-        /// <summary>What the last press of Hit did, shown under the button. Empty until the first hit.</summary>
         string _lastResult = "";
 
-        /// <summary>Opens the bench.</summary>
         [MenuItem("Seal the Deal/Dev/Hit Bench")]
         public static void Open() => GetWindow<HitBenchWindow>("Hit Bench");
 
@@ -138,23 +89,12 @@ namespace CloseTheDeal.Editor.Dev
                 EditorGUILayout.LabelField("Last hit", _lastResult, EditorStyles.wordWrappedLabel);
         }
 
-        /// <summary>Redraws a few times a second while playing, so the status line follows the dummy.</summary>
         void OnInspectorUpdate()
         {
             if (Application.isPlaying)
                 Repaint();
         }
 
-        /// <summary>
-        /// The dummy set in the window's Dummy slot, or else the one nearest the game camera
-        /// (the Scene view's outside Play Mode). Null when there is none.
-        /// </summary>
-        /// <remarks>
-        /// WHY nearest and not remembered: dummies move (the roof range, one placed in front of
-        /// you while playing), and the bench used to keep hitting whichever it found first,
-        /// which could be on another floor. It is worked out afresh on every call; an Editor
-        /// window, so the scene search costs nothing in the game.
-        /// </remarks>
         HitDummy FindDummy()
         {
             if (_dummy != null)
@@ -177,7 +117,6 @@ namespace CloseTheDeal.Editor.Dev
             return nearest;
         }
 
-        /// <summary>One line on whether the dummy can take a hit right now, and if not, why not and what to do.</summary>
         static string Status(HitDummy dummy)
         {
             if (dummy == null)
@@ -194,14 +133,12 @@ namespace CloseTheDeal.Editor.Dev
             return body.Down ? dummy.name + " is knocked down." : dummy.name + " is ready.";
         }
 
-        /// <summary>Fills in a point hit's kind and strength.</summary>
         void Preset(HitType type, float impulse)
         {
             _type = type;
             _impulse = impulse;
         }
 
-        /// <summary>Fills in a blast's strength and distance.</summary>
         void Preset(HitType type, float impulse, float distance)
         {
             Preset(type, impulse);
@@ -209,7 +146,6 @@ namespace CloseTheDeal.Editor.Dev
             _blastRadius = BlastReach;
         }
 
-        /// <summary>Builds the hit from the window's values and delivers it.</summary>
         void Hit()
         {
             HitDummy dummy = FindDummy();
@@ -222,7 +158,6 @@ namespace CloseTheDeal.Editor.Dev
             }
 
             Transform body = dummy.transform;
-            // The way the hit travels: from the chosen side, toward the body.
             Vector3 direction = _from switch
             {
                 From.Front => -body.forward,

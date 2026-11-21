@@ -5,14 +5,7 @@ using UnityEngine.EventSystems;
 
 namespace CloseTheDeal.MatchMode
 {
-    /// <summary>
-    /// The match's section of the game menu, built with the UI kit: where the match stands,
-    /// who sealed the deal and why, and the host's one button (start, then rematch). Everyone
-    /// else reads why they can't press it. When a match ends it opens the menu through
-    /// GameMenu, so the menu's rule still holds: menu open, mouse free, player idle. A full
-    /// results screen is lane 5's; this is the result until that lands. Text changes only on
-    /// match events. Design: docs/systems/MATCH.md.
-    /// </summary>
+    /// <summary>Game-menu section showing match status, result summary, and host start/rematch controls. Design: docs/systems/MATCH.md.</summary>
     public sealed class MatchMenuPanel : MonoBehaviour
     {
         [Header("Wiring")]
@@ -78,7 +71,6 @@ namespace CloseTheDeal.MatchMode
             _action.Clicked -= OnAction;
         }
 
-        /// <summary>Joining while a result is up: the result is where the match stands, so the menu shows it (quietly: it isn't news).</summary>
         void OnStarted()
         {
             Refresh();
@@ -110,7 +102,6 @@ namespace CloseTheDeal.MatchMode
                 EventSystem.current.SetSelectedGameObject(_action.gameObject);
         }
 
-        /// <summary>The clock only matters here while the menu is actually up.</summary>
         void OnSecondPassed(int secondsLeft)
         {
             if (_section.activeInHierarchy)

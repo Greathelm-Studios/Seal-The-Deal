@@ -2,11 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Customisation
 {
-    /// <summary>
-    /// Every outfit slot the game offers, in the order the fitting room shows them.
-    /// The host checks every outfit a player sends against this list, so host and clients
-    /// must ship the same catalog. Designer content: read at runtime, never written.
-    /// </summary>
+    /// <summary>Designer-owned ordered list of outfit slots used for UI and host validation. Design: docs/systems/CUSTOMISATION.md.</summary>
     [CreateAssetMenu(menuName = "Seal the Deal/Customisation/Outfit Catalog", fileName = "OutfitCatalog")]
     public sealed class OutfitCatalog : ScriptableObject
     {

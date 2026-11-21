@@ -54,17 +54,14 @@ namespace CloseTheDeal.Combat
         }
     }
 
-    /// <summary>
-    /// The guns a player carries: two slots, their magazines, firing, reloading and switching.
-    /// The owner's game answers the button at once (tracer, recoil, ammo count) and tells the
-    /// host; the host checks the shot is allowed, traces it against where everyone stood when
-    /// the shooter saw them, and is the only one that deals damage or breaks glass.
-    /// Pickups call Equip and Unequip on the host. Design and ownership: docs/systems/WEAPONS.md.
-    /// </summary>
+    /// <summary>Manages two weapon slots, owner prediction, and host-authoritative firing, reloading, and validation.</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Health))]
     public sealed class WeaponHolder : NetworkBehaviour
     {
+        internal const string ReloadKeyboardBinding = "<Keyboard>/r";
+        internal const string ReloadPadBinding = "<Gamepad>/buttonEast";
+
         public const int SlotCount = 2;
 
         /// <summary>
@@ -73,8 +70,6 @@ namespace CloseTheDeal.Combat
         /// host refuses the shot. Reload and switching still work. Null means never held.
         /// </summary>
         public static Func<WeaponHolder, bool> FireHeld;
-
-        // ---- Inspector -----------------------------------------------------------------------
 
         [Tooltip("The list of every gun in the game. Players' games name guns to each other by their place in it.")]
         [SerializeField] WeaponCatalog _catalog;
@@ -88,8 +83,6 @@ namespace CloseTheDeal.Combat
 
         [Tooltip("How far the shooter's eye may be from where the host has their body, in metres, before the host fires from its own position instead. Covers leaning and the shooter's own movement during lag; 2.5 allows sprinting on a 200 ms connection.")]
         [Range(0.5f, 5f)] [SerializeField] float _originTolerance = 2.5f;
-
-        // ---- Events --------------------------------------------------------------------------
 
         /// <summary>The gun in hand changed (null for empty hands), with its slot. Every machine.</summary>
         public event Action<WeaponDefinition, int> WeaponChanged;
@@ -118,8 +111,6 @@ namespace CloseTheDeal.Combat
         /// <summary>The host confirmed this player's shot killed someone, with where. Shooter's own game only; raised straight after HitConfirmed, for a kill sound and marker of its own.</summary>
         public event Action<Vector3> KillConfirmed;
 
-        // ---- Runtime -------------------------------------------------------------------------
-
         const int PendingLength = 64;
         const byte LongAgo = byte.MaxValue;
         /// <summary>Remote bodies are drawn about this many ticks behind the newest host tick heard: FishNet's two ticks of interpolation plus about one more, measured in the lane self-check.</summary>
@@ -130,8 +121,6 @@ namespace CloseTheDeal.Combat
         const uint TimingSlackTicks = 9;
         /// <summary>How long the owner trusts its own switch before taking the host's word for which gun is out, in seconds.</summary>
         const float SwitchTrustSeconds = 0.4f;
-        /// <summary>How long past a reload's end the owner waits for the host's confirmation before giving up, in seconds.</summary>
-        const float ReloadConfirmGraceSeconds = 0.75f;
         /// <summary>How long a press made while the gun is still cycling is remembered, in seconds, so fast taps on a one-per-press gun are never swallowed.</summary>
         const float PressBufferSeconds = 0.15f;
         const float FallbackEyeHeight = 1.6f;
@@ -141,6 +130,8 @@ namespace CloseTheDeal.Combat
         const float MovingSpeed = 1f;
         const byte MovingFlag = 1;
         const byte AirborneFlag = 2;
+        const byte HitKilledFlag = 1;
+        const byte HitPrecisionFlag = 2;
 
         static readonly SyncTypeSettings EveryTick = new(0f);
         static readonly SyncTypeSettings OwnerEveryTick = new(WritePermission.ServerOnly, ReadPermission.OwnerOnly, 0f, Channel.Reliable);
@@ -164,6 +155,11 @@ namespace CloseTheDeal.Combat
         byte _hostReloadsDone;
         bool _hostReloading;
         uint _hostReloadDoneTick;
+        ushort _hostReloadRequest;
+        ushort _ownerReloadRequest;
+        bool _fireAfterReload;
+        bool _reloadConfirmed;
+        ushort _completedReloadRequest;
         uint _hostReadyTick;
         uint _hostLastShotTick;
         double _hostNextShotTime;
@@ -187,12 +183,11 @@ namespace CloseTheDeal.Combat
         float _lastShotTime;
         bool _triggerHeld;
         bool _triggerPressed;
-        float _pressBufferedUntil;
+        float _pressBufferedUntil = float.NegativeInfinity;
+        bool _dryClickPending;
         byte _seenReloadsDone;
         int _shownAmmo = -1;
         int _shownMagazine = -1;
-
-        // ---- Read-outs -----------------------------------------------------------------------
 
         /// <summary>The slot in hand. On the owner's game this is already the slot they just switched to.</summary>
         public int ActiveSlot => IsOwner ? _localActive : _active.Value;
@@ -244,8 +239,6 @@ namespace CloseTheDeal.Combat
         /// <summary>Rounds left in the gun in hand: the host's count on the host, the owner's own running count on their game.</summary>
         public int AmmoInMagazine => IsOwner ? OwnerAmmo(_localActive) : _hostAmmo[_active.Value];
 
-        // ---- Lifecycle -----------------------------------------------------------------------
-
         void Awake()
         {
             _health = GetComponent<Health>();
@@ -267,6 +260,8 @@ namespace CloseTheDeal.Combat
             _ownerState.OnChange -= OnOwnerStateChanged;
             _health.Died -= OnDied;
             _health.Respawned -= OnRespawned;
+            _input?.Dispose();
+            _input = null;
         }
 
         public override void OnStartServer()
@@ -280,7 +275,11 @@ namespace CloseTheDeal.Combat
             Array.Clear(_hostAmmo, 0, SlotCount);
             _hostAckSeq = 0;
             _hostReloadsDone = 0;
+            _completedReloadRequest = 0;
             _hostReloading = false;
+            _hostReloadDoneTick = 0;
+            _hostReadyTick = 0;
+            _hostLastShotTick = 0;
             _hostBloom = 0f;
             _hostNextShotTime = 0d;
             GiveStartingLoadout();
@@ -323,8 +322,6 @@ namespace CloseTheDeal.Combat
             _input = null;
         }
 
-        // ---- Pickups (host) ------------------------------------------------------------------
-
         /// <summary>
         /// Host only. Gives this player a gun with a full magazine: into the first empty slot,
         /// or over the gun in hand when both are taken. Returns false when it could not
@@ -345,7 +342,7 @@ namespace CloseTheDeal.Combat
 
             bool handsWereEmpty = _weapons[_active.Value] == null;
             if (slot == _active.Value)
-                _hostReloading = false;
+                HostCancelReload();
 
             _weapons[slot] = weapon;
             _hostAmmo[slot] = (byte)weapon.MagazineSize;
@@ -376,7 +373,7 @@ namespace CloseTheDeal.Combat
             int other = 1 - slot;
             if (slot == _active.Value)
             {
-                _hostReloading = false;
+                HostCancelReload();
                 if (_weapons[other] != null)
                     HostSetActive(other);
             }
@@ -397,8 +394,6 @@ namespace CloseTheDeal.Combat
             }
         }
 
-        // ---- The owner's buttons -------------------------------------------------------------
-
         /// <summary>Owner only. The fire button went down. One shot for a one-per-press gun; an automatic keeps firing until ReleaseTrigger.</summary>
         public void PullTrigger()
         {
@@ -413,6 +408,7 @@ namespace CloseTheDeal.Combat
         public void ReleaseTrigger()
         {
             _triggerHeld = false;
+            _dryClickPending = false;
         }
 
         /// <summary>Owner only. Starts a reload of the gun in hand. False when there is nothing to reload or the gun is busy.</summary>
@@ -424,11 +420,15 @@ namespace CloseTheDeal.Combat
             if (OwnerAmmo(_localActive) >= weapon.MagazineSize)
                 return false;
 
+            _triggerPressed = false;
+            _pressBufferedUntil = float.NegativeInfinity;
+            _dryClickPending = false;
+            _reloadConfirmed = false;
             _state = WeaponState.Reloading;
             _stateEndsAt = Time.time + weapon.ReloadSeconds;
             _stateDuration = weapon.ReloadSeconds;
             ReloadStarted?.Invoke(weapon.ReloadSeconds);
-            ServerReload((byte)_localActive);
+            ServerReload((byte)_localActive, ++_ownerReloadRequest);
             return true;
         }
 
@@ -460,7 +460,11 @@ namespace CloseTheDeal.Combat
             TickState();
 
             if (_triggerPressed)
+            {
                 _pressBufferedUntil = Time.time + PressBufferSeconds;
+                if (_state == WeaponState.Reloading && _pressBufferedUntil >= _stateEndsAt)
+                    _fireAfterReload = true;
+            }
             _triggerPressed = false;
 
             bool pressed = Time.time <= _pressBufferedUntil;
@@ -474,12 +478,12 @@ namespace CloseTheDeal.Combat
         {
             if (!PlayerInputReader.Captured)
             {
-                ReleaseTrigger();
+                ClearFireInput();
                 return;
             }
 
             if (FireHeld != null && FireHeld(this))
-                ReleaseTrigger();
+                ClearFireInput();
             else if (_input.FirePressed)
                 PullTrigger();
             if (_input.FireReleased)
@@ -507,34 +511,52 @@ namespace CloseTheDeal.Combat
 
         void TickState()
         {
-            if (_state == WeaponState.Equipping && Time.time >= _stateEndsAt)
+            if (Time.time < _stateEndsAt)
+                return;
+            if (_state == WeaponState.Equipping)
                 _state = WeaponState.Ready;
+            else if (_state == WeaponState.Reloading && _reloadConfirmed)
+            {
+                _state = WeaponState.Ready;
+                if (_fireAfterReload)
+                    _pressBufferedUntil = Time.time + PressBufferSeconds;
+                _fireAfterReload = false;
+                ReloadFinished?.Invoke();
+            }
+        }
 
-            // The host ends a reload by filling the magazine. If that never comes, it refused the reload.
-            if (_state == WeaponState.Reloading && Time.time >= _stateEndsAt + ReloadConfirmGraceSeconds)
-                CancelOwnerReload();
+        void ClearFireInput()
+        {
+            _fireAfterReload = false;
+            _triggerHeld = false;
+            _triggerPressed = false;
+            _pressBufferedUntil = float.NegativeInfinity;
+            _dryClickPending = false;
         }
 
         void TryFire(WeaponDefinition weapon, bool pressed)
         {
-            if (_health.IsDead || _state != WeaponState.Ready)
+            if (_health.IsDead)
             {
-                _pressBufferedUntil = 0f;
+                ClearFireInput();
                 return;
             }
 
-            // Still cycling: a remembered press waits here for the gun, it isn't thrown away.
-            if (Time.time < _nextShotAt)
+            // A tap may finish the existing input buffer during draw, reload or the firing interval.
+            if (_state != WeaponState.Ready || Time.time < _nextShotAt)
                 return;
 
-            _pressBufferedUntil = 0f;
-            if (OwnerAmmo(_localActive) <= 0)
+            _pressBufferedUntil = float.NegativeInfinity;
+            int rounds = OwnerAmmo(_localActive);
+            if (rounds <= 0)
             {
-                if (pressed)
+                if (pressed || _dryClickPending)
                     DryFired?.Invoke();
+                _dryClickPending = false;
                 return;
             }
 
+            _dryClickPending = rounds == 1 && weapon.Automatic && _triggerHeld;
             FireShot(weapon);
         }
 
@@ -559,6 +581,16 @@ namespace CloseTheDeal.Combat
             EyeAndAim(out Vector3 origin, out Vector3 forward);
             uint packedAim = ShotResolver.PackDirection(forward);
             byte stance = Stance();
+
+            // The host's own shot is judged on the spot, against the world exactly as the host sees it now;
+            // skip the duplicate predicted trace and let HostFire raise Fired from its single trace.
+            if (IsServerStarted)
+            {
+                HandleFireRequest((byte)_localActive, _seq, origin, packedAim, ticksSince, _viewTick, stance);
+                RefreshOwnerAmmo();
+                return;
+            }
+
             float spread = NextSpread(ref _bloom, weapon, ticksSince, stance);
             Vector3 direction = ShotResolver.SpreadDirection(ShotResolver.UnpackDirection(packedAim), spread, ShotSeed(_seq));
 
@@ -567,12 +599,7 @@ namespace CloseTheDeal.Combat
             Fired?.Invoke(new ShotInfo(weapon, origin, seen.End, SurfaceOf(seen), true, _shotInBurst));
             RefreshOwnerAmmo();
 
-            // The host's own shot is judged on the spot, against the world exactly as the host sees it now;
-            // sent round through the network it would be judged a tick late, with nothing to rewind for it.
-            if (IsServerStarted)
-                HandleFireRequest((byte)_localActive, _seq, origin, packedAim, ticksSince, _viewTick, stance);
-            else
-                ServerFire((byte)_localActive, _seq, origin, packedAim, ticksSince, _viewTick, stance);
+            ServerFire((byte)_localActive, _seq, origin, packedAim, ticksSince, _viewTick, stance);
         }
 
         /// <summary>
@@ -634,6 +661,7 @@ namespace CloseTheDeal.Combat
 
         void BeginEquip(WeaponDefinition weapon)
         {
+            ClearFireInput();
             _state = weapon != null && weapon.EquipSeconds > 0f ? WeaponState.Equipping : WeaponState.Ready;
             _stateEndsAt = weapon != null ? Time.time + weapon.EquipSeconds : 0f;
             _stateDuration = weapon != null ? weapon.EquipSeconds : 0f;
@@ -648,10 +676,10 @@ namespace CloseTheDeal.Combat
                 return;
 
             _state = WeaponState.Ready;
+            _fireAfterReload = false;
+            _pressBufferedUntil = float.NegativeInfinity;
             ReloadCancelled?.Invoke();
         }
-
-        // ---- Owner's running ammo count ------------------------------------------------------
 
         /// <summary>The host's last count for a slot, less the owner's shots the host has not answered yet.</summary>
         int OwnerAmmo(int slot)
@@ -695,17 +723,12 @@ namespace CloseTheDeal.Combat
             if (reloadsDone != _seenReloadsDone)
             {
                 _seenReloadsDone = reloadsDone;
-                if (_state == WeaponState.Reloading)
-                {
-                    _state = WeaponState.Ready;
-                    ReloadFinished?.Invoke();
-                }
+                if (_state == WeaponState.Reloading && (ushort)(next >> 40) == _ownerReloadRequest)
+                    _reloadConfirmed = true;
             }
 
             RefreshOwnerAmmo();
         }
-
-        // ---- Host: requests from the owner ---------------------------------------------------
 
         [ServerRpc]
         void ServerFire(byte slot, ushort seq, Vector3 origin, uint packedAim, byte ticksSince, uint viewTick, byte stance)
@@ -719,7 +742,9 @@ namespace CloseTheDeal.Combat
             // Shots arrive in order (reliable), so an honest owner always sends the next number.
             // Any other number is refused: the number seeds the spread and must not be chosen.
             bool next = seq == (ushort)(_hostAckSeq + 1);
-            _hostAckSeq = seq;
+            if (next)
+                _hostAckSeq = seq;
+
             WeaponDefinition weapon = slot < SlotCount ? _weapons[slot] : null;
             uint tick = TimeManager.Tick;
 
@@ -760,17 +785,38 @@ namespace CloseTheDeal.Combat
             // but never as rested as the owner claims beyond what the host itself saw.
             uint rested = Math.Min(ticksSince, tick - _hostLastShotTick + TimingSlackTicks);
             _hostLastShotTick = tick;
-            float spread = NextSpread(ref _hostBloom, weapon, rested, stance);
+            byte validatedStance = ValidateStance(stance);
+            float spread = NextSpread(ref _hostBloom, weapon, rested, validatedStance);
+            if (IsOwner)
+                _bloom = _hostBloom;
 
             uint seenTick = SeenTick(viewTick, tick);
             origin = TrustedOrigin(origin, tick - seenTick);
 
             Vector3 direction = ShotResolver.SpreadDirection(ShotResolver.UnpackDirection(packedAim), spread, ShotSeed(seq));
-            ShotResult shot = ShotResolver.Trace(origin, direction, weapon.Range, _solidMask, _health, true, seenTick, weapon.HeadFromHeight);
+            ShotResult shot = ShotResolver.Trace(origin, direction, weapon.Range, _solidMask, _health, true, seenTick, weapon.HeadFromHeight, recordPanes: true);
+
+            if (IsOwner)
+                Fired?.Invoke(new ShotInfo(weapon, origin, shot.End, SurfaceOf(shot), true, _shotInBurst));
 
             ShotResolver.BreakCrossedPanes(shot, direction, OwnerId);
             HostApplyHit(weapon, shot, direction);
             RpcShot(shot.End, (byte)SurfaceOf(shot));
+        }
+
+        /// <summary>Validates client-reported stance flags against the host's motor so a client cannot spoof standing still.</summary>
+        byte ValidateStance(byte clientStance)
+        {
+            if (_motor == null)
+                return 0;
+
+            byte hostStance = Stance();
+            byte clean = (byte)(clientStance & (MovingFlag | AirborneFlag));
+            if ((hostStance & AirborneFlag) != 0 || (clean & AirborneFlag) != 0)
+                return AirborneFlag;
+            if ((hostStance & MovingFlag) != 0)
+                return MovingFlag;
+            return clean;
         }
 
         /// <summary>
@@ -819,32 +865,62 @@ namespace CloseTheDeal.Combat
                 Vector3 shove = Knockback.ShoveVelocity(direction, weapon.HitShove, weapon.ShoveLift);
                 Vector3 killShove = Knockback.ShoveVelocity(direction, weapon.KillShove, weapon.ShoveLift);
                 if (shot.Body.ApplyHit(damage, shot.End, direction, OwnerId, shove, killShove, weapon.HitControlLoss))
-                    ConfirmHit(shot.End, damage, shot.Body.IsDead, shot.Precision);
+                    ConfirmHit(shot.Body.IsDead, shot.Precision);
                 return;
             }
 
-            IDamageable target = shot.Solid != null ? shot.Solid.GetComponentInParent<IDamageable>() : null;
+            if (shot.Solid == null)
+                return;
+
+            if (DoorDamage.TryFind(shot.Solid, out DoorDamage door))
+            {
+                if (door.IsBroken)
+                    return;
+
+                door.ApplyDamage(damage, shot.End, direction, OwnerId);
+                ConfirmHit(false, false);
+                return;
+            }
+
+            IDamageable target = null;
+            if (!shot.Solid.TryGetComponent(out target))
+            {
+                Rigidbody rb = shot.Solid.attachedRigidbody;
+                if (rb != null)
+                    rb.TryGetComponent(out target);
+            }
+
             if (target == null)
                 return;
 
             target.ApplyDamage(damage, shot.End, direction, OwnerId);
-            ConfirmHit(shot.End, damage, false, false);
+            ConfirmHit(false, false);
         }
 
-        void ConfirmHit(Vector3 point, float damage, bool killed, bool precision)
+        void ConfirmHit(bool killed, bool precision)
         {
-            if (Owner.IsValid)
-                TargetHitConfirmed(Owner, point, damage, killed, precision);
+            if (!Owner.IsValid)
+                return;
+
+            byte flags = 0;
+            if (killed)
+                flags |= HitKilledFlag;
+            if (precision)
+                flags |= HitPrecisionFlag;
+            TargetHitConfirmed(Owner, flags);
         }
 
         [ServerRpc]
-        void ServerReload(byte slot)
+        void ServerReload(byte slot, ushort request)
         {
             WeaponDefinition weapon = slot < SlotCount ? _weapons[slot] : null;
-            if (weapon == null || slot != _active.Value || _health.IsDead || _hostReloading)
+            if (weapon == null || slot != _active.Value || _health.IsDead || _hostReloading || _hostAmmo[slot] >= weapon.MagazineSize)
+            {
+                TargetReloadCancelled(Owner, request);
                 return;
-            if (_hostAmmo[slot] >= weapon.MagazineSize)
-                return;
+            }
+
+            _hostReloadRequest = request;
 
             _hostReloading = true;
             _hostReloadDoneTick = TimeManager.Tick + TimeManager.TimeToTicks(weapon.ReloadSeconds);
@@ -862,7 +938,7 @@ namespace CloseTheDeal.Combat
 
         void HostSetActive(int slot)
         {
-            _hostReloading = false;
+            HostCancelReload();
             _hostBloom = 0f;
             _hostReadyTick = TimeManager.Tick + TimeManager.TimeToTicks(_weapons[slot].EquipSeconds);
             _active.Value = (byte)slot;
@@ -875,6 +951,23 @@ namespace CloseTheDeal.Combat
                 HostFinishReload();
         }
 
+        void HostCancelReload()
+        {
+            if (!_hostReloading)
+                return;
+
+            _hostReloading = false;
+            if (Owner.IsValid)
+                TargetReloadCancelled(Owner, _hostReloadRequest);
+        }
+
+        [TargetRpc]
+        void TargetReloadCancelled(NetworkConnection owner, ushort request)
+        {
+            if (request == _ownerReloadRequest)
+                CancelOwnerReload();
+        }
+
         void HostFinishReload()
         {
             _hostReloading = false;
@@ -884,6 +977,7 @@ namespace CloseTheDeal.Combat
 
             _hostAmmo[_active.Value] = (byte)weapon.MagazineSize;
             _hostReloadsDone++;
+            _completedReloadRequest = _hostReloadRequest;
             PushOwnerState();
         }
 
@@ -892,10 +986,9 @@ namespace CloseTheDeal.Combat
             _ownerState.Value = _hostAmmo[0]
                 | ((ulong)_hostAmmo[1] << 8)
                 | ((ulong)_hostAckSeq << 16)
-                | ((ulong)_hostReloadsDone << 32);
+                | ((ulong)_hostReloadsDone << 32)
+                | ((ulong)_completedReloadRequest << 40);
         }
-
-        // ---- Host: messages out --------------------------------------------------------------
 
         [ObserversRpc(ExcludeOwner = true)]
         void RpcShot(Vector3 end, byte surface, Channel channel = Channel.Unreliable)
@@ -910,25 +1003,23 @@ namespace CloseTheDeal.Combat
         }
 
         [TargetRpc]
-        void TargetHitConfirmed(NetworkConnection owner, Vector3 point, float damage, bool killed, bool precision)
+        void TargetHitConfirmed(NetworkConnection owner, byte flags)
         {
-            HitConfirmed?.Invoke(point, damage, killed, precision);
+            bool killed = (flags & HitKilledFlag) != 0;
+            bool precision = (flags & HitPrecisionFlag) != 0;
+            HitConfirmed?.Invoke(Vector3.zero, 0f, killed, precision);
             if (killed)
-                KillConfirmed?.Invoke(point);
+                KillConfirmed?.Invoke(Vector3.zero);
         }
-
-        // ---- Death and respawn (every machine) -----------------------------------------------
 
         void OnDied(Health health, DamageInfo info)
         {
             if (IsServerStarted)
-                _hostReloading = false;
+                HostCancelReload();
 
             if (IsOwner)
             {
-                ReleaseTrigger();
-                _triggerPressed = false;
-                _pressBufferedUntil = 0f;
+                ClearFireInput();
                 CancelOwnerReload();
             }
         }
@@ -945,7 +1036,7 @@ namespace CloseTheDeal.Combat
         /// <summary>A respawned player comes back with full magazines, and with the scene's starting guns if they had lost theirs.</summary>
         void HostRefill()
         {
-            _hostReloading = false;
+            HostCancelReload();
             _hostBloom = 0f;
             if (_weapons[0] == null && _weapons[1] == null)
                 GiveStartingLoadout();
@@ -958,8 +1049,6 @@ namespace CloseTheDeal.Combat
 
             PushOwnerState();
         }
-
-        // ---- Synced values landing -----------------------------------------------------------
 
         void OnSlotChanged(byte previous, byte next, bool asServer)
         {
@@ -999,8 +1088,6 @@ namespace CloseTheDeal.Combat
             _weapons[0] = _catalog.Get(_slot0.Value);
             _weapons[1] = _catalog.Get(_slot1.Value);
         }
-
-        // ---- Helpers -------------------------------------------------------------------------
 
         SyncVar<byte> SlotVar(int slot) => slot == 0 ? _slot0 : _slot1;
 
@@ -1044,16 +1131,15 @@ namespace CloseTheDeal.Combat
         sealed class WeaponInput : IDisposable
         {
             readonly InputAction _fire = new("Fire", InputActionType.Button, "<Mouse>/leftButton");
-            readonly InputAction _reload = new("Reload", InputActionType.Button, "<Keyboard>/r");
+            readonly InputAction _reload = new("Reload", InputActionType.Button, ReloadKeyboardBinding);
             readonly InputAction _slot1 = new("Weapon Slot 1", InputActionType.Button, "<Keyboard>/1");
             readonly InputAction _slot2 = new("Weapon Slot 2", InputActionType.Button, "<Keyboard>/2");
 
             public WeaponInput()
             {
-                // Pad: right trigger fires, Y reloads, d-pad left and right pick the slots.
-                // A, B, X and d-pad down belong to jump, crouch, interact and drop.
+                // Right trigger fires, B/Circle reloads, and D-pad left/right select slots.
                 _fire.AddBinding("<Gamepad>/rightTrigger");
-                _reload.AddBinding("<Gamepad>/buttonNorth");
+                _reload.AddBinding(ReloadPadBinding);
                 _slot1.AddBinding("<Gamepad>/dpad/left");
                 _slot2.AddBinding("<Gamepad>/dpad/right");
                 _fire.Enable();

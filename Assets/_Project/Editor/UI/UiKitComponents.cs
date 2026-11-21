@@ -7,11 +7,7 @@ using static CloseTheDeal.Editor.UI.UiKitAssets;
 
 namespace CloseTheDeal.Editor.UI
 {
-    /// <summary>
-    /// Builds the kit's component prefabs in Assets/_Project/UI/Kit: buttons (primary, secondary, quiet, tab),
-    /// toggle, stepper, swatches, slider, status line, key hint, section header, plate, glass pane, focus frame,
-    /// crosshair and edge marker. A prefab a designer edited is left alone (GeneratedAssetGuard): edit the prefab to take it over.
-    /// </summary>
+    /// <summary>Builds the UI kit component prefabs under Assets/_Project/UI/Kit (guarded by GeneratedAssetGuard).</summary>
     internal static class UiKitComponents
     {
         internal static GameObject Primary, Secondary, Quiet, Tab, Toggle, Stepper, Swatches, Slider;
@@ -38,8 +34,6 @@ namespace CloseTheDeal.Editor.UI
             EdgeMarker = SavePrefab(BuildEdgeMarker(), KitFolder + "/EdgeMarker.prefab");
         }
 
-        // ---- The shared control frame -----------------------------------------------------------
-
         static RectTransform NewRoot(string name, float w, float h)
         {
             var go = new GameObject(name, typeof(RectTransform)) { layer = 5 };
@@ -48,29 +42,50 @@ namespace CloseTheDeal.Editor.UI
             return rect;
         }
 
-        /// <summary>The parts every control has: padded hit area, refusal plate, lift shadow, plate, brackets, tick.</summary>
+
         static void Frame(RectTransform root, UiControlFx fx, UiVariant variant, bool keyline)
         {
             UiTokens t = Tokens;
             fx.Tokens = t;
             fx.Variant = variant;
+            // Shape and depth after Cocoon: radius 12 for controls, a soft shadow that grows with the lift, a resting
+            // shadow and a bevel on the raised variants. No corner brackets: focus is the ring (FocusFrame).
+            bool raised = variant == UiVariant.Primary || variant == UiVariant.Secondary;
             Img(Fill(root, "HitArea", -t.HitPadding), UiKitArt.White, Color.clear, raycast: true);
-            fx.RefusalPlate = Img(Fill(root, "RefusalPlate", -4f), UiKitArt.White, UiTokens.WithAlpha(t.Amber, 0f));
-            fx.Shadow = Img(Fill(root, "Shadow"), UiKitArt.White, UiTokens.WithAlpha(t.Navy, 0f));
+            fx.RefusalPlate = Img(Fill(root, "RefusalPlate", -4f), UiKitArt.Round16, UiTokens.WithAlpha(t.Amber, 0f));
+            if (raised)
+            {
+                RectTransform rest = Fill(root, "RestShadow", -16f);
+                rest.anchoredPosition = new Vector2(0f, -2f);
+                Img(rest, UiKitArt.Shadow12, UiTokens.WithAlpha(t.Navy, 0.10f));
+            }
+
+            fx.Shadow = Img(Fill(root, "Shadow", -16f), UiKitArt.Shadow12, UiTokens.WithAlpha(t.Navy, 0f));
             fx.Plate = Fill(root, "Plate");
-            fx.Fill = Img(Fill(fx.Plate, "Fill"), UiKitArt.White, t.Paper);
+            bool signature = variant == UiVariant.Primary && UiKitArt.Signature != null;
+            fx.Fill = Img(Fill(fx.Plate, "Fill"), signature ? UiKitArt.Signature : UiKitArt.Round12, signature ? Color.white : t.Paper);
+            if (raised)
+            {
+                Img(Fill(fx.Plate, "BevelTop"), UiKitArt.BevelTop12, UiTokens.WithAlpha(Color.white, signature ? 0.35f : 0.9f));
+                Img(Fill(fx.Plate, "BevelBottom"), UiKitArt.BevelBottom12, UiTokens.WithAlpha(t.Navy, 0.10f));
+            }
+
             if (keyline)
-                fx.Outline = Img(Fill(fx.Plate, "Outline"), UiKitArt.Outline1, t.Navy);
-            fx.Dashed = Img(Fill(fx.Plate, "Dashed"), UiKitArt.Dashed, t.Disabled, Image.Type.Tiled);
+                fx.Outline = Img(Fill(fx.Plate, "Outline"), UiKitArt.Ring12, t.Navy);
+            fx.Dashed = Img(Fill(fx.Plate, "Dashed"), UiKitArt.Ring12, t.Disabled);
             fx.Dashed.enabled = false;
 
-            RectTransform underline = Node(fx.Plate, "Underline");
-            underline.anchorMin = new Vector2(0f, 0f);
-            underline.anchorMax = new Vector2(1f, 0f);
-            underline.pivot = new Vector2(0f, 0f);
-            underline.sizeDelta = new Vector2(0f, 2f);
-            underline.anchoredPosition = Vector2.zero;
-            fx.Underline = Img(underline, UiKitArt.White, UiTokens.WithAlpha(t.Electric, 0f));
+            if (variant == UiVariant.Tab)
+            {
+                // The open tab's mark: a short bar under the label, inset from the rounded corners.
+                RectTransform underline = Node(fx.Plate, "Underline");
+                underline.anchorMin = new Vector2(0f, 0f);
+                underline.anchorMax = new Vector2(1f, 0f);
+                underline.pivot = new Vector2(0f, 0f);
+                underline.offsetMin = new Vector2(16f, 6f);
+                underline.offsetMax = new Vector2(-16f, 9f);
+                fx.Underline = Img(underline, UiKitArt.Round8, UiTokens.WithAlpha(t.Electric, 0f));
+            }
 
             RectTransform tick = Node(fx.Plate, "ConfirmTick");
             tick.anchorMin = tick.anchorMax = new Vector2(0f, 0.5f);
@@ -79,29 +94,7 @@ namespace CloseTheDeal.Editor.UI
             tick.localScale = Vector3.zero;
             fx.ConfirmTick = Img(tick, UiKitArt.White, UiTokens.WithAlpha(t.Cyan, 0f));
 
-            fx.HoverBrackets = Brackets(root, 4f, 12f, UiTokens.WithAlpha(t.Navy, 0f));
-        }
-
-        /// <summary>Four L brackets outside a rect's corners: top-left, top-right, bottom-left, bottom-right.</summary>
-        internal static Image[] Brackets(RectTransform parent, float gap, float size, Color colour)
-        {
-            var result = new Image[4];
-            Vector2[] anchors = { new(0f, 1f), new(1f, 1f), new(0f, 0f), new(1f, 0f) };
-            string[] names = { "BracketTL", "BracketTR", "BracketBL", "BracketBR" };
-            for (int i = 0; i < 4; i++)
-            {
-                RectTransform b = Node(parent, names[i]);
-                b.anchorMin = b.anchorMax = anchors[i];
-                b.pivot = new Vector2(0f, 1f);
-                b.sizeDelta = new Vector2(size, size);
-                float sx = (i & 1) == 0 ? 1f : -1f;
-                float sy = i < 2 ? 1f : -1f;
-                b.localScale = new Vector3(sx, sy, 1f);
-                b.anchoredPosition = new Vector2(-sx * gap, sy * gap);
-                result[i] = Img(b, UiKitArt.Bracket, colour);
-            }
-
-            return result;
+            fx.HoverBrackets = new Image[0];
         }
 
         static TextMeshProUGUI PlateLabel(UiControlFx fx, string text, UiTypeRole role, float left, float right, TextAlignmentOptions align)
@@ -113,8 +106,6 @@ namespace CloseTheDeal.Editor.UI
             fx.Label = label;
             return label;
         }
-
-        // ---- Buttons --------------------------------------------------------------------------------
 
         static GameObject Button(string name, UiVariant variant, string label, float w, float h)
         {
@@ -135,8 +126,6 @@ namespace CloseTheDeal.Editor.UI
             fx.Apply();
             return root.gameObject;
         }
-
-        // ---- Value controls -----------------------------------------------------------------------
 
         static GameObject BuildToggle()
         {
@@ -164,23 +153,26 @@ namespace CloseTheDeal.Editor.UI
             Frame(root, fx, UiVariant.Secondary, true);
             TextMeshProUGUI value = PlateLabel(fx, "Cross + Dot", Tokens.Item, 44f, 44f, TextAlignmentOptions.Center);
             TextMeshProUGUI left = Label(fx.Plate, "Previous", 0f, 0f, 44f, 48f, "‹", Tokens.Heading, Tokens.Navy, TextAlignmentOptions.Center);
-            TextMeshProUGUI right = Label(fx.Plate, "Next", 196f, 0f, 44f, 48f, "›", Tokens.Heading, Tokens.Navy, TextAlignmentOptions.Center);
+            TextMeshProUGUI right = Label(fx.Plate, "Next", 0f, 0f, 44f, 48f, "›", Tokens.Heading, Tokens.Navy, TextAlignmentOptions.Center);
+            right.rectTransform.SetInsetAndSizeFromParentEdge(RectTransform.Edge.Right, 0f, 44f);
             left.characterSpacing = right.characterSpacing = 0f;
             fx.Inks = new Graphic[] { left, right };
             ClickZone(fx.Plate, "PreviousZone", 0f, 0f, 44f, 48f, stepper, -1);
-            ClickZone(fx.Plate, "NextZone", 196f, 0f, 44f, 48f, stepper, 1);
+            RectTransform nextZone = ClickZone(fx.Plate, "NextZone", 0f, 0f, 44f, 48f, stepper, 1);
+            nextZone.SetInsetAndSizeFromParentEdge(RectTransform.Edge.Right, 0f, 44f);
             Set(stepper, "_value", value);
             fx.Apply();
             return root.gameObject;
         }
 
-        static void ClickZone(Transform parent, string name, float x, float y, float w, float h, UiControl control, int value)
+        static RectTransform ClickZone(Transform parent, string name, float x, float y, float w, float h, UiControl control, int value)
         {
             Image hit = Box(parent, name, x, y, w, h, Color.clear);
             hit.raycastTarget = true;
             var zone = hit.gameObject.AddComponent<UiClickZone>();
             Set(zone, "_control", control);
             SetValue(zone, "_value", value);
+            return hit.rectTransform;
         }
 
         static GameObject BuildSwatches()
@@ -251,8 +243,6 @@ namespace CloseTheDeal.Editor.UI
             return root.gameObject;
         }
 
-        // ---- Text parts ---------------------------------------------------------------------------
-
         static GameObject BuildStatusLine()
         {
             RectTransform root = NewRoot("StatusLine", 600f, 52f);
@@ -271,7 +261,7 @@ namespace CloseTheDeal.Editor.UI
         static GameObject BuildKeyHint()
         {
             RectTransform root = NewRoot("KeyHint", 160f, 40f);
-            Image cap = Box(root, "KeyCap", 0f, 2f, 48f, 36f, Tokens.Navy, UiKitArt.Outline1);
+            Image cap = Box(root, "KeyCap", 0f, 2f, 48f, 36f, Tokens.Navy, UiKitArt.Ring8);
             TextMeshProUGUI key = Label(root, "Key", 0f, 2f, 48f, 36f, "Esc", Tokens.Label, Tokens.Navy, TextAlignmentOptions.Center);
             TextMeshProUGUI label = Label(root, "Label", 58f, 0f, 102f, 40f, "Back", Tokens.Label, Tokens.Ink2);
             var hint = root.gameObject.AddComponent<UiKeyHint>();
@@ -294,20 +284,12 @@ namespace CloseTheDeal.Editor.UI
         {
             UiTokens t = Tokens;
             RectTransform root = NewRoot(name, 640f, 204f);
-            RectTransform shadow = Fill(root, "Shadow");
+            // Panels: radius 20, a soft shadow, a hairline rim. No top rule (a rule line is decoration).
+            RectTransform shadow = Fill(root, "Shadow", -24f);
             shadow.anchoredPosition = new Vector2(0f, -6f);
-            Img(shadow, UiKitArt.White, UiTokens.WithAlpha(t.Navy, 0.10f));
-            Image pane = Img(Fill(root, "Surface"), UiKitArt.White, UiTokens.WithAlpha(t.Paper, frosted ? t.FrostedAlpha : t.PlateAlpha));
-            Img(Fill(root, "Edge"), UiKitArt.Outline1, t.Hair);
-            if (frosted)
-            {
-                RectTransform rule = Node(root, "TopRule");
-                rule.anchorMin = new Vector2(0f, 1f);
-                rule.anchorMax = new Vector2(1f, 1f);
-                rule.pivot = new Vector2(0.5f, 1f);
-                rule.sizeDelta = new Vector2(0f, 4f);
-                Img(rule, UiKitArt.White, t.Cobalt);
-            }
+            Img(shadow, UiKitArt.Shadow20, UiTokens.WithAlpha(t.Navy, 0.12f));
+            Image pane = Img(Fill(root, "Surface"), UiKitArt.Round20, UiTokens.WithAlpha(t.Paper, frosted ? t.FrostedAlpha : t.PlateAlpha));
+            Img(Fill(root, "Edge"), UiKitArt.Ring20, t.Hair);
 
             var glass = root.gameObject.AddComponent<UiGlassPane>();
             Set(glass, "_tokens", t);
@@ -315,8 +297,6 @@ namespace CloseTheDeal.Editor.UI
             SetValue(glass, "_frosted", frosted ? 1f : 0f);
             return root.gameObject;
         }
-
-        // ---- Focus marks and crosshair ----------------------------------------------------------------
 
         static GameObject BuildFocusFrame()
         {
@@ -332,8 +312,8 @@ namespace CloseTheDeal.Editor.UI
             RectTransform frame = Node(root, "Frame");
             frame.anchorMin = frame.anchorMax = frame.pivot = new Vector2(0.5f, 0.5f);
             frame.sizeDelta = new Vector2(420f, 64f);
-            Img(Fill(frame, "Ring"), UiKitArt.Outline2, t.Electric);
-            Image[] brackets = Brackets(frame, 4f, 14f, t.Navy);
+            // Focus is a rounded ring just outside the control (radius 12 + 4 gap) and the chevron cue. No corner brackets.
+            Img(Fill(frame, "Ring", -4f), UiKitArt.Ring16Bold, t.Electric);
             RectTransform chevron = Node(frame, "Chevron");
             chevron.anchorMin = chevron.anchorMax = new Vector2(0f, 0.5f);
             chevron.pivot = new Vector2(1f, 0.5f);
@@ -346,7 +326,7 @@ namespace CloseTheDeal.Editor.UI
             Set(focus, "_frame", frame);
             Set(focus, "_group", group);
             Set(focus, "_ring", frame.Find("Ring").GetComponent<Image>());
-            SetArray(focus, "_brackets", new Object[] { brackets[0].rectTransform, brackets[1].rectTransform, brackets[2].rectTransform, brackets[3].rectTransform });
+            SetArray(focus, "_brackets", new Object[0]);
             Set(focus, "_chevron", chevron);
             return go;
         }
@@ -377,11 +357,6 @@ namespace CloseTheDeal.Editor.UI
             return go;
         }
 
-        /// <summary>
-        /// The off-screen marker. Its root stretches over the whole canvas (the frame WorldToCanvas.TryProject measures
-        /// in); the body is anchored at the bottom-left corner and moved in canvas units: a navy keyline, the mark,
-        /// the chevron and a paper tag with the distance under it.
-        /// </summary>
         static GameObject BuildEdgeMarker()
         {
             UiTokens t = Tokens;

@@ -10,13 +10,7 @@ using UnityEngine.Audio;
 
 namespace CloseTheDeal.Editor.Lanes
 {
-    /// <summary>
-    /// Everything the UI sound lane adds to the project, from one menu item: import settings for the clips
-    /// (Assets/_Project/Audio/UI), the AudioMixer with its buses, and the UiSoundSet that maps every event to its clip.
-    /// It only adds what is missing: a clip's import settings are applied once (then marked), an existing mixer is kept, and
-    /// a sound-set entry that already exists keeps its clip, volume, variance and gap. Safe to run again after a merge.
-    /// Also holds the scripted run that fires every event once and checks the mixer (RunSelfTest, batch mode).
-    /// </summary>
+    /// <summary>Additive setup for UI/Item/Weapon/Ambience import settings, GameMixer, UiSoundSet, and batch self-test.</summary>
     public static class UiSoundLaneSetup
     {
         public const string ClipFolder = "Assets/_Project/Audio/UI";
@@ -42,7 +36,6 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log("UiSoundLaneSetup: clips imported, mixer and UiSoundSet ready.");
         }
 
-        // ----------------------------------------------------------------------------------- import settings
         static void ApplyImportSettings()
         {
             foreach (string guid in AssetDatabase.FindAssets("t:AudioClip", new[] { ClipFolder, ItemClipFolder, WeaponClipFolder, AmbienceFolder }))
@@ -74,7 +67,6 @@ namespace CloseTheDeal.Editor.Lanes
             }
         }
 
-        // ----------------------------------------------------------------------------------------- the mixer
         static AudioMixer EnsureMixer()
         {
             var existing = AssetDatabase.LoadAssetAtPath<AudioMixer>(MixerPath);
@@ -141,7 +133,6 @@ namespace CloseTheDeal.Editor.Lanes
             throw new InvalidOperationException("exposed parameter for " + name + " not found");
         }
 
-        // ------------------------------------------------------------------------------------- the sound set
         static void EnsureSet(AudioMixer mixer)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(SetPath));
@@ -195,13 +186,11 @@ namespace CloseTheDeal.Editor.Lanes
             en.pitchVariance = t.variance;
         }
 
-        // ------------------------------------------------------------------- scripted run (batch mode)
         const string FlagKey = "UiSoundSelfTest.Run";
         const string SavedUiKey = "UiSoundSelfTest.SavedUi";
         const string ReportPath = "UiSoundSelfTest.json";
 
-        /// <summary>-executeMethod CloseTheDeal.Editor.Lanes.UiSoundLaneSetup.RunSelfTest: enters play mode, fires every
-        /// event, checks the UI bus, the volume parameter and a rapid-hover burst, writes UiSoundSelfTest.json, exits.</summary>
+        /// <summary>Batch entry point verifying live Play Mode routing, bus volumes, focus gating, and burst capping.</summary>
         public static void RunSelfTest()
         {
             Run();

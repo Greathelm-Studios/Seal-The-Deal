@@ -2,13 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// The reception desk. Press interact to ready up or take it back. When everyone is ready the
-    /// host instead holds interact to start the run; a quick tap still takes the host's ready
-    /// back. If a firm is empty or the firms are uneven, the first hold arms a confirm (the
-    /// prompt says why) and a second hold within a few seconds starts the run anyway, when the
-    /// lobby rules allow a short-handed start. The desk asks the host; the roster decides.
-    /// </summary>
+    /// <summary>Reception desk interactable handling ready toggles and host start/confirm holds. Design: docs/systems/LOBBY.md.</summary>
     public sealed class ReceptionDesk : LobbyInteractable
     {
         [Tooltip("The desk bell or button that dips when used. Optional; a child made for this, never a placed part of the desk.")]
@@ -20,15 +14,21 @@ namespace CloseTheDeal.Lobby
         /// <summary>Raised when the host's first hold arms a short-handed confirm (the reason). For a sound and the board.</summary>
         public static event System.Action<StartBlock> OnConfirmArmed;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            OnConfirmArmed = null;
+        }
+
         enum Mode { None, Ready, Unready, HostStart, WaitForHost, RunStarted }
 
         // Prompts are fixed strings so nothing is built per frame (AGENTS.md §6).
         const string KeyReady = "F   Ready up";
         const string KeyUnready = "F   Take back your ready";
-        const string KeyStart = "Hold F   Start the run";
+        const string KeyStart = "F   Hold to start the run";
         const string PadReady = "Y   Ready up";
         const string PadUnready = "Y   Take back your ready";
-        const string PadStart = "Hold Y   Start the run";
+        const string PadStart = "Y   Hold to start the run";
         const string KeyWaiting = "F   Take back your ready   (waiting for the host)";
         const string PadWaiting = "Y   Take back your ready   (waiting for the host)";
         const string Started = "The run has started";
@@ -120,7 +120,6 @@ namespace CloseTheDeal.Lobby
             Ring();
         }
 
-        /// <summary>A full hold: start now, or (short-handed) arm the confirm, or on the second hold start anyway.</summary>
         void StartOrArm(LobbyRoster roster)
         {
             StartState state = roster.Evaluate(out StartBlock reason);
@@ -149,8 +148,8 @@ namespace CloseTheDeal.Lobby
             string why = reason == StartBlock.NeedBothFirms
                 ? roster.Rules.FirmName(roster.SmallerFirm()) + " has nobody."
                 : "The firms are uneven.";
-            _confirmKeyPrompt = why + "   Hold F again to start anyway";
-            _confirmPadPrompt = why + "   Hold Y again to start anyway";
+            _confirmKeyPrompt = "F   " + why + " Hold again to start anyway.";
+            _confirmPadPrompt = "Y   " + why + " Hold again to start anyway.";
             _confirmUntil = Time.unscaledTime + roster.Rules.ConfirmSeconds;
             OnConfirmArmed?.Invoke(reason);
         }

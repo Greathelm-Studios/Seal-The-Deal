@@ -2,10 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Glass
 {
-    /// <summary>
-    /// Designer-owned tuning for breakable glass. Runtime only reads it (AGENTS.md §4).
-    /// Design and ownership: docs/systems/GLASS.md.
-    /// </summary>
+    /// <summary>Designer-owned tuning for breakable glass.</summary>
     [CreateAssetMenu(menuName = "Seal the Deal/Glass Profile", fileName = "GlassProfile")]
     public sealed class GlassProfile : ScriptableObject
     {

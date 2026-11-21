@@ -1,22 +1,3 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-12
-//  Prompt    : Alex: "i also wanna add a stylised reflection or sheen to the windows/glass"
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : The kit's glass. URP Lit glass is either invisible or a mirror, and the art bible
-//              rules out mirrors ("glass is for visibility first", §12). This draws glass the way
-//              an illustrator does: almost clear, with a pair of hard diagonal light streaks
-//              that slide across the pane as the viewer moves, and a pale edge at grazing angles.
-//              It is its own shader because none of that is a lighting response; it is drawn.
-// -----------------------------------------------------------------------------
-//
-// Trade-off: drawn streaks, not a real reflection (reflection probe or planar reflection). A
-// real reflection would put the sky and the room in the glass, which is exactly what hides the
-// player across the street. Drawn streaks cover a fixed, small share of each pane, so how much
-// of the view they cost is a slider, not an accident of the camera angle.
-//
-// It is unlit and casts no shadow, so sunlight passes through it onto the floor untouched.
 Shader "Close the Deal/Glass Sheen"
 {
     Properties
@@ -52,10 +33,7 @@ Shader "Close the Deal/Glass Sheen"
             Tags { "LightMode" = "UniversalForward" }
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
-            // WHY back faces are culled: the kit's panes are thin closed boxes, so whichever side
-            // you stand on there is already a face turned toward you. Drawing both faces put every
-            // streak on screen twice and doubled its strength. A pane modelled as a single
-            // one-sided sheet would need Cull Off instead.
+            // Kit panes are thin closed boxes; culling back faces avoids drawing streaks twice.
             Cull Back
 
             HLSLPROGRAM

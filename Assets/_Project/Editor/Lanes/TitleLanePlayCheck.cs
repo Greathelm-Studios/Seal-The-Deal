@@ -12,14 +12,7 @@ using Object = UnityEngine.Object;
 
 namespace CloseTheDeal.Editor.Lanes
 {
-    /// <summary>
-    /// Sees the title's live sky and the screen transitions running in Play Mode, in the integration scene.
-    /// Batch only: -executeMethod CloseTheDeal.Editor.Lanes.TitleLanePlayCheck.RunFromCommandLine [-titleOut folder]
-    /// It checks: the live sky attaches and renders while the title shows; its view moves over time; every
-    /// transition plays, covers and finishes within a frame or two of its stated length; a call made during one
-    /// waits; reduced motion turns a wipe into the short fade and stills the sky; hiding the title stops the sky
-    /// camera and puts the game's own sky back. Writes frame strips and play_check.txt. Nothing is saved.
-    /// </summary>
+    /// <summary>Batch Play Mode verification for TitleSky and UiTransition timing in Lane_Integration.unity.</summary>
     public static class TitleLanePlayCheck
     {
         const string ScenePath = "Assets/_Project/Scenes/Lanes/Lane_Integration.unity";
@@ -50,7 +43,33 @@ namespace CloseTheDeal.Editor.Lanes
         static void Resume()
         {
             if (SessionState.GetBool(ActiveKey, false))
+            {
                 EditorApplication.update += Pump;
+                EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            }
+        }
+
+        static void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state != PlayModeStateChange.EnteredEditMode)
+                return;
+            CleanupSession();
+            _run = null;
+            _failures = 0;
+            _out = null;
+            Log.Clear();
+        }
+
+        static void CleanupSession()
+        {
+            EditorApplication.update -= Pump;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            SessionState.SetBool(ActiveKey, false);
+            if (SessionState.GetBool(ReducedSavedKey, false))
+            {
+                UiSettings.ReducedMotion = SessionState.GetBool(ReducedKey, false);
+                SessionState.SetBool(ReducedSavedKey, false);
+            }
         }
 
         static void Pump()
@@ -67,13 +86,7 @@ namespace CloseTheDeal.Editor.Lanes
 
         static void Finish()
         {
-            EditorApplication.update -= Pump;
-            SessionState.SetBool(ActiveKey, false);
-            if (SessionState.GetBool(ReducedSavedKey, false))
-            {
-                UiSettings.ReducedMotion = SessionState.GetBool(ReducedKey, false);
-                SessionState.SetBool(ReducedSavedKey, false);
-            }
+            CleanupSession();
             Log.AppendLine(_failures == 0 ? "PASS" : $"FAIL ({_failures})");
             File.WriteAllText(Path.Combine(_out, "play_check.txt"), Log.ToString());
             Debug.Log("[TitlePlay]\n" + Log);

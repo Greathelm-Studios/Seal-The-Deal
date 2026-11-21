@@ -5,13 +5,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.Items
 {
-    /// <summary>
-    /// The item HUD, built from the UI kit (Plate, KeyHint, tokens): the prompt under the
-    /// crosshair ("F · Pick up Chair", "Chair · Too heavy"), refusals in its place (amber edge,
-    /// the kit's shake, a sound), and the hands slot at the bottom left (what is carried, how
-    /// heavy, its keys). Redrawn only when the local ItemCarrier's events fire; the motion runs
-    /// on the kit's one driver while something moves. Contract: docs/systems/ITEMS.md, "UI contract".
-    /// </summary>
+    /// <summary>Item pickup prompt, refusal feedback, and held-item HUD panel built from the UI kit. Contract: docs/systems/ITEMS.md.</summary>
     [DisallowMultipleComponent]
     public sealed class ItemHud : MonoBehaviour, IUiAnimated
     {
@@ -61,6 +55,7 @@ namespace CloseTheDeal.Items
         Vector2 _handsHome;
         float _loadWidth;
         float _labelAfterKey;
+        float _promptCapWidth;
 
         /// <summary>What the prompt reads for a person, key first ("F · Pick up Chair"); empty while it is hidden. For checks and captions.</summary>
         public string PromptReading => !_shown ? "" : _promptKeyCap.activeSelf ? _promptKey.text + " · " + _promptLabel.text : _promptLabel.text;
@@ -94,6 +89,7 @@ namespace CloseTheDeal.Items
             _promptHome = _prompt.anchoredPosition;
             _handsHome = _hands.anchoredPosition;
             _loadWidth = ((RectTransform)_handsLoadFill.parent).rect.width;
+            _promptCapWidth = ((RectTransform)_promptKeyCap.transform).rect.width;
             _labelAfterKey = _promptLabel.rectTransform.anchoredPosition.x;
             _promptFade.Snap(0f);
             _promptRise.Snap(0f);
@@ -106,6 +102,7 @@ namespace CloseTheDeal.Items
         {
             ItemCarrier.LocalChanged += Bind;
             ItemCarrier.UsingPadChanged += OnDeviceChanged;
+            UiGlyphs.Changed += RefreshDevice;
             Bind(ItemCarrier.Local);
             LabelKeys();
         }
@@ -114,6 +111,7 @@ namespace CloseTheDeal.Items
         {
             ItemCarrier.LocalChanged -= Bind;
             ItemCarrier.UsingPadChanged -= OnDeviceChanged;
+            UiGlyphs.Changed -= RefreshDevice;
             Bind(null);
             UiMotion.Sleep(this);
         }
@@ -145,8 +143,6 @@ namespace CloseTheDeal.Items
             Apply();
         }
 
-        // ---- What the carrier says ----------------------------------------------------------
-
         void OnPromptChanged(PromptKind kind, ItemDefinition item)
         {
             _lookKind = kind;
@@ -176,8 +172,9 @@ namespace CloseTheDeal.Items
             ShowPrompt(true);
         }
 
-        /// <summary>Keyboard to pad or back: every key name on screen changes with it, at once.</summary>
-        void OnDeviceChanged(bool pad)
+        void OnDeviceChanged(bool pad) => RefreshDevice();
+
+        void RefreshDevice()
         {
             LabelKeys();
             if (_refusalLeft > 0f)
@@ -197,7 +194,6 @@ namespace CloseTheDeal.Items
         const float KeyCapPadding = 12f;
         const float KeyLabelGap = 10f;
 
-        /// <summary>Names the key and fits its cap to the name ("DOWN" needs more room than "G"), keeping the label just after it.</summary>
         static void SetKey(TMP_Text text, ItemAction action)
         {
             if (text == null)
@@ -275,8 +271,6 @@ namespace CloseTheDeal.Items
             _handsLoadFill.sizeDelta = size;
         }
 
-        // ---- Drawing --------------------------------------------------------------------------
-
         void DrawPrompt(string text, bool showKey, Color edge, Color textColour)
         {
             _promptKeyCap.SetActive(showKey);
@@ -288,7 +282,14 @@ namespace CloseTheDeal.Items
 
             // The plate fits its words: key cap, gap, label, padding either side.
             RectTransform label = _promptLabel.rectTransform;
-            float keyRoom = showKey ? _labelAfterKey : 0f;
+            float keyRoom = 0f;
+            if (showKey)
+            {
+                float capWidth = Mathf.Max(_promptCapWidth, _promptKey.preferredWidth + KeyCapPadding);
+                Resize((RectTransform)_promptKeyCap.transform, capWidth);
+                Resize(_promptKey.rectTransform, capWidth);
+                keyRoom = _labelAfterKey + capWidth - _promptCapWidth;
+            }
             Vector2 labelPosition = label.anchoredPosition;
             labelPosition.x = keyRoom;
             label.anchoredPosition = labelPosition;
@@ -317,7 +318,6 @@ namespace CloseTheDeal.Items
             UiMotion.Wake(this);
         }
 
-        /// <summary>In: fade up and rise into place, easing out. Out: fade and sink, easing in. Reduce motion: fade only.</summary>
         void Fade(ref UiTween fade, ref UiTween rise, bool show, float inSeconds, float outSeconds, float distance)
         {
             bool reduced = UiMotion.Reduced;

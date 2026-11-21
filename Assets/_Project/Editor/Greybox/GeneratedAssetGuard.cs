@@ -6,13 +6,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Editor.Greybox
 {
-    /// <summary>
-    /// Keeps the greybox tools off anything a person has made or touched (AGENTS.md §4).
-    /// Every file a tool writes gets an asset label holding a fingerprint of its contents.
-    /// Before overwriting, a tool checks that label: a file with no label was made by hand,
-    /// and a file whose contents no longer match was edited since. Either way the tool
-    /// leaves it alone and says so. An artist takes over a prefab just by editing it.
-    /// </summary>
+    /// <summary>Fingerprint asset-label guard preventing generator tools from overwriting hand-edited assets.</summary>
     public static class GeneratedAssetGuard
     {
         const string LabelPrefix = "greybox-";
@@ -83,7 +77,7 @@ namespace CloseTheDeal.Editor.Greybox
             return null;
         }
 
-        /// <summary>A short hash of the file with carriage returns removed, so git's line-ending conversion on another PC doesn't count as an edit.</summary>
+        // Strip \r so git CRLF conversion across machines never counts as a hand edit.
         static string Fingerprint(string path)
         {
             byte[] bytes = File.ReadAllBytes(path);

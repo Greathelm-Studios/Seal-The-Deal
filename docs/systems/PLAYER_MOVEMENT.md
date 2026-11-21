@@ -1,6 +1,6 @@
-# PLAYER MOVEMENT
+# Player Movement
 
-**Status:** Current · **Last updated:** 2026-11-12 · **Verified against:** the movement lane branch (`claude/lane-movement-864d86`), scripted play sessions in `Lane_Movement.unity`
+**Status:** Current · **Last updated:** 2026-11-21 · **Verified against:** the movement lane branch (`claude/lane-movement-864d86`), scripted play sessions in `Lane_Movement.unity`
 
 ## What happens in the game
 
@@ -27,17 +27,18 @@ Your own moves show the instant you press them. The host is still the judge: if 
 | Action | Keyboard and mouse | Gamepad | Read as | Used by |
 |---|---|---|---|---|
 | Move | WASD / arrows | Left stick | `Move` | motor |
-| Look | Mouse | — | `LookDelta` (counts) | camera |
-| LookStick | — | Right stick | `LookStick` (rate; dead zone `Look Stick Dead Zone` on the profile) | camera |
+| Look | Mouse | None | `LookDelta` (counts) | camera |
+| LookStick | None | Right stick | `LookStick` (rate; dead zone `Look Stick Dead Zone` on the profile) | camera |
 | Sprint | Left Shift | Left stick press | `Sprint` | motor |
 | Jump | Space | South (A / Cross) | `JumpHeld`, `Consume(Jump)` | motor |
-| Crouch / slide | Left Ctrl, C | East (B / Circle) | `Crouch` | motor |
+| Crouch / slide | Left Ctrl, C | Right stick press (R3) | `Crouch` | motor |
 | Lean | Q / E | LB / RB | `Lean` (−1, 0, +1) | motor |
 | Attack | Left mouse | Right trigger | `Consume(Attack)`, `Held(Attack)` | weapons (movement never reads it) |
 | AltFire | Right mouse | Left trigger | `Consume(AltFire)`, `Held(AltFire)` | weapons (shooting lane) |
 | Interact | F | North (Y / Triangle) | `Consume(Interact)` | pickups and doors |
-| Throw / drop | G | Right stick press | `Consume(Throw)` | pickups and furniture |
-| Reload | R | West (X / Square) | `Consume(Reload)` | weapons |
+| Drop held item or briefcase | G | D-pad down | Item or briefcase drop input | pickups and match |
+| Throw held item | Left mouse | Right trigger | Item throw input | pickups |
+| Reload | R | East (B / Circle) | Weapon input | weapons |
 | Weapon slots 1–4 | 1, 2, 3, 4 | D-pad up, right, down, left | `ConsumeWeaponSlot()` (1–4, 0 = none) | weapons |
 | Help | F1 | View (Select / Share) | `Pressed(PlayerPress.Help)` | movement's controls card |
 | Menu | Esc | Start | read by `GameMenu` directly | menu |
@@ -48,12 +49,12 @@ Presses are latched every frame and kept until the owning system consumes them o
 
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
-| Player body (position, velocity, state, jump timers, lean, crouch, slide, climb target and exit speed, event counters) | **Host.** The owning client predicts its own body. Other clients run each other player a few ticks past that player's last input that has arrived, repeating it (presses left out) for up to a third of a second, then letting go | Host → everyone: the reconcile, about 115 B before FishNet's packing | Every tick, 60/s |
+| Player body (position, velocity, state, jump timers, lean, crouch, slide, climb target and exit speed, event counters) | **Host.** The owning client predicts its own body. Other clients run each other player a few ticks past that player's last input that has arrived, repeating it (presses left out) for up to a third of a second, then letting go | Host → everyone: custom-serialized `MoveReconcile` (`Lean` quantized to `sbyte`, `Crouch` to `byte`, `StateTicksLeft` to `ushort`, packed flags, omitting `Mantle` unless mantling and `PendingKnock` when zero: 14 B payload plus `PredictionRigidbody` on normal ticks) | Every tick, 60/s |
 | Player input (move, yaw, sprint, crouch, jump press and hold, lean side) | Owning client | Client → host, about 19 B | Every tick, 60/s |
-| Animation state (`PlayerAnimState`) | Nobody: every machine works it out each frame from the body state above | Nothing extra | — |
-| Jump, landing, climb, refusal events | Counted on the tick inside the reconcile, raised once per change on every machine | Inside the reconcile | — |
+| Animation state (`PlayerAnimState`) | Nobody: every machine works it out each frame from the body state above | Nothing extra | None |
+| Jump, landing, climb, refusal events | Counted on the tick inside the reconcile, raised once per change on every machine | Inside the reconcile | None |
 | Knockback | **Host only.** Clients never decide a hit | Arrives as part of the body state | On hit |
-| Camera, view dip, speed widening | Local only | Nothing | — |
+| Camera, view dip, speed widening | Local only | Nothing | None |
 
 Bandwidth: with **8 players** the host sends each client 8 × ~115 B × 60/s ≈ **55 KB/s**, and its own upload is about 7 × 55 ≈ **390 KB/s (3.1 Mbit/s)** before packing. That is heavy for a residential upload; see Known limitations.
 
@@ -80,7 +81,7 @@ Quake-lineage acceleration, written for this game:
 
 | State | Enters when | Does | Leaves when |
 |---|---|---|---|
-| Grounded | feet within the ground probe of a floor flatter than 50° | runs or slides as above; follows stairs and ramp tops down (`Step Down Snap`); Space or held hop jumps, or climbs if something climbable is ahead | leaves the floor; jumps; climbs |
+| Grounded | feet within the ground probe of a floor flatter than 58° | runs or slides as above; steps up risers up to `Step Up Height` (0.35 m), adopts walkable ramp slopes on entry, and follows stairs and ramp tops down (`Step Down Snap`); Space or held hop jumps, or climbs if something climbable is ahead | leaves the floor; jumps; climbs |
 | Airborne | left the floor or jumped | air acceleration as above; air gravity rising, heavier fall gravity falling; letting go of Space while rising keeps half the upward speed; a jump still works 0.1 s after walking off an edge | lands moving downward; grabs a ledge |
 | Mantling | Space at, or a jump into, something whose top is between the min and max ledge height with room to stand on or over it | rises to the top, then moves across at least as fast as you came in; gravity ignored | stands on a deep top (Grounded) or clears a thin one (Airborne), keeping 90 % of the entry speed; times out at 2× the climb time |
 | Knocked | the host applies a knockback (also mid-climb) | no steering; extra gravity; skids to a stop on the floor | the control-loss time passes |
@@ -97,7 +98,7 @@ Until there is an animation, the crouch squashes the body toward the feet (`Squa
 
 ## UI contract: what a HUD reads from movement
 
-Read from `PlayerMotor.Local` (null until the local player has spawned; subscribe to `PlayerMotor.LocalChanged` once it exists, see below) and from any other `PlayerMotor` for other players. **Nothing here is polled per frame by design**: take the value when an event fires, or read `AnimState` once in `Update` only for a continuously moving visual (a speed bar). Nothing here is decided by the UI: it shows host-confirmed state and sends no requests of its own.
+Read from `PlayerMotor.Local` (null until the local player has spawned; subscribe to `PlayerMotor.LocalChanged` once it exists, see below), `PlayerMotor.All` (all currently enabled player bodies), and from any other `PlayerMotor` for other players. **Nothing here is polled per frame by design**: take the value when an event fires, or read `AnimState` once in `Update` only for a continuously moving visual (a speed bar). Nothing here is decided by the UI: it shows host-confirmed state and sends no requests of its own.
 
 | Thing | Type | Who owns it | Where it comes from | When it changes |
 |---|---|---|---|---|
@@ -146,7 +147,7 @@ For help text, the real bindings come from the actions asset: read them with `In
 Built from the UI kit's prefabs by `Seal the Deal > Lanes > Add Movement HUD To Open Scene` (also run by `Set Up Movement`), under the game menu's `Hud`; it only adds what is missing. Script: `Player/Hud/MovementHud.cs`.
 
 - **Refusal line:** a kit `StatusLine` at the bottom centre. When the local player presses jump at something they can't climb it says why ("Can't climb that: it's above your reach." / "...there's no room on top."), with the kit's refusal mark (amber square, navy keyline) and the `Error` sound; it fades in at the kit's hover timing, holds 2.2 s (`Refusal Seconds`), and fades out. A second refusal restarts the hold.
-- **Controls card:** a kit `Plate` of `KeyHint` lines, opened and closed with Help (F1, pad View), sliding in from the left at the kit's panel timing with `PanelOpen` / `PanelClose`; with Reduce motion it only fades. Every key is read from the player's own copy of the actions (`PlayerInputReader.BindingText`), so rebinding shows, and the card switches between keyboard and controller labels as soon as the player touches the other device (`PlayerInputReader.DeviceChanged`). Opening the game menu hides the HUD and closes the card; it never comes back open on its own.
+- **Controls card:** a kit `Plate` of `KeyHint` lines, opened and closed with Help (F1, pad View), sliding in from the left at the kit's panel timing with `PanelOpen` / `PanelClose`; with Reduce motion it only fades. Movement hints read the player's own action bindings. Pickup, drop and reload use their lane's actual fixed controls, and the card switches between keyboard and controller labels as soon as the player touches the other device (`PlayerInputReader.DeviceChanged`). Opening the game menu hides the HUD and closes the card; it never comes back open on its own.
 - **Crosshair:** one crosshair, the UI kit's `UiCrosshair` (its shape, colour and size are the player's settings, lane 5's). Movement's `CrosshairFeed` sits on it and sets its `OpenPixels` gap every frame: open by speed above walking (`Crosshair Open Per Speed`, 1.2 px per m/s) plus `Crosshair Open In Air` (6 px) while airborne, capped at 16 px, or by the gun's own spread (`WeaponHolder.CurrentSpreadDegrees` turned into screen pixels at the current field of view) when that is wider, never both added, because the spread already grows when moving or airborne. It eases toward that at 80 px/s. A landing faster than 8 m/s, a hit, a precision hit and a kill each `Pulse` it outward and back (0.3, 0.5, 0.8, 1.0). Shooting draws its own hit marker. All values at 100% crosshair size on a 1080p screen, on `MovementProfile` under Crosshair.
 
 ## Scripts
@@ -157,7 +158,7 @@ Under [Assets/_Project/Scripts/Player/](../../Assets/_Project/Scripts/Player/):
 - `LedgeProbe.cs`: finds what can be climbed or vaulted, and why not.
 - `PlayerAnimState.cs`: the read-only state a rig reads.
 - `PlayerInputReader.cs`: the one place input is read; see Controls.
-- `PlayerCamera.cs`: first-person camera; look speeds and limits now live on `MovementProfile` (the old scene values, including the Greybox scene's −35° look-up limit, are no longer read).
+- `PlayerCamera.cs`: first-person camera; look speeds and limits now live on `MovementProfile` (the old scene values, including the Greybox scene's −35° look-up limit, are no longer read). In body view (`SetBodyView`), the eye is never parented to the head bone (head bob, turn lead, and hit jolts would cause nausea); view rotation comes from mouse/stick alone while position settles smoothly onto the head bone and takes only a capped share of quick motion (see [VIEWMODEL.md](VIEWMODEL.md)).
 - `MovementProfile.cs`: every tuning value, with tooltips; asset `Assets/_Project/Profiles/DefaultMovement.asset`.
 - `Dev/PlayerMovementSession.cs`: the scripted play session; its host-and-client run found that every reader shared one actions asset, so a remote body spawning switched off the local player's input. Each reader now takes its own copy of the asset (editor and development builds only; wakes only on `-movementSession`).
 - `Combat/Knockback.cs` (not this lane's): turns a blast into `ApplyKnockback` calls; unchanged.

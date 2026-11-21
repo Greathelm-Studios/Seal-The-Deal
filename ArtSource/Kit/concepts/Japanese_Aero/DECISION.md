@@ -1,12 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-13
-  Prompt    : Alex on the Japanese corporate Aero paintovers: "do a mix of all 3 i think!"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Turns "a mix of the current look, A (Aero) and B (Soft Club)" into concrete values, so the kit
-              restyle follows one written spec. Read with README.md in this folder (sizes, sign copy).
--->
 # Japanese corporate Aero: the mix (decision)
 
 **2026-11-13 · Alex:** build a mix of all three: the current KitOffice, **A — Aero** and **B — Soft Club**. The company is **AONAGI, 青凪総合サービス株式会社** (README.md), a Japanese office.

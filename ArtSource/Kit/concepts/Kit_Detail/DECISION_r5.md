@@ -1,12 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-12
-  Prompt    : Alex on round 5 (office labyrinth): "this works, no light trail tho"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Records Alex's sign-off on the round-5 kit detail direction so the kit and docs work that
-              follows starts from a written decision, not from chat.
--->
 # Kit detail: round 5 approved
 
 **Date:** 2026-11-12 · **Decided by:** Alex · **Applies to:** [README_r5.md](README_r5.md), [contact_sheet_r5.png](contact_sheet_r5.png), brief [FEEDBACK_05.md](FEEDBACK_05.md)

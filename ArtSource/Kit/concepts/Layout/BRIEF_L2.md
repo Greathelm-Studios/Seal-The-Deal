@@ -1,12 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-15
-  Prompt    : Alex on L1: "take all the positives of each and try to negate the weakness as much as possible"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Round-L2 brief: one hybrid office floor that combines L1_A, L1_B and L1_C's strengths and designs
-              out their weaknesses, checked against the game mode now on main (docs/systems/MATCH.md).
--->
 # Office floor layout, round L2: one hybrid
 
 **From:** Alex, drafted by Claude · **Date:** 2026-11-15 · Read with [BRIEF.md](BRIEF.md) (still applies) and your L1 output.

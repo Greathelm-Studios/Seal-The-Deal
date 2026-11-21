@@ -2,13 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Items
 {
-    /// <summary>
-    /// The thing under the crosshair that the pick-up prompt is about, made a little brighter on
-    /// the looker's own screen only, so the prompt's "Chair" is plainly that chair. Drawn only,
-    /// nothing synced. Uses one shared property block on the item's own renderers (no material
-    /// copies) and leaves alone any renderer that already uses a property block of its own
-    /// (the Grenade Case's warning light).
-    /// </summary>
+    /// <summary>Local-only MaterialPropertyBlock highlight for the liftable item under the crosshair.</summary>
     static class LookHighlight
     {
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
@@ -52,10 +46,14 @@ namespace CloseTheDeal.Items
             if (!renderer.HasPropertyBlock())
                 return false;
 
+            Block.Clear();
             renderer.GetPropertyBlock(Block);
             Color drawn = Block.GetColor(BaseColorId);
             Color own = renderer.sharedMaterial.GetColor(BaseColorId);
-            return (drawn - Color.Lerp(own, Color.white, Lift)).maxColorComponent < 0.002f;
+            Color expected = Color.Lerp(own, Color.white, Lift);
+            return Mathf.Abs(drawn.r - expected.r) < 0.002f
+                && Mathf.Abs(drawn.g - expected.g) < 0.002f
+                && Mathf.Abs(drawn.b - expected.b) < 0.002f;
         }
     }
 }

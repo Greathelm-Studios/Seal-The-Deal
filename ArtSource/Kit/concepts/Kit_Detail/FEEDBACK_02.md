@@ -1,14 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-12
-  Prompt    : Alex on round 2 of the kit detail sheets: "we can push it more"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Round-3 brief to Codex. Round 2 moved in the right direction but most moves were flat
-              graphics applied to an unchanged boxy room; this pushes toward plate 04's scale: moves that
-              change silhouette and massing, bigger cobalt fields, harder light. Overrides FEEDBACK_01 and
-              REQUEST.md where they differ.
--->
 # Kit detail, round 3: push it further
 
 **From:** Alex, drafted by Claude · **Date:** 2026-11-12 · Read with [FEEDBACK_01.md](FEEDBACK_01.md) and [README_r2.md](README_r2.md). This brief wins where they differ.

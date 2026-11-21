@@ -17,6 +17,7 @@ namespace CloseTheDeal.Props
 
         Rigidbody _rigidbody;
         bool _heldStill;
+        bool _frozen;
 
         public float ThrowResistance => _throwResistance;
 
@@ -26,6 +27,9 @@ namespace CloseTheDeal.Props
         /// <summary>True while something other than physics is in charge of it: carried in a player's hands, or out of play.</summary>
         public bool HeldStill => _heldStill;
 
+        /// <summary>Host only. True while parked by far-floor freezing.</summary>
+        public bool Frozen => _frozen;
+
         void Awake()
         {
             _rigidbody = GetComponent<Rigidbody>();
@@ -34,6 +38,17 @@ namespace CloseTheDeal.Props
         public override void OnStartNetwork()
         {
             base.OnStartNetwork();
+            _heldStill = false;
+            _frozen = false;
+            ApplyBodyMode();
+        }
+
+        public override void OnStopNetwork()
+        {
+            base.OnStopNetwork();
+            _heldStill = false;
+            _frozen = false;
+            _rigidbody.detectCollisions = true;
             ApplyBodyMode();
         }
 
@@ -44,6 +59,18 @@ namespace CloseTheDeal.Props
         public void SetHeldStill(bool heldStill)
         {
             _heldStill = heldStill;
+            if (heldStill)
+                _frozen = false;
+            ApplyBodyMode();
+        }
+
+        /// <summary>Host only. Freezes or wakes physics for a prop on a floor far from all players.</summary>
+        public void SetFrozen(bool frozen)
+        {
+            if (!IsServerStarted || _frozen == frozen)
+                return;
+
+            _frozen = frozen;
             ApplyBodyMode();
         }
 
@@ -53,13 +80,20 @@ namespace CloseTheDeal.Props
             if (!IsServerStarted || _heldStill)
                 return;
 
+            if (_frozen)
+                SetFrozen(false);
+
             _rigidbody.AddForce(velocityChange * (1f - _throwResistance), ForceMode.VelocityChange);
         }
 
         /// <summary>Only the host runs prop physics; clients are moved by the synced transform.</summary>
         void ApplyBodyMode()
         {
-            _rigidbody.isKinematic = !IsServerStarted || _heldStill;
+            bool freeze = IsServerStarted && _frozen && !_heldStill;
+            _rigidbody.isKinematic = !IsServerStarted || _heldStill || _frozen;
+            _rigidbody.detectCollisions = !freeze;
+            if (!freeze && IsServerStarted && !_heldStill)
+                _rigidbody.WakeUp();
         }
     }
 }

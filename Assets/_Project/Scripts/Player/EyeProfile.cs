@@ -1,19 +1,11 @@
-// AI-GENERATED SOURCE FILE
-// Generator : Codex (GPT-6)
-// Generated : 2026-11-12
-// Prompt    : Give the STDMC player character animated 2D eye cards.
-// Reviewed  : NOT YET REVIEWED BY A HUMAN
-// Summary   : Designer-owned timing and expression thresholds for the eye cards.
-// Modified  : Claude Opus 5.5 (Claude Code), 2026-11-13 — idle look-around tuning.
 using UnityEngine;
 
 namespace CloseTheDeal.Player
 {
-    /// <summary>Read-only runtime tuning for the character's eye cards.</summary>
+    /// <summary>Designer-owned timing and expression thresholds for character eye cards.</summary>
     [CreateAssetMenu(menuName = "Seal the Deal/Eye Profile", fileName = "EyeProfile")]
     public sealed class EyeProfile : ScriptableObject
     {
-        // WHY: a complete blink needs time to show both its closing and opening frames.
         private const float ShortestBlink = 0.08f;
 
         [Header("Blink")]
@@ -88,7 +80,6 @@ namespace CloseTheDeal.Player
         /// <summary>Minimum weight between a walk and full sprint for the focused eyes.</summary>
         public float FocusThreshold => _focusThreshold;
 
-        /// <summary>A non-negative range with its smaller value first.</summary>
         private static Vector2 Ascending(Vector2 range) =>
             new(Mathf.Max(0f, Mathf.Min(range.x, range.y)), Mathf.Max(0f, Mathf.Max(range.x, range.y)));
     }

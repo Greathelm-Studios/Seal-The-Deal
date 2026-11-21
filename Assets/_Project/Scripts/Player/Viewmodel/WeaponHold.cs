@@ -1,27 +1,8 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-14
-//  Prompt    : Harvey, on whose gun is drawn once Adam's weapon system lands: "Take the best
-//              option and get it ready"
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : Describes one thing the hands can hold: its model and where each hand sits on
-//              it. Weapon code fills one in per weapon and hands it to PlayerViewmodel.Equip;
-//              the first-person arms and the body then both hold that model.
-// -----------------------------------------------------------------------------
 using UnityEngine;
 
 namespace CloseTheDeal.Player
 {
-    /// <summary>
-    /// What the hands hold and where they sit on it. Plain data: nothing here is synced, and
-    /// every machine builds its own from whatever says which weapon a player has out.
-    /// </summary>
-    /// <remarks>
-    /// Seats are in the model's own space, from its pivot. A seat's blue axis (+Z) is where the
-    /// fingers point and its green axis (+Y) runs from the little finger to the index finger,
-    /// the same as the grip seats on the arms prefab.
-    /// </remarks>
+    /// <summary>Weapon model and model-space hand seats (+Z fingers, +Y little-to-index) passed to <see cref="PlayerViewmodel.Equip"/>.</summary>
     public readonly struct WeaponHold
     {
         /// <summary>The model to show: a prefab or any transform to copy. Its pivot is what the view places in front of the eye.</summary>

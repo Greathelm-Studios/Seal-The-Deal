@@ -1,14 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-12
-#  Prompt    : Alex: "update the kit for the labyrinth" (round-5 picks, DECISION_r5.md)
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Snaps the round-5 labyrinth pieces into one 16 x 16 m maze section and renders it at eye
-#              height, so the new pieces are judged together as a space against the approved concepts. Its
-#              own file because interior_scene.py lays out the old tower floor; this is a review layout,
-#              not a level: whoever lays out the game's maze decides the real one.
-# -----------------------------------------------------------------------------
 """Usage: blender -b --factory-startup -P ArtSource/Kit/labyrinth_scene.py -- <kit build folder> <out folder> [--save]
 
 Layout, Unity floor-local metres, x 0-16 east, z 0 to -16 south, two storeys of 4.5 m:

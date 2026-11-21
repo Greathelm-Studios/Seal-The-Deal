@@ -1,15 +1,11 @@
+using System.Collections.Generic;
 using CloseTheDeal.Glass;
+using CloseTheDeal.Player;
 using UnityEngine;
 
 namespace CloseTheDeal.Combat
 {
-    /// <summary>
-    /// Plays a player's gun and body sounds on this machine: shots, dry fire, the reload's stages,
-    /// the draw, where shots land, and (for your own player) hurt, death and respawn. Listens to
-    /// WeaponHolder and Health, decides nothing, sends nothing. Voices are pooled, so a full-auto
-    /// burst creates nothing. One per player, on the player root. Glass shatter is played by the
-    /// first CombatSounds alive, once per pane.
-    /// </summary>
+    /// <summary>Plays pooled 3D weapon/impact/glass audio and 2D local body feedback from WeaponHolder and Health events.</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(WeaponHolder), typeof(Health))]
     public sealed class CombatSounds : MonoBehaviour
@@ -17,15 +13,16 @@ namespace CloseTheDeal.Combat
         [Tooltip("The shared combat sounds and their mixer bus. Each gun's shot and reload sounds are on the gun itself.")]
         [SerializeField] CombatSoundSet _set;
 
-        /// <summary>Reload stage times as fractions of the reload: magazine out, magazine in, slide or charge.</summary>
         const float MagazineOutAt = 0.15f;
         const float MagazineInAt = 0.6f;
         const float ReloadEndAt = 0.85f;
-        const int Voices = 12;
+        const int Voices = 32;
 
         static AudioSource[] _voices;
         static int _next;
         static CombatSounds _glassVoice;
+        static Camera _mainCamera;
+        static readonly List<CombatSounds> _active = new();
 
         WeaponHolder _holder;
         Health _health;
@@ -52,6 +49,8 @@ namespace CloseTheDeal.Combat
             _health.Damaged += OnDamaged;
             _health.Died += OnDied;
             _health.Respawned += OnRespawned;
+            if (!_active.Contains(this))
+                _active.Add(this);
             if (_glassVoice == null)
             {
                 _glassVoice = this;
@@ -70,10 +69,16 @@ namespace CloseTheDeal.Combat
             _health.Damaged -= OnDamaged;
             _health.Died -= OnDied;
             _health.Respawned -= OnRespawned;
+            _active.Remove(this);
             if (_glassVoice == this)
             {
                 GlassPane.AnyBroken -= OnPaneBroken;
                 _glassVoice = null;
+                if (_active.Count > 0)
+                {
+                    _glassVoice = _active[0];
+                    GlassPane.AnyBroken += _glassVoice.OnPaneBroken;
+                }
             }
         }
 
@@ -82,10 +87,12 @@ namespace CloseTheDeal.Combat
         {
             _voices = null;
             _next = 0;
+            if (_glassVoice != null)
+                GlassPane.AnyBroken -= _glassVoice.OnPaneBroken;
             _glassVoice = null;
+            _mainCamera = null;
+            _active.Clear();
         }
-
-        // ---- What the gun says ---------------------------------------------------------------
 
         void OnFired(ShotInfo shot)
         {
@@ -151,8 +158,6 @@ namespace CloseTheDeal.Combat
             PlayAt(clip, at, false);
         }
 
-        // ---- What the body says ----------------------------------------------------------------
-
         void OnDamaged(Health health, DamageInfo info)
         {
             if (_health.IsOwner && !info.Fatal)
@@ -177,20 +182,42 @@ namespace CloseTheDeal.Combat
             PlayAt(_set != null ? _set.GlassShatter : null, pane.Centre, true);
         }
 
-        // ---- Voices ----------------------------------------------------------------------------
-
         void PlayAt(AudioClip clip, Vector3 point, bool vary)
         {
             if (clip == null || _set == null)
                 return;
 
-            AudioSource voice = NextVoice();
+            bool hasListener = TryListenerPosition(out Vector3 listenerPos);
+            if (hasListener && (point - listenerPos).sqrMagnitude > _set.FarDistance * _set.FarDistance)
+                return;
+
+            AudioSource voice = NextVoice(listenerPos, hasListener);
             voice.transform.position = point;
             voice.outputAudioMixerGroup = _set.Output;
             voice.minDistance = _set.NearDistance;
             voice.maxDistance = _set.FarDistance;
             voice.pitch = vary ? 1f + Random.Range(-_set.PitchVariance, _set.PitchVariance) : 1f;
             voice.PlayOneShot(clip, _set.Volume);
+        }
+
+        static bool TryListenerPosition(out Vector3 position)
+        {
+            if (PlayerCamera.Instance != null)
+            {
+                position = PlayerCamera.Instance.transform.position;
+                return true;
+            }
+
+            if (_mainCamera == null)
+                _mainCamera = Camera.main;
+            if (_mainCamera != null)
+            {
+                position = _mainCamera.transform.position;
+                return true;
+            }
+
+            position = Vector3.zero;
+            return false;
         }
 
         /// <summary>Your own body's sounds: flat, not placed in the world.</summary>
@@ -210,10 +237,37 @@ namespace CloseTheDeal.Combat
             _flat.PlayOneShot(clip, _set.Volume);
         }
 
-        static AudioSource NextVoice()
+        static AudioSource NextVoice(Vector3 listenerPos, bool hasListener)
         {
             if (_voices == null || _voices[0] == null)
                 CreateVoices();
+
+            for (int i = 0; i < Voices; i++)
+            {
+                int idx = (_next + i) % Voices;
+                if (!_voices[idx].isPlaying)
+                {
+                    _next = (idx + 1) % Voices;
+                    return _voices[idx];
+                }
+            }
+
+            if (hasListener)
+            {
+                int farthest = 0;
+                float maxSqr = -1f;
+                for (int i = 0; i < Voices; i++)
+                {
+                    float sqr = (_voices[i].transform.position - listenerPos).sqrMagnitude;
+                    if (sqr > maxSqr)
+                    {
+                        maxSqr = sqr;
+                        farthest = i;
+                    }
+                }
+                _next = (farthest + 1) % Voices;
+                return _voices[farthest];
+            }
 
             AudioSource voice = _voices[_next];
             _next = (_next + 1) % Voices;

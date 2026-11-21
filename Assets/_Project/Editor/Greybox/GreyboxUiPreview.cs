@@ -6,12 +6,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Editor.Greybox
 {
-    /// <summary>
-    /// Renders the game menu and HUD to PNGs at 1920×1080 in three states (start, hosting, in
-    /// game) so the layout can be checked without entering Play Mode. Changes are made to the
-    /// open scene in memory only and never saved. Shell use (with graphics, so not -nographics):
-    ///   Unity.exe -batchmode -quit -projectPath &lt;repo&gt; -executeMethod CloseTheDeal.Editor.Greybox.GreyboxUiPreview.CaptureFromCommandLine -previewOut &lt;folder&gt;
-    /// </summary>
+    /// <summary>Headless 1080p PNG renderer for GameUI start, hosting, local, and HUD states.</summary>
     public static class GreyboxUiPreview
     {
         const string ScenePath = "Assets/_Project/Scenes/Greybox.unity";
@@ -59,26 +54,32 @@ namespace CloseTheDeal.Editor.Greybox
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.62f, 0.65f, 0.68f); // Roughly a greybox wall, the hardest backdrop for the HUD.
             var rt = new RenderTexture(Width, Height, 24);
-            cam.targetTexture = rt;
-            canvas.renderMode = RenderMode.ScreenSpaceCamera;
-            canvas.worldCamera = cam;
-            canvas.planeDistance = 1f;
+            try
+            {
+                cam.targetTexture = rt;
+                canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                canvas.worldCamera = cam;
+                canvas.planeDistance = 1f;
 
-            Transform root = ui.transform;
-            ShowStart(root);
-            Render(root, cam, rt, Path.Combine(folder, "1_menu_start.png"));
-            ShowHosting(root);
-            Render(root, cam, rt, Path.Combine(folder, "2_menu_hosting.png"));
-            ShowLocal(root);
-            Render(root, cam, rt, Path.Combine(folder, "3_menu_local.png"));
-            ShowHud(root);
-            Render(root, cam, rt, Path.Combine(folder, "4_hud.png"));
-
-            Object.DestroyImmediate(camGo);
+                Transform root = ui.transform;
+                ShowStart(root);
+                Render(root, cam, rt, Path.Combine(folder, "1_menu_start.png"));
+                ShowHosting(root);
+                Render(root, cam, rt, Path.Combine(folder, "2_menu_hosting.png"));
+                ShowLocal(root);
+                Render(root, cam, rt, Path.Combine(folder, "3_menu_local.png"));
+                ShowHud(root);
+                Render(root, cam, rt, Path.Combine(folder, "4_hud.png"));
+            }
+            finally
+            {
+                cam.targetTexture = null;
+                rt.Release();
+                Object.DestroyImmediate(rt);
+                Object.DestroyImmediate(camGo);
+            }
             Debug.Log("[UI Preview] Wrote previews to " + folder);
         }
-
-        // ---- States (mirrors what GameMenu.Refresh shows at runtime) ------------------------
 
         static void ShowStart(Transform root)
         {
@@ -120,8 +121,6 @@ namespace CloseTheDeal.Editor.Greybox
             Set(root, "Hud", true);
             Text(root, "Hud/NetworkReadout/Text", "Grounded  ·  6.0 m/s  ·  ping 38 ms\nHost corrections 4  ·  last 0.03 m");
         }
-
-        // ---- Helpers -------------------------------------------------------------------------
 
         static void Render(Transform root, Camera cam, RenderTexture rt, string path)
         {

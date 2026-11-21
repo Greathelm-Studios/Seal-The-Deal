@@ -8,13 +8,7 @@ using static CloseTheDeal.Editor.UI.UiKitScreens;
 
 namespace CloseTheDeal.Editor.UI
 {
-    /// <summary>
-    /// Builds the in-game menu (Screens/InGameMenu.prefab): a frosted glass pane on the left of the running game with
-    /// MENU, the §5.5 line and buttons (ArtSource/UI/research/ui_inventory.md), the focused button's explanation, the
-    /// session line and key hints; on the right the match lane's slot (Content/MatchSlot, a path lane 4's tool builds
-    /// into) and reception's seats on a second pane. No veil: the game stays in view. Coordinates are the 1920 x 1080
-    /// design frame.
-    /// </summary>
+    /// <summary>Builds InGameMenu.prefab with navigation pane, MatchSlot, and reception seat pane.</summary>
     internal static class UiKitGameMenuBuilder
     {
         const float PaneX = 96f, PaneY = 120f, PaneW = 528f, PaneH = 724f;
@@ -127,7 +121,6 @@ namespace CloseTheDeal.Editor.UI
             public readonly List<Object> FirmNames = new(), FirmMarks = new(), Names = new(), States = new(), Marks = new(), Rings = new();
         }
 
-        /// <summary>Reception's seats on their own glass pane: both firms side by side, four seats each.</summary>
         static ReceptionRefs BuildReception(RectTransform parent)
         {
             UiTokens t = Tokens;

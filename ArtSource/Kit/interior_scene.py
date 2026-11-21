@@ -1,18 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-11
-#  Prompt    : "the priority is working on the interior" -> "A whole interior scene"
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Snaps the built kit pieces into one whole office floor and renders it at eye height,
-#              so the interior can be judged as a space rather than piece by piece. It reads build/,
-#              so every piece modelled later shows up here without touching this file. It is a review
-#              scene, not a floor template: the programmer's template builder stays the authority.
-#  Modified  : Claude Opus 5.5, 2026-11-12 — dresses the floor in the approved "White Trays + Cobalt Portal"
-#              pieces: cobalt portal on the STORE front, open stair treads with the ramp hidden, the red
-#              locked door, ceiling strip lights, and the ceiling/carpet tile textures.
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-# -----------------------------------------------------------------------------
 """Usage: blender -b --factory-startup -P ArtSource/Kit/interior_scene.py -- <kit build folder> <out folder> [--save]
 
 Layout, in Unity floor-local metres (x along the façade from the left corner, -z into the building):

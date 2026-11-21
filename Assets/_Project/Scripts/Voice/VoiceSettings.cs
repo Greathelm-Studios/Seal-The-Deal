@@ -1,16 +1,3 @@
-// -----------------------------------------------------------------------------
-//  AI-GENERATED SOURCE FILE
-//  Generator : Claude Fable 5.2 (Claude Code)
-//  Generated : 2026-11-15
-//  Prompt    : Harvey: "Add VOIP/Proximity chat to the game."
-//  Modified  : Claude Fable 5.2, 2026-11-15 — adds which microphone to use and whether noise
-//              suppression is on, for the settings menu (Harvey: "do the delay and mic picker
-//              and do the settings in the settings menu").
-//  Reviewed  : NOT YET REVIEWED BY A HUMAN
-//  Summary   : This player's own voice chat choices (which microphone, how it opens, noise
-//              suppression, and whether they hear themselves for a mic test), remembered
-//              between launches.
-// -----------------------------------------------------------------------------
 using UnityEngine;
 
 namespace CloseTheDeal.Voice
@@ -28,10 +15,7 @@ namespace CloseTheDeal.Voice
         Off = 2,
     }
 
-    /// <summary>
-    /// This player's voice chat choices. Local to this machine and never synced: the host
-    /// only ever sees the voice a player chose to send.
-    /// </summary>
+    /// <summary>Local voice chat preferences persisted in PlayerPrefs (never synced).</summary>
     public static class VoiceSettings
     {
         const string ModeKey = "ctd.voice.mode";
@@ -69,11 +53,7 @@ namespace CloseTheDeal.Voice
             }
         }
 
-        /// <summary>
-        /// The microphone to record from, by the name Unity lists it under. Empty means
-        /// whichever one Windows has as its default. A saved microphone that is unplugged
-        /// falls back to the default without being forgotten.
-        /// </summary>
+        /// <summary>Selected microphone name, or empty for the system default.</summary>
         public static string Device
         {
             get
@@ -112,16 +92,10 @@ namespace CloseTheDeal.Voice
             }
         }
 
-        /// <summary>
-        /// True while the player has muted an open microphone with the voice key. Not saved:
-        /// every launch starts unmuted, so nobody is silent without knowing why.
-        /// </summary>
+        /// <summary>Transient mute state for open microphone mode (resets each launch).</summary>
         public static bool Muted { get; private set; }
 
-        /// <summary>
-        /// Plays this player's own voice back to them, flat, after it has been through the same
-        /// cleaning and compression other players hear. A mic test; not saved.
-        /// </summary>
+        /// <summary>Transient local loopback mic test toggle (not saved).</summary>
         public static bool HearSelf
         {
             get => _hearSelf;

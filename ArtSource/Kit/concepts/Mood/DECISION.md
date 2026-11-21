@@ -1,13 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-15
-  Prompt    : Alex on mood round 2: "I like d but make it blue, i also wouldn't mind having some animated stuff in the
-              background too. but i do also like E we will save that for another gamemode"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Records which mood direction KitOffice is built to, with Alex's changes, so the scene work starts from a
-              written decision and E is not lost.
--->
 # KitOffice mood: decision
 
 **Date:** 2026-11-15 · **Decided by:** Alex · **Applies to:** [round 2 sheet](contact_sheet_2.png), [D's build list](README_2.md)

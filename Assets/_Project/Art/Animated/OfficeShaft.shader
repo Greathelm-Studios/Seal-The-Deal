@@ -1,9 +1,3 @@
-// AI-GENERATED SOURCE FILE
-// Generator : Codex (GPT-6)
-// Generated : 2026-11-15
-// Prompt    : REQUEST_ANIM.md; faint blue daylight shafts in the court.
-// Reviewed : NOT YET REVIEWED BY A HUMAN
-// Summary   : Crossed additive planes with soft edges and shader-time drift; no depth texture required.
 Shader "Close the Deal/Animated/Office Shaft"
 {
     Properties
@@ -59,7 +53,7 @@ Shader "Close the Deal/Animated/Office Shaft"
                 float wisps = 0.76 + 0.12 * sin(input.uv.x * 27 + input.uv.y * 5 - _Time.y * 0.09 + input.phase);
                 wisps += 0.08 * sin(input.uv.y * 17 + input.uv.x * 11 + _Time.y * 0.06);
                 float breath = 0.82 + 0.18 * sin(_Time.y * Tau / _BreathSeconds + input.phase);
-                // WHY: fade a crossed plane when edge-on so it cannot read as a bright vertical card.
+                // Fade edge-on so crossed planes do not read as hard vertical cards.
                 float facing = smoothstep(0.08, 0.55, abs(dot(normalize(GetWorldSpaceViewDir(input.positionWS)), normalize(input.normalWS))));
                 float nearFade = smoothstep(0.25, 1.0, distance(GetCameraPositionWS(), input.positionWS));
                 half3 colour = MixFogColor(_Tint.rgb, half3(0, 0, 0), input.fog);

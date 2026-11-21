@@ -3,15 +3,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Combat
 {
-    /// <summary>
-    /// Everything a gun looks like, on this machine only: the model in the hand and how it
-    /// kicks, sways and bobs; the muzzle flash and its light; the tracer and the impact; the
-    /// shooter's view kick, shake and field-of-view punch; the dip of a reload and the slump
-    /// of the camera when its player dies. Nothing here is networked or decides anything; it
-    /// listens to WeaponHolder and Health. Runs after PlayerCamera has placed the camera, so
-    /// the kick sits on top of the player's own look and moves the crosshair with it.
-    /// Per-gun feel lives on each WeaponDefinition; what is the same for every gun lives here.
-    /// </summary>
+    /// <summary>Local weapon model, view kick, shake, FOV punch, sway/bob, and death slump applied after PlayerCamera.</summary>
     [DefaultExecutionOrder(1000)]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(WeaponHolder), typeof(Health))]
@@ -76,6 +68,14 @@ namespace CloseTheDeal.Combat
         const float SwayFlickDegreesPerSecond = 600f;
         const float FlashSizeJitter = 0.3f;
 
+        struct CachedModel
+        {
+            public GameObject View;
+            public Transform Muzzle;
+            public GameObject Flash;
+            public Vector3 FlashScale;
+        }
+
         WeaponHolder _holder;
         Health _health;
         PlayerMotor _motor;
@@ -84,7 +84,7 @@ namespace CloseTheDeal.Combat
         GameObject _view;
         Transform _muzzle;
         Transform _externalMuzzle;
-        readonly System.Collections.Generic.Dictionary<WeaponDefinition, GameObject> _models = new();
+        readonly System.Collections.Generic.Dictionary<WeaponDefinition, CachedModel> _models = new();
         GameObject _flash;
         Vector3 _flashScale;
         bool _inFirstPerson;
@@ -146,10 +146,13 @@ namespace CloseTheDeal.Combat
             _holder.ReloadStarted -= OnReloadStarted;
             _holder.ReloadFinished -= OnReloadEnded;
             _holder.ReloadCancelled -= OnReloadEnded;
+            if (_fovAdded != 0f && _camera != null && Mathf.Approximately(_camera.fieldOfView, _fovWritten))
+                _camera.fieldOfView -= _fovAdded;
+            _fovAdded = 0f;
+            _fovWritten = 0f;
+            _fov.Clear();
             ClearView();
         }
-
-        // ---- What the holder says ------------------------------------------------------------
 
         void OnWeaponChanged(WeaponDefinition weapon, int slot)
         {
@@ -189,28 +192,34 @@ namespace CloseTheDeal.Combat
 
         void SpawnView(WeaponDefinition weapon, Transform parent, bool firstPerson)
         {
-            // Each gun's model is made once per player and reused, so switching costs no allocation.
-            if (!_models.TryGetValue(weapon, out _view) || _view == null || _view.transform.parent != parent)
+            // Each gun's model is made once per player and reused, so switching costs no allocation or Find.
+            if (!_models.TryGetValue(weapon, out CachedModel cached) || cached.View == null || cached.View.transform.parent != parent)
             {
-                if (_view != null)
-                    Destroy(_view);
-                _view = Instantiate(weapon.ViewPrefab, parent);
-                _models[weapon] = _view;
+                if (cached.View != null)
+                    Destroy(cached.View);
+                GameObject view = Instantiate(weapon.ViewPrefab, parent);
+                Transform muzzle = view.transform.Find(MuzzleName);
+                Transform flash = view.transform.Find(FlashName);
+                cached = new CachedModel
+                {
+                    View = view,
+                    Muzzle = muzzle,
+                    Flash = flash != null ? flash.gameObject : null,
+                    FlashScale = flash != null ? flash.localScale : Vector3.one
+                };
+                _models[weapon] = cached;
             }
+
+            _view = cached.View;
+            _muzzle = cached.Muzzle;
+            _flash = cached.Flash;
+            _flashScale = cached.FlashScale;
 
             _view.SetActive(true);
             _view.transform.localPosition = firstPerson ? weapon.ViewOffset : Vector3.zero;
             _view.transform.localRotation = Quaternion.identity;
-            _muzzle = _view.transform.Find(MuzzleName);
-            Transform flash = _view.transform.Find(FlashName);
-            _flash = flash != null ? flash.gameObject : null;
             if (_flash != null)
-            {
-                // From the prefab: a reused model's flash still has the last shot's random size.
-                Transform authored = weapon.ViewPrefab.transform.Find(FlashName);
-                _flashScale = authored != null ? authored.localScale : flash.localScale;
                 _flash.SetActive(false);
-            }
 
             // A freshly drawn gun comes up from below, and starts its sway from the current look.
             _dip = 1f;
@@ -304,30 +313,33 @@ namespace CloseTheDeal.Combat
 
         void OnDestroy()
         {
-            foreach (GameObject model in _models.Values)
+            foreach (CachedModel model in _models.Values)
             {
-                if (model != null)
-                    Destroy(model);
+                if (model.View != null)
+                    Destroy(model.View);
             }
 
             _models.Clear();
         }
 
-        // ---- Every frame ---------------------------------------------------------------------
-
         void LateUpdate()
         {
             float dt = Time.deltaTime;
-            float deathTarget = _health.IsDead ? 1f : 0f;
             SettleFlash(dt);
-            SettleClimb(dt);
-            bool held = SettleDip(dt);
-            _death = Mathf.MoveTowards(_death, deathTarget, dt / _deathSeconds);
-            // Other players see a put-away gun as gone from the hand; in first person it has dipped out of view.
-            ShowView(!_health.IsDead && (_inFirstPerson || !held));
 
             if (!_inFirstPerson)
+            {
+                // Other players see a put-away gun as gone from the hand; skip first-person climb, dip and death math.
+                bool remoteHeld = WeaponHolder.FireHeld != null && WeaponHolder.FireHeld(_holder);
+                ShowView(!_health.IsDead && !remoteHeld);
                 return;
+            }
+
+            float deathTarget = _health.IsDead ? 1f : 0f;
+            SettleClimb(dt);
+            SettleDip(dt);
+            _death = Mathf.MoveTowards(_death, deathTarget, dt / _deathSeconds);
+            ShowView(!_health.IsDead);
 
             Transform cam = PlayerCamera.Instance != null ? PlayerCamera.Instance.transform : null;
             if (cam == null)

@@ -1,9 +1,3 @@
-// AI-GENERATED SOURCE FILE
-// Generator : Codex (GPT-6)
-// Generated : 2026-11-15
-// Prompt    : REQUEST_ANIM.md; cyan-white reception LED tickers for both firms.
-// Reviewed : NOT YET REVIEWED BY A HUMAN
-// Summary   : Text steps through a fixed dot lattice; no runtime text meshes or texture uploads.
 Shader "Close the Deal/Animated/Office Ticker"
 {
     Properties

@@ -1,12 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-15
-#  Prompt    : Alex: "making a trimsheet in substance ... you can use substance painter"
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Painter: exports the baked mesh maps, to check the bake and its ID colours.
-#              Run from ArtSource/Kit/trim/painter with: python sp.py tp_meshmaps.py
-# -----------------------------------------------------------------------------
 # Painter: export the baked mesh maps (to check the ID colours and the bake before painting).
 import os
 import substance_painter.export as ex

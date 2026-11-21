@@ -4,14 +4,18 @@ using UnityEngine;
 
 namespace CloseTheDeal.Items
 {
-    /// <summary>
-    /// The damage half of an item's explosion. Combat/Knockback throws players and props;
-    /// this hurts whatever can be hurt. Host only: the caller is always a host-side item.
-    /// </summary>
+    /// <summary>Host-only radial explosion damage against IDamageable targets.</summary>
     public static class ItemBlast
     {
         static readonly Collider[] Buffer = new Collider[256];
         static readonly List<IDamageable> Hurt = new(16);
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            System.Array.Clear(Buffer, 0, Buffer.Length);
+            Hurt.Clear();
+        }
 
         /// <summary>
         /// Hurts every IDamageable with a collider inside the radius, once each, full damage at
@@ -19,17 +23,20 @@ namespace CloseTheDeal.Items
         /// </summary>
         public static int Damage(Vector3 point, float radius, float centreDamage, float edgeFraction, int attackerClientId)
         {
-            int found = Physics.OverlapSphereNonAlloc(point, radius, Buffer, ~0, QueryTriggerInteraction.Ignore);
+            int found = Physics.OverlapSphereNonAlloc(point, radius, Buffer, ItemLayers.PlayerMask | ItemLayers.PropMask, QueryTriggerInteraction.Ignore);
             Hurt.Clear();
 
             for (int i = 0; i < found; i++)
             {
-                IDamageable target = Buffer[i].GetComponentInParent<IDamageable>();
+                Collider collider = Buffer[i];
+                IDamageable target = collider.GetComponentInParent<IDamageable>();
                 if (target == null || Hurt.Contains(target))
                     continue;
 
                 Hurt.Add(target);
-                Vector3 nearest = Buffer[i].ClosestPoint(point);
+                Vector3 nearest = collider is MeshCollider mesh && !mesh.convex
+                    ? collider.ClosestPointOnBounds(point)
+                    : collider.ClosestPoint(point);
                 Vector3 away = nearest - point;
                 float distance = away.magnitude;
                 float closeness = 1f - Mathf.Clamp01(distance / radius);

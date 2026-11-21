@@ -5,17 +5,10 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// What went wrong with hosting, joining or a game, in the title's middle and right columns: an amber plate with
-    /// the problem in plain words and how to fix it, the button that fixes it (Host again, Try again, Open Steam
-    /// friends, Quit to desktop) and Back (Esc / B), which forgets the problem and returns to the title. One panel for
-    /// every SteamLobby problem; the words follow ui_inventory §5.3. It refuses a fix that can't run now (Steam's
-    /// overlay missing, the network not ready) with its reason, never a dead button.
-    /// </summary>
+    /// <summary>Displays SteamLobby errors over the title screen with a fix action and Back button.</summary>
     [AddComponentMenu("Seal the Deal/UI/Problem Panel")]
     public sealed class ProblemPanel : UiScreen
     {
-        /// <summary>Opens and closes under lane 8's CloudWipe (docs/systems/UI_KIT.md "Screens").</summary>
         public override CloseTheDeal.UI.Title.UiTransitionKind? Through => CloseTheDeal.UI.Title.UiTransitionKind.CloudWipe;
 
         [Header("Parts")]
@@ -37,13 +30,10 @@ namespace CloseTheDeal.UI
         Fix _fixAction;
         LobbyProblem _shown;
 
-        /// <summary>The problem the panel is showing.</summary>
         public LobbyProblem Shown => _shown;
 
-        /// <summary>Raised when the player dismisses a problem the lobby keeps (a broken network), so the root doesn't reopen it.</summary>
         internal event Action Dismissed;
 
-        /// <summary>A problem arrives with the Error sound, not the usual panel sound.</summary>
         public override UiSoundEvent OpenSound => UiSoundEvent.Error;
 
         internal void Bind(SteamLobby lobby, TitleScreen title)
@@ -85,21 +75,20 @@ namespace CloseTheDeal.UI
                 _title.MakeRoom(false);
         }
 
-        /// <summary>Esc / B: Back.</summary>
         public override void OnCancel()
         {
             UiSound.Play(UiSoundEvent.Back);
             OnBack();
         }
 
-        /// <summary>Fills the panel for a problem. Public so the capture tool and the gallery can show every one.</summary>
+        /// <summary>Populates the panel for the given SteamLobby problem.</summary>
         public void Show(LobbyProblem problem)
         {
             _shown = problem;
             string host = _lobby != null && !string.IsNullOrEmpty(_lobby.ProblemHost) ? _lobby.ProblemHost : "the host";
             string detail = _lobby != null ? _lobby.ProblemDetail : string.Empty;
             int max = _lobby != null ? _lobby.MaxPlayers : 8;
-            Words words = WordsFor(problem, host, detail, max);
+            Words words = WordsFor(problem, host, detail, max, _lobby != null && _lobby.LocalMode);
             words.Headline = Sentence(words.Headline);
             if (_caption != null) _caption.text = words.Caption;
             if (_headline != null) _headline.text = words.Headline;
@@ -121,7 +110,6 @@ namespace CloseTheDeal.UI
             Refocus();
         }
 
-        /// <summary>A fix that can't run right now stays visible, greyed out, and says why when pressed.</summary>
         void RefreshFixUse()
         {
             bool usable = true;
@@ -136,7 +124,9 @@ namespace CloseTheDeal.UI
                         break;
                     case Fix.TryAgain:
                         usable = _lobby.CanRetryJoin;
-                        why = "There's nothing to try again. Join a friend from Steam.";
+                        why = _lobby.LocalMode
+                            ? "Return to the title and choose Join on this PC."
+                            : "There's nothing to try again. Join a friend from Steam.";
                         break;
                     case Fix.HostAgain:
                         usable = _lobby.Ready && !_lobby.IsActive;
@@ -184,10 +174,8 @@ namespace CloseTheDeal.UI
 
         void OnBack() => Close();
 
-        /// <summary>True while the panel closes itself, so the root doesn't put it straight back.</summary>
-        internal bool Closing { get; private set; }
+        internal bool Closing { get; private set; } // Prevents UiRoot from re-pushing while closing.
 
-        /// <summary>Closes (with the sound the button already played) and forgets the problem.</summary>
         void Close()
         {
             Closing = true;
@@ -200,8 +188,6 @@ namespace CloseTheDeal.UI
             Closing = false;
         }
 
-        // ---- Words (ui_inventory §5.3: plain, and each names the fix) --------------------------------------
-
         struct Words
         {
             public string Caption, Headline, Body, FixLabel, FixAbout;
@@ -212,10 +198,20 @@ namespace CloseTheDeal.UI
         const string HostCaption = "§ 1  HOST GAME";
         const string GameCaption = "§ 1  GAME";
 
-        static Words WordsFor(LobbyProblem problem, string host, string detail, int max)
+        static Words WordsFor(LobbyProblem problem, string host, string detail, int max, bool local)
         {
             switch (problem)
             {
+                case LobbyProblem.Unreachable when local:
+                case LobbyProblem.ConnectionLost when local:
+                    return W(JoinCaption, "Unable to reach the game on this PC.",
+                        "Choose Host a game in a second copy of Seal the Deal on this PC, then try again here.",
+                        Fix.TryAgain, "Try again", "Reconnect to the game on this PC.");
+                case LobbyProblem.HostClosed when local:
+                case LobbyProblem.HostDropped when local:
+                    return W(GameCaption, "The host on this PC disconnected.",
+                        "Host here, or go back and join once the other copy is hosting again.",
+                        Fix.HostAgain, "Host a game", "Start a game on this PC.");
                 case LobbyProblem.NetworkBroken:
                     return W(HostCaption, "Unable to start the network.", "Restart Seal the Deal. If it keeps happening, reinstall it from Steam.",
                         Fix.Quit, "Quit to desktop", "Close the game so it can start again cleanly.");
@@ -235,8 +231,9 @@ namespace CloseTheDeal.UI
                     return W(JoinCaption, "Unable to join. Steam refused the request" + Code(detail) + ".", "This is usually brief. Try again.",
                         Fix.TryAgain, "Try again", "Ask to join the same game again.");
                 case LobbyProblem.VersionMismatch:
-                    return W(JoinCaption, "Unable to join. " + host + " is on " + (string.IsNullOrEmpty(detail) ? "another version" : "version " + detail) + ", you are on " + Application.version + ".",
-                        "Whoever is behind needs to update. Steam updates the game when it restarts.",
+                    return W(JoinCaption, "Unable to join. Game versions differ.",
+                        "Update Seal the Deal through Steam and try again. Your version: " + Application.version
+                        + ". Host version: " + (string.IsNullOrEmpty(detail) ? "unknown" : detail) + ".",
                         Fix.Quit, "Quit to desktop", "Close the game so Steam can update it.");
                 case LobbyProblem.Unreachable:
                     return W(JoinCaption, "Unable to reach " + host + "'s game.", "They may have left, or the connection failed. Try joining again.",
@@ -255,7 +252,6 @@ namespace CloseTheDeal.UI
             }
         }
 
-        /// <summary>A line that starts with the host's name ("the host closed...") starts with a capital.</summary>
         static string Sentence(string line) =>
             string.IsNullOrEmpty(line) || char.IsUpper(line[0]) ? line : char.ToUpperInvariant(line[0]) + line.Substring(1);
 

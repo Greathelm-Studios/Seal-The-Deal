@@ -25,14 +25,7 @@ using Object = UnityEngine.Object;
 
 namespace CloseTheDeal.Editor.Lanes
 {
-    /// <summary>
-    /// The gaps lane's setup: builds the Records prefab (match records, profile keeper, death
-    /// report, match secretary, first-run hints and the names-over-heads canvas) and the
-    /// installer that adds it at run time to every scene with a match, so no scene is edited.
-    /// Also a scripted check in Lane_Integration.unity. Only creates what is missing; a prefab or
-    /// asset a person edited is left alone (GeneratedAssetGuard).
-    /// Menu: Seal the Deal > Lanes > Gaps. Design: docs/systems/RECORDS.md.
-    /// </summary>
+    /// <summary>Additive setup for Records prefab, runtime installer, narration/hint assets, and gaps check.</summary>
     public static class GapsLaneSetup
     {
         internal const string ObjectName = "Records";
@@ -57,7 +50,6 @@ namespace CloseTheDeal.Editor.Lanes
         /// <summary>The name the orchestrator has on file; it now builds the prefab instead of editing the scene.</summary>
         public static void AddToIntegrationFromCommandLine() => BuildFromCommandLine();
 
-        /// <summary>Makes what is missing. Returns what was made, or "".</summary>
         internal static string Build()
         {
             var parts = new List<string>();
@@ -99,7 +91,6 @@ namespace CloseTheDeal.Editor.Lanes
             return prefab;
         }
 
-        /// <summary>Its own overlay canvas under the kit's menus (KitUI sorts at 20), built to the kit's 1920 x 1080 Expand scaling.</summary>
         static void BuildNameplates(Transform parent)
         {
             var go = new GameObject("Nameplates", typeof(RectTransform)) { layer = 5 };
@@ -141,13 +132,10 @@ namespace CloseTheDeal.Editor.Lanes
             AssetDatabase.CreateFolder(parent, Path.GetFileName(folder));
         }
 
-        // ---- Content assets (created once; a person's edits are never overwritten) ----------------
-
         internal const string NarrationFolder = "Assets/_Project/Profiles/Narration";
         internal const string LinesPath = NarrationFolder + "/MatchSecretaryLines.asset";
         internal const string HintsPath = "Assets/_Project/Profiles/Onboarding/OnboardingHints.asset";
 
-        /// <summary>Makes the lines and hints assets if missing. Never touches existing ones.</summary>
         internal static void EnsureContent(List<string> parts)
         {
             if (AssetDatabase.LoadAssetAtPath<MatchSecretaryLines>(LinesPath) == null)
@@ -178,7 +166,6 @@ namespace CloseTheDeal.Editor.Lanes
         static MatchSecretaryLines.Moment M(MatchMoment when, int priority, params string[] lines) =>
             new() { When = when, Priority = priority, Lines = lines };
 
-        /// <summary>Proposals for the owner, every one.</summary>
         static MatchSecretaryLines.Moment[] SecretaryContent() => new[]
         {
             M(MatchMoment.MatchStart, 30,
@@ -232,7 +219,6 @@ namespace CloseTheDeal.Editor.Lanes
         static OnboardingHints.Hint H(string id, HintTrigger when, float seconds, string text) =>
             new() { Id = id, When = when, Seconds = seconds, Text = text };
 
-        /// <summary>Proposals for the owner, every one.</summary>
         static OnboardingHints.Hint[] HintContent() => new[]
         {
             H("reception", HintTrigger.ArrivedInReception, 8f, "Sign in with a firm at one of the stands, then ready up at the desk. Press {interact} at either."),
@@ -245,14 +231,7 @@ namespace CloseTheDeal.Editor.Lanes
         };
     }
 
-    /// <summary>
-    /// Plays Lane_Integration.unity by script to check the records and the profile. Roles:
-    /// solo (one copy; with -gapsCorrupt the profile file is spoiled first), host and client
-    /// (two copies of the project, same -gapsPort). The scene gets the records for the run
-    /// only; it is never saved. Shell:
-    /// Unity -batchmode -projectPath &lt;copy&gt; -executeMethod CloseTheDeal.Editor.Lanes.GapsLaneRun.RunFromShell
-    ///   -gapsRole solo|host|client -gapsOut &lt;folder&gt; -gapsPort 17795 -profileSave &lt;file&gt; [-gapsCorrupt]
-    /// </summary>
+    /// <summary>Batch Play Mode verification runner for records and profile persistence in Lane_Integration.unity.</summary>
     public static class GapsLaneRun
     {
         internal const string ScenePath = "Assets/_Project/Scenes/Lanes/Lane_Integration.unity";
@@ -301,6 +280,8 @@ namespace CloseTheDeal.Editor.Lanes
 
         static void Begin(string role, string outFolder)
         {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
             EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             GapsLaneSetup.Build();
             SessionState.SetBool(SceneHadRecordsKey, Object.FindAnyObjectByType<MatchRecords>(FindObjectsInactive.Include) != null);
@@ -315,7 +296,6 @@ namespace CloseTheDeal.Editor.Lanes
             EditorApplication.EnterPlaymode();
         }
 
-        /// <summary>Our own port, so this run never joins someone else's editor on FishNet's default.</summary>
         static void SetPort(ushort port)
         {
             var net = Object.FindAnyObjectByType<NetworkManager>();
@@ -343,17 +323,31 @@ namespace CloseTheDeal.Editor.Lanes
                 EditorApplication.update += Pump;
         }
 
-        /// <summary>Back in edit mode, however the run ended (finished or stopped by hand): the next Play is an ordinary one.</summary>
         static void OnPlayModeChanged(PlayModeStateChange change)
         {
             if (change != PlayModeStateChange.EnteredEditMode)
                 return;
             EditorApplication.update -= Pump;
+            Application.logMessageReceived -= CountProfileErrors;
             SessionState.SetBool(ActiveKey, false);
             SessionState.EraseString(ProfileStore.EditorPathKey);
+            Steps.Clear();
+            Report.Clear();
+            _waiting = null;
+            _waitUntil = 0f;
+            _started = false;
+            _role = null;
+            _out = null;
+            _failures = 0;
+            _passes = 0;
+            _profileErrors = 0;
+            _finals = 0;
+            _deadAtFinal = false;
+            _phaseAtJoin = null;
+            Said.Clear();
+            Hinted.Clear();
+            Downs.Clear();
         }
-
-        // ---- The stepper ---------------------------------------------------------------------
 
         static void Pump()
         {
@@ -494,8 +488,6 @@ namespace CloseTheDeal.Editor.Lanes
             Note($"{(ok ? "PASS" : "FAIL")}  {what}{(detail.Length > 0 ? "  · " + detail : "")}");
         }
 
-        // ---- Reading the game ----------------------------------------------------------------
-
         static FirmMember Me => FirmMember.Local;
         static MatchDirector Match => MatchDirector.Instance;
         static MatchRecords Records => MatchRecords.Instance;
@@ -535,7 +527,6 @@ namespace CloseTheDeal.Editor.Lanes
             };
         }
 
-        /// <summary>Feet on a floor of a tower, in the open: the same spot the integration check uses.</summary>
         static Vector3 OpenSpot(int tower, int floor)
         {
             int solid = ~(LayerMask.GetMask("Player") | LayerMask.GetMask("Prop"));
@@ -589,8 +580,6 @@ namespace CloseTheDeal.Editor.Lanes
             Me.ServerTeleport(OpenSpot(Me.Firm, Match.Arena.RoofFloor));
             yield return new Until(() => Match.Phase == MatchPhase.Ended, 5f, "the win");
         }
-
-        // ---- Solo: profile across launches ------------------------------------------------------
 
         static IEnumerator SoloScript()
         {
@@ -651,8 +640,6 @@ namespace CloseTheDeal.Editor.Lanes
             return ProfileStore.State;
         }
 
-        // ---- Host --------------------------------------------------------------------------------
-
         static IEnumerator HostScript()
         {
             Note("ROLE host: hosting; a second copy joins late as the client. Profile at " + ProfileStore.FilePath);
@@ -698,11 +685,8 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 3f;
         }
 
-        // ---- Names over heads -------------------------------------------------------------------
-
         static Nameplates.Nameplates Plates => Object.FindAnyObjectByType<Nameplates.Nameplates>();
 
-        /// <summary>The client joins the host's firm and stands in view: a name. Then it switches to the rival firm inside the host's tower: a marker for a short while.</summary>
         static IEnumerator HostSeesNameplates(FirmMember them)
         {
             int myFirm = Me.Firm, theirFirm = them.Firm, theirSlot = them.Slot;
@@ -766,7 +750,6 @@ namespace CloseTheDeal.Editor.Lanes
             PitchField.SetValue(cam, -Mathf.Asin(direction.y) * Mathf.Rad2Deg);
         }
 
-        /// <summary>Renders the game camera with the nameplate canvas at 1920 x 1080 and 1280 x 720 into the run's folder.</summary>
         static void Capture(string name)
         {
             CaptureAt(name + "_1080p", 1920, 1080);
@@ -838,8 +821,6 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 1.5f;
         }
 
-        // ---- Client ------------------------------------------------------------------------------
-
         static IEnumerator ClientScript()
         {
             Note("ROLE client: joins the host's match late. Everything here is what the client saw. Profile at " + ProfileStore.FilePath);
@@ -865,7 +846,6 @@ namespace CloseTheDeal.Editor.Lanes
             yield return ClientMatchThree();
         }
 
-        /// <summary>Match 3: the host makes this player a teammate (names over heads), then leaves mid-match.</summary>
         static IEnumerator ClientMatchThree()
         {
             yield return new Until(() => Match.Phase == MatchPhase.Running, 60f, "match 3 to run");
@@ -933,7 +913,6 @@ namespace CloseTheDeal.Editor.Lanes
             yield return 1f;
         }
 
-        /// <summary>Writes a made-up 99 kills into this machine's own copy of its line, as a cheating client might.</summary>
         static void ClaimNinetyNineKills()
         {
             FieldInfo field = typeof(MatchRecords).GetField("_lines", BindingFlags.Instance | BindingFlags.NonPublic);

@@ -1,13 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-15
-  Prompt    : Alex on the lift: "very bare bones in terms of visual and its design and foundation, its very blockouty";
-              he wants a concept sheet first, the same process as the Aero props.
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Brief to Codex for the lift's concept sheets, so its look is agreed with Alex as pictures before the
-              lift pieces are remodelled. Sizes and moving parts are fixed by the working lift and listed here.
--->
 # The AONAGI lift, Aero / Soft Club — request to Codex
 
 **From:** Alex (environment artist), drafted by Claude · **Date:** 2026-11-15 · **Status:** Waiting for Codex

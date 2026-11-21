@@ -1,9 +1,3 @@
-# AI-GENERATED SOURCE FILE
-# Generator : Codex (GPT-6)
-# Generated : 2026-11-15
-# Prompt    : REQUEST_ANIM.md; procedural reception messages from the supplied OFL fonts.
-# Reviewed  : NOT YET REVIEWED BY A HUMAN
-# Summary   : Rasterizes fonts with private Windows GDI handles; writes only new PNGs and metadata.
 """Run with Python 3 on Windows; standard library only, no Unity or font installation.
 
 WHY: Windows GDI can read both supplied TrueType fonts without Pillow, packages,

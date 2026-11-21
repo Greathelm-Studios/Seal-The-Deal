@@ -10,16 +10,7 @@ using static CloseTheDeal.Editor.UI.UiKitAssets;
 
 namespace CloseTheDeal.Editor.UI
 {
-    /// <summary>
-    /// Adds the UI kit to a scene: builds the tokens asset (once, then never overwritten), the kit's sprites and
-    /// prefabs (each left alone once a person edits it), and in the open scene a "KitUI" canvas with the screen
-    /// stack, the title, settings and confirm screens and the focus marks, plus the kit crosshair in the game
-    /// menu's HUD. It only adds: an existing KitUI or kit crosshair is left as it is. Guide: docs/systems/UI_KIT.md.
-    ///
-    /// Menu: Seal the Deal > Lanes > Set Up UI (the open scene; save it yourself).
-    /// Shell: -executeMethod CloseTheDeal.Editor.UI.UiKitSetup.SetUpFromCommandLine (Lane_Integration.unity, saved).
-    /// Set Up Scene, Set Up Integration and Make Open Scene Playable reach it through GreyboxUiSetup.Ensure.
-    /// </summary>
+    /// <summary>Additive scene setup and replacement tool for the UI kit (docs/systems/UI_KIT.md).</summary>
     public static class UiKitSetup
     {
         internal const string IntegrationScene = "Assets/_Project/Scenes/Lanes/Lane_Integration.unity";
@@ -34,10 +25,7 @@ namespace CloseTheDeal.Editor.UI
                 EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         }
 
-        /// <summary>
-        /// Replaces the open scene's KitUI with a fresh copy of the kit canvas prefab, after asking (it throws away
-        /// anything changed on that KitUI in the scene). For after a kit prefab was rebuilt.
-        /// </summary>
+        /// <summary>Rebuilds untouched kit prefabs and replaces the open scene's KitUI after confirmation.</summary>
         [MenuItem("Seal the Deal/Lanes/Replace UI In Open Scene")]
         public static void ReplaceFromMenu()
         {
@@ -92,11 +80,7 @@ namespace CloseTheDeal.Editor.UI
             AssetDatabase.SaveAssets();
         }
 
-        /// <summary>
-        /// Tokens, sprites, component and screen prefabs; never overwrites a file a person edited. Screen prefabs nest
-        /// the component prefabs, and Unity gives a rebuilt nest new internal ids (a large diff for no change), so the
-        /// screens are rebuilt only when missing unless asked (Replace UI does).
-        /// </summary>
+        /// <summary>Builds tokens, sprites, component prefabs, and missing (or requested) screen prefabs.</summary>
         public static void BuildAssets(bool rebuildScreens = false)
         {
             UiTokens tokens = EnsureTokens();
@@ -106,17 +90,13 @@ namespace CloseTheDeal.Editor.UI
             AssetDatabase.SaveAssets();
         }
 
-        /// <summary>Called by GreyboxUiSetup.Ensure whenever a scene gets its game menu, so every playable scene has the kit.</summary>
+        /// <summary>Ensures kit assets exist and adds KitUI to the open scene (used by GreyboxUiSetup.Ensure).</summary>
         public static void EnsureInOpenScene()
         {
             EnsureAssets();
             AddToOpenScene();
         }
 
-        /// <summary>
-        /// Builds the kit's assets only when they are missing: other lanes' scene setups reach this through
-        /// GreyboxUiSetup.Ensure, and shouldn't rebuild the kit as a side effect. Set Up UI refreshes it.
-        /// </summary>
         static void EnsureAssets()
         {
             LoadPrefabsIfNeeded();
@@ -154,17 +134,9 @@ namespace CloseTheDeal.Editor.UI
             return true;
         }
 
-        // ---- The match lane's section in the in-game menu ---------------------------------------------------
-
-        /// <summary>Agreed with lane 4 (AgentHub #529/#530): their tool builds into this path once it exists.</summary>
         internal const string MatchSlotPath = "InGameMenu/Content/MatchSlot";
         const string MatchSectionName = "MatchSection";
 
-        /// <summary>
-        /// The match lane's section (where the match stands, Start / Rematch) was built into the playtest card, which
-        /// the kit's in-game menu replaces: the same object moves, untouched, into the menu's MatchSlot. Nothing is
-        /// rebuilt; its MatchMenuPanel keeps every reference. Only when the slot is empty.
-        /// </summary>
         static bool MoveMatchSection(UiRoot root, GameMenu menu)
         {
             Transform slot = root.transform.Find(MatchSlotPath);
@@ -174,14 +146,11 @@ namespace CloseTheDeal.Editor.UI
             if (section == null)
                 return false;
             section.SetParent(slot, false);
+            CloseTheDeal.Editor.Lanes.GameModeLaneSetup.StyleMatchSummary((RectTransform)section, AssetDatabase.LoadAssetAtPath<UiTokens>(TokensPath));
             Debug.Log("[UI] Moved the match lane's section from the playtest card into the in-game menu (" + MatchSlotPath + ").");
             return true;
         }
 
-        /// <summary>
-        /// Before KitUI's prefabs are rebuilt or KitUI is replaced, the match lane's section leaves it (back to the old
-        /// card), so a rebuilt slot can't orphan it and the fresh KitUI takes it back.
-        /// </summary>
         static void ParkMatchSection()
         {
             UiRoot old = Object.FindAnyObjectByType<UiRoot>(FindObjectsInactive.Include);
@@ -194,9 +163,6 @@ namespace CloseTheDeal.Editor.UI
                 slot.GetChild(i).SetParent(card != null ? card : menu.transform, false);
         }
 
-        // ---- HUD pieces on the kit ---------------------------------------------------------------------
-
-        /// <summary>The "Esc · Menu" hint as the kit's key hint (Esc on keys, Menu / Options on a pad); the greybox chip is switched off.</summary>
         static bool EnsureMenuHint(GameMenu menu)
         {
             Transform hud = menu.transform.Find("Hud");
@@ -204,7 +170,8 @@ namespace CloseTheDeal.Editor.UI
                 return false;
 
             var hint = Instance<UiKeyHint>(UiKitComponents.KeyHint, hud, MenuHintName);
-            Pin((RectTransform)hint.transform, new Vector2(0f, 1f), new Vector2(24f, -24f), new Vector2(160f, 40f));
+            Pin((RectTransform)hint.transform, Vector2.up, new Vector2(24f, -24f), new Vector2(136f, 40f));
+            Img((RectTransform)hint.transform, AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_Round16.png"), Tokens.Paper);
             SetLabelText(hint.transform, "Label", "Menu");
             SetLabelText(hint.transform, "Key", "Esc");
             SetString(hint, "_keyboardText", "Esc");
@@ -213,11 +180,6 @@ namespace CloseTheDeal.Editor.UI
             return true;
         }
 
-        /// <summary>
-        /// The network readout on a kit plate (navy on white), with its own readout component; the greybox chip and its
-        /// component are switched off, not deleted or rewired. Show network stats still hides it (the plate is the
-        /// text's parent).
-        /// </summary>
         static bool EnsureNetworkReadout(GameMenu menu)
         {
             Transform hud = menu.transform.Find("Hud");
@@ -227,7 +189,7 @@ namespace CloseTheDeal.Editor.UI
             // The readout hides its text's parent (the plate), so it lives on a holder above the plate: hidden, it can
             // still hear Show network stats come back on.
             RectTransform holder = Node(hud, ReadoutName);
-            Pin(holder, Vector2.zero, new Vector2(24f, 24f), new Vector2(500f, 84f));
+            Pin(holder, Vector2.up, new Vector2(24f, -90f), new Vector2(500f, 84f));
             var plate = Instance<RectTransform>(UiKitComponents.Plate, holder, "Plate");
             Stretch(plate);
             TextMeshProUGUI text = Label(plate, "Text", 16f, 10f, 468f, 64f, string.Empty, Tokens.Caption, Tokens.Navy, TextAlignmentOptions.TopLeft, true);
@@ -269,10 +231,6 @@ namespace CloseTheDeal.Editor.UI
                 old.gameObject.SetActive(false);
         }
 
-        /// <summary>
-        /// The title shows lane 8's live sky by default (TitleSky adds itself at run time and draws the scene's own sky
-        /// material). A scene with no sky material gets the flat fallback instead; say so, with the fix.
-        /// </summary>
         static void ReportTitleSky()
         {
             if (RenderSettings.skybox == null)
@@ -281,7 +239,6 @@ namespace CloseTheDeal.Editor.UI
                 Debug.Log("[UI] The title will show this scene's sky (" + RenderSettings.skybox.name + ") live behind its window frame.");
         }
 
-        /// <summary>Loads what earlier runs built. Unity's null (a deleted asset) counts as missing, so it reloads.</summary>
         static void LoadPrefabsIfNeeded()
         {
             if (Tokens == null)
@@ -303,10 +260,6 @@ namespace CloseTheDeal.Editor.UI
             return root;
         }
 
-        /// <summary>
-        /// An existing kit is left as it is, except that a game menu rebuilt by Rebuild Game UI is a new object:
-        /// a kit still pointing at the old (deleted) one is pointed at the new one.
-        /// </summary>
         static bool RelinkMenu(UiRoot root, GameMenu menu)
         {
             var so = new SerializedObject(root);
@@ -321,7 +274,6 @@ namespace CloseTheDeal.Editor.UI
             return true;
         }
 
-        /// <summary>The kit crosshair replaces the greybox squares (which are switched off, not deleted).</summary>
         static bool EnsureCrosshair(GameMenu menu)
         {
             Transform hud = menu.transform.Find("Hud");
@@ -342,7 +294,6 @@ namespace CloseTheDeal.Editor.UI
             return true;
         }
 
-        /// <summary>The playtest card fades in instead of cutting in, until the in-game menu slice replaces it.</summary>
         static bool EnsureMenuFade(GameMenu menu)
         {
             Transform card = menu.transform.Find("Menu");

@@ -2,11 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Customisation
 {
-    /// <summary>
-    /// One choice inside an outfit slot: the colours a part of the character is drawn in.
-    /// Designer content (AGENTS.md §4): read at runtime, never written.
-    /// Design: docs/systems/CUSTOMISATION.md.
-    /// </summary>
+    /// <summary>Designer-owned colour and unlock requirement for one outfit choice. Design: docs/systems/CUSTOMISATION.md.</summary>
     [CreateAssetMenu(menuName = "Seal the Deal/Customisation/Outfit Option", fileName = "Option_")]
     public sealed class OutfitOption : ScriptableObject
     {

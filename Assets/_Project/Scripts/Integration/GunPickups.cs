@@ -6,15 +6,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Integration
 {
-    /// <summary>
-    /// Host only. A gun taken from the level goes straight into the player's weapon slots and the
-    /// pickup leaves play, so a gun never sits in the hands:
-    /// - a gun the player already has: that gun's magazine is refilled;
-    /// - a free slot: the gun goes in it;
-    /// - both slots full: it replaces the gun in hand, and that gun drops at their feet as a pickup.
-    /// The weapon holder's synced slots carry the result to the owner and everyone else.
-    /// Owner: host. Synced: the holder's slot values and the pickup's despawn. Design: docs/systems/INTEGRATION.md.
-    /// </summary>
+    /// <summary>Host-only bridge routing picked-up gun items into WeaponHolder slots. Design: docs/systems/INTEGRATION.md.</summary>
     [DisallowMultipleComponent]
     public sealed class GunPickups : MonoBehaviour
     {
@@ -66,20 +58,18 @@ namespace CloseTheDeal.Integration
                 DropSwapped(carrier, swappedOut);
         }
 
-        /// <summary>Puts the gun in a slot by the rules above. False when the holder refused it; swappedOut is the gun it replaced, or null.</summary>
         static bool GiveGun(WeaponHolder holder, WeaponDefinition weapon, out WeaponDefinition swappedOut)
         {
             swappedOut = null;
             int slot = SlotHolding(holder, weapon);
             if (slot < 0)
-                slot = SlotHolding(holder, null); // The first free slot.
+                slot = SlotHolding(holder, null);
             if (slot < 0)
             {
-                slot = holder.ActiveSlot; // Both full: the gun in hand goes.
+                slot = holder.ActiveSlot;
                 swappedOut = holder.WeaponInSlot(slot);
             }
 
-            // Equip always gives a full magazine, so a gun already carried is simply refilled.
             if (holder.Equip(weapon, slot))
                 return true;
 
@@ -98,7 +88,6 @@ namespace CloseTheDeal.Integration
             return -1;
         }
 
-        /// <summary>A gun that could not go to the slots is an ordinary item; it may not share the hands with the briefcase.</summary>
         static void NotWithTheBriefcase(ItemCarrier carrier, Pickup pickup)
         {
             MatchDirector match = MatchDirector.Instance;

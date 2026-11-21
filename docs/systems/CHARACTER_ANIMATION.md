@@ -1,20 +1,6 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Fable 5.2 (Claude Code)
-  Generated : 2026-11-12
-  Prompt    : Alex: "set up a humanoid procedural animation system" (built-in, no clips), then
-              feel notes ending with the choice of a "True ragdoll body" ("look at TABS, gang
-              beast"; reference video: "Full Procedural Animations System")
-  Modified  : Claude Fable 5.2, 2026-11-13 — the ragdoll now chases animation clips; Alex chose
-              clips after the hand-written poses still read as "off" (setting off and stopping:
-              too floppy, wrong shapes, not matching the movement)
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : The owning doc for the player's animation (AGENTS.md §7): what the player sees,
-              who owns it, where the files are, how to tune it, what is unchecked.
--->
 # Character animation
 
-**Status:** Current (seventh pass: the active ragdoll now chases real animation clips instead of hand-written poses; checked in frame strips from the side and the front, **not yet judged by a person and not yet seen in Play Mode**) · **Last updated:** 2026-11-13
+**Status:** Current (seventh pass: the active ragdoll chases real animation clips instead of hand-written poses; plus 2026-11-21 remote ragdoll LOD culling and local BodyView head-turn cap. Checked in frame strips from the side and front; **not yet judged by a person and not yet seen in Play Mode**) · **Last updated:** 2026-11-21
 
 The player's body is a real ragdoll: eleven rigidbodies joined like a skeleton, the way TABS and Gang Beasts build theirs.
 It is not limp. Animation clips say what the body should be doing every frame (standing, running any way, sprinting, in the air, landing), and every joint has a motor pulling toward that. What you see is the body trying to do the clip.
@@ -40,14 +26,23 @@ It hangs from its hips, which a spring drags along after the player. **It does n
 
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
-| The clip blend and the ragdoll | Each client, for its own screen | Nothing | — |
+| The clip blend and the ragdoll | Each client, for its own screen | Nothing | None |
 
 Every client works the blend out from what it already has (how its smoothed copy of the player moved this frame, and the motor's state), and runs its own ragdoll.
 Two screens will show the same player's limbs in different places. Nothing reads them back, so that cannot desync, and it costs no bandwidth.
 
 **The ragdoll lives in a physics scene of its own** ([RagdollWorld.cs](../../Assets/_Project/Scripts/Player/RagdollWorld.cs)), stepped by that class at 120 steps a second and by nothing else.
 The game's own physics scene is stepped by FishNet once a tick and re-stepped several times on every reconcile; a ragdoll in it would be simulated many times over and could shove the predicted capsule and the host's props. In its own scene it can do neither.
-The price is that the level's colliders are in the other scene, so the ragdoll scene keeps copies of the solid level geometry within 3 m of each ragdoll.
+The price is that the level's colliders are in the other scene, so the ragdoll scene keeps copies of the solid level geometry within 3 m of each ragdoll (refreshes staggered across ragdolls every 0.2 s, dropped past 8 m hysteresis; disabled-state checks throttled to 0.2 s with last-known bounds cached for disabled colliders). Remote ragdolls beyond 25 m (resume at 22 m) or more than 9 m vertically away (resume at 8 m) pause simulation and leave `RagdollWorld` (re-adding and snapping cleanly when back in range); when no active ragdolls remain, `RagdollWorld` unloads its physics scene and clears its proxy table.
+
+## Architecture and design rationale
+
+- **Why a manual `PlayableGraph` instead of an Animator Controller:** Animator Controllers evaluate on Unity's schedule before FishNet moves the smoothed `Graphics` visual for the frame, and state would live in an asset a rebuilt prefab must wire to. `PlayerAnimator` sits on `Graphics` (above the lean pivot so lean slide is not read as running) at execution order 100 (before `PlayerRagdoll` at 110), drives a manual `PlayableGraph` with `applyRootMotion = false` and `cullingMode = AlwaysAnimate` (so the owner's shadow-only body keeps animating for the ragdoll), resets the skeleton to T-pose rest before `_graph.Evaluate()` (so un-animated bones such as the lower spine do not keep the ragdoll's previous frame output), and exposes `HeadBone` directly because clearing the humanoid avatar makes runtime `Animator` bone lookups return null.
+- **Play-Mode script reload guard:** Unity preserves plain fields across a Play-Mode recompile without re-running `Start()`, so `PlayerAnimator` uses `[NonSerialized] bool _ready` and `PlayerRagdoll` checks `Running` to disable cleanly with one logged error instead of throwing every frame.
+- **Direction snapping, stride hold, and head turn:** Sideways/backward clips are not phase-synced with forward clips and measured velocity wanders a few degrees as the camera turns, so `PlayerAnimator` snaps to one of 8 directions with 10° hysteresis (`RunDirectionSlack`) and cross-fades over 0.12 s (`RunDirectionBlendTime`). Holding stride for 0.2 s (`StrideHoldTime`) prevents left-right direction flips from dipping toward idle. Standing head turns (`TurnHeadFirst`) rotate the full body once past `HeadTurnLimit` (clamped to `15°` for the local player in first-person body view so looking right does not twist the shoulder across the camera). Breathing (`Breathe`) is additive in code so amplitude and rate tune live without re-exporting clips. In the clip-free fallback, `SolveLeg` resets leg bones to rest each frame so twist does not accumulate across frames.
+- **Why `RagdollWorld` instead of FishNet `OfflineRigidbody`:** `OfflineRigidbody` would step only once per 60 Hz tick (visibly stepping at high frame rates) and could still push predicted capsules. `RagdollWorld` steps at 120 Hz (`MaxStepsPerFrame = 4`, covering down to 30 fps) and exposes `Blend` for smooth frame interpolation.
+- **Ragdoll mass skew, steadiness, and joint setup:** Part masses (`10, 10, 5, 2, 1.5, 2, 1.5, 5, 3.5, 5, 3.5` kg) give the head 11% and head+chest ~33% of total mass so the top sways over the legs (above 50% collapsed under 45 m/s² starts). Pelvis inertia is multiplied by `25` (`HipsSteadiness`) so swinging 17 kg of legs stays within ~2° of the pose. Joints use `RotationDriveMode.Slerp` with `useAcceleration = true` (one frequency scales to both heavy chests and light forearms) and `14` solver / `4` velocity iterations. Knees and elbows are hinges; `NeckTurn = 120°` exceeds a real neck's 80° because the chest rigidbody sits at the lowest spine bone (which turns ~90° in sideways runs). Neck and upper spine bones are left out of the rigidbody chain so they keep the pose's twist and bend on top of the chest part. Start/stop carry (`MaxCarryPush = 150 m/s²`) reads the visual's acceleration (not the hips target, which includes clip bob), passing 60 m/s² stops through while softening jump launches and teleports (`SnapDistance = 2.5 m`). Knocked-down dummy parts switch to `ContinuousDynamic` collision and refresh proxies every frame so fast limbs do not tunnel through 0.2 m floor slabs.
+- **Dev mirror (`DevMirror`):** Uses a reflected eye behind the glass and an oblique frustum sized to the viewport-raycast visible patch of the quad (`PatchMargin = 0.03`, `MinPatch = 0.05 m`, `MinEyeDistance = 0.05 m`, `24`-bit depth for URP stencil, `Clamp` wrap so URP Unlit does not tile outside the patch, left-right UV flip, and `Scale(1, 1, -1)` for Unity's `-Z` camera space). `RenderPipelineManager` callbacks temporarily unhide the local player's body only for the mirror camera.
 
 ## Files
 

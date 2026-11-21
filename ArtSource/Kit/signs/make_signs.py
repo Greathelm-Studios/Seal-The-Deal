@@ -1,18 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-15
-#  Prompt    : Alex: signs, logos and labels "look blockouty ... fonts are basic too ... dont have it modelled,
-#              either textured or a decal". Typefaces picked by Alex: Michroma + M PLUS 1.
-#  Modified  : Claude Opus 5.5, 2026-11-15 — every other label too: columns, reception desk, wall logo, LED and
-#              lift indicators (dot matrix), prop labels.
-#  Modified  : Claude Opus 5.5, 2026-11-15 — the wave and logo lightbox graphics (PANLINE reference).
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : The office's sign system, drawn as textures instead of modelled text. One layout spec (sizes in
-#              metres, the kit palette, two typefaces) renders every zone sign to a transparent PNG at a fixed
-#              pixel density, all layers in one image so nothing can z-fight, plus a spec sheet for review.
-#              A script rather than painted files so a copy or size change is one rerun for every sign.
-# -----------------------------------------------------------------------------
 """Usage: python ArtSource/Kit/signs/make_signs.py
 
 Writes Sign_Zone_<L|R|C|H|A>.png into textures/ and review/sign_spec.png beside this script.

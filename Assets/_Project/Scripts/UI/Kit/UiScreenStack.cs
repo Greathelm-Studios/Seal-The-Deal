@@ -5,15 +5,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The kit's screens, top one in charge. Push opens a screen over the current one (a full screen slides the
-    /// old one out; a dialog leaves it showing behind a veil), Pop goes back one, Replace swaps the top. Every change
-    /// animates (never a cut) and plays its sound; Esc / the pad's B is passed to the top screen. A change to a
-    /// screen that names one of lane 8's transitions (UiScreen.Through: Settings slides panes, hosting / joining /
-    /// problems wipe cloud) is made while that transition covers the view, and both screens settle at once under
-    /// it; the overlay's own sound answers it (Back still plays on a pop, the control's answer). While a covered change waits, the stack is Busy and ignores
-    /// further changes (the root re-syncs when it lands). Design: docs/systems/UI_KIT.md "Screens".
-    /// </summary>
+    /// <summary>Manages active UiScreen stack, input routing, and covered screen transitions.</summary>
     [AddComponentMenu("Seal the Deal/UI/Screen Stack")]
     public sealed class UiScreenStack : MonoBehaviour
     {
@@ -43,12 +35,7 @@ namespace CloseTheDeal.UI
         float _pendingFor;
         readonly List<UiScreen> _settle = new(8);
 
-        /// <summary>
-        /// Runs change once kind covers the view (Busy until then) and ends the motion of every screen it moved, so the
-        /// reveal shows them finished. Changes the change itself causes (the root re-syncing) run at once under the same
-        /// cover. Focus is let go while waiting, so a Submit can't fire the old screen's button under the cover. Returns
-        /// false (nothing done) when no cover is wanted or possible; the caller then makes the change itself.
-        /// </summary>
+        /// <summary>Defers change until transition covers the screen, then settles screens; returns false if un-covered.</summary>
         public bool RunCovered(UiTransitionKind? kind, Action change)
         {
             if (kind == null || _underCover || !UseTransitions || !Application.isPlaying)
@@ -94,10 +81,7 @@ namespace CloseTheDeal.UI
                 Top.Refocus();
         }
 
-        /// <summary>
-        /// A covered change whose transition never reached its cover (its overlay was destroyed) runs anyway once the
-        /// transition is overdue and nothing is playing, so the stack can't stay Busy for good.
-        /// </summary>
+        // Watchdog: if a covered transition overlay was destroyed mid-flight, flush pending change so Busy cannot stick.
         void Update()
         {
             if (Busy && !UiTransition.IsPlaying && Time.unscaledTime - _pendingSince > _pendingFor)
@@ -144,10 +128,7 @@ namespace CloseTheDeal.UI
             Changed?.Invoke();
         }
 
-        /// <summary>
-        /// Closes the top screen and brings back the one below, where the player left it. Plays Back (a screen) or
-        /// PanelClose (a dialog) unless the caller already played its own answer this frame.
-        /// </summary>
+        /// <summary>Closes the top screen and restores the screen below it.</summary>
         public void Pop(bool playSound = true)
         {
             if (_stack.Count == 0 || Busy)
@@ -180,10 +161,7 @@ namespace CloseTheDeal.UI
             Changed?.Invoke();
         }
 
-        /// <summary>
-        /// Swaps the top screen for another of the same kind (screen for screen, dialog for dialog) with one transition.
-        /// Swapping between kinds goes back one and opens the new one instead.
-        /// </summary>
+        /// <summary>Swaps the top screen for another of the same kind in one transition.</summary>
         public void Replace(UiScreen screen)
         {
             if (screen == null || Busy)

@@ -6,11 +6,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Editor.Greybox
 {
-    /// <summary>
-    /// Builds the greybox prop prefabs: networked, host-simulated furniture. Each is a box
-    /// with its pivot at floor level so template markers sit on the floor.
-    /// Sizes and masses here are greybox stand-ins; real props come from an artist.
-    /// </summary>
+    /// <summary>Generates greybox networked prop prefabs with floor-level pivots.</summary>
     public static class GreyboxPropSetup
     {
         const string Folder = "Assets/_Project/Prefabs/Props";

@@ -2,13 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Combat
 {
-    /// <summary>
-    /// A kick that comes back by itself along an authored curve. Each new kick adds to what is
-    /// left of the last one and starts the curve again from the total, so fast shots compound.
-    /// The curve runs from 1 at the moment of the kick to 0 at its end; dipping below 0 on the
-    /// way gives the overshoot past rest that makes recoil read as physical. The peak is held
-    /// for the frame of the kick, so the attack looks the same at any frame rate.
-    /// </summary>
+    /// <summary>Additive curve-driven impulse with peak-frame hold and overshoot recovery.</summary>
     public struct DecayingImpulse
     {
         float _peak;

@@ -2,11 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Customisation
 {
-    /// <summary>
-    /// One clear graphic category of the outfit (art bible §07): suit, shirt, shoes and so on.
-    /// Each slot recolours one or more material slots of the character's body mesh.
-    /// Designer content: read at runtime, never written.
-    /// </summary>
+    /// <summary>Designer-owned outfit category mapping material names, choices, and fitting camera angle. Design: docs/systems/CUSTOMISATION.md.</summary>
     [CreateAssetMenu(menuName = "Seal the Deal/Customisation/Outfit Slot", fileName = "Slot_")]
     public sealed class OutfitSlot : ScriptableObject
     {

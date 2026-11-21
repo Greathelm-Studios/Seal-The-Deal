@@ -6,17 +6,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The in-game menu: a light glass pane over the running game (nothing pauses). Back to game, Invite friends
-    /// (Steam only), Settings and Leave game, with the focused button's explanation, who is hosting and how many are
-    /// in, and, while the run has not started, reception's seats and who is ready (read-only: the lobby lane owns the
-    /// ready board and the start). The match lane's section sits in MatchSlot. Leaving asks first, in the host's or
-    /// a client's words. Esc / B is Back to game. Opened and closed by the UI root from the game menu's state (menu
-    /// open = mouse free = player idle stays GameMenu's rule). Text changes only on lobby and roster events. While
-    /// open, LateUpdate compares the match section's shown state, height and button (no allocation; the match lane
-    /// raises no event for them) and whether the lobby's roster has spawned, and re-lays out only when one changed.
-    /// Design: docs/systems/UI_KIT.md "In-game menu".
-    /// </summary>
+    /// <summary>In-game menu glass pane: navigation, session summary, match slot, and read-only reception seats.</summary>
     [AddComponentMenu("Seal the Deal/UI/In-Game Menu")]
     public sealed class InGameMenuScreen : UiScreen
     {
@@ -75,9 +65,10 @@ namespace CloseTheDeal.UI
         float _matchHeight;
         bool _matchActionUp;
         bool _refusalShown;
+        bool _dirty = true;
         string _sessionText = string.Empty;
+        UiButton[] _menuButtons;
 
-        /// <summary>Given by the UI root: the game menu whose rule this pane follows and whose lobby it reads.</summary>
         internal void Bind(GameMenu menu)
         {
             _menu = menu;
@@ -88,6 +79,7 @@ namespace CloseTheDeal.UI
         {
             base.Awake();
             _firstFocus = _back;
+            _menuButtons = new[] { _back, _invite, _settings, _leave };
             if (_back != null)
                 _back.ConfirmSound = UiSoundEvent.Back;
         }
@@ -95,7 +87,7 @@ namespace CloseTheDeal.UI
         void OnEnable()
         {
             if (_lobby != null)
-                _lobby.OnChanged += Refresh;
+                _lobby.OnChanged += MarkDirty;
             _back.Clicked += OnBack;
             _invite.Clicked += OnInvite;
             _settings.Clicked += OnSettings;
@@ -107,7 +99,7 @@ namespace CloseTheDeal.UI
         protected override void OnDisable()
         {
             if (_lobby != null)
-                _lobby.OnChanged -= Refresh;
+                _lobby.OnChanged -= MarkDirty;
             _back.Clicked -= OnBack;
             _invite.Clicked -= OnInvite;
             _settings.Clicked -= OnSettings;
@@ -130,21 +122,21 @@ namespace CloseTheDeal.UI
             if (LobbyRoster.Instance != _roster)
             {
                 WatchRoster(LobbyRoster.Instance); // spawned after the menu opened
+                MarkDirty();
+            }
+
+            if (_dirty)
+            {
                 Refresh();
                 return;
             }
 
-            if (_matchSlot == null || _matchSlot.childCount == 0)
+            EnsureMatchAction();
+            if (_matchChild == null)
                 return;
-            Transform child = _matchSlot.GetChild(0);
-            if (child != _matchChild)
-            {
-                _matchChild = child;
-                _matchAction = child.GetComponentInChildren<Selectable>(true); // once per section, not per frame
-            }
 
-            bool shown = child.gameObject.activeSelf;
-            float height = shown ? ((RectTransform)child).rect.height : 0f;
+            bool shown = _matchChild.gameObject.activeSelf;
+            float height = shown ? ((RectTransform)_matchChild).rect.height : 0f;
             bool actionUp = _matchAction != null && _matchAction.isActiveAndEnabled;
             if (shown == _matchShown && Mathf.Approximately(height, _matchHeight) && actionUp == _matchActionUp)
                 return;
@@ -155,7 +147,9 @@ namespace CloseTheDeal.UI
             LinkNavigation();
         }
 
-        /// <summary>Esc / B: back to the game (the game menu hands the mouse back once the confirm button is up).</summary>
+        void MarkDirty() => _dirty = true;
+
+        /// <summary>Esc / B: resume gameplay.</summary>
         public override void OnCancel()
         {
             UiSound.Play(UiSoundEvent.Back);
@@ -167,14 +161,15 @@ namespace CloseTheDeal.UI
             if (roster == _roster)
                 return;
             if (_roster != null)
-                _roster.OnChanged -= Refresh;
+                _roster.OnChanged -= MarkDirty;
             _roster = roster;
             if (_roster != null)
-                _roster.OnChanged += Refresh;
+                _roster.OnChanged += MarkDirty;
         }
 
         void Refresh()
         {
+            _dirty = false;
             if (_lobby == null || _tokens == null)
                 return;
             WatchRoster(LobbyRoster.Instance);
@@ -199,7 +194,6 @@ namespace CloseTheDeal.UI
             LinkNavigation();
         }
 
-        /// <summary>Both firms' seats while in reception: who sits where, who is ready, and the empty seats.</summary>
         void RefreshReception()
         {
             bool show = _roster != null && !_roster.RunInProgress && _roster.Rules != null;
@@ -214,10 +208,6 @@ namespace CloseTheDeal.UI
                 _readyCount.text = ready + " of " + _roster.Count + " ready";
         }
 
-        /// <summary>
-        /// The seats were built for a 196 px match section; they move up or down to sit under the real one (none
-        /// showing: up to the top of the column). Only on refresh, never per frame.
-        /// </summary>
         void PlaceReception()
         {
             if (_receptionBlock == null || _matchSlot == null)
@@ -238,7 +228,6 @@ namespace CloseTheDeal.UI
             _receptionBlock.anchoredPosition = new Vector2(0f, -shift);
         }
 
-        /// <summary>One firm's name, colour and seats (members first, then empty seats). Returns how many are ready.</summary>
         int RefreshFirm(int firm)
         {
             if (firm < _firmNames.Length && _firmNames[firm] != null)
@@ -285,14 +274,14 @@ namespace CloseTheDeal.UI
             _seatRings[index].enabled = false;
         }
 
-        /// <summary>Top to bottom; right from any button reaches the match's button when it is showing.</summary>
         void LinkNavigation()
         {
             Selectable right = MatchSelectable();
             Selectable previous = null;
-            foreach (UiButton current in new[] { _back, _invite, _settings, _leave })
+            for (int i = 0; i < _menuButtons.Length; i++)
             {
-                if (!current.gameObject.activeSelf)
+                UiButton current = _menuButtons[i];
+                if (current == null || !current.gameObject.activeSelf)
                     continue;
                 var nav = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = previous, selectOnRight = right };
                 current.navigation = nav;
@@ -307,12 +296,27 @@ namespace CloseTheDeal.UI
             }
         }
 
+        void EnsureMatchAction()
+        {
+            if (_matchSlot == null || _matchSlot.childCount == 0)
+            {
+                _matchChild = null;
+                _matchAction = null;
+                return;
+            }
+
+            Transform child = _matchSlot.GetChild(0);
+            if (child != _matchChild)
+            {
+                _matchChild = child;
+                _matchAction = child.GetComponentInChildren<Selectable>(true); // once per section, not per frame
+            }
+        }
+
         Selectable MatchSelectable()
         {
-            if (_matchSlot == null)
-                return null;
-            Selectable found = _matchSlot.GetComponentInChildren<Selectable>(false);
-            return found != null && found.isActiveAndEnabled ? found : null;
+            EnsureMatchAction();
+            return _matchAction != null && _matchAction.isActiveAndEnabled ? _matchAction : null;
         }
 
         void OnFocused(Selectable control, string description)
@@ -353,7 +357,6 @@ namespace CloseTheDeal.UI
                 Stack.Push(_settingsScreen);
         }
 
-        /// <summary>Asks first, in the host's words (the game ends for everyone) or a client's (the team carries on).</summary>
         void OnLeave()
         {
             if (Stack == null || _confirm == null || Stack.Top != this || _lobby == null)

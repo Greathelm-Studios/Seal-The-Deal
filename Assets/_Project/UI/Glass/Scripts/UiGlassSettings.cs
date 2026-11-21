@@ -2,10 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The player's choice for UI glass quality. Auto uses the blur when the renderer has it; NoBlur never runs
-    /// the blur passes and the panes fall back to a denser plain tint (still passes contrast). Persisted.
-    /// </summary>
+    /// <summary>Persisted local UI glass quality setting (Auto, Blur, NoBlur).</summary>
     public static class UiGlassSettings
     {
         public enum Quality { Auto = 0, Blur = 1, NoBlur = 2 }
@@ -37,8 +34,7 @@ namespace CloseTheDeal.UI
         /// <summary>True when the feature should run its passes this frame.</summary>
         public static bool BlurAllowed => Current != Quality.NoBlur;
 
-        /// <summary>Panes read this: 0 until a blur pass actually ran, so a scene or renderer without the feature
-        /// (or "No blur") gets the fallback tint by itself.</summary>
+        // Default _UiGlassBlurOn to 0 until a blur pass runs so scenes without the feature use the fallback tint.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetOnLoad()
         {

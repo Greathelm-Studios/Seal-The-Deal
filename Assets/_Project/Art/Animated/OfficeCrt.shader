@@ -1,9 +1,3 @@
-// AI-GENERATED SOURCE FILE
-// Generator : Codex (GPT-6)
-// Generated : 2026-11-15
-// Prompt    : REQUEST_ANIM.md; approved mood D in blue, scrolling office CRTs.
-// Reviewed : NOT YET REVIEWED BY A HUMAN
-// Summary   : One shared, unlit URP material; world-origin phase needs no per-screen updates.
 Shader "Close the Deal/Animated/Office CRT"
 {
     Properties
@@ -18,8 +12,7 @@ Shader "Close the Deal/Animated/Office CRT"
     }
     SubShader
     {
-        // WHY: object origins must survive static/dynamic batching for independent phases;
-        // this does not disable the SRP Batcher's material constant-buffer path.
+        // Preserve per-object world origins for independent screen phases without breaking SRP Batcher.
         Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry+10" "DisableBatching"="True" }
         Pass
         {
@@ -90,7 +83,7 @@ Shader "Close the Deal/Animated/Office CRT"
                 float content = page < 1 ? sheet : (page < 2 ? chart : document);
                 half3 colour = _Background.rgb + _Ink.rgb * (body * content * 0.78 + toolbar * 0.4) + _Paper.rgb * heading;
                 float scan = 1 - _ScanStrength * (0.5 + 0.5 * sin(uv.y * Scanlines * Tau));
-                // WHY: fade the scanlines at a distance instead of producing a moving moire pattern.
+                // Fade scanlines at distance to avoid moving moire.
                 scan = lerp(scan, 1, saturate(fwidth(uv.y) * Scanlines));
                 float edge = min(min(uv.x, 1 - uv.x), min(uv.y, 1 - uv.y));
                 float vignette = smoothstep(0, _Border, edge);

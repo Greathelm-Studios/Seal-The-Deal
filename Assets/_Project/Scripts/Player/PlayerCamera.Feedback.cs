@@ -23,6 +23,8 @@ namespace CloseTheDeal.Player
         const float HardStopBelow = 1.5f;
         const float HardStopDeceleration = 20f;
         const float HardStopCooldownSeconds = 0.5f;
+        const float MaxSpringStep = 1f / 120f;
+        const float MaxStepTotal = 0.25f;
 
         /// <summary>The movement kick on the view this frame, in metres along the camera's own axes. The viewmodel may scale it.</summary>
         public Vector3 FeedbackOffset => _kick;
@@ -106,10 +108,19 @@ namespace CloseTheDeal.Player
             }
 
             // A damped spring: stiffness from the frequency, damping as a fraction of critical.
+            // Substepped so explicit Euler never blows up below 30.5 FPS.
             float omega = 2f * Mathf.PI * Mathf.Max(p.CameraSpringFrequency, 0.1f);
-            Vector3 acceleration = -omega * omega * _kick - 2f * p.CameraSpringDamping * omega * _kickVelocity;
-            _kickVelocity += acceleration * dt;
-            _kick += _kickVelocity * dt;
+            float omegaSq = omega * omega;
+            float twoDampOmega = 2f * p.CameraSpringDamping * omega;
+            float remaining = Mathf.Min(dt, MaxStepTotal);
+            while (remaining > 0f)
+            {
+                float step = remaining > MaxSpringStep ? MaxSpringStep : remaining;
+                Vector3 acceleration = -omegaSq * _kick - twoDampOmega * _kickVelocity;
+                _kickVelocity += acceleration * step;
+                _kick += _kickVelocity * step;
+                remaining -= step;
+            }
             return _kick;
         }
 

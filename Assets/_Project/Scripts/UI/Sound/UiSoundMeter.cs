@@ -2,10 +2,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// Measures the final output (after the mixer) of the AudioListener it sits next to: peak and RMS since the last
-    /// Reset. Only the UI sound self-test adds it; nothing in the game does.
-    /// </summary>
+    /// <summary>AudioListener probe measuring peak and RMS output after the mixer (used by UiSound self-tests).</summary>
     public sealed class UiSoundMeter : MonoBehaviour
     {
         static float peak;

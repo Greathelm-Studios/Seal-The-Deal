@@ -1,14 +1,3 @@
-# -----------------------------------------------------------------------------
-#  AI-GENERATED SOURCE FILE
-#  Generator : Claude Opus 5.5 (Claude Code)
-#  Generated : 2026-11-15
-#  Prompt    : Alex: "satirical motivational office messages along the walls ... same with presentations flicking to
-#              different slides in a presentation or pitch room"
-#  Reviewed  : NOT YET REVIEWED BY A HUMAN
-#  Summary   : Lays out KitOffice's satirical motivational posters and the pitch-room slide atlas with exact text, from
-#              COPY.md, over Codex's textless poster art. Its own file because the copy is a writing job and the
-#              images an image-generation job; this joins them so neither has to do the other's.
-# -----------------------------------------------------------------------------
 """Usage: python ArtSource/Kit/posters/make_posters.py
 
 Writes ../signs/textures/Poster_NN.png (KitSigns imports them) and Assets/_Project/Art/Animated/Slides_Pitch.png (Codex's

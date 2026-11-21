@@ -1,6 +1,6 @@
-# UI KIT
+# UI Kit
 
-**Status:** Current (wide pass slices 1–3: edge marker, device key hints, live-sky title, settings fixes, hosting / joining / problem panels) · **Last updated:** 2026-11-14
+**Status:** Current (wide pass slices 1-3: edge marker, device key hints, live-sky title, settings fixes, hosting / joining / problem panels; partial client-side verification) · **Last updated:** 2026-11-21
 
 ## What the player sees
 
@@ -14,6 +14,10 @@ Screen changes play lane 8's transitions and the change happens while they cover
 Hosting, joining and loading stay on the title: a **session panel** takes its middle and right columns (the window and lockup stay) and says what is happening in the lobby's own words, with three chevrons stepping while it waits, a track that fills over the 15 s a join waits before giving up (nothing else gets a bar, because nothing else is measurable) and **Cancel** (Esc / B). When a player of ours is in the world, the window closes over the view (lane 8's frame zoom) and the screens clear under it. Anything that goes wrong (every SteamLobby problem: no lobby, closed, friends-only, full, refused, wrong version, unreachable, host closed, host dropped, connection lost, network broken) opens the **problem panel**: an amber plate with the problem and how to fix it, the button that fixes it (Host again, Try again, Open Steam friends, Quit to desktop; greyed with its reason when it can't run) and **Back**. In local mode without Steam the title says friends can't join and how to fix it.
 In a game, **Esc** (or the pad's Start) opens the **in-game menu**: a frosted glass pane on the left over the running game (nothing pauses; there is no veil). **§ MENU**, "The game continues while this is open.", then **Back to game**, **Invite friends** (Steam only: hidden in local mode, greyed with its reason when Steam's overlay is off), **Settings** and **Leave game**; under them the focused button's explanation, the session line ("You are hosting. 3 players of 8." or "Hosted by Adam. …") and the keys row. On the right, the match lane's section (where the match stands, the host's Start / Rematch) sits in the pane's match slot, and while the run hasn't started a second glass pane shows **reception**: both firms side by side, four seats each, who sits there, Ready / Not ready / Fitting room, "Seat available" for the rest and how many are ready (read only; the lobby lane owns the ready board and the start). Leave asks first, in the host's words ("End the game for everyone?", or "Close your game?" when alone) or a client's ("Leave Adam's game?"). Esc / B is Back to game from the pane and goes back one step from Settings or the question; Start closes the whole menu from anywhere in it. While it is open the mouse is free and the player stands still, even mid-sprint.
 The HUD's **Esc · Menu** hint is the kit's key hint (Menu / Options on a pad), and the network readout sits on a kit plate (navy on white; Settings › Accessibility › Show network stats hides it).
+
+## Ownership and netcode boundary
+
+The UI kit is purely local client-side presentation. User preferences live locally in `PlayerPrefs` (`UiSettings`, `UiVideo`, `InputPrefs`, `UiAudio`, `UiGlassSettings`). `TitleScreen`, `SessionPanel`, `ProblemPanel`, and `InGameMenuScreen` read `SteamLobby` and `LobbyRoster` state and forward button clicks (`Host`, `JoinLocal`, `Invite`, `Leave`, `RetryJoin`), never authoring or syncing network state themselves.
 
 ## uGUI, not UI Toolkit
 
@@ -51,6 +55,7 @@ One asset, [UiTokens.asset](../../Assets/_Project/UI/Tokens/UiTokens.asset), des
 ## Motion
 
 `UiMotion` is the one driver: components `Wake` themselves while moving and drop out when settled; it ticks on unscaled time, allocates nothing per frame, and can be paused and stepped by hand (`Paused`, `Tick`) for captures.
+`UiMotion.EnsureSubCanvas(GameObject)` isolates animated HUD subtrees (`UiCrosshair`, `UiEdgeMarker`, `UiFocusFrame`) on their own nested sub-Canvas (without adding a `GraphicRaycaster`) so moving, scaling, or fading them does not dirty and rebuild the parent HUD canvas.
 `UiSpring` is the ζ / T spring from the feel table (interruptible: change `Target` mid-flight). `UiTween` runs cubic-bezier curves.
 **Reduce motion** (Settings) is the PlayerPrefs key `ui.reducedMotion`, shared with the title lane's `UiTransition`: slides and zooms become fades, the shake and breathing stop, the press stops moving the plate.
 
@@ -79,6 +84,7 @@ Events (frozen with lane 9; append only): None, HoverMove, Focus, Select, Confir
 ## Focus and cursor
 
 - One `UiFocusFrame` per kit canvas follows the selected control on a spring; it shows only after a key or pad press and hides when the mouse moves. The first arrow press after the mouse only reveals focus.
+- `UiFocusFrame` ticks while it has an active selected target on keys/pad or while fading (tracking targets that may be sliding with their panel), and returns `false` from `Tick` to sleep in `UiMotion` once faded out or unselected. `Follow`, `Bump`, and `WakeUp` wake it (`WakeUp` is needed when code selects an already-selected object, since uGUI raises no `OnSelect` event).
 - Navigation order is explicit: title top to bottom (a greyed-out Host is skipped); settings tab → rows → Reset ↔ Back; dialogs Confirm ↔ Stay.
 - The end of a list nudges the marks (edge bump). Held directions repeat at the token timing.
 - Left / right on a stepper, swatch row or slider changes the value instead of moving focus.
@@ -136,6 +142,10 @@ Changes apply at once (no Apply step; the mockup's Apply / unsaved-changes flow 
 - **Seal the Deal > Lanes > Set Up UI**: builds the tokens (once), sprites and component prefabs, and the screen prefabs when missing (each left alone once a person edits it, `GeneratedAssetGuard`), and adds KitUI (an instance of `Screens/KitCanvas.prefab`) and the kit crosshair to the open scene. Only adds.
 - **Seal the Deal > Lanes > Replace UI In Open Scene** (asks first): swaps the scene's KitUI for a fresh instance of the kit canvas, dropping anything changed on it in that scene. Shell (rebuilds every untouched kit prefab, screens included, then replaces KitUI in Lane_Integration): `UiKitSetup.ReplaceFromCommandLine`; use it after changing the screen builders. Shell: `-executeMethod CloseTheDeal.Editor.UI.UiKitSetup.SetUpFromCommandLine` (Lane_Integration.unity).
 - `GreyboxUiSetup.Ensure` adds the kit too (building its assets only if they are missing), so Set Up Scene (Greybox), Set Up Integration and Make Open Scene Playable (KitOffice) get it when they next run. Rebuild Game UI keeps the kit and points it at the new menu.
+- **Setup guards and reference safety:**
+  - `GeneratedAssetGuard` writes an MD5 fingerprint (ignoring `\r` so git CRLF line-ending differences across machines do not look like edits) into asset labels (`greybox-<hash>`), skipping any hand-made or hand-edited asset unless cleared with `Close the Deal > Greybox > Let the Tool Rebuild Selected`.
+  - Screen prefabs nest component prefabs, and rebuilding them generates new internal Unity file IDs (causing noisy YAML diffs for no functional change), so `UiKitSetup.BuildAssets(false)` only builds missing screen prefabs unless `Replace UI` explicitly asks to rebuild them.
+  - Before rebuilding or replacing `KitUI`, `UiKitSetup.ParkMatchSection()` temporarily moves the match lane's section back to `GameMenu` so `MatchMenuPanel` keeps its references, then `MoveMatchSection()` moves it into the new `InGameMenu/Content/MatchSlot`.
 - Captures: `-executeMethod CloseTheDeal.Editor.UI.UiKitCapture.RunFromShell -uiCaptureOut <dir> -uiCaptureMode capture|persist-write|persist-read|menu-rule -local [-lanePort n]` with the Editor binary, `-batchmode`, **without** `-quit` or `-nographics`. Writes the title and settings at three sizes, a state sheet per screen, the hover → press → push strip, a 30 fps clip sequence, a sound log and PASS / FAIL lines.
 
 ## Known limitations

@@ -4,16 +4,17 @@ using UnityEngine;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// The local player's hands in reception: each frame it picks the interactable they are near
-    /// and looking at, and feeds it the interact button. Local only, nothing networked; the
-    /// interactables send requests to the host themselves. Off while the game menu frees the
-    /// mouse or while something (the fitting room) has taken over the controls.
-    /// </summary>
+    /// <summary>Local ray-aim selector feeding interact press/hold/release to reception interactables. Design: docs/systems/LOBBY.md.</summary>
     [DisallowMultipleComponent]
     public sealed class LobbyInteractor : MonoBehaviour
     {
         public static LobbyInteractor Instance { get; private set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+        }
 
         /// <summary>The thing in reach changed (null = nothing). UI and sound listen.</summary>
         public event Action<LobbyInteractable> OnTargetChanged;

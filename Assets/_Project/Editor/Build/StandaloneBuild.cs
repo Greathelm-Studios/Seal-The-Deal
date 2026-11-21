@@ -10,19 +10,9 @@ using Debug = UnityEngine.Debug;
 
 namespace CloseTheDeal.Editor.Build
 {
-    /// <summary>
-    /// Builds the game to a standalone player that boots into the playable scene, and stamps it
-    /// with a build number and commit (BuildInfo). Changes no project setting: the scene list is
-    /// passed to this build only, and the version stays what Player Settings say (Steam lobbies
-    /// compare it). Menu: Seal the Deal > Build. Shell:
-    /// Unity -batchmode -quit -projectPath &lt;checkout&gt; -executeMethod CloseTheDeal.Editor.Build.StandaloneBuild.BuildFromCommandLine
-    ///   -playerTarget mac|windows -buildOut &lt;folder&gt; [-buildNumber N]
-    /// Exit code 0 = built; 2 = failed, with the reason in the log and in &lt;folder&gt;/build_report.txt.
-    /// Design: docs/systems/BUILD.md.
-    /// </summary>
+    /// <summary>Builds a standalone Windows/macOS player stamped with BuildInfo commit metadata.</summary>
     public static class StandaloneBuild
     {
-        /// <summary>What the player boots into. The integration scene is the whole game today; the title scene goes first once it exists.</summary>
         static readonly string[] Scenes = { "Assets/_Project/Scenes/Lanes/Lane_Integration.unity" };
 
         const string GameFileName = "SealTheDeal";
@@ -43,7 +33,6 @@ namespace CloseTheDeal.Editor.Build
             EditorApplication.Exit(ok ? 0 : 2);
         }
 
-        /// <summary>Builds, stamps and writes a short report beside the player. Returns true when the player was made.</summary>
         static bool Run(BuildTarget target, string outputFolder, int buildNumber)
         {
             var report = new StringBuilder();
@@ -103,7 +92,6 @@ namespace CloseTheDeal.Editor.Build
             return null;
         }
 
-        /// <summary>Where the player reads Application.streamingAssetsPath from.</summary>
         static string StreamingAssetsOf(BuildTarget target, string location)
         {
             if (target == BuildTarget.StandaloneOSX)
@@ -136,7 +124,6 @@ namespace CloseTheDeal.Editor.Build
 
         static int CommitCount() => int.TryParse(Git("rev-list --count HEAD"), out int count) ? count : 0;
 
-        /// <summary>One git query in the project folder; "" if git isn't there.</summary>
         static string Git(string arguments)
         {
             try

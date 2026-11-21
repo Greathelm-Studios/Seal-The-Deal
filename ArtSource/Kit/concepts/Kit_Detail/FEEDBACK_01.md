@@ -1,13 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-12
-  Prompt    : Alex on the kit detail sheets: "i dont like these, theyre very flat", follow the art bible
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Round-2 brief to Codex. Round 1 answered a brief that asked for millimetre detail, so it
-              came back as flat, evenly lit illustrations; this re-aims it at the art bible's large forms,
-              graphic colour blocking and staging. It overrides REQUEST.md where they differ.
--->
 # Kit detail, round 2 — follow the art bible
 
 **From:** Alex, drafted by Claude · **Date:** 2026-11-12 · Read with [REQUEST.md](REQUEST.md); this wins where they differ.

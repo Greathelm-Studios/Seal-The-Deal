@@ -5,16 +5,10 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// Settings: Controls, Video, Audio and Accessibility tabs (Q / E or the shoulder buttons switch), each a
-    /// UiSettingsPage with its rows and its right-hand preview. Every change applies at once and is written to disk when
-    /// the screen closes; Reset to defaults puts the open tab back. Only rows whose game-side value exists are shown
-    /// (docs/systems/UI_KIT.md "Settings").
-    /// </summary>
+    /// <summary>Tabbed Settings screen (Controls, Video, Audio, Accessibility) with immediate apply and flush on close.</summary>
     [AddComponentMenu("Seal the Deal/UI/Settings Screen")]
     public sealed class SettingsScreen : UiScreen
     {
-        /// <summary>Opens and closes under lane 8's PaneSlide (docs/systems/UI_KIT.md "Screens").</summary>
         public override CloseTheDeal.UI.Title.UiTransitionKind? Through => CloseTheDeal.UI.Title.UiTransitionKind.PaneSlide;
 
         [Header("Tabs")]
@@ -109,6 +103,7 @@ namespace CloseTheDeal.UI
                 _subscribed.Saved -= OnSaved;
             _subscribed = _tabs.CurrentPage;
             _subscribed.Saved += OnSaved;
+            _status.Set(KeptLine, UiStatusKind.Info);
             string title = _subscribed.Title;
             if (_breadcrumb != null)
                 _breadcrumb.text = "SEAL THE DEAL · SETTINGS · " + title.ToUpperInvariant();
@@ -123,13 +118,16 @@ namespace CloseTheDeal.UI
             Link();
         }
 
-        /// <summary>Tabs across the top, the open page's rows down the middle, Reset and Back at the bottom.</summary>
         void Link()
         {
             UiSettingsPage page = _tabs.CurrentPage;
             if (page == null)
                 return;
-            _reset.interactable = !page.AtDefaults;
+            EventSystem events = EventSystem.current;
+            bool canReset = !page.AtDefaults;
+            if (!canReset && events != null && events.currentSelectedGameObject == _reset.gameObject)
+                events.SetSelectedGameObject(_back.gameObject);
+            _reset.interactable = canReset;
             Selectable footer = _reset.interactable ? _reset : (Selectable)_back;
             UiButton tab = _tabs.CurrentTab;
             page.LinkRows(tab, footer);
@@ -150,7 +148,6 @@ namespace CloseTheDeal.UI
             ShowChanges();
         }
 
-        /// <summary>Rewrites the summary under the rows: only when the tab or a value changed, never per frame.</summary>
         void ShowChanges()
         {
             UiSettingsPage page = _tabs.CurrentPage;

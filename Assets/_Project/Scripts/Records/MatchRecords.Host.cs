@@ -9,10 +9,6 @@ using UnityEngine;
 
 namespace CloseTheDeal.Records
 {
-    /// <summary>
-    /// The host's half: counts every player's match from host-side events only, while the match
-    /// is Running, and sends each change out. Nothing here runs on a client.
-    /// </summary>
     public sealed partial class MatchRecords
     {
         struct LastHit
@@ -27,6 +23,7 @@ namespace CloseTheDeal.Records
         readonly HashSet<Pickup> _watchedThrows = new();
 
         bool _running;
+        bool _serverHooked;
         uint _hostKey;
         int _carrierClient = -1;
         float _carryStart;
@@ -36,12 +33,34 @@ namespace CloseTheDeal.Records
         bool IsHost => _net != null && _net.IsServerStarted;
         bool IsHostCounting => IsHost && _running;
 
-        // ---- Hooks -------------------------------------------------------------------------------
-
         void HostHookNetwork(NetworkManager net)
         {
-            net.ServerManager.OnRemoteConnectionState += HostConnectionChanged;
-            net.ServerManager.OnAuthenticationResult += HostAuthenticated;
+            net.ServerManager.OnServerConnectionState += HostServerConnectionChanged;
+            if (net.IsServerStarted)
+                HostHookServerEvents();
+        }
+
+        void HostUnhookNetwork(NetworkManager net)
+        {
+            net.ServerManager.OnServerConnectionState -= HostServerConnectionChanged;
+            HostUnhookServerEvents();
+        }
+
+        void HostServerConnectionChanged(ServerConnectionStateArgs args)
+        {
+            if (args.ConnectionState == LocalConnectionState.Started)
+                HostHookServerEvents();
+            else if (args.ConnectionState == LocalConnectionState.Stopped)
+                HostUnhookServerEvents();
+        }
+
+        void HostHookServerEvents()
+        {
+            if (_serverHooked || _net == null)
+                return;
+            _serverHooked = true;
+            _net.ServerManager.OnRemoteConnectionState += HostConnectionChanged;
+            _net.ServerManager.OnAuthenticationResult += HostAuthenticated;
             Health.AnyDied += HostDied;
             Health.AnyDamaged += HostDamaged;
             FirmMember.OnFellOut += HostFellOut;
@@ -50,10 +69,16 @@ namespace CloseTheDeal.Records
             Pickup.ServerThrowLanded += HostThrowLanded;
         }
 
-        void HostUnhookNetwork(NetworkManager net)
+        void HostUnhookServerEvents()
         {
-            net.ServerManager.OnRemoteConnectionState -= HostConnectionChanged;
-            net.ServerManager.OnAuthenticationResult -= HostAuthenticated;
+            if (!_serverHooked)
+                return;
+            _serverHooked = false;
+            if (_net != null)
+            {
+                _net.ServerManager.OnRemoteConnectionState -= HostConnectionChanged;
+                _net.ServerManager.OnAuthenticationResult -= HostAuthenticated;
+            }
             Health.AnyDied -= HostDied;
             Health.AnyDamaged -= HostDamaged;
             FirmMember.OnFellOut -= HostFellOut;
@@ -63,7 +88,7 @@ namespace CloseTheDeal.Records
             UnwatchThrows();
         }
 
-        /// <summary>Pickups used up without a release (a gun taken into a slot) never unsubscribe themselves.</summary>
+        // Unhook consumed pickups (e.g. guns taken into slots) that never fire Released.
         void UnwatchThrows()
         {
             foreach (Pickup pickup in _watchedThrows)
@@ -91,8 +116,6 @@ namespace CloseTheDeal.Records
             match.OnClosed -= HostClosed;
         }
 
-        // ---- Phase -------------------------------------------------------------------------------
-
         void HostPhaseChanged(MatchPhase previous, MatchPhase next)
         {
             if (!IsHost)
@@ -105,7 +128,11 @@ namespace CloseTheDeal.Records
             else if (next == MatchPhase.Ended && _running)
                 HostFinish();
             else
+            {
                 _running = false;
+                if (_net != null && _match != null)
+                    enabled = false;
+            }
         }
 
         void HostClosed()
@@ -115,6 +142,12 @@ namespace CloseTheDeal.Records
             _hostKey = 0;
             _carrierClient = -1;
             _tally.Clear();
+            _joinedAt.Clear();
+            _lastHit.Clear();
+            _carried.Clear();
+            UnwatchThrows();
+            if (_net != null && _match != null)
+                enabled = false;
         }
 
         void HostReset()
@@ -135,6 +168,7 @@ namespace CloseTheDeal.Records
         void HostBeginRunning()
         {
             _running = true;
+            enabled = true;
             _nextFloorCheck = 0f;
             HostAddMissingPlayers();
         }
@@ -143,6 +177,8 @@ namespace CloseTheDeal.Records
         {
             HostEndCarry(Time.time);
             _running = false;
+            if (_net != null && _match != null)
+                enabled = false;
             MatchSnapshot snapshot = _match.Snapshot;
             float end = Time.time;
             IReadOnlyList<FirmMember> members = FirmMember.All;
@@ -170,8 +206,6 @@ namespace CloseTheDeal.Records
                 _net.ServerManager.Broadcast(owner, new MatchFinalBroadcast { Final = final });
             }
         }
-
-        // ---- Players -----------------------------------------------------------------------------
 
         void HostRosterChanged()
         {
@@ -210,7 +244,6 @@ namespace CloseTheDeal.Records
 
         readonly List<int> _forget = new();
 
-        /// <summary>Drops the hits this player took and the window-kill credit they held on others.</summary>
         void ForgetHits(int clientId)
         {
             _lastHit.Remove(clientId);
@@ -236,7 +269,6 @@ namespace CloseTheDeal.Records
                 _net.ServerManager.Broadcast(connection, new MatchLineBroadcast { MatchKey = _hostKey, Line = line });
         }
 
-        /// <summary>The player's line so far, made (and their start time noted) on first use.</summary>
         MatchLine HostLine(FirmMember member)
         {
             int id = member.Owner.ClientId;
@@ -272,8 +304,6 @@ namespace CloseTheDeal.Records
 
         static ushort Seconds(float seconds) => (ushort)Mathf.Clamp(Mathf.FloorToInt(seconds), 0, ushort.MaxValue);
         static ushort Add(ushort value) => value == ushort.MaxValue ? value : (ushort)(value + 1);
-
-        // ---- Deaths and falls --------------------------------------------------------------------
 
         void HostDamaged(Health health, DamageInfo info)
         {
@@ -333,7 +363,6 @@ namespace CloseTheDeal.Records
 
         static bool IsDead(FirmMember member) => member.TryGetComponent(out Health health) && health.IsDead;
 
-        /// <summary>The attacker's player if they are on the other firm; null for the world, yourself or a teammate.</summary>
         static FirmMember Rival(FirmMember victim, int attackerClientId)
         {
             if (attackerClientId < 0)
@@ -347,8 +376,6 @@ namespace CloseTheDeal.Records
             var entry = new KillEntry { VictimClientId = victim, KillerClientId = killer != null ? killer.Owner.ClientId : -1, Kind = kind };
             _net.ServerManager.Broadcast(new KillBroadcast { Entry = entry });
         }
-
-        // ---- Briefcase ---------------------------------------------------------------------------
 
         void HostBriefcaseChanged(BriefcaseStatus previous, BriefcaseStatus next)
         {
@@ -411,10 +438,10 @@ namespace CloseTheDeal.Records
             HostPut(line);
         }
 
-        // ---- Throws ------------------------------------------------------------------------------
-
         void HostItemTaken(ItemCarrier carrier, Pickup pickup)
         {
+            if (!IsHostCounting)
+                return;
             if (pickup != null && _watchedThrows.Add(pickup))
                 pickup.Released += HostReleased;
         }
@@ -437,8 +464,10 @@ namespace CloseTheDeal.Records
 
         void HostThrowLanded(Pickup item, int throwerClientId, GameObject hit, float damage)
         {
+            if (!IsHostCounting || hit == null)
+                return;
             FirmMember thrower = MemberOf(throwerClientId);
-            if (!IsHostCounting || thrower == null || hit == null)
+            if (thrower == null)
                 return;
             FirmMember struck = hit.GetComponentInParent<FirmMember>();
             if (struck == null || struck.Owner == null || Rival(struck, throwerClientId) == null)
@@ -449,9 +478,6 @@ namespace CloseTheDeal.Records
             HostPut(line);
         }
 
-        // ---- Climb -------------------------------------------------------------------------------
-
-        /// <summary>Host, while Running, a few times a second: notes each player's highest floor. Sends only when one rises.</summary>
         void HostSampleFloors()
         {
             if (Time.time < _nextFloorCheck || _match == null)

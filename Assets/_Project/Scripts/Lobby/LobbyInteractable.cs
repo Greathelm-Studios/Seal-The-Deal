@@ -3,17 +3,19 @@ using UnityEngine;
 
 namespace CloseTheDeal.Lobby
 {
-    /// <summary>
-    /// Something in reception a player can walk up to and use with the interact button:
-    /// the desk, a firm's sign-in stand, the fitting-room mirror. The local LobbyInteractor
-    /// picks the one the player is looking at and passes on presses, holds and releases.
-    /// </summary>
+    /// <summary>Base class for reception interactables (desk, firm stands, fitting-room mirror).</summary>
     public abstract class LobbyInteractable : MonoBehaviour
     {
         static readonly List<LobbyInteractable> _all = new();
 
         /// <summary>Every enabled interactable in the scene. Read-only use.</summary>
         public static IReadOnlyList<LobbyInteractable> All => _all;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            _all.Clear();
+        }
 
         [Tooltip("The point the player has to look at and stand near, in metres from this object. Usually the middle of the counter top or the mirror's face.")]
         [SerializeField] Vector3 _focusOffset = new(0f, 1.1f, 0f);

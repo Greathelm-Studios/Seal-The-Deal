@@ -1,82 +1,52 @@
 # RECORDS
 
-**Status:** Current (in `buffer`; built by the gaps lane) · **Last updated:** 2026-11-14
+**Status:** Current · **Last updated:** 2026-11-21
 
 ## What the player sees
 
-Nothing drawn yet: this is the data a scoreboard, kill feed and results screen read. During a match every player's numbers (kills, deaths, falls, window kills, briefcase pick-ups and steals, floors opened, throws, seconds with the briefcase, best floor) are known on every machine, and every death produces one kill-feed line. When the match ends each player gets their own final record, which their profile keeps ([PROFILE.md](PROFILE.md)).
+Data layer powering scoreboards, the kill feed, the death screen, and career stats. During a match, every player's numbers (kills, deaths, falls, window kills, briefcase pick-ups and steals, floors opened, throws, throw hits, carry seconds, seconds played, best floor) are known on every machine, and every death or fall produces one kill-feed line. When a match finishes, each player receives their own final record (`MatchFinal`), which their local profile persists ([PROFILE.md](PROFILE.md)).
 
-A **window kill** is the GDD's first moment: a rival who falls out of the building within 6 s of your hit counts as your kill.
+A **window kill** credits a rival who falls out of the building within `WindowKillSeconds` (6 s) of taking rival damage.
 
-## Who owns what (AGENTS.md §3)
+## Ownership and netcode boundary (`AGENTS.md §3`)
 
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
-| Every player's numbers | **Host** counts them from host-side events only, while the match is Running | `MatchLineBroadcast` (~30 bytes) to everyone | Once per change: a kill (2 lines), a fall, a pick-up, a floor, a throw, end of a carry, a new best floor. Nothing per frame. |
-| New match | **Host**, at the countdown | `MatchResetBroadcast` (4 bytes) to everyone | Once per match |
-| Kill-feed line | **Host** decides killer and kind | `KillBroadcast` (9 bytes) to everyone | Once per death or fall |
-| Final record | **Host**, at the end | `MatchFinalBroadcast` (~40 bytes) to each player, their own only | Once per match per player |
-| Late joiner | **Host** sends the match's lines so far when they authenticate | One reset + one line per player | Once per join |
-| Leaver | **Host** removes their line | `MatchLineBroadcast` with `Gone` | Once per leave |
-| Profile | Each machine, its own, **only from the host's final record** | Nothing | — |
+| Player stats (`MatchLine`) | Host counts from host-side events while Running | `MatchLineBroadcast` (~30 bytes) to all | On change only |
+| Match reset | Host on Countdown | `MatchResetBroadcast` (4 bytes) | Once per match |
+| Kill-feed line | Host decides killer and `KillKind` | `KillBroadcast` (9 bytes) | Once per death or fall |
+| Final record | Host at match end | `MatchFinalBroadcast` (~40 bytes) to that owner only | Once per match per player |
+| Late joiner sync | Host sends current lines on auth | Reset + one line per player | Once per join |
+| Leaver removal | Host removes line and clears hit/carry state | `MatchLineBroadcast` (`Gone = true`) | Once per leave |
+| Career profile | Each PC writes its own from `MatchFinal` only | Nothing | Never |
 
-FishNet broadcasts, not a NetworkObject: `MatchRecords` is a plain scene object, so no prefab or networked-object list changes. **Bandwidth at 8 players:** a busy minute is a few dozen ~30-byte messages to 7 clients, well under 1 KB/s.
+`MatchRecords` uses FishNet broadcasts on a plain scene object rather than a `NetworkObject` (`< 1 KB/s` at 8 players). Clients never send stat updates to the host.
 
-**A client can't claim a stat:** no message goes from a client to the host, every machine's numbers are the host's, and the profile is written only from the final record the host sends. The scripted check spoils a client's own copy with 99 kills before the end and shows the profile gets the host's 0.
+## Architecture and design rationale
 
-## Rules the code keeps
-
-- Counting happens only on the host and only while Running. The countdown resets every line.
-- Bodies without a `FirmMember` (target dummies) are not counted.
-- A kill counts only against the other firm. Dying to the world, yourself or a teammate is a death with no credit (`KillKind.Died`).
-- A fall is not a death. It is credited as a window kill to the last rival who hit the faller within **Window Kill Seconds**.
-- A steal is a pick-up from the firm that held or last held the briefcase before.
-- Carry time ends when the briefcase leaves the carrier's hands, the carrier leaves, or the match ends.
-- Best floor is sampled by the host every **Floor Check Seconds** (default 0.5 s) and also rises when the carrier opens a floor.
-- **Only a finished match is recorded.** The host leaving, the client leaving or the match closing sends no final record.
-- Throws count items thrown (`ReleaseKind.Thrown`); `ThrowHits` counts those that hit a player of the other firm.
-
-## Designer values
-
-On the scene's **Records** object (`MatchRecords`): **Window Kill Seconds** (6) and **Floor Check Seconds** (0.5). Both have tooltips.
+- **Match epoch key (`_hostKey` / `MatchKey`):** Countdown sets `_hostKey = Snapshot.PhaseTick` and broadcasts `MatchResetBroadcast`. Clients ignore `MatchLineBroadcast` packets whose `MatchKey` differs and deduplicate `MatchFinalBroadcast` by `_lastFinalKey`, preventing stale broadcasts across rematches or duplicate final writes.
+- **Counting rules (`MatchRecords.Host.cs`):** Counts only on the host while `MatchPhase.Running`. Bodies without `FirmMember` (target dummies) are ignored. Only rival hits qualify for kills/window kills/throw hits; dead bodies flung out by blasts are not double-counted as falls (`IsDead` guard). `_lastHit`, `_joinedAt`, `_carried`, and `_tally` are cleaned on disconnect because FishNet reuses `ClientId`s. `_watchedThrows` unhooks `Pickup.Released` on reset or stop for pickups consumed without releasing (such as guns taken into weapon slots).
+- **Best-floor sampling:** `HostSampleFloors` polls `FirmMember.All` every `FloorCheckSeconds` (0.5 s) while Running and updates late joiners' `Firm` once seated.
+- **Only finished matches persist:** Disconnecting mid-match or host shutdown (`HostClosed`, `OnClientConnection` Stopped) clears local lines without emitting `FinalRecord`.
+- **Death report (`LocalDeath`):** Translates `MatchRecords.Kill` + `Health.AnyRespawned` for the local player into `Down(DeathReport)` and `Back` events for the combat HUD death card.
 
 ## UI contract
 
-On `MatchRecords.Instance` (namespace `CloseTheDeal.Records`), every machine. Read on events; never poll.
+On `MatchRecords.Instance` (`CloseTheDeal.Records`), read on events:
 
-| Member | Type | Notes |
-|---|---|---|
-| `Lines` | `IReadOnlyList<MatchLine>` | Everyone in the match, in arrival order. |
-| `TryGetLine(clientId, out line)`, `TryGetLocalLine(out line)` | `bool` | |
-| `TryGetLastFinal(out final)` | `bool` | The last final record this session, for a results screen opened late. |
-| `MatchRecords.NameOf(clientId)` | `string` | Name from the reception board; "Associate N" if the board doesn't know them. |
-| `LineChanged` | `Action<MatchLine>` | A line appeared or changed. |
-| `LineRemoved` | `Action<int clientId>` | A player left. |
-| `Cleared` | `Action` | New match, or this machine left the game. |
-| `Kill` | `Action<KillEntry>` | `VictimClientId`, `KillerClientId` (-1 = nobody), `Kind`: `Killed`, `KnockedOut` (window kill), `Fell`, `Died`. |
-| `FinalRecord` | `Action<MatchFinal>` | This player's own record: `Winner`, `Reason` (`MatchEndReason` as byte), `EndSeconds`, `Players`, `Line`. Once per match. |
+- **State:** `Lines` (`IReadOnlyList<MatchLine>`), `TryGetLine(clientId, out line)`, `TryGetLocalLine(out line)`, `TryGetLastFinal(out final)`, `MatchRecords.NameOf(clientId)`.
+- **Events:** `LineChanged(MatchLine)`, `LineRemoved(clientId)`, `Cleared`, `Kill(KillEntry)`, `FinalRecord(MatchFinal)`.
+- **`LocalDeath`:** `Down(DeathReport)` (`Kind`, `KillerClientId`, `RespawnSeconds`, `ComesBackOn`), `Back`.
 
-`MatchLine`: `ClientId`, `Firm`, `Kills`, `Deaths`, `Falls`, `WindowKills`, `Pickups`, `Steals`, `FloorsOpened`, `Throws`, `ThrowHits` (thrown items that hit a rival, from the pickups lane's `Pickup.ServerThrowLanded`), `CarrySeconds`, `SecondsPlayed` (set at the end), `BestFloor`.
+## Files, tuning, and setup
 
-### Death report (for the combat HUD's death card)
-
-`LocalDeath` (same object, this machine's player only): `Down(DeathReport)` with `Kind`, `KillerClientId` (-1 = nobody), `RespawnSeconds` (the body's respawn time; 0 for a fall, which puts you back at once) and `ComesBackOn` ("Floor 4", or the checkpoint's name for a fall); `Back` when they are up again. Built from the host's kill-feed line, so it fires only while a match runs. A death card gives way to the result when `MatchDirector.OnMatchEnded` fires. Lane 2 draws it (agreed).
-
-Firm colour and name: `MatchDirector.Instance.ColourFor(line.Firm)`, `FirmName(line.Firm)`.
-
-## Scripts
-
-[Assets/_Project/Scripts/Records/](../../Assets/_Project/Scripts/Records/): `MatchLine.cs` (data and wire messages), `MatchRecords.cs` (every machine), `MatchRecords.Host.cs` (counting), `LocalDeath.cs` (death report).
-
-## Setup
-
-**No scene is edited.** `RecordsInstaller` adds `Prefabs/Gaps/Records.prefab` at run time to every scene that has a `MatchDirector` and no `MatchRecords` yet, so `Lane_Integration`, the greybox and any rebuilt scene get it without a setup step. The prefab holds `MatchRecords`, `ProfileKeeper`, `LocalDeath`, `MatchSecretary`, `FirstRunHints` and the **Nameplates** canvas. It is named by `Resources/Gaps/RecordsInstaller.asset`; delete that asset to turn it all off. A scene that already holds a `MatchRecords` keeps its own.
-
-**Seal the Deal > Lanes > Gaps > Build Records Prefab** makes the prefab, the installer and the secretary's lines and hints assets if missing (shell: `-executeMethod CloseTheDeal.Editor.Lanes.GapsLaneSetup.BuildFromCommandLine`). It never changes one a person edited. Tune values on the prefab. **Run Records Check (solo)** on the same menu plays `Lane_Integration` by script; host and client runs are in [GapsLaneSetup.cs](../../Assets/_Project/Editor/Lanes/GapsLaneSetup.cs).
+- Scripts under [Assets/_Project/Scripts/Records/](../../Assets/_Project/Scripts/Records/): `MatchLine.cs`, `MatchRecords.cs`, `MatchRecords.Host.cs`, `LocalDeath.cs`, `RecordsInstaller.cs`.
+- Tuning on **Records** (`MatchRecords`): `WindowKillSeconds` (6 s), `FloorCheckSeconds` (0.5 s).
+- Runtime install: `RecordsInstaller` (`Resources/Gaps/RecordsInstaller.asset`) spawns `Prefabs/Gaps/Records.prefab` (`MatchRecords`, `ProfileKeeper`, `LocalDeath`, `MatchSecretary`, `FirstRunHints`, **Nameplates**) into any scene with a `MatchDirector` and no `MatchRecords`. Rebuild via **Seal the Deal > Lanes > Gaps > Build Records Prefab**.
 
 ## Known limitations
 
-- **Names:** without Steam, players read "Associate 1", "Associate 2" (seen in the scripted runs).
-- **A dropped client who rejoins starts a new line**: identity is the connection, not the Steam id.
-- **Fall-outs are heard from `FirmMember.OnFellOut`**, an observers message the host also receives as its own client. A dedicated server with no local player would miss falls; the game has none.
-- Nothing here is seen over Steam, on two computers, or with more than one client.
+- Without Steam, player names fall back to "Associate 1", "Associate 2".
+- Disconnecting and rejoining starts a new `MatchLine` because identity is tracked by connection `ClientId` rather than Steam ID.
+- Fall-outs listen to `FirmMember.OnFellOut` (an `ObserversRpc` also delivered to the host client), assuming no headless dedicated server without a local client.
+- Not yet verified over Steam across multiple computers with 3+ players.

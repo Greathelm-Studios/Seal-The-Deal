@@ -6,14 +6,7 @@ using UnityEngine;
 
 namespace CloseTheDeal.Integration
 {
-    /// <summary>
-    /// Host only. Every time the towers are built (each match start and rematch builds them
-    /// fresh from a new seed), puts the loot table's guns, gadgets and furniture loose on their
-    /// floors, the same spot in both towers, and clears last match's away first. Guns swapped
-    /// out of a full set of slots are spawned here too, so a rebuild clears them as well.
-    /// Clients see the spawns through FishNet and the motion through Switchboard.
-    /// Owner: host. Synced: one spawn message per thing, per match. Design: docs/systems/INTEGRATION.md.
-    /// </summary>
+    /// <summary>Host-only seeded floor loot spawner spread across frames on arena rebuild. Design: docs/systems/INTEGRATION.md.</summary>
     [DisallowMultipleComponent]
     public sealed class FloorLoot : NetworkBehaviour
     {
@@ -23,6 +16,7 @@ namespace CloseTheDeal.Integration
         const float ProbeAbove = 1f;
         const float ProbeDepth = 1.4f;
         const float FloorTolerance = 0.15f;
+        const int FloorsPerFrame = 2;
 
         readonly List<NetworkObject> _spawned = new();
         readonly List<Vector3> _usedOnFloor = new();
@@ -31,11 +25,22 @@ namespace CloseTheDeal.Integration
         uint _placedForSeed;
         int _blockMask;
         int _floorMask;
+        System.Random _spawnRandom;
+        int _nextFloor;
+        int _roofFloor;
+        int _unplacedCount;
+        bool _spawning;
 
         /// <summary>How many things this match put down, swapped-out guns included. Host only.</summary>
         public int SpawnedCount => _spawned.Count;
 
         public static FloorLoot Instance { get; private set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            Instance = null;
+        }
 
         void Awake()
         {
@@ -48,9 +53,10 @@ namespace CloseTheDeal.Integration
         void Start()
         {
             Hook();
+            if (!_spawning)
+                enabled = false;
         }
 
-        /// <summary>Finds the tower and match once, from Start or from the server starting, whichever comes first.</summary>
         bool Hook()
         {
             if (_match != null)
@@ -72,6 +78,7 @@ namespace CloseTheDeal.Integration
 
         void OnDestroy()
         {
+            CancelSpawnQueue();
             if (Instance == this)
                 Instance = null;
             if (_tower != null)
@@ -92,10 +99,11 @@ namespace CloseTheDeal.Integration
         public override void OnStopServer()
         {
             base.OnStopServer();
+            CancelSpawnQueue();
+            _placedForSeed = 0;
             _spawned.Clear();
         }
 
-        /// <summary>The floors, plaza and gates are in place for this seed; the furniture already stands on them.</summary>
         void OnArenaChanged()
         {
             if (!IsServerStarted || _table == null || !_match.Arena.Ready || _placedForSeed == _tower.Seed)
@@ -103,17 +111,67 @@ namespace CloseTheDeal.Integration
 
             _placedForSeed = _tower.Seed;
             DespawnAll();
-            // The floors were moved into place after they were made; queries must see them there.
+            // Floors were just placed during build; sync transforms before placement physics checks.
             Physics.SyncTransforms();
-            var random = new System.Random(unchecked((int)_tower.Seed));
-            int left = 0;
-            for (int floor = 1; floor < _match.Arena.RoofFloor; floor++)
-                left += PlaceFloor(floor, random);
-
-            Debug.Log($"[Integration] Put {_spawned.Count} things on the floors for this match" + (left > 0 ? $"; {left} found no room and were left out." : "."));
+            _spawnRandom = new System.Random(unchecked((int)_tower.Seed));
+            _nextFloor = 1;
+            _roofFloor = _match.Arena.RoofFloor;
+            _unplacedCount = 0;
+            if (_nextFloor < _roofFloor)
+            {
+                _spawning = true;
+                enabled = true;
+            }
+            else
+            {
+                Debug.Log($"[Integration] Put {_spawned.Count} things on the floors for this match.");
+            }
         }
 
-        /// <summary>Every line of the table for this floor, once per tower. Returns how many found no room.</summary>
+        void Update()
+        {
+            if (!_spawning)
+            {
+                enabled = false;
+                return;
+            }
+
+            StepSpawnQueue();
+        }
+
+        void StepSpawnQueue()
+        {
+            if (!IsServerStarted || _table == null || _match == null || !_match.Arena.Ready)
+            {
+                CancelSpawnQueue();
+                return;
+            }
+
+            int end = Mathf.Min(_nextFloor + FloorsPerFrame, _roofFloor);
+            while (_nextFloor < end)
+            {
+                _unplacedCount += PlaceFloor(_nextFloor, _spawnRandom);
+                _nextFloor++;
+            }
+
+            if (_nextFloor >= _roofFloor)
+            {
+                int left = _unplacedCount;
+                CancelSpawnQueue();
+                Debug.Log($"[Integration] Put {_spawned.Count} things on the floors for this match" + (left > 0 ? $"; {left} found no room and were left out." : "."));
+            }
+        }
+
+        void CancelSpawnQueue()
+        {
+            _spawning = false;
+            _spawnRandom = null;
+            _nextFloor = 0;
+            _roofFloor = 0;
+            _unplacedCount = 0;
+            enabled = false;
+        }
+
         int PlaceFloor(int floor, System.Random random)
         {
             _usedOnFloor.Clear();
@@ -140,7 +198,6 @@ namespace CloseTheDeal.Integration
             return left;
         }
 
-        /// <summary>A random spot on the open floor, in the floor's own space, that is free in both towers.</summary>
         bool TryFindSpot(int floor, System.Random random, out Vector3 local, out float yaw)
         {
             TowerProfile profile = _match.Arena.Profile;
@@ -189,7 +246,6 @@ namespace CloseTheDeal.Integration
             return true;
         }
 
-        /// <summary>The building's floor right under the spot, and nothing at all in the room the thing needs.</summary>
         bool Standable(Vector3 spot)
         {
             if (!Physics.Raycast(spot + Vector3.up * ProbeAbove, Vector3.down, out RaycastHit ground, ProbeDepth, _floorMask, QueryTriggerInteraction.Ignore))
@@ -204,31 +260,29 @@ namespace CloseTheDeal.Integration
 
         static float Range(System.Random random, float min, float max) => min + (float)random.NextDouble() * (max - min);
 
-        // ---- Spawning --------------------------------------------------------------------------
-
         void SpawnAt(NetworkObject prefab, Vector3 position, Quaternion rotation)
         {
-            // Things taken and used up mid-match (guns) are gone already; forget them.
-            for (int i = _spawned.Count - 1; i >= 0; i--)
-            {
-                if (_spawned[i] == null || !_spawned[i].IsSpawned)
-                    _spawned.RemoveAt(i);
-            }
-
             NetworkObject thing = NetworkManager.GetPooledInstantiated(prefab, position, rotation, true);
             ServerManager.Spawn(thing);
             _spawned.Add(thing);
         }
 
-        /// <summary>
-        /// Host only. Puts a thing loose in the level mid-match (a gun swapped out of full slots),
-        /// moving at the given velocity. It is cleared with the rest at the next build.
-        /// </summary>
+        void PruneDeadSpawned()
+        {
+            for (int i = _spawned.Count - 1; i >= 0; i--)
+            {
+                if (_spawned[i] == null || !_spawned[i].IsSpawned)
+                    _spawned.RemoveAt(i);
+            }
+        }
+
+        /// <summary>Host only. Spawns a loose networked object mid-match (e.g. a swapped-out gun) tracked for rebuild cleanup.</summary>
         public NetworkObject ServerSpawnLoose(NetworkObject prefab, Vector3 position, Quaternion rotation, Vector3 velocity)
         {
             if (!IsServerStarted || prefab == null)
                 return null;
 
+            PruneDeadSpawned();
             SpawnAt(prefab, position, rotation);
             NetworkObject thing = _spawned[_spawned.Count - 1];
             if (thing.TryGetComponent(out Rigidbody body))
@@ -242,6 +296,7 @@ namespace CloseTheDeal.Integration
 
         void DespawnAll()
         {
+            CancelSpawnQueue();
             if (!IsServerStarted)
                 return;
 

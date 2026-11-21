@@ -1,13 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-12
-  Prompt    : Alex: "lets actually work on assets now like proper ones" -> upgrade the kit, concepts first
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Brief to Codex for detail concepts of the existing kit. The kit is clean blocks that match
-              the approved office direction; this asks what each family looks like as finished game art
-              (edges, trims, joints, hardware, surfaces), so Alex can pick a level before it is modelled.
--->
 # Kit detail pass — request to Codex
 
 **From:** Alex (environment artist), drafted by Claude · **Date:** 2026-11-12 · **Status:** Waiting for Codex

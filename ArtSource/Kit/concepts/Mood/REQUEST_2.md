@@ -1,12 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-15
-  Prompt    : Alex turned down mood directions A, B and C ("none of these") and sent 14 references
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Second brief to Codex for KitOffice mood paintovers, built from Alex's own references, so the next pick is
-              between directions he pointed at rather than ones we guessed.
--->
 # KitOffice mood paintovers, round 2: request to Codex
 
 **From:** Alex (environment artist), drafted by Claude · **Date:** 2026-11-15 · **Status:** Waiting for Codex

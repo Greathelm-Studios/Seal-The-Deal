@@ -4,14 +4,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// One screen or dialog in the kit's screen stack. A dialog slides and fades in over the screen below, behind a
-    /// paper veil. Full screens change through paper white, never through a muddy mix of the two: the old screen's
-    /// content fades and its sky window rolls up (its paper stays), then the new screen's paper settles over it
-    /// (paper on paper, unseen), its sky rolls down and its lines reveal one after another. Reduce motion turns the
-    /// slides and the roll into fades. Input works from the first frame of the show; only the visuals wait.
-    /// Subclasses fill in what the screen says and does. Design: docs/systems/UI_KIT.md "Screens".
-    /// </summary>
+    /// <summary>Base class for screens and modal dialogs managed by UiScreenStack.</summary>
     [RequireComponent(typeof(CanvasGroup))]
     public class UiScreen : MonoBehaviour, IUiAnimated
     {
@@ -48,10 +41,7 @@ namespace CloseTheDeal.UI
 
         public bool IsDialog => _isDialog;
 
-        /// <summary>
-        /// Lane 8's transition the stack plays when this screen is opened over another or closed back to it (the change
-        /// happens while the view is covered). Null: the screen's own slide and fade only (dialogs, the quit question).
-        /// </summary>
+        /// <summary>Optional full-screen transition that covers swaps to or from this screen.</summary>
         public virtual CloseTheDeal.UI.Title.UiTransitionKind? Through => null;
 
         /// <summary>The sound the stack plays as this screen opens: PanelOpen for a dialog, Transition for a screen.</summary>
@@ -95,10 +85,6 @@ namespace CloseTheDeal.UI
         /// <summary>Called as the screen starts to hide.</summary>
         protected virtual void OnHiding() { }
 
-        /// <summary>
-        /// Opens the screen. For a full screen, delay is how long the screen below takes to clear its content: this one
-        /// waits that long before its paper settles, so the change goes through paper. Input is live at once.
-        /// </summary>
         internal void Show(bool fromBelow, float delay = 0f)
         {
             bool stillShowing = gameObject.activeSelf && _hiding; // Brought back mid-hide: carry on from where it is.
@@ -164,10 +150,6 @@ namespace CloseTheDeal.UI
             UiMotion.Wake(this);
         }
 
-        /// <summary>
-        /// Ends the screen's show or hide motion at once (a hiding screen switches off). The stack calls it for a change
-        /// made under one of lane 8's transitions, so the reveal shows the new screen finished, not still sliding in.
-        /// </summary>
         internal void Settle()
         {
             _alpha.Snap(_alpha.To);

@@ -9,18 +9,7 @@ using UnityEngine.InputSystem;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// The playtest menu and HUD. Owns three things together so they can never disagree:
-    /// whether the menu is open, whether the HUD shows, and whether the mouse is captured.
-    /// Menu open = mouse free and the player stands still; menu closed = mouse captured, HUD up.
-    /// The menu opens by itself whenever there is no local player (before joining, after
-    /// leaving, on disconnect); in game, Esc or the pad's Start button toggles it. Greybox, not the final lobby.
-    /// Text is rebuilt only on lobby events, never per frame. Design: docs/systems/MENU_AND_HUD.md.
-    /// The UI kit draws every state when it is in the scene (HandTitleToKit): the title, hosting, joining and
-    /// failures, and the in-game menu pane; this dark card is then never shown, and the kit also closes the open
-    /// menu on Esc / B / Start. Closing waits for the confirm button to be let go, because the pad's A is both UI
-    /// Submit and Jump (docs/systems/UI_KIT.md).
-    /// </summary>
+    /// <summary>Owns menu open state, HUD visibility, cursor lock/holds, and kit handoff.</summary>
     public sealed class GameMenu : MonoBehaviour
     {
         [Header("Wiring")]
@@ -56,8 +45,6 @@ namespace CloseTheDeal.UI
         string _lastPlayers;
         string _lastMode;
 
-        // ---- Cursor holds (another lane's screen that needs the mouse) ------------------------------
-
         static readonly HashSet<object> Holds = new();
         static readonly Predicate<object> Gone = o => o is UnityEngine.Object u && u == null;
 
@@ -72,19 +59,10 @@ namespace CloseTheDeal.UI
             OpenInGame = false;
         }
 
-        /// <summary>
-        /// True while this menu is open over a game. A screen that holds the cursor reads this to stand still while the
-        /// menu is over it (Esc opens the menu on top of a held screen).
-        /// </summary>
+        /// <summary>True while the menu is open over an active game (other cursor-holding screens pause under it).</summary>
         public static bool OpenInGame { get; private set; }
 
-        /// <summary>
-        /// Frees the mouse for a screen of the owner's own (a fitting room, a host's player list) without opening this
-        /// menu. Reference-counted per owner: while any hold exists in a game the cursor is free and visible, the
-        /// player stands still (every input reader reads the cursor lock) and the HUD stays up. Esc still opens this
-        /// menu over it. Holding twice with the same owner counts once. Leaving the game drops every hold, and an
-        /// owner that is destroyed stops counting by itself; release it when its screen closes.
-        /// </summary>
+        /// <summary>Reference-counted per-owner cursor hold for external in-game screens; dropped on game exit or owner destroy.</summary>
         public static void HoldCursor(object owner)
         {
             if (owner != null && Holds.Add(owner))
@@ -127,20 +105,12 @@ namespace CloseTheDeal.UI
 
         public SteamLobby Lobby => _lobby;
 
-        /// <summary>Not in a game and not hosting or joining: the title screen's state.</summary>
+        /// <summary>True when not in a game and not hosting or joining.</summary>
         public bool AtTitle => _open && !_inGame && !_lobby.IsActive;
 
-        /// <summary>
-        /// No player of ours in the world: the title, hosting, joining, loading and any failure.
-        /// </summary>
         public bool OutOfGame => !_inGame;
 
-        /// <summary>
-        /// The kit calls this while it is in the scene: the card then stays hidden out of a game and the kit draws the
-        /// title, hosting, joining and failures. With inGameToo (a kit that has the in-game menu) the card is never
-        /// shown and the kit also closes the open menu itself (Esc / B / Start). The rule (menu open = mouse free =
-        /// player idle), the cursor holds and the HUD stay here.
-        /// </summary>
+        /// <summary>Hands title (and optionally in-game menu) rendering to the UI kit while keeping cursor/HUD ownership here.</summary>
         public void HandTitleToKit(bool handed, bool inGameToo = false)
         {
             _titleHandedOff = handed;
@@ -209,7 +179,6 @@ namespace CloseTheDeal.UI
             }
         }
 
-        /// <summary>A player spawning closes the menu; losing it (leaving, a drop) opens it.</summary>
         void TrackGame()
         {
             bool inGame = PlayerMotor.Local != null;
@@ -226,7 +195,6 @@ namespace CloseTheDeal.UI
             Refresh();
         }
 
-        /// <summary>A close asked for while the confirm button was down happens once it is let go.</summary>
         void FinishPendingClose()
         {
             if (!_closeOnRelease || UiInput.SubmitHeld)
@@ -236,7 +204,6 @@ namespace CloseTheDeal.UI
                 SetOpen(false);
         }
 
-        /// <summary>A cursor lock asked for while the confirm button was down happens once it is let go.</summary>
         void FinishPendingLock()
         {
             if (_lockOnRelease && !UiInput.SubmitHeld)
@@ -256,13 +223,8 @@ namespace CloseTheDeal.UI
             return pad != null && pad.startButton.wasPressedThisFrame;
         }
 
-        /// <summary>
-        /// Set by the kit while its in-game menu pane is actually up. Only then does the kit own closing (Esc, B, Start);
-        /// while it can't show the pane (the window still zooming in) the keys stay this menu's, so it is never stuck.
-        /// </summary>
+        // Only true while kit pane is active; while zooming in, GameMenu keeps Esc/Start so input never sticks.
         internal bool KitMenuUp { get; set; }
-
-        // ---- Open / close --------------------------------------------------------------------
 
         public void Resume()
         {
@@ -273,10 +235,7 @@ namespace CloseTheDeal.UI
                 _closedFrame = Time.frameCount; // an Esc that closed it from outside this frame must not reopen it here
         }
 
-        /// <summary>
-        /// Closes the menu, but not while a confirm button is still held: the pad's A is UI Submit and
-        /// also Jump, so handing the mouse back on the press frame would fire or jump. It closes on release.
-        /// </summary>
+        // Defer close while Submit is held so pad A (also Jump) does not fire/jump on the frame cursor locks.
         void Close()
         {
             if (!_open)
@@ -311,10 +270,6 @@ namespace CloseTheDeal.UI
             StateChanged?.Invoke();
         }
 
-        /// <summary>
-        /// The mouse is free while the menu is open, out of a game, or held by another screen (HoldCursor); otherwise
-        /// it is captured, but never while the confirm button is still down (the pad's A is also Jump).
-        /// </summary>
         void ApplyCursor()
         {
             bool free = _open || !_inGame || CursorHeld;
@@ -330,7 +285,6 @@ namespace CloseTheDeal.UI
             Cursor.visible = free;
         }
 
-        /// <summary>The playtest card shows only where the kit doesn't draw: without the kit, or in a game with a kit that has no in-game menu.</summary>
         void ShowCard()
         {
             bool kitDraws = _inGame ? _gameMenuHandedOff : _titleHandedOff;
@@ -339,7 +293,6 @@ namespace CloseTheDeal.UI
                 _menuRoot.SetActive(show);
         }
 
-        /// <summary>Puts keyboard and pad focus on the most likely next action.</summary>
         void SelectFirst()
         {
             if (EventSystem.current == null || !_menuRoot.activeInHierarchy)
@@ -350,8 +303,6 @@ namespace CloseTheDeal.UI
                 first = _leaveButton;
             EventSystem.current.SetSelectedGameObject(first.gameObject);
         }
-
-        // ---- State ---------------------------------------------------------------------------
 
         void SetStatus(string text)
         {

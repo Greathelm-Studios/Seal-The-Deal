@@ -6,10 +6,7 @@ using UnityEngine.UI;
 
 namespace CloseTheDeal.UI
 {
-    /// <summary>
-    /// Picks one of a few named choices with ‹ and ›. Left / right steps (it wraps), up / down moves focus on.
-    /// Clicking an arrow steps that way.
-    /// </summary>
+    /// <summary>Wrapping choice stepper control supporting left/right stepping and click zones.</summary>
     [AddComponentMenu("Seal the Deal/UI/Stepper")]
     public sealed class UiStepper : UiControl, IUiStepTarget
     {

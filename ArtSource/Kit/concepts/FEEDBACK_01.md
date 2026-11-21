@@ -1,12 +1,3 @@
-<!--
-  AI-GENERATED SOURCE FILE
-  Generator : Claude Opus 5.5 (Claude Code)
-  Generated : 2026-11-11
-  Prompt    : Alex on the first window bay concept: "these are boring"
-  Reviewed  : NOT YET REVIEWED BY A HUMAN
-  Summary   : Round-2 brief to Codex. The first hand-back redrew the blockout; this asks for designed
-              options and changes the presentation, so the request and the feedback stay side by side.
--->
 # Round 2 — feedback on the window bay, and what we need instead
 
 **From:** Alex, drafted by Claude · **Date:** 2026-11-11 · Read with [REQUEST.md](REQUEST.md); this overrides it where they differ.
