@@ -65,13 +65,14 @@ Point by point against these guns:
 | Tracer for everyone else | Host | `RpcShot`: where the shot ended + whether it hit, 13 B, unreliable, to everyone but the shooter | Per shot |
 | Hit confirmation | Host | `TargetHitConfirmed` to the shooter only: point, damage, killed; reliable | Per hit |
 | Which gun is in each slot, which slot is out | Host | Three one-byte SyncVars, to everyone | On change |
-| Magazines, last shot number answered, reloads completed | Host | One packed 8-byte SyncVar, **to the owner only** | On change (each shot, each reload) |
+| Magazines, last shot number answered, reloads completed and last completed reload request | Host | One packed 8-byte SyncVar, **to the owner only** | On change (each shot, each reload) |
 | Health, dead flag, last attacker | Host | Three SyncVars on `Health`, to everyone | On change |
 | Hit, death (with the throw: the ragdoll trigger and impulse), respawn | Host | One RPC each to all clients; hits unreliable, death and respawn reliable | Per event |
+| Reload refused or interrupted | Host | One reliable RPC to the shooter, identifying the reload request | On refusal or interruption |
 | Reload started (for other players' sound and animation) | Host | One RPC to everyone but the shooter | Per reload |
 | Muzzle flash, tracer, view kick, gun model, hit flash, falling over | Each machine, locally | Nothing | — |
 
-**What the owner predicts:** its own shot (flash, tracer, kick), its ammo count, the start of a reload, and a weapon switch. The ammo shown is the host's last count minus the owner's shots the host has not answered yet, so it never flickers upward. A reload only *finishes* when the host says the magazine is full, so it ends one trip to the host late (a few tens of ms) and can never give ammo the host didn't.
+**What the owner predicts:** its own shot (flash, tracer, kick), its ammo count, the start of a reload, and a weapon switch. The ammo shown is the host's last count minus the owner's shots the host has not answered yet, so it never flickers upward. A reload only *finishes* once the local reload animation has finished and the host confirms that specific reload, so a tap in the final input window waits for that confirmation. The host explicitly cancels refused or interrupted reloads.
 
 **What the host checks on every shot:** the gun is the one in hand, the player is alive, the magazine isn't empty, no reload is running, and the shot isn't faster than the gun (a tenth of a second of slack for network jitter; the long-run rate is exact). A refused shot is still answered so the owner's count corrects itself.
 

@@ -130,8 +130,6 @@ namespace CloseTheDeal.Combat
         const uint TimingSlackTicks = 9;
         /// <summary>How long the owner trusts its own switch before taking the host's word for which gun is out, in seconds.</summary>
         const float SwitchTrustSeconds = 0.4f;
-        /// <summary>How long past a reload's end the owner waits for the host's confirmation before giving up, in seconds.</summary>
-        const float ReloadConfirmGraceSeconds = 0.75f;
         /// <summary>How long a press made while the gun is still cycling is remembered, in seconds, so fast taps on a one-per-press gun are never swallowed.</summary>
         const float PressBufferSeconds = 0.15f;
         const float FallbackEyeHeight = 1.6f;
@@ -164,6 +162,11 @@ namespace CloseTheDeal.Combat
         byte _hostReloadsDone;
         bool _hostReloading;
         uint _hostReloadDoneTick;
+        ushort _hostReloadRequest;
+        ushort _ownerReloadRequest;
+        bool _fireAfterReload;
+        bool _reloadConfirmed;
+        ushort _completedReloadRequest;
         uint _hostReadyTick;
         uint _hostLastShotTick;
         double _hostNextShotTime;
@@ -281,6 +284,7 @@ namespace CloseTheDeal.Combat
             Array.Clear(_hostAmmo, 0, SlotCount);
             _hostAckSeq = 0;
             _hostReloadsDone = 0;
+            _completedReloadRequest = 0;
             _hostReloading = false;
             _hostBloom = 0f;
             _hostNextShotTime = 0d;
@@ -346,7 +350,7 @@ namespace CloseTheDeal.Combat
 
             bool handsWereEmpty = _weapons[_active.Value] == null;
             if (slot == _active.Value)
-                _hostReloading = false;
+                HostCancelReload();
 
             _weapons[slot] = weapon;
             _hostAmmo[slot] = (byte)weapon.MagazineSize;
@@ -377,7 +381,7 @@ namespace CloseTheDeal.Combat
             int other = 1 - slot;
             if (slot == _active.Value)
             {
-                _hostReloading = false;
+                HostCancelReload();
                 if (_weapons[other] != null)
                     HostSetActive(other);
             }
@@ -429,11 +433,12 @@ namespace CloseTheDeal.Combat
             _triggerPressed = false;
             _pressBufferedUntil = float.NegativeInfinity;
             _dryClickPending = false;
+            _reloadConfirmed = false;
             _state = WeaponState.Reloading;
             _stateEndsAt = Time.time + weapon.ReloadSeconds;
             _stateDuration = weapon.ReloadSeconds;
             ReloadStarted?.Invoke(weapon.ReloadSeconds);
-            ServerReload((byte)_localActive);
+            ServerReload((byte)_localActive, ++_ownerReloadRequest);
             return true;
         }
 
@@ -465,7 +470,11 @@ namespace CloseTheDeal.Combat
             TickState();
 
             if (_triggerPressed)
+            {
                 _pressBufferedUntil = Time.time + PressBufferSeconds;
+                if (_state == WeaponState.Reloading && _pressBufferedUntil >= _stateEndsAt)
+                    _fireAfterReload = true;
+            }
             _triggerPressed = false;
 
             bool pressed = Time.time <= _pressBufferedUntil;
@@ -512,16 +521,23 @@ namespace CloseTheDeal.Combat
 
         void TickState()
         {
-            if (_state == WeaponState.Equipping && Time.time >= _stateEndsAt)
+            if (Time.time < _stateEndsAt)
+                return;
+            if (_state == WeaponState.Equipping)
                 _state = WeaponState.Ready;
-
-            // The host ends a reload by filling the magazine. If that never comes, it refused the reload.
-            if (_state == WeaponState.Reloading && Time.time >= _stateEndsAt + ReloadConfirmGraceSeconds)
-                CancelOwnerReload();
+            else if (_state == WeaponState.Reloading && _reloadConfirmed)
+            {
+                _state = WeaponState.Ready;
+                if (_fireAfterReload)
+                    _pressBufferedUntil = Time.time + PressBufferSeconds;
+                _fireAfterReload = false;
+                ReloadFinished?.Invoke();
+            }
         }
 
         void ClearFireInput()
         {
+            _fireAfterReload = false;
             _triggerHeld = false;
             _triggerPressed = false;
             _pressBufferedUntil = float.NegativeInfinity;
@@ -665,6 +681,8 @@ namespace CloseTheDeal.Combat
                 return;
 
             _state = WeaponState.Ready;
+            _fireAfterReload = false;
+            _pressBufferedUntil = float.NegativeInfinity;
             ReloadCancelled?.Invoke();
         }
 
@@ -712,11 +730,8 @@ namespace CloseTheDeal.Combat
             if (reloadsDone != _seenReloadsDone)
             {
                 _seenReloadsDone = reloadsDone;
-                if (_state == WeaponState.Reloading)
-                {
-                    _state = WeaponState.Ready;
-                    ReloadFinished?.Invoke();
-                }
+                if (_state == WeaponState.Reloading && (ushort)(next >> 40) == _ownerReloadRequest)
+                    _reloadConfirmed = true;
             }
 
             RefreshOwnerAmmo();
@@ -855,13 +870,16 @@ namespace CloseTheDeal.Combat
         }
 
         [ServerRpc]
-        void ServerReload(byte slot)
+        void ServerReload(byte slot, ushort request)
         {
             WeaponDefinition weapon = slot < SlotCount ? _weapons[slot] : null;
-            if (weapon == null || slot != _active.Value || _health.IsDead || _hostReloading)
+            if (weapon == null || slot != _active.Value || _health.IsDead || _hostReloading || _hostAmmo[slot] >= weapon.MagazineSize)
+            {
+                TargetReloadCancelled(Owner, request);
                 return;
-            if (_hostAmmo[slot] >= weapon.MagazineSize)
-                return;
+            }
+
+            _hostReloadRequest = request;
 
             _hostReloading = true;
             _hostReloadDoneTick = TimeManager.Tick + TimeManager.TimeToTicks(weapon.ReloadSeconds);
@@ -879,7 +897,7 @@ namespace CloseTheDeal.Combat
 
         void HostSetActive(int slot)
         {
-            _hostReloading = false;
+            HostCancelReload();
             _hostBloom = 0f;
             _hostReadyTick = TimeManager.Tick + TimeManager.TimeToTicks(_weapons[slot].EquipSeconds);
             _active.Value = (byte)slot;
@@ -892,6 +910,23 @@ namespace CloseTheDeal.Combat
                 HostFinishReload();
         }
 
+        void HostCancelReload()
+        {
+            if (!_hostReloading)
+                return;
+
+            _hostReloading = false;
+            if (Owner.IsValid)
+                TargetReloadCancelled(Owner, _hostReloadRequest);
+        }
+
+        [TargetRpc]
+        void TargetReloadCancelled(NetworkConnection owner, ushort request)
+        {
+            if (request == _ownerReloadRequest)
+                CancelOwnerReload();
+        }
+
         void HostFinishReload()
         {
             _hostReloading = false;
@@ -901,6 +936,7 @@ namespace CloseTheDeal.Combat
 
             _hostAmmo[_active.Value] = (byte)weapon.MagazineSize;
             _hostReloadsDone++;
+            _completedReloadRequest = _hostReloadRequest;
             PushOwnerState();
         }
 
@@ -909,7 +945,8 @@ namespace CloseTheDeal.Combat
             _ownerState.Value = _hostAmmo[0]
                 | ((ulong)_hostAmmo[1] << 8)
                 | ((ulong)_hostAckSeq << 16)
-                | ((ulong)_hostReloadsDone << 32);
+                | ((ulong)_hostReloadsDone << 32)
+                | ((ulong)_completedReloadRequest << 40);
         }
 
         // ---- Host: messages out --------------------------------------------------------------
@@ -939,7 +976,7 @@ namespace CloseTheDeal.Combat
         void OnDied(Health health, DamageInfo info)
         {
             if (IsServerStarted)
-                _hostReloading = false;
+                HostCancelReload();
 
             if (IsOwner)
             {
@@ -960,7 +997,7 @@ namespace CloseTheDeal.Combat
         /// <summary>A respawned player comes back with full magazines, and with the scene's starting guns if they had lost theirs.</summary>
         void HostRefill()
         {
-            _hostReloading = false;
+            HostCancelReload();
             _hostBloom = 0f;
             if (_weapons[0] == null && _weapons[1] == null)
                 GiveStartingLoadout();

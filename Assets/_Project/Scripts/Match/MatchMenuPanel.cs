@@ -62,6 +62,9 @@ namespace CloseTheDeal.MatchMode
             Refresh();
         }
 
+        // Disconnect callbacks can outlive the separate menu canvas during application shutdown.
+        void OnApplicationQuit() => enabled = false;
+
         void OnDisable()
         {
             if (!_wired)
