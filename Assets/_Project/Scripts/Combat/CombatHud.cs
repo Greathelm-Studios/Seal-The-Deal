@@ -360,18 +360,11 @@ namespace CloseTheDeal.Combat
             _ammoText.SetText("{0}", inMagazine);
             _magazineText.SetText("/ {0}", magazineSize);
             _empty = magazineSize > 0 && inMagazine == 0;
-            _ammoText.color = AmmoColour(inMagazine, magazineSize);
+            _ammoText.color = _empty ? _tokens.Amber : LowAmmo ? _tokens.Electric : _tokens.Navy;
             ShowState();
         }
 
-        /// <summary>Navy normally; Electric when low; Amber (a warning) when empty.</summary>
-        Color AmmoColour(int inMagazine, int magazineSize)
-        {
-            if (_empty)
-                return _tokens.Amber;
-            bool low = magazineSize > 0 && inMagazine <= magazineSize * _lowAmmo;
-            return low ? _tokens.Electric : _tokens.Navy;
-        }
+        bool LowAmmo => _shownMagazine > 0 && _shownAmmo <= _shownMagazine * _lowAmmo;
 
         void OnDryFired()
         {
@@ -396,7 +389,7 @@ namespace CloseTheDeal.Combat
             {
                 case WeaponState.Reloading: _weaponState.text = "RELOADING"; break;
                 case WeaponState.Equipping: _weaponState.text = "DRAWING"; break;
-                default: _weaponState.text = _empty ? EmptyText() : _holder.ActiveWeapon == null ? string.Empty : "READY"; break;
+                default: _weaponState.text = _empty ? EmptyText() : _holder.ActiveWeapon == null ? string.Empty : LowAmmo ? "LOW AMMO" : "READY"; break;
             }
 
             _weaponState.color = _empty && _holder.State == WeaponState.Ready ? _tokens.Amber : _tokens.Ink3;

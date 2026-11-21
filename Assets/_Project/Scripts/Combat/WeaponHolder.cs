@@ -187,7 +187,8 @@ namespace CloseTheDeal.Combat
         float _lastShotTime;
         bool _triggerHeld;
         bool _triggerPressed;
-        float _pressBufferedUntil;
+        float _pressBufferedUntil = float.NegativeInfinity;
+        bool _dryClickPending;
         byte _seenReloadsDone;
         int _shownAmmo = -1;
         int _shownMagazine = -1;
@@ -413,6 +414,7 @@ namespace CloseTheDeal.Combat
         public void ReleaseTrigger()
         {
             _triggerHeld = false;
+            _dryClickPending = false;
         }
 
         /// <summary>Owner only. Starts a reload of the gun in hand. False when there is nothing to reload or the gun is busy.</summary>
@@ -424,6 +426,9 @@ namespace CloseTheDeal.Combat
             if (OwnerAmmo(_localActive) >= weapon.MagazineSize)
                 return false;
 
+            _triggerPressed = false;
+            _pressBufferedUntil = float.NegativeInfinity;
+            _dryClickPending = false;
             _state = WeaponState.Reloading;
             _stateEndsAt = Time.time + weapon.ReloadSeconds;
             _stateDuration = weapon.ReloadSeconds;
@@ -474,12 +479,12 @@ namespace CloseTheDeal.Combat
         {
             if (!PlayerInputReader.Captured)
             {
-                ReleaseTrigger();
+                ClearFireInput();
                 return;
             }
 
             if (FireHeld != null && FireHeld(this))
-                ReleaseTrigger();
+                ClearFireInput();
             else if (_input.FirePressed)
                 PullTrigger();
             if (_input.FireReleased)
@@ -515,26 +520,37 @@ namespace CloseTheDeal.Combat
                 CancelOwnerReload();
         }
 
+        void ClearFireInput()
+        {
+            _triggerHeld = false;
+            _triggerPressed = false;
+            _pressBufferedUntil = float.NegativeInfinity;
+            _dryClickPending = false;
+        }
+
         void TryFire(WeaponDefinition weapon, bool pressed)
         {
-            if (_health.IsDead || _state != WeaponState.Ready)
+            if (_health.IsDead)
             {
-                _pressBufferedUntil = 0f;
+                ClearFireInput();
                 return;
             }
 
-            // Still cycling: a remembered press waits here for the gun, it isn't thrown away.
-            if (Time.time < _nextShotAt)
+            // A tap may finish the existing input buffer during draw, reload or the firing interval.
+            if (_state != WeaponState.Ready || Time.time < _nextShotAt)
                 return;
 
-            _pressBufferedUntil = 0f;
-            if (OwnerAmmo(_localActive) <= 0)
+            _pressBufferedUntil = float.NegativeInfinity;
+            int rounds = OwnerAmmo(_localActive);
+            if (rounds <= 0)
             {
-                if (pressed)
+                if (pressed || _dryClickPending)
                     DryFired?.Invoke();
+                _dryClickPending = false;
                 return;
             }
 
+            _dryClickPending = rounds == 1 && weapon.Automatic && _triggerHeld;
             FireShot(weapon);
         }
 
@@ -634,6 +650,7 @@ namespace CloseTheDeal.Combat
 
         void BeginEquip(WeaponDefinition weapon)
         {
+            ClearFireInput();
             _state = weapon != null && weapon.EquipSeconds > 0f ? WeaponState.Equipping : WeaponState.Ready;
             _stateEndsAt = weapon != null ? Time.time + weapon.EquipSeconds : 0f;
             _stateDuration = weapon != null ? weapon.EquipSeconds : 0f;
@@ -926,9 +943,7 @@ namespace CloseTheDeal.Combat
 
             if (IsOwner)
             {
-                ReleaseTrigger();
-                _triggerPressed = false;
-                _pressBufferedUntil = 0f;
+                ClearFireInput();
                 CancelOwnerReload();
             }
         }

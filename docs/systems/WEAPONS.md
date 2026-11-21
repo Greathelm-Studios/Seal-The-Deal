@@ -1,6 +1,6 @@
 # WEAPONS
 
-**Status:** Current (greybox guns, no sound or HUD yet) · **Last updated:** 2026-11-12 · **Verified against:** the shooting lane commit, see [HANDOVER_shooting.md](../HANDOVER_shooting.md) for what was and was not seen running
+**Status:** Current (greybox guns with combat HUD and audio) · **Last updated:** 2026-11-21 · **Verified against:** the shooting lane commit, see [HANDOVER_shooting.md](../HANDOVER_shooting.md) for what was and was not seen running
 
 ## What happens in the game
 
@@ -40,7 +40,7 @@ Point by point against these guns:
 
 | NorseFPS element | Here before the feel pass | After the feel pass |
 |---|---|---|
-| Same-frame fire, trigger buffer | Yes (0.15 s buffer) | Same |
+| Same-frame fire, trigger buffer | Yes (0.15 s buffer) | A tap in the last 0.15 s of draw or reload can fire once the gun is ready. Switching weapons, losing control of the trigger or opening the menu clears pending taps. |
 | Kick that returns + climb that stays | Pattern climb held through a burst, returned after; no per-shot snap | Per-shot snap on an authored curve, on top of the learnable pattern |
 | Authored recovery curves with overshoot | Linear return | Curve per gun, overshoot by default |
 | Gun out-moves the camera | 6 cm push back, linear | Push back, muzzle flip, roll and twist on their own curve |
@@ -131,6 +131,8 @@ The catalog names guns on the network by their place in the list. **Add new guns
 
 ## Combat HUD contract
 
+The combat HUD marks low ammo at the authored threshold and shows the reload control when empty. Holding automatic fire until empty produces one dry click on the next firing interval. The hit marker waits for host confirmation.
+
 What a combat HUD reads. Everything is an event or a property read when an event says it changed; nothing needs polling every frame except the two countdowns, which a HUD reads only while it is showing them. The HUD never decides anything: a hit marker appears only when the host says the hit landed.
 
 All of these are on the local player's own `WeaponHolder` and `Health` (find them on `PlayerMotor.Local`).
@@ -212,7 +214,6 @@ Set-up is one editor file, [ShootingLaneSetup.cs](../../Assets/_Project/Editor/L
 
 ## Known limitations
 
-- **No sound, no HUD, no hit marker on screen, greybox box guns.** The events are there; nothing listens yet.
 - **No ragdoll.** A dead body is the capsule tipped flat and thrown; `Health.Died` carries the impulse a ragdoll would use.
 - **Ammo is endless**: a reload always fills the magazine. No reserve ammo exists; that is a design question.
 - **Friendly fire is on.** Firms exist now (`FirmMember.Firm`), but whether a teammate's shot hurts is Adam's decision; until then every shot hurts everyone.
