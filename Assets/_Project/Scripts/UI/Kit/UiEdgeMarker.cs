@@ -44,6 +44,8 @@ namespace CloseTheDeal.UI
         [SerializeField] RectTransform _pointer;
         [Tooltip("The chevron's image, tinted like the mark.")]
         [SerializeField] Image _pointerImage;
+        [Tooltip("Optional second chevron. Together the arrows frame the target in view. At the screen edge only the direction arrow shows.")]
+        [SerializeField] Image _oppositeChevron;
         [Tooltip("The distance, e.g. '24 m'.")]
         [SerializeField] TMP_Text _distance;
         [Tooltip("The distance tag's plate, hidden when no distance is given. It sits on the side away from the chevron.")]
@@ -175,9 +177,14 @@ namespace CloseTheDeal.UI
         {
             if (_pointer != null)
             {
-                _pointer.gameObject.SetActive(!inView);
-                _pointer.anchoredPosition = dir * _pointerDistance;
-                _pointer.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+                _pointer.gameObject.SetActive(!inView || _oppositeChevron != null);
+                if (_oppositeChevron != null)
+                {
+                    _oppositeChevron.gameObject.SetActive(inView);
+                    _oppositeChevron.rectTransform.anchoredPosition = Vector2.right * _pointerDistance;
+                }
+                _pointer.anchoredPosition = (inView ? Vector2.left : dir) * _pointerDistance;
+                _pointer.localRotation = Quaternion.Euler(0f, 0f, inView ? 0f : Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
             }
 
             if (_tag != null)
@@ -319,6 +326,8 @@ namespace CloseTheDeal.UI
                 _shape.rectTransform.localScale = new Vector3(scale, scale, 1f);
             if (_keyline != null)
                 _keyline.rectTransform.localScale = new Vector3(scale, scale, 1f);
+            if (_oppositeChevron != null)
+                _oppositeChevron.color = _kind == UiMarkKind.Loose ? _tokens.Navy : colour;
             Paint(_pointerImage, _pointerImage != null ? _pointerImage.sprite : null, _kind == UiMarkKind.Loose ? _tokens.Navy : colour);
         }
 

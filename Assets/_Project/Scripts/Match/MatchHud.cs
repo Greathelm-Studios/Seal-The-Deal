@@ -147,6 +147,7 @@ namespace CloseTheDeal.MatchMode
             _match.OnBriefcaseChanged += OnBriefcaseChanged;
             _match.OnCheckpointSaved += OnCheckpointSaved;
             _match.OnBriefcasePickedUp += OnPickedUp;
+            _match.OnBriefcaseDropped += OnDropped;
             _match.OnBriefcaseStolen += OnStolen;
             _match.OnBriefcaseReturning += OnReturning;
             _match.OnFloorOpened += OnFloorOpened;
@@ -176,6 +177,7 @@ namespace CloseTheDeal.MatchMode
             _match.OnBriefcaseChanged -= OnBriefcaseChanged;
             _match.OnCheckpointSaved -= OnCheckpointSaved;
             _match.OnBriefcasePickedUp -= OnPickedUp;
+            _match.OnBriefcaseDropped -= OnDropped;
             _match.OnBriefcaseStolen -= OnStolen;
             _match.OnBriefcaseReturning -= OnReturning;
             _match.OnFloorOpened -= OnFloorOpened;
@@ -245,7 +247,7 @@ namespace CloseTheDeal.MatchMode
             if (_clockWarning != null)
                 _clockWarning.enabled = _capWarning;
             // Said in words as well as colour.
-            _clockCaption.text = _capWarning ? "QUARTER CLOSING" : "QUARTER";
+            _clockCaption.text = _capWarning ? "QUARTER CLOSING" : _compactFloors ? string.Empty : "QUARTER";
             // A returning case's own countdown ticks with the clock rather than every frame.
             if (_match.IsLive && _match.CaseStatus.State == BriefcaseState.Returning)
                 RefreshTracker();
@@ -431,10 +433,19 @@ namespace CloseTheDeal.MatchMode
         void OnPickedUp(int firm)
         {
             FirmMember local = FirmMember.Local;
-            if (local == null || _match.IsCarrying(local))
+            if (local == null)
                 return;
-
+            if (_match.IsCarrying(local))
+            {
+                Say("Carry the briefcase to a roof.", UiStatusKind.Info);
+                return;
+            }
             Say(firm == local.Firm ? "Your firm has the briefcase. Keep them climbing." : "The rival firm has the briefcase. Take it off them.", UiStatusKind.Info);
+        }
+
+        void OnDropped(int firm)
+        {
+            Say("Briefcase dropped. Collect it.", UiStatusKind.Info);
         }
 
         void OnStolen(int byFirm, int fromFirm)

@@ -4748,8 +4748,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 0, y: -1}
-  m_SizeDelta: {x: 120, y: 18}
+  m_AnchoredPosition: {x: 0, y: -0}
+  m_SizeDelta: {x: 144, y: 17}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &245283367
 MonoBehaviour:
@@ -4781,7 +4781,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4284566339
-  m_fontColor: {r: 0.105882354, g: 0.23529412, b: 0.56078434, a: 1}
+  m_fontColor: {r: 0.06666667, g: 0.105882354, b: 0.21960784, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -4798,8 +4798,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 12
-  m_fontSizeBase: 12
+  m_fontSize: 13
+  m_fontSizeBase: 13
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -8419,6 +8419,81 @@ Transform:
   m_Children: []
   m_Father: {fileID: 313451420}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &400696559
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 400696560}
+  - component: {fileID: 400696562}
+  - component: {fileID: 400696561}
+  m_Layer: 5
+  m_Name: OppositeChevron
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &400696560
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400696559}
+  m_LocalRotation: {x: 0, y: 0, z: 1, w: -0.00000004371139}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1862684388}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 17, y: 25}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &400696561
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400696559}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.1254902, g: 0.83137256, b: 0.9019608, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: a949c327878f44cfb2a90cf30c792d6d, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &400696562
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400696559}
+  m_CullTransparentMesh: 1
 --- !u!1001 &402456303
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13941,6 +14016,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Ladder
       objectReference: {fileID: 0}
+    - target: {fileID: 748675521735827151, guid: cb1b25dc967b74f4ca60729ab983da96, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3545380059045232711, guid: cb1b25dc967b74f4ca60729ab983da96, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -15686,8 +15765,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 0, y: -12}
-  m_SizeDelta: {x: 120, y: 48}
+  m_AnchoredPosition: {x: 0, y: -7}
+  m_SizeDelta: {x: 144, y: 48}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &831355830
 MonoBehaviour:
@@ -15712,14 +15791,14 @@ MonoBehaviour:
   m_text: 15:00
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: b59ce851c27bb42ba873468ae0b88a28, type: 2}
-  m_sharedMaterial: {fileID: 2619358037517090393, guid: b59ce851c27bb42ba873468ae0b88a28, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: e880d1fd6a0d54ddc935a92170b66839, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
     rgba: 4281867025
-  m_fontColor: {r: 0.06666667, g: 0.105882354, b: 0.21960784, a: 1}
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -30799,6 +30878,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tracker
       objectReference: {fileID: 0}
+    - target: {fileID: 748675521735827151, guid: cb1b25dc967b74f4ca60729ab983da96, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3545380059045232711, guid: cb1b25dc967b74f4ca60729ab983da96, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -32359,11 +32442,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5651363190836921430, guid: cb1b25dc967b74f4ca60729ab983da96, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 120
+      value: 144
       objectReference: {fileID: 0}
     - target: {fileID: 5651363190836921430, guid: cb1b25dc967b74f4ca60729ab983da96, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 60
+      value: 57
       objectReference: {fileID: 0}
     - target: {fileID: 5651363190836921430, guid: cb1b25dc967b74f4ca60729ab983da96, type: 3}
       propertyPath: m_LocalPosition.x
@@ -32395,11 +32478,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5651363190836921430, guid: cb1b25dc967b74f4ca60729ab983da96, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -55
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5651363190836921430, guid: cb1b25dc967b74f4ca60729ab983da96, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -21
+      value: -18
       objectReference: {fileID: 0}
     - target: {fileID: 5651363190836921430, guid: cb1b25dc967b74f4ca60729ab983da96, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -37134,6 +37217,18 @@ PrefabInstance:
       propertyPath: m_TextStyleHashCode
       value: -1183493901
       objectReference: {fileID: 0}
+    - target: {fileID: 2160495859403798121, guid: 3358937e124cd4214b05369573fa75cc, type: 3}
+      propertyPath: _oppositeChevron
+      value: 
+      objectReference: {fileID: 400696561}
+    - target: {fileID: 2811446531922508992, guid: 3358937e124cd4214b05369573fa75cc, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: a949c327878f44cfb2a90cf30c792d6d, type: 3}
+    - target: {fileID: 2811446531922508992, guid: 3358937e124cd4214b05369573fa75cc, type: 3}
+      propertyPath: m_PreserveAspect
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4193462516149780502, guid: 3358937e124cd4214b05369573fa75cc, type: 3}
       propertyPath: m_Name
       value: BriefcaseEdgeMarker
@@ -37218,9 +37313,20 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7835999062864145999, guid: 3358937e124cd4214b05369573fa75cc, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 17
+      objectReference: {fileID: 0}
+    - target: {fileID: 7835999062864145999, guid: 3358937e124cd4214b05369573fa75cc, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 25
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 4339327569561902847, guid: 3358937e124cd4214b05369573fa75cc, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 400696560}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 3358937e124cd4214b05369573fa75cc, type: 3}
 --- !u!224 &1862684386 stripped
@@ -37239,6 +37345,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c617a340c40d94fd0b63c6a826797304, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.UI.UiEdgeMarker
+--- !u!224 &1862684388 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 4339327569561902847, guid: 3358937e124cd4214b05369573fa75cc, type: 3}
+  m_PrefabInstance: {fileID: 1862684385}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1868560274
 GameObject:
   m_ObjectHideFlags: 0

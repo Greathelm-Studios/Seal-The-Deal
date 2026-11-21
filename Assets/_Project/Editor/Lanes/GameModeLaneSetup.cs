@@ -636,49 +636,35 @@ namespace CloseTheDeal.Editor.Lanes
             RectTransform tracker = (RectTransform)root.Find("Tracker");
             RectTransform ladder = (RectTransform)root.Find("Ladder");
             var top = new Vector2(0.5f, 1f);
-            Anchored(ladder, top, new Vector2(0, -20), new Vector2(580, 66));
-            ladder.SetAsFirstSibling();
-            MatchSurface(ladder, t.Paper, "Caption");
-            MatchText(ladder, "Caption", 18, 18, 147, 34, 20, t.Navy);
-            var floorName = ladder.Find("Caption").GetComponent<TMP_Text>();
-            floorName.characterSpacing = 0;
-            floorName.enableAutoSizing = true;
-            floorName.fontSizeMin = 16;
-            floorName.fontSizeMax = 20;
-            UiKitAssets.Place((RectTransform)ladder.Find("Rows"), 20, 52, 156, 10);
-            var row = (RectTransform)ladder.Find("Rows/Row");
-            UiKitAssets.Place(row, 0, 0, 20, 10);
-            UiKitAssets.Place((RectTransform)row.Find("Box"), 0, 0, 9, 9);
-            UiKitAssets.Place((RectTransform)row.Find("Mark"), 0, -4, 9, 2);
-            row.Find("Label").gameObject.SetActive(false);
-            if (ladder.Find("FloorLabel") == null)
-                UiKitAssets.Label(ladder, "FloorLabel", 18, 3, 180, 22, "OPEN FLOOR", t.Caption, t.CobaltDeep);
-
+            ladder.gameObject.SetActive(false);
+            tracker.gameObject.SetActive(false);
             var hud = new SerializedObject(root.GetComponentInParent<MatchHud>(true));
             hud.FindProperty("_compactFloors").boolValue = true;
             hud.ApplyModifiedPropertiesWithoutUndo();
-            Anchored(clock, top, new Vector2(-55, -21), new Vector2(120, 60));
-            Anchored(tracker, top, new Vector2(150, -22), new Vector2(278, 60));
-            // The floor plate backs the entire strip. Nested plates would stack their edges and frost.
-            foreach (var pane in new[] { clock, tracker })
-                foreach (var layer in new[] { "Shadow", "Edge", "Surface", "HudFace" })
-                {
-                    Transform face = pane.Find(layer);
-                    if (face != null)
-                        face.gameObject.SetActive(false);
-                }
-            MatchText(clock, "Caption", 0, 1, 120, 18, 12, t.CobaltDeep, TextAlignmentOptions.Center);
-            MatchText(clock, "Time", 0, 12, 120, 48, 31, t.Navy, TextAlignmentOptions.Center);
-            clock.Find("Time").GetComponent<TMP_Text>().characterSpacing = 0f;
-            tracker.Find("Caption").gameObject.SetActive(false);
-            UiKitAssets.Place((RectTransform)tracker.Find("Bar"), 2, 14, 7, 7);
-            ((RectTransform)tracker.Find("Bar")).localRotation = Quaternion.Euler(0, 0, 45);
-            MatchText(tracker, "Holder", 16, 0, 252, 34, 21, t.Navy);
-            MatchText(tracker, "Where", 16, 29, 252, 30, 16, t.CobaltDeep);
-            var where = tracker.Find("Where").GetComponent<TMP_Text>();
-            where.enableAutoSizing = true;
-            where.fontSizeMin = 14;
-            where.fontSizeMax = 16;
+
+            Anchored(clock, top, new Vector2(0, -18), new Vector2(144, 57));
+            foreach (var name in new[] { "Shadow", "Edge", "Surface", "HudFace" })
+            {
+                var layer = clock.Find(name);
+                if (layer != null)
+                    layer.gameObject.SetActive(false);
+            }
+            MatchText(clock, "Caption", 0, 0, 144, 17, 13, t.Navy, TextAlignmentOptions.Center);
+            MatchText(clock, "Time", 0, 7, 144, 48, 31, Color.white, TextAlignmentOptions.Center);
+            var time = clock.Find("Time").GetComponent<TMP_Text>();
+            time.characterSpacing = 0f;
+            const string clockInk = "Assets/_Project/UI/Fonts/HUD Clock.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(clockInk);
+            if (material == null)
+            {
+                material = new Material(time.fontSharedMaterial);
+                material.EnableKeyword("OUTLINE_ON");
+                material.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.18f);
+                material.SetColor(ShaderUtilities.ID_OutlineColor, t.Navy);
+                AssetDatabase.CreateAsset(material, clockInk);
+            }
+            time.fontSharedMaterial = material;
+            ConfigureBriefcaseArrows(root.Find("BriefcaseEdgeMarker"));
 
             var banner = (RectTransform)root.Find("Banner");
             Anchored(banner, new Vector2(0.5f, 1f), new Vector2(0, -98), new Vector2(670, 60));
@@ -693,6 +679,28 @@ namespace CloseTheDeal.Editor.Lanes
             UiKitAssets.Place((RectTransform)line.Find("Mark"), 12, 18, 3, 34);
             UiKitAssets.Place((RectTransform)line.Find("MarkOutline"), 12, 18, 3, 34);
             MatchText(line, "Text", 26, 2, 498, 66, 20, t.Navy);
+        }
+
+        static void ConfigureBriefcaseArrows(Transform marker)
+        {
+            if (marker == null)
+                return;
+            var body = marker.Find("Body");
+            var pointer = (RectTransform)body.Find("Pointer");
+            var arrow = pointer.GetComponent<UnityEngine.UI.Image>();
+            arrow.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(UiKitArt.Folder + "/Kit_TitleV3Chevron.png");
+            arrow.preserveAspect = true;
+            pointer.sizeDelta = new Vector2(17, 25);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(pointer);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(arrow);
+            var partner = body.Find("OppositeChevron");
+            if (partner == null)
+                partner = Object.Instantiate(pointer, body, false);
+            partner.name = "OppositeChevron";
+            partner.localRotation = Quaternion.Euler(0, 0, 180);
+            var component = marker.GetComponent<UiEdgeMarker>();
+            UiKitAssets.Set(component, "_oppositeChevron", partner.GetComponent<UnityEngine.UI.Image>());
+            PrefabUtility.RecordPrefabInstancePropertyModifications(component);
         }
 
         static void MatchSurface(RectTransform panel, Color colour, string before)
