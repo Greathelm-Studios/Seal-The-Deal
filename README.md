@@ -35,7 +35,7 @@ be live for 14+ days; allow 7 days for each review.
 1. Accept the GitHub invite, then clone the repo with **GitHub Desktop** (it handles Git LFS).
 2. Install **Unity 6000.4.8f1** from Unity Hub and open the cloned folder. The first open takes a while: it downloads the netcode packages from GitHub.
 3. Have **Steam running and signed in**, and be **Steam friends** with whoever is hosting.
-4. Open `Assets/_Project/Scenes/Greybox.unity` and press **Play**.
+4. Open `Assets/_Project/Scenes/KitOffice.unity` and press **Play**.
 5. **Host:** press **Host game**, then **Copy**, and send the code to your friend.
    **Friend:** paste the code under **Join with a lobby code** and press **Join**.
 6. Play. **Esc** brings the menu back; the controls are listed on it.
