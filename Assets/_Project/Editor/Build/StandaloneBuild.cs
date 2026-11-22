@@ -13,7 +13,7 @@ namespace CloseTheDeal.Editor.Build
     /// <summary>Builds a standalone Windows/macOS player stamped with BuildInfo commit metadata.</summary>
     public static class StandaloneBuild
     {
-        static readonly string[] Scenes = { "Assets/_Project/Scenes/Lanes/Lane_Integration.unity" };
+        static readonly string[] Scenes = { "Assets/_Project/Scenes/KitOffice.unity" };
 
         const string GameFileName = "SealTheDeal";
 

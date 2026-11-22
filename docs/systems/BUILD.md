@@ -4,7 +4,7 @@
 
 ## What the player sees
 
-A standalone Seal the Deal build that boots straight into reception (`Lane_Integration.unity`), plus a version line in the menu corner (`v0.1.0 · build 52 · 3f2a9c1`). The first line of every log records the build, OS, CPU, and GPU so any submitted `Player.log` identifies its exact build.
+A standalone Seal the Deal build that boots straight into the kit office (`KitOffice.unity`), plus a version line in the menu corner (`v0.1.0 · build 52 · 3f2a9c1`). The first line of every log records the build, OS, CPU, and GPU so any submitted `Player.log` identifies its exact build.
 
 ## Ownership and netcode boundary
 
@@ -12,7 +12,7 @@ A standalone Seal the Deal build that boots straight into reception (`Lane_Integ
 
 ## Architecture and design rationale
 
-- **No project settings mutated on build:** `StandaloneBuild` passes the scene list directly to the build pipeline while leaving `EditorBuildSettings` untouched (`Greybox.unity` stays the editor build scene).
+- **No project settings mutated on build:** `StandaloneBuild` passes the scene list directly to the build pipeline while leaving `EditorBuildSettings` untouched (`KitOffice.unity` is also the editor build scene).
 - **Non-dirtying build stamp:** Build metadata (`buildNumber`, `commit`, `builtUtc`, `target`) is written into the built player's `StreamingAssets/build_info.json`, never into `Assets/`.
 - **Log-on-launch and domain-reload safety:** `BuildInfo` resets static caches under `RuntimeInitializeLoadType.SubsystemRegistration` and logs platform diagnostics on `BeforeSceneLoad`.
 
