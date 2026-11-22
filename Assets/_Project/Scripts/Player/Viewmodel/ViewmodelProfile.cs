@@ -100,10 +100,10 @@ namespace CloseTheDeal.Player
 
         [Header("Body view (looking out of the real body)")]
         [Tooltip("How much of the head QUICK movement the eye takes in the body view: the bob of each step and the jolt of a hit. 0 = none, a gliding eye (most comfortable); 1 = all of it (most likely to make people feel sick). Slow movement, like leaning into a run or looking at the floor, is always followed in full.")]
-        [Range(0f, 1f)] public float BodyViewHeadFollow = 0.2f;
+        [Range(0f, 1f)] public float BodyViewHeadFollow = 0.08f;
 
-        [Tooltip("How long the eye takes to settle onto where the head has moved to in the body view, in seconds. Higher = steadier and floatier, but the body can get ahead of the eye when you start to sprint; lower = tighter and shakier.")]
-        [Range(0.01f, 0.5f)] public float BodyViewSmoothing = 0.12f;
+        [Tooltip("How long the eye takes to settle onto where the head has moved to in the body view, in seconds. Higher = steadier and less W/S surge, but the body can get ahead of the eye when you start to sprint; lower = tighter and shakier.")]
+        [Range(0.01f, 0.5f)] public float BodyViewSmoothing = 0.22f;
 
         [Tooltip("How far in front of the head bone the eye sits in the body view, in metres: where the face is. Higher keeps the camera lens clear of your shoulders and upper arm; lower shows more of your arm.")]
         [Range(0f, 0.3f)] public float BodyViewForward = 0.065f;
@@ -112,7 +112,7 @@ namespace CloseTheDeal.Player
         [Range(0f, 0.5f)] public float BodyViewMaxOffset = 0.15f;
 
         [Tooltip("Where the gun is held in the body view, measured from GunPosition, in metres: X right, Y up, Z further out. Raise Z to extend the arm further out in front of you; raise Y to bring it higher into view.")]
-        public Vector3 BodyViewGunShift = new Vector3(0.025f, 0.02f, 0.025f);
+        public Vector3 BodyViewGunShift = new Vector3(0.045f, 0.015f, 0.04f);
 
         [Tooltip("Radius of the world-space sphere around your real head bone that is not drawn on your own screen, in metres: hides your head, hair and eye cards even when the ragdoll moves fast. Raise if hair pokes into view; lower if your shoulder or sleeve gets cut away. Mirrors, shadows and other players always see the whole body.")]
         [Range(0f, 0.5f)] public float BodyViewHeadClip = 0.20f;
@@ -124,7 +124,7 @@ namespace CloseTheDeal.Player
         [Range(0.005f, 0.2f)] public float BodyViewSwingSmooth = 0.035f;
 
         [Tooltip("Minimum distance to the right of the crosshair the gun stays in the one-handed body view, in metres. Raise if the gun or forearm drifts into the middle of the screen.")]
-        [Range(0f, 0.25f)] public float BodyViewKeepOutRight = 0.125f;
+        [Range(0f, 0.25f)] public float BodyViewKeepOutRight = 0.155f;
 
         [Tooltip("Minimum distance below the crosshair the gun stays in the body view, in metres. Raise if the gun lifts into your sightline.")]
         [Range(0f, 0.25f)] public float BodyViewKeepOutDown = 0.085f;

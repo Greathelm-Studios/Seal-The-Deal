@@ -40,14 +40,14 @@ MonoBehaviour:
   ReloadDrop: 0.1
   ReloadTilt: 40
   ReloadRoll: 25
-  BodyViewHeadFollow: 0.2
-  BodyViewSmoothing: 0.12
+  BodyViewHeadFollow: 0.08
+  BodyViewSmoothing: 0.22
   BodyViewForward: 0.065
   BodyViewMaxOffset: 0.15
-  BodyViewGunShift: {x: 0.025, y: 0.02, z: 0.025}
+  BodyViewGunShift: {x: 0.045, y: 0.015, z: 0.04}
   BodyViewHeadClip: 0.2
   BodyViewArmSwing: 0.45
   BodyViewSwingSmooth: 0.035
-  BodyViewKeepOutRight: 0.125
+  BodyViewKeepOutRight: 0.155
   BodyViewKeepOutDown: 0.085
   BodyViewMinForward: 0.36

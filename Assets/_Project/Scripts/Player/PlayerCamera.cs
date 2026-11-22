@@ -157,6 +157,9 @@ namespace CloseTheDeal.Player
                 // movement on top (step bob, a hit's jolt) it takes only a capped share.
                 _headOffset = Vector3.Lerp(_headOffset, real, 1f - Mathf.Exp(-Time.deltaTime / _headSmoothSeconds));
                 Vector3 quick = Vector3.ClampMagnitude(real - _headOffset, _headMaxOffset);
+                Vector3 flatForward = Quaternion.Euler(0f, _yaw, 0f) * Vector3.forward;
+                float quickForward = Vector3.Dot(quick, flatForward);
+                quick -= flatForward * (quickForward * 0.65f);
                 head += _headOffset + quick * _headFollow;
             }
             // In the body view the real head has already leaned with the body; sliding the eye

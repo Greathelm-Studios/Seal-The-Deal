@@ -67,8 +67,8 @@ MonoBehaviour:
   LandKickMax: 2.4
   SlideKick: 0.9
   MantleKick: 0.3
-  SprintStartKick: 0.12
-  HardStopKick: 0.25
+  SprintStartKick: 0.06
+  HardStopKick: 0.1
   HardStopSpeed: 7
   SlideFovKick: 4
   SpeedFovKick: 6

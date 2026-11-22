@@ -189,10 +189,10 @@ namespace CloseTheDeal.Player
         public float MantleKick = 0.3f;
 
         [Tooltip("Kick when sprinting starts, in metres per second backward: the view lags a touch as the body surges.")]
-        public float SprintStartKick = 0.12f;
+        public float SprintStartKick = 0.06f;
 
         [Tooltip("Kick when a fast run stops dead, in metres per second forward: the view carries on a little and settles back.")]
-        public float HardStopKick = 0.25f;
+        public float HardStopKick = 0.10f;
 
         [Tooltip("Slowest a run can be, in metres per second, for stopping from it to count as a hard stop.")]
         public float HardStopSpeed = 7f;
