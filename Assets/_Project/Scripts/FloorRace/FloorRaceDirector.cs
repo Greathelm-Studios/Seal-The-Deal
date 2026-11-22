@@ -309,7 +309,6 @@ namespace CloseTheDeal.FloorRace
             return room != null ? room.Name : string.Empty;
         }
 
-        public bool HasClock => false;
         public int CurrentFloor => Floor;
 
         public bool BriefcaseHidden(BriefcaseStatus status)

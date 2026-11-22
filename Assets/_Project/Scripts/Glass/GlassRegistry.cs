@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using CloseTheDeal.Tower;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using UnityEngine;
@@ -27,12 +26,7 @@ namespace CloseTheDeal.Glass
 
         /// <summary>Set in a synced entry when the shards fly against the pane's facing rather than along it.</summary>
         const uint AgainstNormalBit = 1u << 31;
-        const uint TowerBit = 1u << 30;
         const uint IdMask = ~AgainstNormalBit;
-        const int BuildingShift = 24;
-        const int FloorShift = 12;
-        const int MaxFloors = 64;
-        const int MaxPanesPerFloor = 1 << FloorShift;
         /// <summary>Thickest glass, in metres, that gets a fitted box; anything deeper is curved or bent.</summary>
         const float MaxPaneThickness = 0.15f;
         /// <summary>How far up from drawn glass to look for the kit piece that holds its colliders: its group, the piece, one more.</summary>
@@ -53,7 +47,6 @@ namespace CloseTheDeal.Glass
         readonly List<Collider> _paneColliders = new();
         readonly List<GameObject> _roots = new();
 
-        TowerBuilder _tower;
         int _liveFromFrame = int.MaxValue;
 
         public GlassProfile Profile => _profile;
@@ -82,27 +75,11 @@ namespace CloseTheDeal.Glass
             base.OnStartNetwork();
             ForgetAll();
             IndexScene();
-
-            _tower = TowerBuilder.Instance;
-            if (_tower == null)
-                return;
-
-            _tower.OnBuilt += IndexTower;
-            _tower.OnCleared += OnTowerCleared;
-            if (_tower.IsBuilt)
-                IndexTower();
         }
 
         public override void OnStopNetwork()
         {
             base.OnStopNetwork();
-            if (_tower != null)
-            {
-                _tower.OnBuilt -= IndexTower;
-                _tower.OnCleared -= OnTowerCleared;
-                _tower = null;
-            }
-
             // The match is over on this machine: every pane it still has is whole again.
             ForgetAll();
             _liveFromFrame = int.MaxValue;
@@ -205,31 +182,6 @@ namespace CloseTheDeal.Glass
             }
 
             _roots.Clear();
-        }
-
-        /// <summary>Panes in the towers, numbered building, floor, then order on the floor. Runs on every machine after its own build.</summary>
-        void IndexTower()
-        {
-            ForgetTower();
-            Transform tower = _tower.transform;
-
-            for (int b = 0; b < tower.childCount; b++)
-            {
-                Transform building = tower.GetChild(b);
-                for (int f = 0; f < building.childCount && f < MaxFloors; f++)
-                    IndexFloor(building.GetChild(f), b, f);
-            }
-        }
-
-        void IndexFloor(Transform floor, int building, int floorIndex)
-        {
-            AddMaterialPanes(floor);
-            floor.GetComponentsInChildren(true, _found);
-            if (_found.Count > MaxPanesPerFloor)
-                Debug.LogWarning($"[Glass] {floor.name} has {_found.Count} panes; only the first {MaxPanesPerFloor} can break.");
-
-            for (int i = 0; i < _found.Count && i < MaxPanesPerFloor; i++)
-                Register(_found[i], TowerBit | ((uint)building << BuildingShift) | ((uint)floorIndex << FloorShift) | (uint)i);
         }
 
         /// <summary>Gives a Glass Pane to everything drawn with one of the profile's glass materials that has its own collider and no pane yet.</summary>
@@ -418,31 +370,6 @@ namespace CloseTheDeal.Glass
         /// match starts with every pane whole, scene glass included), and every machine drops
         /// the old tower numbers at once so nothing re-breaks while the clear is on its way.
         /// </summary>
-        void OnTowerCleared()
-        {
-            if (IsServerStarted)
-                _broken.Clear();
-
-            _brokenIds.RemoveWhere(IsTowerId);
-            ForgetTower();
-        }
-
-        static bool IsTowerId(uint id) => (id & TowerBit) != 0;
-
-        void ForgetTower()
-        {
-            for (int i = _paneList.Count - 1; i >= 0; i--)
-            {
-                // Read the number, not the object: by now the tower's panes may already be destroyed.
-                uint id = _paneList[i].Id;
-                if ((id & TowerBit) == 0)
-                    continue;
-
-                _panes.Remove(id);
-                _paneList.RemoveAt(i);
-            }
-        }
-
         void ForgetAll()
         {
             RestoreAll();

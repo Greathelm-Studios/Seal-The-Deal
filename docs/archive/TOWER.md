@@ -1,5 +1,7 @@
 # TOWER
 
+**Archived 2026-11-22:** the two-tower mode was removed when the floor race replaced it ([FLOOR_RACE.md](../systems/FLOOR_RACE.md)). `TeamSpawner` is the only part still in the code. Links below point at files that no longer exist.
+
 **Status:** Current · **Last updated:** 2026-11-21
 
 ## What the player sees

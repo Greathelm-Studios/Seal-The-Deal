@@ -2,6 +2,8 @@
 
 **Status:** Current · **Last updated:** 2026-11-21
 
+**Read this first (2026-11-22):** `Lane_Integration.unity`, the towers, `FloorLoot` and the tool that built the scene were removed when the floor race replaced the two-tower mode ([FLOOR_RACE.md](FLOOR_RACE.md)). What is still in the code and used by `FloorRace.unity`: gun pickups (`GunPickups`, `GunPickupMap`), shared hands (`SharedHands`) and `PlayerParts`. `LobbyRunFlow` and `LobbyRoom` remain but no scene uses them. The rest of this page describes the removed scene.
+
 Plays the Seal the Deal lanes as one game in `Assets/_Project/Scenes/Lanes/Lane_Integration.unity`.
 
 ## What the player sees

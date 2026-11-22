@@ -26,7 +26,7 @@ Local only: nothing is sent over the network. `Nameplates` reads synced `FirmMem
 ## Known limitations
 
 - Shows through solid walls as well as glass (per-frame line-of-sight checks are avoided).
-- The raider marker starts when a rival enters your tower, not when first seen.
+- The marked-raider tag (a rival inside your tower) is switched off: there is no "your building" in the floor race. Its UI is still in `Records.prefab`.
 - No nameplates appear in reception for the rival firm.
 - Without Steam, player names fall back to "Associate 1", "Associate 2".
 - Verified in headless stills (host and client at 1920 x 1080 and 1280 x 720 in `Lane_Integration.unity`), not yet verified in live motion in a desktop window.

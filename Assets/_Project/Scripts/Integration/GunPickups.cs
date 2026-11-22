@@ -21,7 +21,7 @@ namespace CloseTheDeal.Integration
 
         bool _warnedUnlisted;
 
-        /// <summary>Host only. Spawns a swapped-out gun (prefab, position, rotation, velocity) in a scene with no FloorLoot; the mode that sets it despawns what it spawns.</summary>
+        /// <summary>Host only. Spawns a swapped-out gun (prefab, position, rotation, velocity); the mode that sets it despawns what it spawns. Unset, a swapped gun is not dropped.</summary>
         public static System.Action<NetworkObject, Vector3, Quaternion, Vector3> SpawnLoose;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -111,18 +111,14 @@ namespace CloseTheDeal.Integration
         void DropSwapped(ItemCarrier carrier, WeaponDefinition weapon)
         {
             NetworkObject prefab = _map.PickupFor(weapon);
-            FloorLoot loot = FloorLoot.Instance;
-            if (prefab == null || (loot == null && SpawnLoose == null))
+            if (prefab == null || SpawnLoose == null)
                 return;
 
             Transform body = carrier.transform;
             Vector3 forward = body.forward;
             Vector3 at = body.position + Vector3.up * SwapDropHeight + forward * SwapDropReach;
             Quaternion facing = Quaternion.LookRotation(forward, Vector3.up);
-            if (SpawnLoose != null)
-                SpawnLoose(prefab, at, facing, forward * _swapTossSpeed);
-            else
-                loot.ServerSpawnLoose(prefab, at, facing, forward * _swapTossSpeed);
+            SpawnLoose(prefab, at, facing, forward * _swapTossSpeed);
         }
 
         void WarnUnlisted(Pickup pickup)

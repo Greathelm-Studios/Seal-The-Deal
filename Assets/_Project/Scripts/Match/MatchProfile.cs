@@ -4,14 +4,14 @@ using UnityEngine;
 namespace CloseTheDeal.MatchMode
 {
     /// <summary>
-    /// Designer-owned tuning for the briefcase game mode. Runtime only reads it (AGENTS.md §4).
+    /// Designer-owned tuning for the briefcase and the two firms. Runtime only reads it (AGENTS.md §4).
     /// Design and ownership: docs/systems/MATCH.md.
     /// </summary>
     [CreateAssetMenu(menuName = "Seal the Deal/Match Profile", fileName = "MatchProfile")]
     public sealed class MatchProfile : ScriptableObject
     {
         [Header("Firms")]
-        [Tooltip("The two rival firms, one per building.")]
+        [Tooltip("The two rival firms.")]
         public FirmDefinition[] Firms = new FirmDefinition[0];
 
         [Tooltip("Colour of your own firm on your own screen: its HUD line, and the briefcase while one of you carries it.")]
@@ -24,21 +24,12 @@ namespace CloseTheDeal.MatchMode
         public Color LooseColour = new(0.42f, 0.3f, 0.22f, 1f);
 
         [Header("Match flow")]
-        [Tooltip("Seconds between the host starting the match and the briefcase unlocking. Longer gives late arrivals time to reach the plaza.")]
+        [Tooltip("Seconds between the host starting the match and the briefcase unlocking. Longer gives everyone time to look round before the search starts.")]
         [Min(1f)] public float CountdownSeconds = 5f;
-
-        [Tooltip("Seconds a match can run before the clock decides it: the firm holding the briefcase, or that carried it last, wins. 900 = the 15-minute cap.")]
-        [Min(10f)] public float MatchSeconds = 900f;
-
-        [Tooltip("Seconds left on the clock when everyone is warned the quarter is about to close. 60 = one minute's warning; 0 = no warning.")]
-        [Min(0f)] public float CapWarningSeconds = 60f;
 
         [Header("Briefcase")]
         [Tooltip("The networked briefcase. One is spawned for the match.")]
         public NetworkObject BriefcasePrefab;
-
-        [Tooltip("Where the briefcase starts, in metres from the centre of the plaza between the towers: X along the street, Y up, Z toward Building B. Keep Z at 0 so neither firm is closer.")]
-        public Vector3 SpawnOnPlaza = new(0f, 0.3f, 0f);
 
         [Tooltip("How close a player's chest must be to the briefcase to pick it up, in metres. Higher = easier grabs through a scrum; above about 3 it reaches across desks.")]
         [Min(0.5f)] public float PickupRange = 2.2f;
@@ -49,31 +40,14 @@ namespace CloseTheDeal.MatchMode
         [Tooltip("Upward speed added to a dropped briefcase, in metres per second. Higher gives a loftier hand-off.")]
         [Min(0f)] public float DropTossLift = 1.5f;
 
-        [Tooltip("Seconds a dropped briefcase may lie outside the buildings, plaza and skybridges before it is sent back.")]
+        [Tooltip("Seconds a dropped briefcase may lie outside the building before it is put back inside.")]
         [Min(0.1f)] public float StraySeconds = 2f;
-
-        [Tooltip("Seconds a briefcase is gone for once it has left the buildings, before it reappears on the skybridge of the highest checkpoint it reached (or on the plaza). Longer punishes losing it more.")]
-        [Min(0f)] public float ReturnDelaySeconds = 3f;
-
-        [Header("Leaving the building")]
-        [Tooltip("How far outside a building's walls still counts as inside, in metres. Higher forgives leaning out of a window; too high and a player on the street is never sent back.")]
-        [Min(0f)] public float OutsideMargin = 0.75f;
-
-        [Tooltip("Seconds a player falls outside the buildings, plaza and skybridges before they are put back at their firm's last checkpoint. Longer shows more of the fall.")]
-        [Min(0f)] public float FallSeconds = 1.2f;
-
-        [Header("Crossings (plaza and skybridges)")]
-        [Tooltip("Width of each skybridge between the towers, in metres. Must stay under 3.6, the gap between the window pillars, or the bridge hits them.")]
-        [Range(1f, 3.5f)] public float BridgeWidth = 3f;
-
-        [Tooltip("Height of the railings along each skybridge, in metres. 1.1 stops a walk-off but not a blast.")]
-        [Min(0f)] public float RailHeight = 1.1f;
 
         [Header("Carrying")]
         [Tooltip("Seconds the briefcase takes to move into the hand when picked up. Keep it short: 0.15 reads as a grab.")]
         [Min(0f)] public float CarryBlendSeconds = 0.15f;
 
-        [Tooltip("Where the carrier sees the briefcase, in metres from their eye: X right, Y up, Z forward. The default tucks it into the lower LEFT corner, mostly below the view, so the stairs ahead stay clear and the gun (lower right) keeps its side.")]
+        [Tooltip("Where the carrier sees the briefcase, in metres from their eye: X right, Y up, Z forward. The default tucks it into the lower LEFT corner, mostly below the view, so the way ahead stays clear and the gun (lower right) keeps its side.")]
         public Vector3 FirstPersonOffset = new(-0.34f, -0.5f, 0.8f);
 
         [Tooltip("How big the carrier sees their own briefcase, as a fraction of its real size. Smaller blocks less of the view; 1 is true size, which fills a corner of the screen.")]
@@ -83,7 +57,7 @@ namespace CloseTheDeal.MatchMode
         [Tooltip("The see-through-walls marker above the briefcase. Leave empty for no beacon.")]
         public Material BeaconMaterial;
 
-        [Tooltip("How far away the beacon can be seen through floors and walls, in metres. 30 covers about six floors; past it, the beacon fades out and only the case itself shows.")]
+        [Tooltip("How far away the beacon can be seen through walls, in metres. 30 covers most of a floor; past it, the beacon fades out and only the case itself shows.")]
         [Min(1f)] public float BeaconRange = 30f;
 
         [Tooltip("How tall the beacon's column of light is above the case, in metres. Taller reads from further below; too tall pokes through the floor above everywhere.")]
@@ -93,15 +67,15 @@ namespace CloseTheDeal.MatchMode
         public Color BeaconLooseColour = new(0.95f, 0.97f, 1f, 1f);
 
         [Header("HUD")]
-        [Tooltip("Seconds a message such as 'The roof only counts with the briefcase' stays on screen.")]
+        [Tooltip("Seconds a message such as 'You dropped the briefcase' stays on screen.")]
         [Min(1f)] public float NoticeSeconds = 4f;
 
-        /// <summary>The firm that climbs the given building, or null when none is set up for it.</summary>
-        public FirmDefinition FirmInTower(int tower)
+        /// <summary>The firm with this index (0 or 1), or null when none is set up for it.</summary>
+        public FirmDefinition FirmByIndex(int index)
         {
             foreach (FirmDefinition firm in Firms)
             {
-                if (firm != null && firm.Tower == tower)
+                if (firm != null && firm.Tower == index)
                     return firm;
             }
 

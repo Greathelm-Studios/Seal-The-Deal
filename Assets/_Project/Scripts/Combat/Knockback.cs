@@ -97,14 +97,6 @@ namespace CloseTheDeal.Combat
                 return motor != null;
             }
 
-            BreakableDoor door = hit.GetComponentInParent<BreakableDoor>();
-            if (door != null)
-            {
-                if (SeenTargets.Add(door))
-                    door.TakeBlast();
-                return false;
-            }
-
             Prop prop = hit.GetComponentInParent<Prop>();
             if (prop != null && SeenTargets.Add(prop))
                 prop.Throw(ThrowVelocity(point, hit.bounds.center, blast, blast.PropSpeed));

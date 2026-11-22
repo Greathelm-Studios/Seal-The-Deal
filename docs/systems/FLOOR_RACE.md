@@ -4,7 +4,7 @@
 
 The main game mode, decided by Harvey on 2026-11-22. It is built, and a whole match has been driven by script with a second player watching from a client build. No person has played it yet. What has been checked, and how, is under "Checked so far".
 
-It replaces the two-tower design. [GDD.md](../GDD.md) and the tower mode in the code ([MATCH.md](MATCH.md)) still describe two towers; going to one building drops the window fights across the street and the zipline raid.
+It replaced the two-tower design, whose code was removed on 2026-11-22. [GDD.md](../GDD.md) still describes two towers; going to one building drops the window fights across the street and the zipline raid.
 
 ## What the player sees
 
@@ -103,9 +103,9 @@ Only one floor is in play at a time. The next floor is built above the old one w
 
 - **One state value drives every machine.** `FloorRaceDirector` syncs `FloorRaceState`. Each machine builds the floor the state names, works the lift doors and the floor-change screen out from the stage's tick, and tears the old floor down `Teardown Seconds` after arriving. Nothing else about a floor change is sent.
 - **The stages of a floor change.** Playing, then Departing when the lift fills (doors close), then Building (the floor number goes up; every machine builds the new floor above; players are still on the old one), then, `Build Lead Seconds` (0.5) later, the host moves everyone up and enters HeadStart, then Playing when the head start ends. Building before moving is why nobody falls: the host only moves players once every machine has had time to build.
-- **The match director is shared, the referee is not.** The briefcase, its pick-up and drop, the phases and the result still belong to `MatchDirector`. A mode registers an `IMatchRuleset` and the director hands it the per-tick referee step, the start button and a few HUD words; without one it runs the two-tower referee as before. The floor race is the first ruleset. The tower code is untouched apart from that seam.
+- **The match director is shared, the referee is not.** The briefcase, its pick-up and drop, the phases and the result belong to `MatchDirector` ([MATCH.md](MATCH.md)). A mode registers an `IMatchRuleset` and the director hands it the per-tick referee step, the start button and a few HUD words. The floor race is the only ruleset.
 - **Respawns are held, not timed.** `Health.RespawnsHeld` is switched on by the mode on every machine. A dead body stays down until the host calls `Health.ServerRespawnAt`. The down card says so instead of counting.
-- **Props without a tower.** The prop stream needed a `TowerBuilder` for its packing box. `PropStream.UseBuilding` now gives it one for any building; the mode sets it once per session to cover the plate and all ten storeys.
+- **The prop stream's building.** The prop stream packs positions into a box the mode gives it with `PropStream.UseBuilding`, set once per session to cover the plate and all ten storeys.
 - **Designer-authored against runtime-derived (`AGENTS.md §4`).** Authored: `FloorRace.asset`, `FloorGen.asset`, `FloorKit.asset`, the match profile, the kit prefabs. Derived: the seed, every layout, the built floors, lift door positions, spawn choices.
 
 ## Files and setup
@@ -118,7 +118,7 @@ Only one floor is in play at a time. The next floor is built above the old one w
 ## HUD
 
 - `FloorRaceHud` adds the floor and room name (top centre), the objective line (top right, under the briefcase tracker), the cash line, and the floor-change screen.
-- `MatchHud` is reused for the briefcase tracker, the pick-up and drop prompts, the countdown, banners and notices. With a ruleset it hides its clock and its tower floor ladder, and hides the briefcase marker while the briefcase is hidden.
+- `MatchHud` supplies the pick-up and drop prompts, the countdown, one-off lines and the briefcase marker, which stays off while the briefcase is hidden.
 
 ## Defaults chosen that the spec did not give
 
@@ -161,19 +161,13 @@ Each is an Inspector value or a small rule, picked as the smallest sensible beha
   - **The floor 10 win:** the client carried the briefcase up eight more floors and [into the manager's office](../proof/floor_race_2026-11-22/c_12_floor10.jpg); its menu read ["Halloran Voss sealed the deal ... That is your firm"](../proof/floor_race_2026-11-22/c_13_win.jpg). The client's profile file held 1,000 cash and the win; the host's held 0 cash and the loss.
 - **Not checked:** a person playing it; more than one player a firm (so boarding with teammates, and a wipe that is not solo, are untested); Steam instead of the local transport; two PCs; a joiner mid-match; falling out of a window as a client (host only).
 
-## Old two-tower code that can now be deleted
+## The two-tower mode was removed
 
-Left in place as asked. This list comes from reading what refers to what, not from deleting anything and compiling.
+On 2026-11-22, in the commit "Remove the two-tower mode", after the floor race had been seen from a client.
 
-- **Tower building:** `Scripts/Tower/TowerBuilder.cs`, `TowerLayout.cs`, `TowerProfile.cs`, `FloorTemplate.cs`, `BreakableDoor.cs`; the floor templates in `Assets/_Project/Floors/`; `Profiles/DefaultTower.asset` and `Profiles/Match/LaneTower.asset`; `Editor/Greybox/GreyboxTowerSetup.cs`. `TeamSpawner.cs` stays (the floor race uses it); it only needs `TowerBuilder.TeamCount` and its `TryGetSpawn` fallback moved or removed.
-- **Tower rules in the match:** `MatchReferee.cs`, `MatchRules.cs`, `MatchArena.cs`, `MatchCrossings.cs`, `MatchGates.cs`, and in `MatchDirector` everything about checkpoints, the open floor, gathering in reception, briefcase return to a skybridge and the quarter clock. `MatchProfile` then loses its plaza, skybridge, clock and leaving-the-building fields. Once they are gone `IMatchRuleset` can be folded into the director or kept for a second mode.
-- **Things that read the tower arena:** the floor ladder, checkpoint and gate lines in `MatchHud`; `Nameplates.RaiderMarked`; the arena calls in `Records/LocalDeath.cs` and `MatchRecords.Host.cs`.
-- **Tower props and loot:** `Props/PropSpawner.cs`, `Props/PropMarker.cs`, `Integration/FloorLoot.cs`, `FloorLootTable.cs` and its asset. `GunPickups` then always uses the mode's spawner.
-- **The reception lobby flow**, if the floor race keeps starting from the menu: `Integration/LobbyRunFlow.cs`, `LobbyRoom.cs` and the desk in `Scripts/Lobby/`. That is a design call, not just a clean-up.
-- **Prop stream:** `TowerFrame.From(TowerProfile)` and `PropStream`'s tower attach; `UseBuilding` becomes the only way in.
-- **Editor tools for scenes that no longer exist:** the lane setups under `Editor/Lanes/` that only build deleted scenes (`GameModeLaneSetup` and `ShootingLaneSetup` are still called by the floor race scene tool for the match HUD, briefcase prefab and combat HUD, so those parts stay).
-- **Docs to archive:** `TOWER.md`, `INTEGRATION.md`, and the tower half of `MATCH.md`.
-- **Not part of this:** `Lift/Elevator.cs` is KitOffice's rooftop lift ([ELEVATOR.md](ELEVATOR.md)), unused by the floor race, which works its own lift doors; whether it stays is a question about KitOffice.
+- **Gone:** the tower builder, layout, profile, floor templates and locked doors; the tower referee, arena, plaza, skybridges and floor gates; checkpoints, the open floor and the quarter clock in `MatchDirector`; `PropSpawner` and `PropMarker`; `FloorLoot` and its table; bullet damage to doors; the tower half of the glass registry; the prop stream's tower hook; the tower and integration scene tools and the scripted checks that drove those scenes; their assets.
+- **Kept:** `TeamSpawner` (seats players in firms); `LobbyRunFlow`, `LobbyRoom` and `Scripts/Lobby/` (the reception desk flow, unused by this scene, a design call); `Lift/Elevator.cs` (KitOffice's rooftop lift); the lane tools that KitOffice, WeaponTest and this scene's tool still call.
+- **Checked after removing it:** it compiles with no errors; a full match (ten floors, a wipe, a fall, the win) was replayed on the host alone in the Editor with a clean console; `KitOffice`, `WeaponTest` and `FloorRace` open with no missing scripts and no prefab has one. The client check above was made before the removal and has not been repeated since.
 
 ## Known limitations
 

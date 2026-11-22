@@ -21,7 +21,7 @@ Where a shot hits the building or furniture there is a pop, sparks, dust and sto
 A hit flashes the target red and rocks it away from the shot (`Health` flinch); by default it does not shove a living target, so being shot never takes a player's movement away (`Hit Shove` on the gun turns that on). The killing shot knocks the body back **along the shot** rather than up: the pistol and AR-15 throw at **10 m/s with a 0.15 lift**, and the ragdoll gives half of that to the whole body and a full-speed kick to the part that was hit, so a head shot snaps the head back and a leg shot sweeps the legs (`DeathBodyShare`, `DeathHitPartShare` in [HIT_REACTIONS.md](HIT_REACTIONS.md)). Measured on the WeaponTest roof (2026-11-22, pistol, level shot): the hips rise 2 to 5 cm and the body ends up about 3.5 to 3.8 m back along the shot. The earlier 13 m/s with 0.55 lift threw bodies up about 2 m; it carried a body from 1.3 to 6 m away out of a window, which a gun kill now mostly doesn't (blasts still do: the GDD's window shot is the rocket's).
 A dead player falls flat, cannot steer, shoot, reload or switch, and comes back **5 seconds** later on the floor they died on with full magazines.
 A wounded player **regenerates**: **5 seconds** after the last hit, health climbs back at **10 a second** until full, and any new hit restarts the wait (`Health` > Regeneration: Regen Delay Seconds, Regen Per Second; 0 per second turns it off). It pauses while knocked out. Not in the GDD yet: added at Harvey's request on 2026-11-22, and the numbers are a first guess for Adam to confirm.
-Bullets always pass through glass and break it on the way ([GLASS.md](GLASS.md)). Bullets also wear down locked doors via `DoorDamage` on the door prefab.
+Bullets always pass through glass and break it on the way ([GLASS.md](GLASS.md)).
 While the menu is open (the mouse is free) the fire, reload and slot buttons do nothing.
 
 ## Feel reference: NorseFPS
@@ -79,7 +79,6 @@ Adam points at NorseFPS (his other project, `Greathelm-Studios`) as the bar for 
 - **Shot effects (`WeaponView.OnFired`, every machine):** the flash is a `MuzzleFlash` prefab instance, one per player per flash, parented to the current muzzle on first use and re-emitted each shot (`ParticleSystem.Emit` on systems that run with emission off, so smoke from earlier shots is kept; the light holds full brightness for the shot's frame then fades over `FlashSeconds`). The muzzle is the arms model's held gun (`PlayerViewmodel.Muzzle`, its child `Muzzle`) on every machine, so other players' flashes leave their visible gun. The impact needs the surface's facing, which the shot does not carry: a 0.6 m local ray across the end point (from 0.3 m before it, so glass the shot passed through is not found) gives the normal and whether the surface has a rigidbody; the burst faces the ricochet direction and `BulletHoles` places the mark. Body hits play the burst facing the shooter and leave no hole.
 - **Pools and culling:** `TracerPool` caches material fade modes (`WidthOnly` on opaque URP Unlit `Tracer.mat` to avoid gradient rebuilds; `PropertyBlockAlpha` / `VertexColor` on transparent materials), capping at 64 live tracers and 32 pooled per prefab. `TracerPool` also flies streaks (`TracerSpeed` above 0): position 0 is the tail, 1 the head, recycled once the tail reaches the end. `LocalEffects` pools impact particles up to 32 live and culls beyond 60 m. `BulletHoles` reuses a ring of 128 quads (oldest first), skips marks beyond 60 m, and hides its own on scene unload. `CombatSounds` pools 32 3D `AudioSource`s with farthest-voice stealing, 60 m distance culling, and single-instance `GlassPane.AnyBroken` registration.
 - **Combat HUD (`CombatHud`):** Isolates hit-marker ticks in a child `Canvas` (`HitMarkerCanvas`) so tick alpha/position updates do not dirty the main HUD canvas; subscribes to `LocalDeath.Down` in `Awake` (not `OnEnable`) because the HUD object is disabled while the menu is open; caches uppercased weapon strings per `WeaponDefinition`.
-- **Doors (`DoorDamage`):** Accumulates bullet damage on the host via `IDamageable` and calls `BreakableDoor.TakeBlast()` each time `_damagePerBlast` is banked; clears banked damage on pool re-enable (`OnEnable`).
 
 ## Designer-authored vs runtime-derived (AGENTS.md §4)
 
@@ -94,7 +93,7 @@ Adam points at NorseFPS (his other project, `Greathelm-Studios`) as the bar for 
 - **Holding fire:** Set `WeaponHolder.FireHeld` (static predicate checked on owner and host) to keep the trigger up and block firing while carried items or lobby rules apply.
 - **Starting guns:** Place `StartingLoadout` in the scene. Without one, players start empty-handed.
 - **Damageable objects:** Implement `CloseTheDeal.Core.IDamageable` on the hit collider, its parents, or its attached `Rigidbody`.
-- **Explosions:** `Knockback.Explode(..., attackerClientId)` applies `BlastProfile.Damage`, throws players and `Prop`s, triggers `BreakableDoor.TakeBlast()`, and breaks glass via `GlassRegistry.BreakInRadius`.
+- **Explosions:** `Knockback.Explode(..., attackerClientId)` applies `BlastProfile.Damage`, throws players and `Prop`s, and breaks glass via `GlassRegistry.BreakInRadius`.
 - **Game mode:** `Health.OverrideNextRespawn(position)` on the host overrides the next respawn point once; `Health.AnyDied` carries the attacker's client id. A mode that decides respawns itself sets `Health.RespawnsHeld` on every machine: the dead then stay down until the host calls `Health.ServerRespawnAt(position)`, and the down card reads "back when your whole firm is down" instead of counting ([FLOOR_RACE.md](FLOOR_RACE.md)).
 
 ## Weapon test scene
@@ -143,7 +142,7 @@ Under [Assets/_Project/Scripts/Combat/](../../Assets/_Project/Scripts/Combat/):
 - `WeaponDefinition.cs`, `WeaponCatalog.cs`, `CombatSoundSet.cs`, `BlastProfile.cs`: Tuning assets.
 - `WeaponHolder.cs`, `ShotResolver.cs`, `Health.cs`: Networked slots, prediction, host validation, lag rewind, health, respawn.
 - `WeaponView.cs`, `TracerPool.cs`, `LocalEffects.cs`, `MuzzleFlash.cs`, `BulletHoles.cs`, `DecayingImpulse.cs`, `CombatHud.cs`, `CombatSounds.cs`: Local visuals, HUD, and audio.
-- `StartingLoadout.cs`, `MovingTarget.cs`, `DoorDamage.cs`, `Knockback.cs`: Scene loadout, moving practice dummy, door bullet damage, shared explosion/shove math.
+- `StartingLoadout.cs`, `MovingTarget.cs`, `Knockback.cs`: Scene loadout, moving practice dummy, shared explosion/shove math.
 - `Assets/_Project/Scripts/Core/IDamageable.cs`: Shared host-only damage interface.
 - Editor setup: [ShootingLaneSetup.cs](../../Assets/_Project/Editor/Lanes/ShootingLaneSetup.cs).
 

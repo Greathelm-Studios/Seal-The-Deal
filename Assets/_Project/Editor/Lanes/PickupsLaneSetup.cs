@@ -7,7 +7,6 @@ using CloseTheDeal.Player;
 using CloseTheDeal.Props;
 using System.Reflection;
 using CloseTheDeal.Net;
-using CloseTheDeal.Tower;
 using CloseTheDeal.UI;
 using FishNet.Component.Transforming;
 using FishNet.Object;
@@ -805,7 +804,6 @@ namespace CloseTheDeal.Editor.Lanes
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             BuildRoom();
-            AddTowerFrame();
             int props = PlaceContents(assets);
             AddCamera();
 
@@ -878,53 +876,6 @@ namespace CloseTheDeal.Editor.Lanes
             block.isStatic = true;
         }
 
-        static void AddTowerFrame()
-        {
-            TowerProfile profile = LaneTowerProfile();
-            var go = new GameObject("Tower (empty frame for prop streaming)");
-            go.AddComponent<NetworkObject>();
-            var builder = go.AddComponent<TowerBuilder>();
-            var so = new SerializedObject(builder);
-            GreyboxSceneSetup.SetReference(so, "_profile", profile);
-            so.ApplyModifiedPropertiesWithoutUndo();
-        }
-
-        static TowerProfile LaneTowerProfile()
-        {
-            FloorTemplate empty = EmptyFloorTemplate();
-            var existing = AssetDatabase.LoadAssetAtPath<TowerProfile>(LaneTowerPath);
-            if (existing != null)
-            {
-                if (existing.Lobby == null)
-                    Debug.LogError($"[Pickups] {LaneTowerPath} has lost its floor templates; delete it and re-run Set Up Pickups.");
-                return existing;
-            }
-
-            var profile = ScriptableObject.CreateInstance<TowerProfile>();
-            profile.Lobby = profile.Checkpoint = profile.Boardroom = profile.Roof = empty;
-            profile.Offices = new[] { empty };
-            // The two empty towers stand well apart, so the hand-built slice and the ground
-            // under its windows are street, not inside a tower: things thrown out of it are
-            // out of the building (Pickup's fall rule) yet still inside Switchboard's box.
-            profile.Gap = LaneTowerGap;
-            AssetDatabase.CreateAsset(profile, LaneTowerPath);
-            Debug.Log("[Pickups] Created " + LaneTowerPath);
-            return profile;
-        }
-
-        static FloorTemplate EmptyFloorTemplate()
-        {
-            var existing = AssetDatabase.LoadAssetAtPath<FloorTemplate>(EmptyFloorPath);
-            if (existing != null)
-                return existing;
-
-            var go = new GameObject("LaneEmptyFloor");
-            go.AddComponent<FloorTemplate>();
-            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, EmptyFloorPath);
-            Object.DestroyImmediate(go);
-            return prefab.GetComponent<FloorTemplate>();
-        }
-
         static int PlaceContents(Assets assets)
         {
             var parent = new GameObject("Props and items").transform;
@@ -994,9 +945,6 @@ namespace CloseTheDeal.Editor.Lanes
 
         internal static void BuildPromptCanvas() => ItemHudSetup.AddToOpenScene();
 
-        /// <summary>Shell: -executeMethod CloseTheDeal.Editor.Lanes.PickupsLaneSetup.AddItemHudToIntegrationScene</summary>
-        public static void AddItemHudToIntegrationScene() => ItemHudSetup.AddToIntegrationSceneFromShell();
-
         internal static class ItemHudSetup
         {
             const string OldCanvasName = "Item Prompts";
@@ -1037,14 +985,6 @@ namespace CloseTheDeal.Editor.Lanes
                 Build(parent, tokens, plate, keyHint);
                 EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
                 Debug.Log($"[Pickups] Added the item HUD under {parent.name}.");
-            }
-
-            /// <summary>Shell: opens Lane_Integration, puts the item HUD in (replacing the old label) and saves it.</summary>
-            public static void AddToIntegrationSceneFromShell()
-            {
-                EditorSceneManager.OpenScene(IntegrationLaneSetup.ScenePath, OpenSceneMode.Single);
-                AddToOpenScene();
-                EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
             }
 
             static Transform HudParent()
@@ -1420,7 +1360,7 @@ namespace CloseTheDeal.Editor.Lanes
             {
                 // The item HUD as players will see it: in the integration scene, put in for this run
                 // only (the scene file is not saved).
-                EditorSceneManager.OpenScene(Arg("-pickupsScene") ?? IntegrationLaneSetup.ScenePath, OpenSceneMode.Single);
+                EditorSceneManager.OpenScene(Arg("-pickupsScene") ?? CloseTheDeal.Editor.FloorRace.FloorRaceSceneSetup.ScenePath, OpenSceneMode.Single);
                 PickupsLaneSetup.ItemHudSetup.AddToOpenScene();
             }
             else

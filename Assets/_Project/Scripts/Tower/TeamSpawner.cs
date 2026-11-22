@@ -9,17 +9,17 @@ using UnityEngine;
 
 namespace CloseTheDeal.Tower
 {
-    /// <summary>Host-authoritative player spawner replacing FishNet's PlayerSpawner. Design: docs/systems/TOWER.md.</summary>
+    /// <summary>Host-authoritative player spawner replacing FishNet's PlayerSpawner: seats each joiner in the smaller firm.</summary>
     [DisallowMultipleComponent]
     public sealed class TeamSpawner : MonoBehaviour
     {
-        /// <summary>Lets a game mode place a joining player somewhere other than the lobby. Return false to use the lobby.</summary>
+        /// <summary>Lets a game mode place a joining player itself. Return false to use the fallback spawns.</summary>
         public delegate bool SpawnChooser(int team, int slot, out Vector3 position, out Quaternion rotation);
 
         /// <summary>Host only. Raised just before a player is spawned: the player, their connection, their team and their slot in it.</summary>
         public static event Action<NetworkObject, NetworkConnection, int, int> OnPlayerSpawning;
 
-        /// <summary>Host only. Asked first for where a joining player appears; null or false means the team lobby.</summary>
+        /// <summary>Host only. Asked first for where a joining player appears; null or false means the fallback spawns.</summary>
         public static SpawnChooser SpawnOverride;
 
         /// <summary>The spawner on the NetworkManager, or null when there is none.</summary>
@@ -33,13 +33,13 @@ namespace CloseTheDeal.Tower
             // OnPlayerSpawning is hooked by FirmMember at SubsystemRegistration; don't clear it here.
         }
 
+        /// <summary>How many firms a match has.</summary>
+        public const int TeamCount = 2;
+
         [Tooltip("The networked player prefab.")]
         [SerializeField] NetworkObject _playerPrefab;
 
-        [Tooltip("Tick to spawn in the team lobbies of the tower. Untick to use the fallback spawns on the flat test area instead.")]
-        [SerializeField] bool _spawnInTower = true;
-
-        [Tooltip("Used when there is no tower, or Spawn In Tower is off. Cycled in order.")]
+        [Tooltip("Where players appear when the game mode does not place them itself. Cycled in order.")]
         public Transform[] FallbackSpawns = new Transform[0];
 
         struct Seat
@@ -52,8 +52,8 @@ namespace CloseTheDeal.Tower
 
         NetworkManager _networkManager;
         readonly Dictionary<int, Seat> _seats = new();
-        readonly int[] _playersPerTeam = new int[TowerBuilder.TeamCount];
-        readonly int[] _slotsInUse = new int[TowerBuilder.TeamCount];
+        readonly int[] _playersPerTeam = new int[TeamCount];
+        readonly int[] _slotsInUse = new int[TeamCount];
         int _nextFallback;
 
         public NetworkObject PlayerPrefab => _playerPrefab;
@@ -134,7 +134,7 @@ namespace CloseTheDeal.Tower
                 return;
 
             _seats.Clear();
-            for (int team = 0; team < TowerBuilder.TeamCount; team++)
+            for (int team = 0; team < TeamCount; team++)
             {
                 _playersPerTeam[team] = 0;
                 _slotsInUse[team] = 0;
@@ -163,7 +163,7 @@ namespace CloseTheDeal.Tower
 
             foreach (KeyValuePair<int, int> pair in teamByClientId)
             {
-                if (pair.Value >= 0 && pair.Value < TowerBuilder.TeamCount)
+                if (pair.Value >= 0 && pair.Value < TeamCount)
                     SitDown(pair.Key, pair.Value);
             }
         }
@@ -197,10 +197,6 @@ namespace CloseTheDeal.Tower
         void ChooseSpawn(Seat seat, out Vector3 position, out Quaternion rotation)
         {
             if (SpawnOverride != null && SpawnOverride(seat.Team, seat.Slot, out position, out rotation))
-                return;
-
-            TowerBuilder tower = TowerBuilder.Instance;
-            if (_spawnInTower && tower != null && tower.TryGetSpawn(seat.Team, seat.Slot, out position, out rotation))
                 return;
 
             if (FallbackSpawns.Length > 0)

@@ -67,7 +67,7 @@ namespace CloseTheDeal.Editor.FloorRace
             EditorSceneManager.SaveScene(scene, ScenePath);
             OfficeLook.Apply(askFirst: false);
 
-            GameModeLaneSetup.AddMatchWithoutTowers();
+            GameModeLaneSetup.AddMatch();
             AddStartingLoadout();
             // Health, ammo and hit marks; it leaves the pistol-only loadout above alone.
             ShootingLaneSetup.AddToOpenScene();

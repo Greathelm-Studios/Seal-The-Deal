@@ -1,7 +1,7 @@
 namespace CloseTheDeal.MatchMode
 {
     /// <summary>
-    /// A game mode that replaces the two-tower rules while reusing the briefcase, phases, pick-up and drop.
+    /// A game mode's rules. MatchDirector keeps the briefcase, phases, pick-up and drop; the mode supplies the rest.
     /// It registers itself in MatchDirector.Ruleset before the network starts. Design: docs/systems/FLOOR_RACE.md.
     /// </summary>
     public interface IMatchRuleset
@@ -11,9 +11,6 @@ namespace CloseTheDeal.MatchMode
 
         /// <summary>The floor in play, counted the way the mode counts it; match records keep each player's best.</summary>
         int CurrentFloor { get; }
-
-        /// <summary>False when the mode has no time limit: the HUD hides its clock.</summary>
-        bool HasClock { get; }
 
         /// <summary>Host only. The host pressed start or rematch.</summary>
         void ServerNewMatch();

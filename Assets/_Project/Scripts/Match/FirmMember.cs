@@ -37,13 +37,13 @@ namespace CloseTheDeal.MatchMode
         /// <summary>Someone joined, left or learned their firm: head counts per firm may differ.</summary>
         public static event Action OnRosterChanged;
 
-        /// <summary>A line for the local player only (why the roof did nothing, and so on).</summary>
+        /// <summary>A line for the local player only (they fell out, they dropped the briefcase).</summary>
         public static event Action<MatchNotice> OnNotice;
 
         /// <summary>What the local player's interact or drop key would do now. Raised only when it changes.</summary>
         public static event Action<MatchPrompt> OnPromptChanged;
 
-        /// <summary>A player fell out of the buildings and was put back. Raised on every machine, for sound and effects.</summary>
+        /// <summary>A player fell out of the building. Raised on every machine, for sound and effects.</summary>
         public static event Action<FirmMember> OnFellOut;
 
         [Tooltip("Where a carried briefcase hangs on this player, as other players see it. Built by the lane setup tool under the body's lean pivot; leave empty and the briefcase hangs at the player's feet.")]
@@ -64,11 +64,8 @@ namespace CloseTheDeal.MatchMode
         byte _assignedSlot;
 
         internal int OutsideTicks;
-        internal bool WasAtGate;
-        internal bool GateExplained;
-        internal bool WasOnRoof;
 
-        /// <summary>Which firm this player belongs to: the index of the building they climb.</summary>
+        /// <summary>Which firm this player belongs to: 0 or 1.</summary>
         public int Firm => _firm.Value;
 
         /// <summary>This player's place within their firm, 0 to 3. Picks their spawn point.</summary>
@@ -76,8 +73,6 @@ namespace CloseTheDeal.MatchMode
 
         public PlayerMotor Motor => _motor;
 
-        /// <summary>The body's collider: what the floor gates let through when this player carries the briefcase.</summary>
-        public Collider Body => _capsule;
         public Vector3 Position => _rigidbody.position;
         public Vector3 Velocity => _rigidbody.linearVelocity;
         public Vector3 Chest => _rigidbody.position + Vector3.up * (_capsule.height * 0.5f);
@@ -122,9 +117,6 @@ namespace CloseTheDeal.MatchMode
             Members.Add(this);
             _firm.OnChange += OnFirmChanged;
             MatchWiring.Raise(OnRosterChanged);
-            // The briefcase status can name this player as carrier before their body exists here.
-            if (MatchDirector.Instance != null)
-                MatchDirector.Instance.ApplyGates();
         }
 
         public override void OnStopNetwork()
@@ -141,7 +133,6 @@ namespace CloseTheDeal.MatchMode
             _firm.Value = _assignedFirm;
             _slot.Value = _assignedSlot;
             OutsideTicks = 0;
-            WasOnRoof = false;
         }
 
         public override void OnStopServer()
@@ -254,14 +245,6 @@ namespace CloseTheDeal.MatchMode
                 MatchDirector.Instance.ServerDrop(this, DropCause.Manual);
         }
 
-        void OnCollisionEnter(Collision collision)
-        {
-            if (!IsOwner || MatchDirector.Instance == null || MatchDirector.Instance.Gates == null)
-                return;
-
-            MatchDirector.Instance.Gates.Touch(collision.collider);
-        }
-
         /// <summary>Host only. Updates synced firm and team slot.</summary>
         public void ServerSetFirm(int firm, int slot)
         {
@@ -282,7 +265,6 @@ namespace CloseTheDeal.MatchMode
             transform.position = position;
             _rigidbody.linearVelocity = Vector3.zero;
             OutsideTicks = 0;
-            WasOnRoof = false;
         }
 
         /// <summary>Host only. Shows a one-off line on this player's own screen.</summary>
@@ -292,7 +274,7 @@ namespace CloseTheDeal.MatchMode
                 TargetNotice(Owner, notice);
         }
 
-        /// <summary>Host only. Tells every machine this player fell out and was put back.</summary>
+        /// <summary>Host only. Tells every machine this player fell out.</summary>
         public void AnnounceFellOut()
         {
             if (IsServerStarted)
