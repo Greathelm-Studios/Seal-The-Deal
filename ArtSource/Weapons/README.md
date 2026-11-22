@@ -21,7 +21,7 @@ Then copy `<out>/export/Pistol.fbx` over `Pistol.fbx` and run two menu items:
 
 What the script does to the source:
 - **Stands it upright**, muzzle along +Z in Unity, 190 mm long, 8 % taller than the source, the slide 40 % wider (26 mm) so it reads chunky, and the frame (grip and guard) only 15 % wider (30 mm): at 36 mm the grip read too thick in the hand (Alex, 2026-11-21). The origin is the middle of the grip, which is where the hand's `GripHand` seat is measured from.
-- **Cuts the fused mesh into parts:** `Pistol_Slide` (cut along the shut line, with the sights), `Pistol_Frame` (with the hammer and the logo), `Pistol_Trigger`, and `Pistol_Magazine`, a 4 mm base plate it adds under the grip.
+- **Cuts the fused mesh into parts:** `Pistol_Slide` (cut along the shut line, with the sights), `Pistol_Frame` (with the hammer and the logo), `Pistol_Trigger`, and `Pistol_Magazine`, which the script adds (the source has none): a 4 mm base plate under the grip and a 56 mm body that runs up inside the grip along its 12.3 degree lean, hidden until a reload slides it out. The body is the grip's bottom outline drawn in to 62 % of its width and 55 % of its depth and set 3 mm toward the back strap; the script counts body corners outside the frame and prints the lean (both must match `Reload magazine length` and `Reload magazine lean` on the viewmodel profile). Only menu item 1 below is needed after a magazine-only change: the bake overwrites the outline mesh in place.
 - **Adds character:**
   - aqua sight blocks;
   - a raised aqua AONAGI ring with its red hanko dot on the left grip panel;
@@ -34,7 +34,7 @@ What the script does to the source:
   - hanko-red dot.
 
   Faces are flat-shaded for the low-poly look.
-- **Size:** about 1,200 triangles.
+- **Size:** 1,236 triangles.
 
 ## Grip hand
 

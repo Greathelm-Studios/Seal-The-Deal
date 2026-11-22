@@ -14,6 +14,25 @@ namespace CloseTheDeal.Player
         const int PlaceOrder = 50;
         const float HeadClipCenterUp = 0.155f;
 
+        // The reload's beats, as fractions of its length. The magazine leaves, seats and the slide goes
+        // where CombatSounds plays their sounds (0.15, 0.6, 0.85).
+        const float ReloadRaisedAt = 0.14f;
+        const float ReloadMagazineFreeAt = 0.13f;
+        const float ReloadMagazineOutAt = 0.22f;
+        const float ReloadMagazineGoneAt = 0.36f;
+        const float ReloadHandComesAt = 0.28f;
+        const float ReloadNewMagazineAt = 0.40f;
+        const float ReloadPushAt = 0.52f;
+        const float ReloadSeatedAt = 0.60f;
+        const float ReloadHandLeavesAt = 0.62f;
+        const float ReloadHandGoneAt = 0.76f;
+        const float ReloadRackAt = 0.80f;
+        const float ReloadLowerAt = 0.84f;
+        const float ReloadNewMagazineRise = 0.12f;
+        const float ReloadMagazineThrow = 0.06f;
+        const float ReloadBumpPitch = 3f;
+        const float ReloadCancelSeconds = 0.15f;
+
         /// <summary>Layer name kept for greybox setup and stand-in raycast mask compatibility.</summary>
         public const string LayerName = "Viewmodel";
 
@@ -69,6 +88,12 @@ namespace CloseTheDeal.Player
         float _kickSide = 1f;
         float _reloadElapsed = -1f;
         float _reloadSeconds;
+        float _reloadFade = 1f;
+        bool _reloadCancelled;
+        bool _reloadRacked;
+        float _reloadRaise;
+        float _reloadFlick;
+        float _reloadBump;
         PlayerHeldWeapon _body;
         PlayerHits _hits;
 
@@ -152,22 +177,70 @@ namespace CloseTheDeal.Player
                 _body.CycleSlide();
         }
 
+        /// <summary>Pulls the held weapon's slide back and lets it go. A weapon with no slide ignores it.</summary>
+        public void RackSlide()
+        {
+            if (_body != null)
+                _body.RackSlide();
+        }
+
+        /// <summary>
+        /// Pulls the held weapon's slide back and keeps it there: the answer to a trigger pull on an empty
+        /// magazine. The next reload lets it go as its last beat; <see cref="ReleaseSlide"/> does it at once.
+        /// </summary>
+        public void LockSlide()
+        {
+            if (_body != null)
+                _body.SetSlideLocked(true);
+        }
+
+        /// <summary>Lets a slide held back by <see cref="LockSlide"/> slam forward. Does nothing when it isn't held.</summary>
+        public void ReleaseSlide()
+        {
+            if (_body != null)
+                _body.SetSlideLocked(false);
+        }
+
+        /// <summary>How far the gun is into its held-up reload pose, 0 on the aim to 1 fully up.</summary>
+        public float ReloadPose => Mathf.Clamp01(_reloadRaise);
+
+        /// <summary>How far the magazine has slid out of the grip during a reload, 0 seated to 1 fully out.</summary>
+        public float ReloadMagazineOut { get; private set; }
+
+        /// <summary>How far a magazine that is out of the gun is from the grip along the grip's own line, in metres: the old one thrown clear, or the new one coming in.</summary>
+        public float ReloadMagazineAway { get; private set; }
+
+        /// <summary>How far the thrown-out magazine has fallen toward the floor, in metres.</summary>
+        public float ReloadMagazineDrop { get; private set; }
+
+        /// <summary>False between the old magazine dropping out of sight and the new one appearing.</summary>
+        public bool ReloadMagazineShown { get; private set; } = true;
+
+        /// <summary>How far the left hand has come to the bottom of the grip with the new magazine, 0 to 1.</summary>
+        public float ReloadHand { get; private set; }
+
+        /// <summary>How far below the grip the left hand's magazine is, in metres.</summary>
+        public float ReloadHandBelow { get; private set; }
+
         /// <summary>Starts the reload move. Does nothing on players this client does not control, or while one is already playing.</summary>
         /// <param name="seconds">How long the move lasts, to match the weapon's reload. Zero or less uses the profile's.</param>
         public void Reload(float seconds = 0f)
         {
-            if (!_active || IsReloading)
+            if (!_active || (IsReloading && !_reloadCancelled))
                 return;
 
             _reloadSeconds = seconds > 0f ? seconds : _profile.ReloadSeconds;
             _reloadElapsed = 0f;
+            _reloadFade = 1f;
+            _reloadCancelled = false;
+            _reloadRacked = false;
         }
 
-        /// <summary>Stops a reload move early and brings the gun back up from where it has got to.</summary>
+        /// <summary>Stops a reload move early: the gun comes back onto the aim from where it has got to and the magazine goes back in.</summary>
         public void CancelReload()
         {
-            if (IsReloading && _reloadElapsed < _reloadSeconds * 0.5f)
-                _reloadElapsed = _reloadSeconds - _reloadElapsed;
+            if (IsReloading)
+                _reloadCancelled = true;
         }
 
         void Awake()
@@ -260,7 +333,7 @@ namespace CloseTheDeal.Player
             _sprint = 0f;
             _climb = 0f;
             _kickElapsed = -1f;
-            _reloadElapsed = -1f;
+            EndReload();
             BodyViewMotionOffset = Vector3.zero;
             BodyViewMotionRotation = RestTurn;
 
@@ -330,23 +403,29 @@ namespace CloseTheDeal.Player
             UpdateLag(dt);
             UpdateStance(dt);
             float kick = KickAmount(dt);
-            float reload = ReloadDepth(dt);
+            StepReload(dt);
 
             float leanTilt = Mathf.DeltaAngle(0f, _baseCamera.transform.eulerAngles.z);
             float bodyRoll = _lag.y * _profile.LookLagRoll - leanTilt * _profile.LeanCounterRoll;
 
+            // The reload's knock comes along the grip, the way the left hand pushes the magazine in.
+            Quaternion reloadTurn = Quaternion.SlerpUnclamped(Quaternion.identity, Quaternion.Euler(_profile.ReloadTurn), _reloadRaise);
+
             BodyViewMotionOffset = new Vector3(_lag.y, -_lag.x, 0f) * _profile.LookLagShift
                 + _profile.SprintShift * _sprint
                 + Vector3.back * (_kickNow.PushBack * kick)
-                + Vector3.down * (_profile.ReloadDrop * reload + _profile.ClimbDrop * _climb);
+                + _profile.ReloadShift * _reloadRaise
+                + reloadTurn * Vector3.up * (_profile.ReloadSeatBump * _reloadBump)
+                + Vector3.down * (_profile.ClimbDrop * _climb);
 
             BodyViewMotionRotation = Quaternion.Euler(_lag.x, _lag.y, bodyRoll)
                 * RestTurn
                 * Quaternion.Euler(_profile.SprintTurn * _sprint)
+                * reloadTurn
                 * Quaternion.Euler(
-                    -_kickNow.Flip * kick - _profile.ReloadTilt * reload + _profile.ClimbTilt * _climb,
+                    -_kickNow.Flip * kick - ReloadBumpPitch * _reloadBump + _profile.ClimbTilt * _climb,
                     _kickNow.Twist * kick,
-                    _kickNow.Roll * kick + _profile.ReloadRoll * reload);
+                    _kickNow.Roll * kick + _profile.ReloadEjectFlick * _reloadFlick);
         }
 
         /// <summary>How much of the current kick is left: 1 on the shot's own frame, then along its curve (which may swing past 0) to rest.</summary>
@@ -439,20 +518,107 @@ namespace CloseTheDeal.Player
             _climb = Mathf.SmoothDamp(_climb, climb, ref _climbVelocity, _profile.ClimbBlendSeconds, Mathf.Infinity, dt);
         }
 
-        float ReloadDepth(float dt)
+        /// <summary>
+        /// Moves the reload on: the gun comes up, the magazine slides out and falls, the left hand brings a new
+        /// one up and pushes it in, the slide is racked and the gun goes back onto the aim. A cancelled reload
+        /// stops where it is and fades everything back to rest.
+        /// </summary>
+        void StepReload(float dt)
         {
             if (_reloadElapsed < 0f)
-                return 0f;
+                return;
 
-            _reloadElapsed += dt;
-            if (_reloadElapsed >= _reloadSeconds)
+            if (_reloadCancelled)
+                _reloadFade -= dt / ReloadCancelSeconds;
+            else
+                _reloadElapsed += dt;
+
+            if (_reloadElapsed >= _reloadSeconds || _reloadFade <= 0f)
             {
-                _reloadElapsed = -1f;
-                return 0f;
+                EndReload();
+                return;
             }
 
-            float arch = Mathf.Sin(_reloadElapsed / _reloadSeconds * Mathf.PI);
-            return arch * arch;
+            float t = _reloadElapsed / _reloadSeconds;
+            float fade = _reloadFade;
+
+            _reloadRaise = SnapUp(Mathf.Clamp01(t / ReloadRaisedAt), _profile.ReloadOvershoot)
+                * (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(ReloadLowerAt, 1f, t)))
+                * fade;
+            _reloadFlick = Jolt(Mathf.InverseLerp(ReloadMagazineFreeAt, ReloadMagazineGoneAt, t)) * fade;
+            _reloadBump = Jolt(Mathf.InverseLerp(ReloadSeatedAt - 0.01f, ReloadHandGoneAt, t)) * fade;
+
+            float length = _profile.ReloadMagazineLength;
+            if (t < ReloadNewMagazineAt)
+            {
+                // Thrown out along the grip by the flick, then it drops.
+                float slid = Mathf.InverseLerp(ReloadMagazineFreeAt, ReloadMagazineOutAt, t);
+                float fallen = Mathf.InverseLerp(ReloadMagazineOutAt, ReloadMagazineGoneAt, t);
+                ReloadMagazineOut = slid * slid * fade;
+                ReloadMagazineAway = fallen * ReloadMagazineThrow * fade;
+                ReloadMagazineDrop = fallen * fallen * _profile.ReloadMagazineFall * fade;
+                ReloadMagazineShown = t < ReloadMagazineGoneAt || _reloadCancelled;
+                ReloadHandBelow = ReloadNewMagazineRise + length;
+            }
+            else
+            {
+                // The new one comes up the line of the grip in the left hand and is pushed home.
+                float pushed = Mathf.InverseLerp(ReloadPushAt, ReloadSeatedAt, t);
+                ReloadMagazineOut = (1f - pushed * pushed) * fade;
+                ReloadMagazineAway = (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(ReloadNewMagazineAt, ReloadPushAt, t))) * ReloadNewMagazineRise * fade;
+                ReloadMagazineDrop = 0f;
+                ReloadMagazineShown = true;
+                ReloadHandBelow = ReloadMagazineAway + ReloadMagazineOut * length;
+            }
+
+            ReloadHand = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(ReloadHandComesAt, ReloadNewMagazineAt, t))
+                * (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(ReloadHandLeavesAt, ReloadHandGoneAt, t)))
+                * fade * _profile.ReloadHandReach;
+
+            if (!_reloadRacked && !_reloadCancelled && t >= ReloadRackAt)
+            {
+                _reloadRacked = true;
+                // An empty gun's slide is already back: it only has to be let go. Otherwise it is racked.
+                if (_body != null && _body.SlideLocked)
+                    ReleaseSlide();
+                else
+                    RackSlide();
+            }
+        }
+
+        void EndReload()
+        {
+            _reloadElapsed = -1f;
+            _reloadFade = 1f;
+            _reloadCancelled = false;
+            _reloadRaise = 0f;
+            _reloadFlick = 0f;
+            _reloadBump = 0f;
+            ReloadMagazineOut = 0f;
+            ReloadMagazineAway = 0f;
+            ReloadMagazineDrop = 0f;
+            ReloadMagazineShown = true;
+            ReloadHand = 0f;
+            ReloadHandBelow = 0f;
+        }
+
+        /// <summary>0 to 1 that arrives fast, swings past 1 by about the overshoot and comes back.</summary>
+        static float SnapUp(float t, float overshoot)
+        {
+            float back = overshoot * 10f;
+            float left = t - 1f;
+            return 1f + (back + 1f) * left * left * left + back * left * left;
+        }
+
+        /// <summary>A knock: up fast over the first quarter, then settling. 0 at both ends.</summary>
+        static float Jolt(float t)
+        {
+            if (t <= 0f || t >= 1f)
+                return 0f;
+            if (t < 0.25f)
+                return t / 0.25f;
+            float left = 1f - (t - 0.25f) / 0.75f;
+            return left * left;
         }
 
         void UpdateLag(float dt)

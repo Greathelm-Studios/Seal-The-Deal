@@ -23,6 +23,8 @@ namespace CloseTheDeal.Player
         const float BodyViewCushion = 0.03f;
         const float LeftArmClearX = 0.24f, LeftArmClearY = 0.22f, LeftArmFrontFade = 0.12f;
         const float RemoteCurlDistance = 12f;
+        const float RackPulledAt = 0.4f, RackReleasedAt = 0.6f;
+        const float ReloadPalmLength = 0.07f, ReloadPalmBelow = 0.015f;
 
         /// <summary>Name of a held model's child that is a hand modelled round the weapon; while it is held, the body's own right hand is hidden.</summary>
         public const string HeldHandName = "HeldHand";
@@ -30,12 +32,19 @@ namespace CloseTheDeal.Player
         /// <summary>A held model's moving top: a child named "Slide" or ending in "_Slide".</summary>
         public const string SlideName = "Slide";
 
+        /// <summary>A held model's magazine, or its base plate: a child named "Magazine" or ending in "_Magazine".</summary>
+        public const string MagazineName = "Magazine";
+
         struct GunCopy
         {
             public Transform Gun;
             public Transform Muzzle;
             public Transform Slide;
             public Vector3 SlideRest;
+            public Transform Magazine;
+            public Vector3 MagazineRest;
+            public float MagazineUnit;
+            public Vector3 MagazineWell;
         }
 
         PlayerMotor _motor;
@@ -77,6 +86,12 @@ namespace CloseTheDeal.Player
         Transform _slide;
         Vector3 _slideRest;
         float _slideBack;
+        float _rackElapsed = -1f;
+        bool _slideLocked;
+        float _slideHeld;
+        bool _slideMoved;
+        GunCopy _held;
+        bool _magazineMoved;
 
         /// <summary>The muzzle of the held weapon (child named "Muzzle", or the weapon root if none).</summary>
         public Transform Muzzle { get; private set; }
@@ -172,8 +187,9 @@ namespace CloseTheDeal.Player
                 for (int i = 0; i < renderers.Length; i++)
                     renderers[i].shadowCastingMode = ShadowCastingMode.On;
                 Transform muzzle = FindMuzzle(_gun);
-                Transform slide = FindSlide(_gun);
+                Transform slide = FindPart(_gun, SlideName);
                 copy = new GunCopy { Gun = _gun, Muzzle = muzzle, Slide = slide, SlideRest = slide != null ? slide.localPosition : Vector3.zero };
+                MeasureMagazine(ref copy);
                 _copies[hold.Model] = copy;
             }
             else
@@ -188,6 +204,12 @@ namespace CloseTheDeal.Player
             _slide = copy.Slide;
             _slideRest = copy.SlideRest;
             _slideBack = 0f;
+            _rackElapsed = -1f;
+            _slideLocked = false;
+            _slideHeld = 0f;
+            _slideMoved = false;
+            SeatMagazine();
+            _held = copy;
             ShowOwnHand(_gun.Find(HeldHandName) == null);
 
             // A different weapon hangs differently; let the steady sag be found again.
@@ -237,14 +259,36 @@ namespace CloseTheDeal.Player
             return model;
         }
 
-        static Transform FindSlide(Transform model)
+        static Transform FindPart(Transform model, string name)
         {
+            string suffix = "_" + name;
             foreach (Transform part in model.GetComponentsInChildren<Transform>(true))
             {
-                if (part.name == SlideName || part.name.EndsWith("_" + SlideName))
+                if (part.name == name || part.name.EndsWith(suffix))
                     return part;
             }
             return null;
+        }
+
+        /// <summary>Where a new copy's magazine sits and how tall it is, so it can slide out of the grip from its top edge.</summary>
+        void MeasureMagazine(ref GunCopy copy)
+        {
+            Transform magazine = FindPart(copy.Gun, MagazineName);
+            copy.Magazine = magazine;
+            if (magazine == null)
+                return;
+
+            copy.MagazineRest = magazine.localPosition;
+            float parentScale = magazine.parent != null ? magazine.parent.lossyScale.y : 1f;
+            copy.MagazineUnit = parentScale > 0f ? 1f / parentScale : 1f;
+
+            Vector3 bottom = Vector3.zero;
+            if (magazine.TryGetComponent(out MeshFilter filter) && filter.sharedMesh != null)
+            {
+                Bounds bounds = filter.sharedMesh.bounds;
+                bottom = new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
+            }
+            copy.MagazineWell = copy.Gun.InverseTransformPoint(magazine.TransformPoint(bottom));
         }
 
         /// <summary>Snaps the held weapon's slide fully back; it returns over the profile's slide time.</summary>
@@ -254,18 +298,112 @@ namespace CloseTheDeal.Player
                 _slideBack = 1f;
         }
 
+        /// <summary>Pulls the held weapon's slide back, holds it and lets it slam forward, over the profile's rack time. Ignored while a rack is already playing.</summary>
+        public void RackSlide()
+        {
+            if (_slide != null && _rackElapsed < 0f)
+                _rackElapsed = 0f;
+        }
+
+        /// <summary>True while the slide is held back on an empty magazine.</summary>
+        public bool SlideLocked => _slideLocked;
+
+        /// <summary>Pulls the slide back and keeps it there (an empty gun), or lets a held slide slam forward (it has been reloaded).</summary>
+        public void SetSlideLocked(bool locked)
+        {
+            _slideLocked = locked && _slide != null;
+        }
+
         void AnimateSlide(float dt)
         {
-            if (_slide == null || _slideBack <= 0f)
+            if (_slide == null || (_slideBack <= 0f && _rackElapsed < 0f && !_slideLocked && !_slideMoved))
                 return;
 
-            // Back at once on the shot's frame, then an ease-in return so it slams home rather than drifting.
-            float home = 1f - _slideBack;
-            float travel = (1f - home * home) * _profile.SlideTravel;
-            _slide.localPosition = _slideRest + Vector3.back * travel;
-            _slideBack = Mathf.MoveTowards(_slideBack, 0f, dt / Mathf.Max(0.01f, _profile.SlideReturnSeconds));
-            if (_slideBack <= 0f)
-                _slide.localPosition = _slideRest;
+            float back = 0f;
+            if (_slideLocked || _slideHeld > 0f)
+            {
+                // Pulled back at the rack's speed and let go at the shot's, eased so it slows into the stop and slams home.
+                float seconds = _slideLocked ? _profile.SlideRackSeconds * RackPulledAt : _profile.SlideReturnSeconds;
+                _slideHeld = Mathf.MoveTowards(_slideHeld, _slideLocked ? 1f : 0f, dt / Mathf.Max(0.01f, seconds));
+                float open = 1f - _slideHeld;
+                back = 1f - open * open;
+            }
+
+            if (_slideBack > 0f)
+            {
+                // Back at once on the shot's frame, then an ease-in return so it slams home rather than drifting.
+                float home = 1f - _slideBack;
+                back = Mathf.Max(back, 1f - home * home);
+                _slideBack = Mathf.MoveTowards(_slideBack, 0f, dt / Mathf.Max(0.01f, _profile.SlideReturnSeconds));
+            }
+
+            if (_rackElapsed >= 0f)
+            {
+                float t = _rackElapsed / Mathf.Max(0.01f, _profile.SlideRackSeconds);
+                _rackElapsed = t < 1f ? _rackElapsed + dt : -1f;
+                back = Mathf.Max(back, RackTravel(t));
+            }
+
+            _slideMoved = back > 0f;
+            _slide.localPosition = _slideRest + Vector3.back * (back * _profile.SlideTravel);
+        }
+
+        /// <summary>A hand's rack: eased back, held, then let go so it slams home.</summary>
+        static float RackTravel(float t)
+        {
+            if (t >= 1f)
+                return 0f;
+            if (t < RackPulledAt)
+            {
+                float left = 1f - t / RackPulledAt;
+                return 1f - left * left;
+            }
+            if (t < RackReleasedAt)
+                return 1f;
+            float gone = (t - RackReleasedAt) / (1f - RackReleasedAt);
+            return 1f - gone * gone;
+        }
+
+        /// <summary>The reload's magazine: it slides out of the grip from its top edge, drops away, and a new one comes up and in.</summary>
+        void AnimateMagazine()
+        {
+            Transform magazine = _held.Magazine;
+            if (magazine == null)
+                return;
+
+            float outBy = _view.ReloadMagazineOut;
+            float away = _view.ReloadMagazineAway;
+            float drop = _view.ReloadMagazineDrop;
+            bool shown = _view.ReloadMagazineShown;
+            bool moved = outBy > 0f || away > 0f || drop > 0f || !shown;
+            if (!moved && !_magazineMoved)
+                return;
+
+            _magazineMoved = moved;
+            if (magazine.gameObject.activeSelf != shown)
+                magazine.gameObject.SetActive(shown);
+
+            float along = (outBy * _profile.ReloadMagazineLength + away) * _held.MagazineUnit;
+            magazine.localPosition = _held.MagazineRest - MagazineAxis() * along;
+            if (drop > 0f)
+                magazine.position += Vector3.down * drop;
+        }
+
+        /// <summary>The line the magazine slides along, in the gun's own space, pointing up into the grip: the grip leans, so it is not straight up.</summary>
+        Vector3 MagazineAxis()
+        {
+            float lean = _profile.ReloadMagazineLean * Mathf.Deg2Rad;
+            return new Vector3(0f, Mathf.Cos(lean), Mathf.Sin(lean));
+        }
+
+        void SeatMagazine()
+        {
+            if (_held.Magazine != null)
+            {
+                _held.Magazine.localPosition = _held.MagazineRest;
+                _held.Magazine.gameObject.SetActive(true);
+            }
+            _magazineMoved = false;
         }
 
         void LateUpdate()
@@ -391,8 +529,10 @@ namespace CloseTheDeal.Player
                     _bodyViewSwingTurn = Quaternion.Slerp(_bodyViewSwingTurn, targetSwingTurn, smooth);
 
                     gunLocal += _bodyViewSwing;
-                    gunLocal.x = SoftFloor(gunLocal.x, _profile.BodyViewKeepOutRight * (1f - _view.TwoHandBlend), BodyViewCushion);
-                    gunLocal.y = SoftCeiling(gunLocal.y, -_profile.BodyViewKeepOutDown, BodyViewCushion);
+                    // A reload brings the gun up toward the middle on purpose, so the keep-out lets go for it.
+                    float reloadPose = _view.ReloadPose;
+                    gunLocal.x = SoftFloor(gunLocal.x, _profile.BodyViewKeepOutRight * (1f - _view.TwoHandBlend) * (1f - reloadPose), BodyViewCushion);
+                    gunLocal.y = Mathf.Lerp(SoftCeiling(gunLocal.y, -_profile.BodyViewKeepOutDown, BodyViewCushion), gunLocal.y, reloadPose);
                     gunLocal.z = SoftFloor(gunLocal.z, _profile.BodyViewMinForward, BodyViewCushion);
 
                     gunRotation *= _bodyViewSwingTurn;
@@ -436,6 +576,9 @@ namespace CloseTheDeal.Player
             // Seat the weapon on the actual hand transform so it never floats if steep pitch exceeds arm reach.
             _gun.SetPositionAndRotation(_grip.Hand.position - gunRotation * _gripPosition, gunRotation);
 
+            // After the gun is placed: the thrown magazine falls toward the floor, not along wherever the hand bone was.
+            AnimateMagazine();
+
             if (_hasSupport && _view.TwoHanded)
             {
                 Vector3 leftElbow = look * new Vector3(-elbowHint.x, elbowHint.y, elbowHint.z);
@@ -445,6 +588,30 @@ namespace CloseTheDeal.Player
             {
                 KeepLeftArmClear(eye, look);
             }
+
+            float reloadHand = _leftArm && _held.Magazine != null ? _view.ReloadHand : 0f;
+            if (reloadHand > 0f)
+                ReachForMagazine(reloadHand, gunRotation, look * new Vector3(-elbowHint.x, elbowHint.y, elbowHint.z));
+        }
+
+        /// <summary>Brings the left hand, palm up, under the grip to push the new magazine home.</summary>
+        void ReachForMagazine(float weight, Quaternion gunRotation, Vector3 elbow)
+        {
+            Vector3 up = gunRotation * MagazineAxis();
+            Vector3 palm = _gun.TransformPoint(_held.MagazineWell) - up * (_view.ReloadHandBelow + ReloadPalmBelow);
+
+            // The palm faces the bottom of the grip and the fingers carry on the line of the arm, so the hand
+            // comes in from its own shoulder whichever way the gun is turned.
+            Vector3 fingers = Vector3.ProjectOnPlane(palm - _support.UpperArm.position, up);
+            if (fingers.sqrMagnitude < 1e-6f)
+                fingers = gunRotation * Vector3.right;
+            fingers.Normalize();
+            Vector3 wrist = palm - fingers * ReloadPalmLength;
+
+            Quaternion before = _support.Hand.rotation;
+            Quaternion palmUp = Quaternion.LookRotation(fingers, Vector3.Cross(fingers, up));
+            _support.Reach(Vector3.Lerp(_support.Hand.position, wrist, weight), palmUp, elbow, false);
+            _support.Hand.rotation = Quaternion.Slerp(before, _support.Hand.rotation, weight);
         }
 
         void KeepLeftArmClear(Vector3 eye, Quaternion look)
