@@ -35,12 +35,12 @@ MonoBehaviour:
   AirStrafeSpeed: 1.5
   HoldToHop: 1
   JumpHeight: 1.6
-  AirGravityMultiplier: 1.6
+  AirGravityMultiplier: 2.4
   MaxFallSpeed: 30
   KnockedGravityMultiplier: 2
-  ApexGravityMultiplier: 0.6
-  ApexHangSpeed: 1.5
-  FallGravityMultiplier: 2.4
+  ApexGravityMultiplier: 1.4
+  ApexHangSpeed: 0.9
+  FallGravityMultiplier: 3.4
   JumpReleaseKeep: 0.5
   CoyoteTime: 0.12
   JumpBufferTime: 0.15
@@ -60,21 +60,23 @@ MonoBehaviour:
   StickLookCurve: 1.6
   LookUpLimit: 89
   LookDownLimit: 89
-  CameraSpringFrequency: 6
-  CameraSpringDamping: 0.5
-  JumpKick: 0.35
-  LandKickPerSpeed: 0.06
-  LandKickMax: 0.9
-  SlideKick: 0.45
+  CameraSpringFrequency: 4.5
+  CameraSpringDamping: 0.55
+  JumpKick: 0.65
+  LandKickPerSpeed: 0.18
+  LandKickMax: 2.4
+  SlideKick: 0.9
   MantleKick: 0.3
-  SprintStartKick: 0.12
-  HardStopKick: 0.25
+  SprintStartKick: 0.06
+  HardStopKick: 0.1
   HardStopSpeed: 7
   SlideFovKick: 4
   SpeedFovKick: 6
   SpeedFovRate: 30
   SlideRoll: 2
   SlideRollRate: 20
+  StrafeRoll: 0.8
+  StrafeRollRate: 10
   CrosshairOpenPerSpeed: 1.2
   CrosshairOpenInAir: 6
   CrosshairOpenMax: 16

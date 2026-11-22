@@ -28,9 +28,12 @@ MonoBehaviour:
   RunClipSpeed: 5.36
   SprintClipSpeed: 8.25
   SideClipSpeed: 5
+  StrafeAimAlign: 0.85
+  AirArmTuck: 32
+  AirPoseMotion: 1
   HeadTurnLimit: 50
   BodyTurnSpeed: 300
-  LandFullSpeed: 20
+  LandFullSpeed: 13
   CrouchIdleClip: {fileID: -1846782879953920020, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
   CrouchClips:
   - {fileID: 8200612064407043467, guid: b7d6500bd62b9ca4daca116aeebb4d60, type: 3}
@@ -101,7 +104,7 @@ MonoBehaviour:
   StartStopCarry: 0.65
   UprightStrength: 20
   RagdollGravity: 0.6
-  AirBrace: 2
+  AirBrace: 1.35
   LimpShare: 0.12
   AirArmRaise: 66
   AirArmForward: 28
@@ -118,4 +121,5 @@ MonoBehaviour:
   StaggerDip: 0.08
   StaggerRecover: 0.5
   PoseBlendTime: 0.12
+  StopBlendTime: 0.22
   VelocitySmoothing: 0.05

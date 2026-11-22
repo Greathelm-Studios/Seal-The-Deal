@@ -85,8 +85,8 @@ namespace CloseTheDeal.Player
         [Tooltip("Jump height in metres on flat ground.")]
         public float JumpHeight = 1.3f;
 
-        [Tooltip("Pull-down while rising from a jump, as a multiple of normal gravity. 1 = floaty real-world arcs; 2 = snappy game jumps; 1.6 rises a little slower for a bouncier jump. Blasts use Knocked Gravity Multiplier instead. The way down from a jump uses Fall Gravity Multiplier instead.")]
-        public float AirGravityMultiplier = 1.6f;
+        [Tooltip("Pull-down while rising from a jump, as a multiple of normal gravity. 1 = floaty real-world arcs; 2.4 = crisp arena jumps. Blasts use Knocked Gravity Multiplier instead. The way down from a jump uses Fall Gravity Multiplier instead.")]
+        public float AirGravityMultiplier = 2.4f;
 
         [Tooltip("Fastest a player can fall, in metres per second. Caps long drops and big blasts. 30 is a hard but readable fall; 0 = no cap.")]
         public float MaxFallSpeed = 30f;
@@ -95,14 +95,14 @@ namespace CloseTheDeal.Player
         public float KnockedGravityMultiplier = 2f;
 
         [Header("Jump feel")]
-        [Tooltip("Pull-down near the top of a jump, as a multiple of normal gravity, while moving up or down slower than Apex Hang Speed. Below 1 the jump hangs for a moment at the top, which reads as bounce; 1 = no hang.")]
-        public float ApexGravityMultiplier = 0.6f;
+        [Tooltip("Pull-down near the top of a jump, as a multiple of normal gravity, while moving up or down slower than Apex Hang Speed. Lower than Air Gravity Multiplier gives a brief micro-hang at the peak; 1.4 with 0.9 m/s hangs for ~0.13 s.")]
+        public float ApexGravityMultiplier = 1.4f;
 
-        [Tooltip("How slow the rise or fall must be, in metres per second, for the apex hang to apply. 1.5 hangs for roughly a tenth of a second.")]
-        public float ApexHangSpeed = 1.5f;
+        [Tooltip("How slow the rise or fall must be, in metres per second, for the apex hang to apply. 0.9 with 1.4 apex gravity hangs for about 0.13 seconds.")]
+        public float ApexHangSpeed = 0.9f;
 
-        [Tooltip("Pull-down on the way down from a jump, as a multiple of normal gravity. Replaces the air gravity once the jump peaks. Equal to air gravity = symmetric arc; higher = quick, punchy landings. Doesn't change blasts.")]
-        public float FallGravityMultiplier = 2.4f;
+        [Tooltip("Pull-down on the way down from a jump, as a multiple of normal gravity. Replaces the air gravity once the jump peaks. Equal to air gravity = symmetric arc; higher (3.4) = quick, punchy landings. Doesn't change blasts.")]
+        public float FallGravityMultiplier = 3.4f;
 
         [Tooltip("Fraction of upward speed kept when Space is let go early, so a tap is a short hop and a hold is a full jump. 1 = every jump is full height; 0.5 = a tap reaches about a quarter of the height.")]
         [Range(0f, 1f)] public float JumpReleaseKeep = 0.5f;
@@ -167,32 +167,32 @@ namespace CloseTheDeal.Player
         [Range(0f, 89f)] public float LookDownLimit = 89f;
 
         [Header("View feel")]
-        [Tooltip("How quickly the view's bounce settles, in springs per second. Every take-off, landing, slide and climb kicks the view and this spring brings it back. Higher = tighter and quicker; lower = softer, floatier.")]
-        public float CameraSpringFrequency = 6f;
+        [Tooltip("How quickly the view's bounce settles, in springs per second. Every take-off, landing, slide and climb kicks the view and this spring brings it back. Higher = tighter and smaller dip; lower = deeper, slower bounce.")]
+        public float CameraSpringFrequency = 4.5f;
 
-        [Tooltip("How much the view's bounce overshoots before it settles, 0 to 1. 1 = no overshoot (dead); 0.5 bounces once past rest and back; below 0.3 wobbles.")]
-        [Range(0.1f, 1f)] public float CameraSpringDamping = 0.5f;
+        [Tooltip("How much the view's bounce overshoots before it settles, 0 to 1. 1 = no overshoot (dead); 0.55 dips cleanly and recovers with a slight rebound; below 0.3 wobbles.")]
+        [Range(0.1f, 1f)] public float CameraSpringDamping = 0.55f;
 
         [Tooltip("Kick on take-off, in metres per second downward: the view dips a touch and springs up into the jump. 0 = none.")]
-        public float JumpKick = 0.35f;
+        public float JumpKick = 0.65f;
 
-        [Tooltip("Kick on landing for each metre per second of falling speed, downward. 0.06 gives a soft bob off a hop (landing at about 8 m/s) and a real thump off a desk. 0 = none.")]
-        public float LandKickPerSpeed = 0.06f;
+        [Tooltip("Kick on landing for each metre per second of falling speed, downward. 0.18 dips about 3.4 cm off a full jump (10.3 m/s) and up to 4.4 cm off a hard drop. 0 = none.")]
+        public float LandKickPerSpeed = 0.18f;
 
         [Tooltip("The most a landing can kick the view, in metres per second, however hard the fall.")]
-        public float LandKickMax = 0.9f;
+        public float LandKickMax = 2.4f;
 
         [Tooltip("Kick when a slide starts, in metres per second downward: the view drops into the slide.")]
-        public float SlideKick = 0.45f;
+        public float SlideKick = 0.9f;
 
         [Tooltip("Kick when a climb or vault starts, in metres per second downward, before the climb lifts the view: reads as gathering for the pull-up.")]
         public float MantleKick = 0.3f;
 
         [Tooltip("Kick when sprinting starts, in metres per second backward: the view lags a touch as the body surges.")]
-        public float SprintStartKick = 0.12f;
+        public float SprintStartKick = 0.06f;
 
         [Tooltip("Kick when a fast run stops dead, in metres per second forward: the view carries on a little and settles back.")]
-        public float HardStopKick = 0.25f;
+        public float HardStopKick = 0.10f;
 
         [Tooltip("Slowest a run can be, in metres per second, for stopping from it to count as a hard stop.")]
         public float HardStopSpeed = 7f;
@@ -211,6 +211,12 @@ namespace CloseTheDeal.Player
 
         [Tooltip("How fast the slide roll comes in and goes out, in degrees per second.")]
         public float SlideRollRate = 20f;
+
+        [Tooltip("How far the view tilts into a sideways strafe at walk speed, in degrees. Rolling never moves the crosshair, so aim is untouched. 0 = no roll; 0.8 gives a grounded feel; above 3 feels seasick.")]
+        [Range(0f, 5f)] public float StrafeRoll = 0.8f;
+
+        [Tooltip("How fast the strafe roll comes in and goes out, in degrees per second.")]
+        [Min(0.1f)] public float StrafeRollRate = 10f;
 
         [Header("Crosshair")]
         [Tooltip("How far the crosshair's arms open for each metre per second above walking speed, in pixels at 100% crosshair size on a 1080p screen. 1.2 opens it about 4 px at a sprint and 11 px at 15 m/s of air strafing. 0 = speed never opens it. With a gun in hand, the gun's own spread is used instead whenever that is wider.")]

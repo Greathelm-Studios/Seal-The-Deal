@@ -118,7 +118,7 @@ Pressed buttons are on `PlayerInputReader` (owner only): `Pressed(PlayerPress)` 
 
 For help text, the real bindings come from the actions asset: read them with `InputAction.GetBindingDisplayString` for the action names in the Controls table above, so the card changes with the player's rebinding and the device in use.
 
-## Feel and feedback (2026-11-14 pass, owner: "a tad faster, bouncier jump, sliding, much better feedback")
+## Feel and feedback (2026-11-21 jump & camera pass)
 
 | Value | Was | Now | Why |
 |---|---|---|---|
@@ -126,13 +126,17 @@ For help text, the real bindings come from the actions asset: read them with `In
 | Sprint Speed | 9 | 10.1 m/s | +12.5% |
 | Ground Acceleration | 70 | 80 | keeps starts snappy and stays above grip × sprint (60.6) |
 | Crouch Speed | 3 | 3.3 m/s | same +10% |
-| Air Gravity Multiplier (rising) | 2 | 1.6 | a slower, floatier rise |
-| Apex Gravity Multiplier | (none) | 0.6 under 1.5 m/s | a moment's hang at the top: the bounce |
-| Fall Gravity Multiplier | 3 | 2.4 | still quicker down than up, less of a slam |
-| Knocked Gravity Multiplier | (was the air value, 2) | 2 | blasts keep their old flight |
-| Coyote Time / Jump Buffer | 0.10 / 0.12 s | 0.12 / 0.15 s | more forgiving chains |
+| Air Gravity Multiplier (rising) | 1.6 | 2.4 | crisp rise while keeping the 1.6 m jump height |
+| Apex Gravity Multiplier | 0.6 under 1.5 m/s | 1.4 under 0.9 m/s | trims apex hang from ~0.51 s to ~0.13 s so jumps stop feeling floaty |
+| Fall Gravity Multiplier | 2.4 | 3.4 | punchier descent; full-jump airtime drops from ~1.17 s to ~0.74 s |
+| Knocked Gravity Multiplier | 2 | 2 | blasts keep their old flight |
+| Coyote Time / Jump Buffer | 0.10 / 0.12 s | 0.12 / 0.15 s | forgiving hop chains |
+| Camera Spring Frequency / Damping | 6 Hz / 0.5 | 4.5 Hz / 0.55 | lets landing and take-off dips read clearly (~3.4 cm on a full jump instead of ~7.5 mm) |
+| Land Kick Per Speed / Max | 0.06 / 0.9 | 0.18 / 2.4 | readable thump on landing in true-POV body view |
+| Jump Kick / Slide Kick | 0.35 / 0.45 | 0.65 / 0.9 | crisp gather on take-off and drop into slides |
+| Strafe Roll / Rate | (none) | 0.8° at 10°/s | subtle grounded tilt into sideways strafes (disabled under Reduce Motion) |
 
-**Camera (local, `PlayerCamera.Feedback.cs`):** one damped spring (6 per second, damping 0.5, so it overshoots once) that movement kicks: take-off dips and springs up (Jump Kick), landing by fall speed (Land Kick Per Speed, capped), the drop into a slide, a gather before a climb, a slight lag when sprint starts and a nudge forward on a hard stop. It moves the eye along the view's own axes and never turns it, so aim is untouched; `PlayerCamera.FeedbackOffset` / `FeedbackRoll` expose it for the viewmodel. Sliding rolls the view about 2° and widens it 4° on top of the speed widening. **Reduce motion** (Settings > Accessibility) turns the kicks, the roll and every field-of-view change off.
+**Camera (local, `PlayerCamera.Feedback.cs`):** one damped spring (4.5 per second, damping 0.55, so it dips cleanly and recovers with a slight rebound) that movement kicks: take-off dips and springs up (`JumpKick` 0.65), landing by fall speed (`LandKickPerSpeed` 0.18, capped at `LandKickMax` 2.4), the drop into a slide (`SlideKick` 0.9), a gather before a climb, a slight lag when sprint starts and a nudge forward on a hard stop. It moves the eye along the view's own axes after body-view head smoothing and never turns it, so aim is untouched; `PlayerCamera.FeedbackOffset` / `FeedbackRoll` expose it for the viewmodel. Sliding rolls the view about 2° and widens it 4° on top of the speed widening; strafing rolls subtly up to 0.8° when not sliding. **Reduce motion** (Settings > Accessibility) turns the kicks, the slide and strafe rolls, and every field-of-view change off.
 
 **Crosshair:** besides opening with speed and in the air, it opens 4 px while sliding and pulses on take-off (0.2) and on the start of a slide (0.35).
 

@@ -29,8 +29,8 @@ namespace CloseTheDeal.Player
         /// <summary>The movement kick on the view this frame, in metres along the camera's own axes. The viewmodel may scale it.</summary>
         public Vector3 FeedbackOffset => _kick;
 
-        /// <summary>The slide roll on the view this frame, in degrees.</summary>
-        public float FeedbackRoll => _slideRoll;
+        /// <summary>The slide and strafe roll on the view this frame, in degrees.</summary>
+        public float FeedbackRoll => _slideRoll + _strafeRoll;
 
         static bool Reduced => UiSettings.ReducedMotion;
 

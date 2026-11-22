@@ -64,14 +64,23 @@ namespace CloseTheDeal.Player
         [Tooltip("How fast the legs step when moving sideways or backwards: the speed across the floor, in metres per second, at which those clips play at the rate they were made. At 6 a strafe at walking speed steps about one and a half times a second, calmly, and the feet slide. Lower = quicker, busier steps that slide less; 3.7 was the old rate.")]
         [Range(1f, 12f)] public float SideClipSpeed = 6f;
 
+        [Tooltip("How much the chest and shoulders turn back toward where you are aiming when running sideways or backwards. 0 = the clip turns the whole torso sideways; 1 = shoulders stay square to your aim while the legs run sideways. Default 0.85 keeps a small natural angle into the stride.")]
+        [Range(0f, 1f)] public float StrafeAimAlign = 0.85f;
+
+        [Tooltip("How far the arms are brought down toward the sides from the jump clip while in the air, in degrees. 0 = the raw jump clip; higher = arms tucked closer to the body instead of sticking out.")]
+        [Range(0f, 60f)] public float AirArmTuck = 32f;
+
+        [Tooltip("How much the torso and legs respond to rising and falling through a jump, as a multiplier. 0 = frozen jump clip; 1 = knees tuck and chest leans forward while rising, then legs reach for the floor while falling.")]
+        [Range(0f, 1.5f)] public float AirPoseMotion = 1f;
+
         [Tooltip("How far you can look round, in degrees either side, with only the head and shoulders turning. Past this the body turns to face where you are looking. Lower = the body follows almost at once; higher = he looks further over his shoulder first. Only while standing: moving or in the air, the body always faces the look.")]
         [Range(0f, 90f)] public float HeadTurnLimit = 50f;
 
         [Tooltip("How fast the body turns to face the look once it follows, in degrees per second. Lower = a slow shuffle round; higher = a snap.")]
         [Range(60f, 1080f)] public float BodyTurnSpeed = 300f;
 
-        [Tooltip("Falling speed at touchdown, in metres per second, that plays the whole landing crouch. Slower landings sink in proportion. A 1.6 m jump lands at about 9.7, so at 20 an ordinary jump sinks about halfway. Lower = deeper landings.")]
-        [Range(3f, 40f)] public float LandFullSpeed = 20f;
+        [Tooltip("Falling speed at touchdown, in metres per second, that plays the whole landing crouch. Slower landings sink in proportion. A 1.6 m jump lands at about 9.7, so at 13 an ordinary jump sinks about three quarters of the way. Lower = deeper landings.")]
+        [Range(3f, 40f)] public float LandFullSpeed = 13f;
 
         [Header("Crouching and sliding")]
         [Tooltip("Crouched and still. Loops.")]
@@ -254,8 +263,8 @@ namespace CloseTheDeal.Player
         [Tooltip("How heavy the body is, as a multiple of real gravity. Lower = floaty limbs that drift down; 1 = arms and head drop like real ones.")]
         [Range(0f, 2f)] public float RagdollGravity = 0.6f;
 
-        [Tooltip("How much harder every joint pulls while in the air, as a multiple of its strength on the floor. 1 = a jump sprawls and tumbles; 2 = it holds its shape.")]
-        [Range(1f, 4f)] public float AirBrace = 2f;
+        [Tooltip("How much harder every joint pulls while in the air, as a multiple of its strength on the floor. 1 = a jump sprawls and tumbles; 1.35 = holds its shape without locking stiff; 2 = very rigid.")]
+        [Range(1f, 4f)] public float AirBrace = 1.35f;
 
         [Tooltip("How much of their strength the joints keep while the body is limp (knocked back, or just after running into something). 0.1 = a rag doll; 1 = no reaction.")]
         [Range(0.02f, 1f)] public float LimpShare = 0.12f;
@@ -307,6 +316,9 @@ namespace CloseTheDeal.Player
         [Header("Smoothing")]
         [Tooltip("How long the body takes to ease between standing, running and airborne poses, in seconds. It eases in and out rather than moving at a fixed rate. Lower = snappier.")]
         [Range(0.02f, 0.5f)] public float PoseBlendTime = 0.12f;
+
+        [Tooltip("How long the legs and body take to ease from running back into the standing stance after you stop, in seconds. Higher = a softer, longer settle; lower = a snappier stop.")]
+        [Range(0.05f, 0.6f)] public float StopBlendTime = 0.22f;
 
         [Tooltip("How much the measured speed is smoothed, in seconds. Higher hides network corrections but makes the feet late to start and stop.")]
         [Range(0.01f, 0.3f)] public float VelocitySmoothing = 0.05f;

@@ -27,6 +27,7 @@ namespace CloseTheDeal.Player
         float _restFov;
         float _edgeHeld;
         float _slideRoll;
+        float _strafeRoll;
         const float StickEdge = 0.95f;
         int _aimMask;
         int _wallMask;
@@ -99,6 +100,8 @@ namespace CloseTheDeal.Player
             _pitch = 0f;
             _shownLean = 0f;
             _shownCrouch = motor.Crouch;
+            _slideRoll = 0f;
+            _strafeRoll = 0f;
         }
 
         public void Release(Transform target)
@@ -154,6 +157,9 @@ namespace CloseTheDeal.Player
                 // movement on top (step bob, a hit's jolt) it takes only a capped share.
                 _headOffset = Vector3.Lerp(_headOffset, real, 1f - Mathf.Exp(-Time.deltaTime / _headSmoothSeconds));
                 Vector3 quick = Vector3.ClampMagnitude(real - _headOffset, _headMaxOffset);
+                Vector3 flatForward = Quaternion.Euler(0f, _yaw, 0f) * Vector3.forward;
+                float quickForward = Vector3.Dot(quick, flatForward);
+                quick -= flatForward * (quickForward * 0.65f);
                 head += _headOffset + quick * _headFollow;
             }
             // In the body view the real head has already leaned with the body; sliding the eye
@@ -168,7 +174,7 @@ namespace CloseTheDeal.Player
                 leanOffset = direction * reach;
             }
 
-            float roll = Reduced ? 0f : SlideRoll(profile, dt);
+            float roll = Reduced ? 0f : SlideRoll(profile, dt) + StrafeRoll(profile, dt);
             Quaternion rotation = Quaternion.Euler(_pitch, _yaw, -_shownLean * profile.LeanAngle + roll);
             // The movement kick moves the eye along the view's own axes; it never turns the view.
             Vector3 kick = rotation * StepFeedback(profile, dt);
@@ -222,6 +228,20 @@ namespace CloseTheDeal.Player
 
             _slideRoll = Mathf.MoveTowards(_slideRoll, target, profile.SlideRollRate * dt);
             return _slideRoll;
+        }
+
+        float StrafeRoll(MovementProfile profile, float dt)
+        {
+            PlayerAnimState state = _motor.AnimState;
+            float target = 0f;
+            if (!state.Sliding && profile.StrafeRoll > 0f && profile.WalkSpeed > 0.1f)
+            {
+                float strafe = Mathf.Clamp(state.LocalMove.x / profile.WalkSpeed, -1f, 1f);
+                target = -strafe * profile.StrafeRoll;
+            }
+
+            _strafeRoll = Mathf.MoveTowards(_strafeRoll, target, profile.StrafeRollRate * dt);
+            return _strafeRoll;
         }
     }
 }

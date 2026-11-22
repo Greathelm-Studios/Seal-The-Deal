@@ -11,6 +11,7 @@ namespace CloseTheDeal.Player
         const float MaximumReachShare = 0.999f;
         const int JointsPerFinger = 3;
         const float StraightArmEpsilon = 1e-12f;
+        const float ForearmTwistShare = 0.7f;
 
         [Header("Arm (filled in by the greybox tool)")]
         [Tooltip("Ticked when this is the left arm. The fingers, thumb and elbow swing then close the mirrored way.")]
@@ -56,6 +57,8 @@ namespace CloseTheDeal.Player
         Quaternion[] _curledHand;
         Vector3 _cachedGripCurl, _cachedTriggerCurl, _cachedThumbCurl;
         bool _cachedLeft;
+        Quaternion _handToLowerRest = Quaternion.identity;
+        bool _hasRestTwist;
 
         /// <summary>True when the three arm bones are assigned, so <see cref="Reach"/> can run.</summary>
         public bool IsRigged => _upperArm != null && _lowerArm != null && _hand != null;
@@ -125,6 +128,8 @@ namespace CloseTheDeal.Player
             // wrist to middle knuckle, up runs little-finger knuckle to index knuckle.
             _knuckleFrame = Quaternion.Inverse(_hand.rotation)
                 * Quaternion.LookRotation(middle.position - _hand.position, index.position - little.position);
+            _handToLowerRest = Quaternion.Inverse(_hand.rotation) * _lowerArm.rotation;
+            _hasRestTwist = true;
 
             _triggerFinger = Joints(humanoid, left ? LeftTriggerBones : TriggerBones);
             _gripFingers = Joints(humanoid, left ? LeftGripBones : GripBones);
@@ -174,7 +179,10 @@ namespace CloseTheDeal.Player
 
             SolveArmBones(target, elbowToward);
 
-            _hand.rotation = targetRotation * Quaternion.Inverse(_knuckleFrame);
+            Quaternion handWorld = targetRotation * Quaternion.Inverse(_knuckleFrame);
+            if (_hasRestTwist)
+                AlignForearmTwist(handWorld);
+            _hand.rotation = handWorld;
 
             if (!curlFingers)
                 return;
@@ -224,6 +232,25 @@ namespace CloseTheDeal.Player
             {
                 _upperArm.rotation = Quaternion.AngleAxis(_elbowSwing * Side, line) * _upperArm.rotation;
             }
+        }
+
+        void AlignForearmTwist(Quaternion handWorld)
+        {
+            Vector3 axis = _hand.position - _lowerArm.position;
+            if (axis.sqrMagnitude <= StraightArmEpsilon)
+                return;
+
+            axis.Normalize();
+            Quaternion delta = handWorld * _handToLowerRest * Quaternion.Inverse(_lowerArm.rotation);
+            Vector3 proj = Vector3.Project(new Vector3(delta.x, delta.y, delta.z), axis);
+            float mag = Mathf.Sqrt(proj.x * proj.x + proj.y * proj.y + proj.z * proj.z + delta.w * delta.w);
+            if (mag <= 1e-6f)
+                return;
+
+            float inv = 1f / mag;
+            Quaternion twist = new(proj.x * inv, proj.y * inv, proj.z * inv, delta.w * inv);
+            // Share axial wrist roll onto the forearm so the sleeve cuff aligns cleanly behind the grip.
+            _lowerArm.rotation = Quaternion.Slerp(Quaternion.identity, twist, ForearmTwistShare) * _lowerArm.rotation;
         }
 
         void EnsureCurledHand()
