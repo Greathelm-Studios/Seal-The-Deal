@@ -1,6 +1,6 @@
 # Seal the Deal Features and System Docs
 
-**Status:** Current · **Last updated:** 2026-11-21
+**Status:** Current · **Last updated:** 2026-11-22
 
 Master index of every gameplay, networking, UI, art, and tooling feature in **Seal the Deal**, linking each feature to its owning system doc, code folder, current verification state, and open gaps. For design scope and roadmap rules, see [GDD.md](GDD.md); for technical decisions, see [DECISIONS.md](DECISIONS.md); for active branch claims and release risks, see [WORKBOARD.md](WORKBOARD.md).
 
@@ -19,7 +19,7 @@ Master index of every gameplay, networking, UI, art, and tooling feature in **Se
 |---|---|---|---|---|---|---|
 | Predicted movement (walk, sprint, crouch, slide, lean, mantle) | v1 | Current | Compiled; solo scripted checks | [PLAYER_MOVEMENT.md](systems/PLAYER_MOVEMENT.md) | `Scripts/Player/` | Confirm feel and 8-player reconcile bandwidth in live 4v4 |
 | Active ragdoll chasing animation clips (`RagdollWorld`) | v1 | Current | Compiled; solo frame strips | [CHARACTER_ANIMATION.md](systems/CHARACTER_ANIMATION.md) | `Scripts/Player/` | Needs live playtest; Kevin Iglesias clips need licence/replacement decision |
-| True-POV first-person arms and held weapon (`PlayerViewmodel`) | v1 | Current | Compiled; solo F5 polish; pistol grip hand seen in play as host, standing (2026-11-21) | [VIEWMODEL.md](systems/VIEWMODEL.md) | `Scripts/Player/Viewmodel/` | `Player.prefab` still runs `WeaponView` alongside `PlayerViewmodel` (needs Adam's call); left hand still the crumpling mitten |
+| True-POV first-person arms and held weapon (`PlayerViewmodel`) | v1 | Current | Compiled; solo F5 polish; pistol grip hand seen in play as host, standing (2026-11-21) | [VIEWMODEL.md](systems/VIEWMODEL.md) | `Scripts/Player/Viewmodel/` | `WeaponView` now drives it (kick, slide, reload) and no longer draws its own gun when it is present (2026-11-22, compiled, unplayed); `Equip` still not called, so the AR-15 shows as the pistol; left hand still the crumpling mitten |
 | Head-mounted animated eye cards | v1 | Current | Compiled; solo checked | [CHARACTER_EYES.md](systems/CHARACTER_EYES.md) | `Scripts/Player/` | Needs visual check in multiplayer |
 | Hit flinch reactions, death ragdoll, knocked-out stun and test dummy/bench | v1 | Current | Compiled; flinch tested on dummy; death/knockout compiled only | [HIT_REACTIONS.md](systems/HIT_REACTIONS.md) | `Scripts/Player/`, `Scripts/Combat/` | Needs live Play Mode and multi-client verification; confirm final knockout threshold/duration with Adam |
 
@@ -27,7 +27,7 @@ Master index of every gameplay, networking, UI, art, and tooling feature in **Se
 
 | Feature | Scope | Status | Verification | Doc | Code | Open Gaps / Decisions |
 |---|---|---|---|---|---|---|
-| Hitscan guns (pistol, AR-15), bloom, reload, lag rewind | v1 | Current | Compiled; solo/host lane checks | [WEAPONS.md](systems/WEAPONS.md) | `Scripts/Combat/` | Unify `WeaponView` with `PlayerViewmodel`; decide friendly fire on/off |
+| Hitscan guns (pistol, AR-15), bloom, reload, lag rewind | v1 | Current | Compiled; solo/host lane checks | [WEAPONS.md](systems/WEAPONS.md) | `Scripts/Combat/` | Soft muzzle flash, flying tracer, impact burst and bullet holes added 2026-11-22 (compiled, offscreen renders only, unplayed); decide friendly fire on/off |
 | Knockback blasts and health/respawn | v1 | Current | Compiled; host checks | [WEAPONS.md](systems/WEAPONS.md) | `Scripts/Combat/` | Confirm blast damage/knockback balance in 4v4 |
 | Breakable glass panes and shard bursts | v1 | Current | Compiled; host lane checks | [GLASS.md](systems/GLASS.md) | `Scripts/Glass/` | Needs multi-client shatter test after `OverlapSphere` blast fix |
 | Local blood splat projector shader and drop bursts | v1 | Current | Compiled; host seen on 1 machine | [BLOOD.md](systems/BLOOD.md) | `Scripts/Effects/` | Needs art-direction sign-off and multi-player visual check |

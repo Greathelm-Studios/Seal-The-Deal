@@ -27,10 +27,15 @@ namespace CloseTheDeal.Player
         /// <summary>Name of a held model's child that is a hand modelled round the weapon; while it is held, the body's own right hand is hidden.</summary>
         public const string HeldHandName = "HeldHand";
 
+        /// <summary>A held model's moving top: a child named "Slide" or ending in "_Slide".</summary>
+        public const string SlideName = "Slide";
+
         struct GunCopy
         {
             public Transform Gun;
             public Transform Muzzle;
+            public Transform Slide;
+            public Vector3 SlideRest;
         }
 
         PlayerMotor _motor;
@@ -69,6 +74,9 @@ namespace CloseTheDeal.Player
         readonly List<int> _handMeshSlot = new();
         bool _ownHandHidden;
         readonly Dictionary<Transform, GunCopy> _copies = new();
+        Transform _slide;
+        Vector3 _slideRest;
+        float _slideBack;
 
         /// <summary>The muzzle of the held weapon (child named "Muzzle", or the weapon root if none).</summary>
         public Transform Muzzle { get; private set; }
@@ -164,7 +172,8 @@ namespace CloseTheDeal.Player
                 for (int i = 0; i < renderers.Length; i++)
                     renderers[i].shadowCastingMode = ShadowCastingMode.On;
                 Transform muzzle = FindMuzzle(_gun);
-                copy = new GunCopy { Gun = _gun, Muzzle = muzzle };
+                Transform slide = FindSlide(_gun);
+                copy = new GunCopy { Gun = _gun, Muzzle = muzzle, Slide = slide, SlideRest = slide != null ? slide.localPosition : Vector3.zero };
                 _copies[hold.Model] = copy;
             }
             else
@@ -174,6 +183,11 @@ namespace CloseTheDeal.Player
             _gun.gameObject.SetActive(true);
             _gunHiddenForDown = false;
             Muzzle = copy.Muzzle;
+            if (_slide != null)
+                _slide.localPosition = _slideRest;
+            _slide = copy.Slide;
+            _slideRest = copy.SlideRest;
+            _slideBack = 0f;
             ShowOwnHand(_gun.Find(HeldHandName) == null);
 
             // A different weapon hangs differently; let the steady sag be found again.
@@ -223,11 +237,43 @@ namespace CloseTheDeal.Player
             return model;
         }
 
+        static Transform FindSlide(Transform model)
+        {
+            foreach (Transform part in model.GetComponentsInChildren<Transform>(true))
+            {
+                if (part.name == SlideName || part.name.EndsWith("_" + SlideName))
+                    return part;
+            }
+            return null;
+        }
+
+        /// <summary>Snaps the held weapon's slide fully back; it returns over the profile's slide time.</summary>
+        public void CycleSlide()
+        {
+            if (_slide != null)
+                _slideBack = 1f;
+        }
+
+        void AnimateSlide(float dt)
+        {
+            if (_slide == null || _slideBack <= 0f)
+                return;
+
+            // Back at once on the shot's frame, then an ease-in return so it slams home rather than drifting.
+            float home = 1f - _slideBack;
+            float travel = (1f - home * home) * _profile.SlideTravel;
+            _slide.localPosition = _slideRest + Vector3.back * travel;
+            _slideBack = Mathf.MoveTowards(_slideBack, 0f, dt / Mathf.Max(0.01f, _profile.SlideReturnSeconds));
+            if (_slideBack <= 0f)
+                _slide.localPosition = _slideRest;
+        }
+
         void LateUpdate()
         {
             if (!_ready)
                 return;
 
+            AnimateSlide(Time.deltaTime);
             Hold(false);
         }
 

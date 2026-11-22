@@ -168,7 +168,10 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   FlashSeconds: 0.03
-  ImpactEffect: {fileID: 4534702109987732128, guid: ca520d7cf319344f29759d9b418c38d1, type: 3}
+  MuzzleFlash: {fileID: 5663483767342715043, guid: 50dcd533401cbe6498ce08bfc5db013c, type: 3}
+  ImpactEffect: {fileID: 5815573004202979781, guid: c152a69d6c9865a43bf170def134c1ae, type: 3}
+  BulletHole: {fileID: 2100000, guid: dd2f56d45b6cb844da2e2c737b87bbbd, type: 2}
+  BulletHoleSize: 0.045
   HeadMultiplier: 1
   HeadFromHeight: 1.5
   MagazineSize: 30
@@ -186,5 +189,7 @@ MonoBehaviour:
   ReloadEndSound: {fileID: 8300000, guid: 589ad67b54bd349be85eb0a8157ca440, type: 3}
   ViewPrefab: {fileID: 509447452055910279, guid: 8413e43c7e859423db7ee3a6109d07c7, type: 3}
   ViewOffset: {x: 0.18, y: -0.2, z: 0.32}
-  TracerPrefab: {fileID: 3924533387463075714, guid: b7f14e774f06045c5a94e67b9394bc5c, type: 3}
+  TracerPrefab: {fileID: 7060885105418946063, guid: c9d151b9600dcc044bfd1dfc62106158, type: 3}
   TracerSeconds: 0.07
+  TracerSpeed: 280
+  TracerLength: 5

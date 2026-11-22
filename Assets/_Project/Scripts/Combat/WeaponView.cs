@@ -12,7 +12,7 @@ namespace CloseTheDeal.Combat
         [Tooltip("Where the gun sits on the body as other players see it: a point at the hand, facing forward. Leave empty and other players see tracers but no gun.")]
         [SerializeField] Transform _thirdPersonAnchor;
 
-        [Tooltip("Tick to draw the gun model in the shooter's own view. Untick when a first-person arms model (PlayerViewmodel) shows the gun instead: tracers, impacts and the view's kick, shake and FOV punch stay; the muzzle flash and its light go with the gun model, so the arms model shows its own. Other players still see the gun on this player's body either way.")]
+        [Tooltip("Tick to draw the gun model in the shooter's own view. Ignored on a player with a first-person arms model (PlayerViewmodel): that draws the gun in the view and in the body's hand, and this keeps the tracers, impacts, muzzle flash and the view's kick, shake and FOV punch.")]
         [SerializeField] bool _drawHeldGun = true;
 
         [Header("Reload and draw")]
@@ -67,6 +67,8 @@ namespace CloseTheDeal.Combat
         const float ShakeFrequency = 22f;
         const float SwayFlickDegreesPerSecond = 600f;
         const float FlashSizeJitter = 0.3f;
+        const float SurfaceProbe = 0.3f;
+        static readonly string[] NotSurfaceLayers = { "Player", "Ragdoll", "Viewmodel", "UI" };
 
         struct CachedModel
         {
@@ -79,6 +81,9 @@ namespace CloseTheDeal.Combat
         WeaponHolder _holder;
         Health _health;
         PlayerMotor _motor;
+        PlayerViewmodel _viewmodel;
+        readonly System.Collections.Generic.Dictionary<MuzzleFlash, MuzzleFlash> _flashes = new();
+        int _surfaceMask;
         Camera _camera;
         WeaponDefinition _weapon;
         GameObject _view;
@@ -125,7 +130,16 @@ namespace CloseTheDeal.Combat
             _holder = GetComponent<WeaponHolder>();
             _health = GetComponent<Health>();
             _motor = GetComponent<PlayerMotor>();
+            _viewmodel = GetComponent<PlayerViewmodel>();
             _shakeSeed = Random.value * 100f;
+
+            _surfaceMask = ~0;
+            foreach (string layerName in NotSurfaceLayers)
+            {
+                int layer = LayerMask.NameToLayer(layerName);
+                if (layer >= 0)
+                    _surfaceMask &= ~(1 << layer);
+            }
         }
 
         void OnEnable()
@@ -135,7 +149,7 @@ namespace CloseTheDeal.Combat
             _holder.DryFired += OnDryFired;
             _holder.ReloadStarted += OnReloadStarted;
             _holder.ReloadFinished += OnReloadEnded;
-            _holder.ReloadCancelled += OnReloadEnded;
+            _holder.ReloadCancelled += OnReloadCancelled;
         }
 
         void OnDisable()
@@ -145,7 +159,7 @@ namespace CloseTheDeal.Combat
             _holder.DryFired -= OnDryFired;
             _holder.ReloadStarted -= OnReloadStarted;
             _holder.ReloadFinished -= OnReloadEnded;
-            _holder.ReloadCancelled -= OnReloadEnded;
+            _holder.ReloadCancelled -= OnReloadCancelled;
             if (_fovAdded != 0f && _camera != null && Mathf.Approximately(_camera.fieldOfView, _fovWritten))
                 _camera.fieldOfView -= _fovAdded;
             _fovAdded = 0f;
@@ -165,20 +179,23 @@ namespace CloseTheDeal.Combat
             _inFirstPerson = firstPerson;
             _dipTarget = 0f;
             _reloading = false;
+            // A held gun drives the arms model's kick and reload; empty hands give its stand-in keys back.
+            if (_viewmodel != null)
+                _viewmodel.Driven = weapon != null;
 
             Transform parent = firstPerson ? PlayerCamera.Instance.transform : _thirdPersonAnchor;
             if (ShouldDraw(weapon, firstPerson) && parent != null)
                 SpawnView(weapon, parent, firstPerson);
         }
 
-        /// <summary>Draws a gun that has a model, unless an arms model draws the first-person one.</summary>
+        /// <summary>Draws a gun that has a model, unless an arms model draws it (in the view and on the body).</summary>
         bool ShouldDraw(WeaponDefinition weapon, bool firstPerson)
         {
-            return (_drawHeldGun || !firstPerson) && weapon != null && weapon.ViewPrefab != null;
+            return _viewmodel == null && (_drawHeldGun || !firstPerson) && weapon != null && weapon.ViewPrefab != null;
         }
 
         /// <summary>Whether this view draws the gun model in the shooter's own view. Off when an arms model does it.</summary>
-        public bool DrawsHeldGun => _drawHeldGun;
+        public bool DrawsHeldGun => _drawHeldGun && _viewmodel == null;
 
         /// <summary>
         /// For an arms model that draws the gun itself: where its muzzle is, so tracers leave from
@@ -230,27 +247,91 @@ namespace CloseTheDeal.Combat
             _gunKick.Clear();
         }
 
+        Transform CurrentMuzzle()
+        {
+            if (_muzzle != null)
+                return _muzzle;
+            if (_viewmodel != null && _viewmodel.Muzzle != null)
+                return _viewmodel.Muzzle;
+            return _externalMuzzle;
+        }
+
         void OnFired(ShotInfo shot)
         {
             WeaponDefinition weapon = shot.Weapon;
-            Transform muzzle = _muzzle != null ? _muzzle : _externalMuzzle;
+            Transform muzzle = CurrentMuzzle();
             Vector3 from = muzzle != null ? muzzle.position : shot.Origin;
             if (weapon == null)
                 return;
 
-            TracerPool.Spawn(weapon.TracerPrefab, from, shot.End, weapon.TracerSeconds);
+            TracerPool.Spawn(weapon.TracerPrefab, from, shot.End, weapon.TracerSeconds, weapon.TracerSpeed, weapon.TracerLength);
             if (shot.HitSomething)
-                LocalEffects.Play(weapon.ImpactEffect, shot.End, from - shot.End);
+                Impact(weapon, shot, from);
 
-            Flash(weapon);
+            Flash(weapon, muzzle);
+            if (_viewmodel != null)
+                _viewmodel.CycleSlide();
             if (shot.Predicted)
+            {
                 KickOwnView(weapon, shot.ShotInBurst);
+                if (_viewmodel != null)
+                    _viewmodel.Fire(HandKick(weapon));
+            }
+        }
+
+        /// <summary>The weapon's own "gun in the hand" kick, twisted to the side the view snapped to.</summary>
+        GunKick HandKick(WeaponDefinition weapon)
+        {
+            return new GunKick(weapon.ViewFlip, weapon.ViewPushBack, weapon.ViewRoll, weapon.ViewTwist * _gunTwistSide, weapon.ViewRecoverySeconds, weapon.ViewCurve);
+        }
+
+        /// <summary>
+        /// The burst where the shot landed, and on the world a mark. The shot carries only its end point, so a
+        /// short local ray across it finds the surface's facing and whether it can move; starting it just short
+        /// of the end keeps glass the shot passed through out of it.
+        /// </summary>
+        void Impact(WeaponDefinition weapon, ShotInfo shot, Vector3 from)
+        {
+            Vector3 toEnd = shot.End - from;
+            Vector3 back = toEnd.sqrMagnitude > 0.0001f ? -toEnd.normalized : Vector3.up;
+            Vector3 facing = back;
+            Vector3 point = shot.End;
+            Transform movable = null;
+            bool onSurface = false;
+
+            if (shot.Surface == ShotSurface.World
+                && Physics.Raycast(shot.End + back * SurfaceProbe, -back, out RaycastHit hit, SurfaceProbe * 2f, _surfaceMask, QueryTriggerInteraction.Ignore))
+            {
+                onSurface = true;
+                facing = hit.normal;
+                point = hit.point;
+                movable = hit.rigidbody != null ? hit.collider.transform : null;
+            }
+
+            // Sparks and dust come off the surface, leaning the way a ricochet would go.
+            LocalEffects.Play(weapon.ImpactEffect, point, onSurface ? Vector3.Reflect(-back, facing) + facing : facing);
+            if (onSurface)
+                BulletHoles.Place(weapon.BulletHole, point, facing, weapon.BulletHoleSize, movable);
         }
 
         /// <summary>The flash, its light, a little different every shot.</summary>
-        void Flash(WeaponDefinition weapon)
+        void Flash(WeaponDefinition weapon, Transform muzzle)
         {
             _flashLeft = weapon.FlashSeconds;
+            if (weapon.MuzzleFlash != null && muzzle != null)
+            {
+                MuzzleFlash flash = FlashFor(weapon.MuzzleFlash);
+                if (flash.transform.parent != muzzle)
+                {
+                    flash.transform.SetParent(muzzle, false);
+                    flash.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+                    flash.gameObject.SetActive(true);
+                }
+
+                flash.Play(weapon.FlashSeconds);
+                return;
+            }
+
             if (_flash == null)
                 return;
 
@@ -286,18 +367,43 @@ namespace CloseTheDeal.Combat
 
         void OnDryFired()
         {
-            if (_weapon != null)
-                _gunKick.Add(DryFireJolt, _weapon.ViewRecoverySeconds, _weapon.ViewCurve);
+            if (_weapon == null)
+                return;
+
+            _gunKick.Add(DryFireJolt, _weapon.ViewRecoverySeconds, _weapon.ViewCurve);
+            if (_viewmodel != null)
+                _viewmodel.Fire(HandKick(_weapon).Scaled(DryFireJolt));
+        }
+
+        /// <summary>One flash per player per flash prefab, made on its first shot and reused.</summary>
+        MuzzleFlash FlashFor(MuzzleFlash prefab)
+        {
+            if (_flashes.TryGetValue(prefab, out MuzzleFlash flash) && flash != null)
+                return flash;
+
+            flash = Instantiate(prefab);
+            flash.name = prefab.name;
+            _flashes[prefab] = flash;
+            return flash;
         }
 
         void OnReloadStarted(float seconds)
         {
             _reloading = true;
+            if (_viewmodel != null && _holder.IsOwner)
+                _viewmodel.Reload(seconds);
         }
 
         void OnReloadEnded()
         {
             _reloading = false;
+        }
+
+        void OnReloadCancelled()
+        {
+            _reloading = false;
+            if (_viewmodel != null && _holder.IsOwner)
+                _viewmodel.CancelReload();
         }
 
         /// <summary>Puts the gun in hand away. Its model is kept, hidden, for the next time that gun comes out.</summary>
@@ -320,6 +426,14 @@ namespace CloseTheDeal.Combat
             }
 
             _models.Clear();
+
+            foreach (MuzzleFlash flash in _flashes.Values)
+            {
+                if (flash != null)
+                    Destroy(flash.gameObject);
+            }
+
+            _flashes.Clear();
         }
 
         void LateUpdate()

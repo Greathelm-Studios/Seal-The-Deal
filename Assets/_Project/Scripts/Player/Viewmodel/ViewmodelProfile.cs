@@ -72,7 +72,7 @@ namespace CloseTheDeal.Player
         [Tooltip("How long the gun takes to drop for a climb and come back up, in seconds.")]
         [Min(0.01f)] public float ClimbBlendSeconds = 0.12f;
 
-        [Header("Fire kick")]
+        [Header("Fire kick (only when no gun is wired: a real gun kicks with its own 'gun in the hand' values)")]
         [Tooltip("How far the muzzle jumps up on a shot, in degrees. This moves the gun and arm only; it does not move your aim.")]
         [Range(0f, 45f)] public float KickPitch = 14f;
 
@@ -84,6 +84,13 @@ namespace CloseTheDeal.Player
 
         [Tooltip("How long the gun takes to settle after a shot, in seconds. Shorter reads as a light, snappy gun.")]
         [Min(0.01f)] public float KickRecoverSeconds = 0.2f;
+
+        [Header("Slide (a pistol's top moving back on each shot, seen by everyone)")]
+        [Tooltip("How far the slide snaps back on a shot, in metres of the gun's own size. 0 = the slide never moves. A real pistol's goes back about a sixth of its length.")]
+        [Range(0f, 0.06f)] public float SlideTravel = 0.024f;
+
+        [Tooltip("How long the slide takes to come forward again, in seconds. Keep it shorter than the time between shots or a fast trigger finger sees it stuck back.")]
+        [Range(0.02f, 0.3f)] public float SlideReturnSeconds = 0.075f;
 
         [Header("Reload")]
         [Tooltip("How long the reload move lasts, in seconds. Only the look for now; there is no ammunition yet.")]

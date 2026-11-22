@@ -110,8 +110,17 @@ namespace CloseTheDeal.Combat
         [Tooltip("How long the muzzle flash and its light stay lit, in seconds. Two or three frames (0.03 to 0.05) reads as a flash; longer reads as a flame.")]
         [Range(0.01f, 0.2f)] public float FlashSeconds = 0.04f;
 
+        [Tooltip("The flash, light and smoke at the muzzle on each shot, seen by everyone. Leave empty to use the gun model's own Flash child instead (the old greybox guns).")]
+        public MuzzleFlash MuzzleFlash;
+
         [Tooltip("The burst played where a shot hits something. Each player's game plays its own; nothing is sent over the network. Leave empty for none.")]
         public ParticleSystem ImpactEffect;
+
+        [Tooltip("The mark a shot leaves on walls, floors and furniture (not on players or glass). Leave empty for none.")]
+        public Material BulletHole;
+
+        [Tooltip("How wide the mark is, in metres. A pistol round's is about 4 cm with its chipped rim.")]
+        [Range(0.01f, 0.2f)] public float BulletHoleSize = 0.045f;
 
         [Header("Damage by where it hits")]
         [Tooltip("Damage on a head hit, as a multiple of the body damage. 1 = the head counts the same as the body. The head is the top of the body from the height below up.")]
@@ -175,6 +184,12 @@ namespace CloseTheDeal.Combat
 
         [Tooltip("How long a tracer stays on screen, in seconds.")]
         [Range(0.02f, 0.5f)] public float TracerSeconds = 0.08f;
+
+        [Tooltip("How fast the tracer streak flies from the muzzle to where the shot landed, in metres per second. 0 = the old look: a line drawn the whole way at once, which then fades. The hit itself is always instant; this is only the look.")]
+        [Range(0f, 1000f)] public float TracerSpeed = 280f;
+
+        [Tooltip("How long the flying streak is, in metres. Only used when the tracer speed is above 0.")]
+        [Range(0.2f, 20f)] public float TracerLength = 5f;
 
         /// <summary>Seconds between shots.</summary>
         public float ShotInterval => 60f / Mathf.Max(1f, RoundsPerMinute);

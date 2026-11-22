@@ -63,7 +63,9 @@ namespace CloseTheDeal.Player
         bool _twoHanded;
         float _twoHand;
         float _twoHandVelocity;
-        float _kick;
+        float _kickElapsed = -1f;
+        bool _kickFresh;
+        GunKick _kickNow;
         float _kickSide = 1f;
         float _reloadElapsed = -1f;
         float _reloadSeconds;
@@ -122,14 +124,32 @@ namespace CloseTheDeal.Player
         /// </summary>
         public bool Driven { get; set; }
 
-        /// <summary>Kicks the gun. Does nothing on players this client does not control, or during a reload.</summary>
+        /// <summary>Kicks the gun with the profile's stand-in kick. Does nothing on players this client does not control, or during a reload.</summary>
         public void Fire()
+        {
+            if (_profile == null)
+                return;
+
+            _kickSide = -_kickSide;
+            Fire(new GunKick(_profile.KickPitch, _profile.KickBack, _profile.KickRoll * _kickSide, 0f, _profile.KickRecoverSeconds, null));
+        }
+
+        /// <summary>Kicks the gun with a weapon's own kick. Does nothing on players this client does not control, or during a reload.</summary>
+        public void Fire(in GunKick kick)
         {
             if (!_active || IsReloading)
                 return;
 
-            _kick = 1f;
-            _kickSide = -_kickSide;
+            _kickNow = kick;
+            _kickElapsed = 0f;
+            _kickFresh = true;
+        }
+
+        /// <summary>Snaps the held weapon's slide back and lets it return. Call on every machine for every shot; a weapon with no slide ignores it.</summary>
+        public void CycleSlide()
+        {
+            if (_body != null)
+                _body.CycleSlide();
         }
 
         /// <summary>Starts the reload move. Does nothing on players this client does not control, or while one is already playing.</summary>
@@ -239,7 +259,7 @@ namespace CloseTheDeal.Player
             _lagVelocity = Vector2.zero;
             _sprint = 0f;
             _climb = 0f;
-            _kick = 0f;
+            _kickElapsed = -1f;
             _reloadElapsed = -1f;
             BodyViewMotionOffset = Vector3.zero;
             BodyViewMotionRotation = RestTurn;
@@ -309,8 +329,7 @@ namespace CloseTheDeal.Player
 
             UpdateLag(dt);
             UpdateStance(dt);
-            _kick = Mathf.MoveTowards(_kick, 0f, dt / _profile.KickRecoverSeconds);
-            float kick = _kick * _kick;
+            float kick = KickAmount(dt);
             float reload = ReloadDepth(dt);
 
             float leanTilt = Mathf.DeltaAngle(0f, _baseCamera.transform.eulerAngles.z);
@@ -318,16 +337,43 @@ namespace CloseTheDeal.Player
 
             BodyViewMotionOffset = new Vector3(_lag.y, -_lag.x, 0f) * _profile.LookLagShift
                 + _profile.SprintShift * _sprint
-                + Vector3.back * (_profile.KickBack * kick)
+                + Vector3.back * (_kickNow.PushBack * kick)
                 + Vector3.down * (_profile.ReloadDrop * reload + _profile.ClimbDrop * _climb);
 
             BodyViewMotionRotation = Quaternion.Euler(_lag.x, _lag.y, bodyRoll)
                 * RestTurn
                 * Quaternion.Euler(_profile.SprintTurn * _sprint)
                 * Quaternion.Euler(
-                    -_profile.KickPitch * kick - _profile.ReloadTilt * reload + _profile.ClimbTilt * _climb,
-                    0f,
-                    _profile.KickRoll * kick * _kickSide + _profile.ReloadRoll * reload);
+                    -_kickNow.Flip * kick - _profile.ReloadTilt * reload + _profile.ClimbTilt * _climb,
+                    _kickNow.Twist * kick,
+                    _kickNow.Roll * kick + _profile.ReloadRoll * reload);
+        }
+
+        /// <summary>How much of the current kick is left: 1 on the shot's own frame, then along its curve (which may swing past 0) to rest.</summary>
+        float KickAmount(float dt)
+        {
+            if (_kickElapsed < 0f)
+                return 0f;
+
+            // The peak is held for the frame the shot was drawn on, so a kick is never skipped at low frame rates.
+            if (_kickFresh)
+                _kickFresh = false;
+            else
+                _kickElapsed += dt;
+
+            float seconds = Mathf.Max(0.01f, _kickNow.Seconds);
+            if (_kickElapsed >= seconds)
+            {
+                _kickElapsed = -1f;
+                return 0f;
+            }
+
+            float t = _kickElapsed / seconds;
+            AnimationCurve curve = _kickNow.Curve;
+            if (curve != null && curve.length > 0)
+                return curve.Evaluate(t);
+            float left = 1f - t;
+            return left * left;
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

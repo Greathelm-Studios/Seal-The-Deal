@@ -669,6 +669,22 @@ namespace CloseTheDeal.Editor.Greybox
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
 
             SwapToOutlineMeshes(pistol, PistolPath);
+            AddPistolMuzzle(pistol.transform);
+        }
+
+        /// <summary>Middle of the end of the pistol's barrel, in Pistol.fbx's own space: measured from its frame mesh (front face at z 0.133, bore 0.072 to 0.085 up).</summary>
+        static readonly Vector3 PistolMuzzle = new(0f, 0.0787f, 0.134f);
+
+        /// <summary>Gives the pistol the "Muzzle" point shots, tracers and the flash leave from, unless it already has one. True if it added it.</summary>
+        internal static bool AddPistolMuzzle(Transform pistol)
+        {
+            if (pistol == null || pistol.Find("Muzzle") != null)
+                return false;
+
+            var muzzle = new GameObject("Muzzle").transform;
+            muzzle.SetParent(pistol, false);
+            muzzle.SetLocalPositionAndRotation(PistolMuzzle, Quaternion.identity);
+            return true;
         }
 
         static void SwapToOutlineMeshes(GameObject model, string modelPath)

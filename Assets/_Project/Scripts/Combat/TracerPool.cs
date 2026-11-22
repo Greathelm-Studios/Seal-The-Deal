@@ -23,6 +23,12 @@ namespace CloseTheDeal.Combat
             public float Width;
             public Color Colour;
             public FadeMode Mode;
+            public Vector3 From;
+            public Vector3 Direction;
+            public float Distance;
+            public float Speed;
+            public float Length;
+            public float Elapsed;
         }
 
         /// <summary>The far end of a tracer is this bright compared with the muzzle end.</summary>
@@ -70,7 +76,17 @@ namespace CloseTheDeal.Combat
         /// <summary>Draws one tracer from the muzzle to where the shot ended, for the given time in seconds.</summary>
         public static void Spawn(LineRenderer prefab, Vector3 from, Vector3 to, float seconds)
         {
-            if (prefab == null || seconds <= 0f)
+            Spawn(prefab, from, to, seconds, 0f, 0f);
+        }
+
+        /// <summary>
+        /// Flies a streak of the given length in metres from the muzzle to where the shot ended at the given
+        /// speed in metres per second; it is gone once its tail reaches the end. A speed of 0 draws the whole
+        /// line at once for the given time in seconds instead.
+        /// </summary>
+        public static void Spawn(LineRenderer prefab, Vector3 from, Vector3 to, float seconds, float speed, float length)
+        {
+            if (prefab == null || (seconds <= 0f && speed <= 0f))
                 return;
 
             if (_instance == null)
@@ -80,10 +96,10 @@ namespace CloseTheDeal.Combat
                 _instance = go.AddComponent<TracerPool>();
             }
 
-            _instance.Show(prefab, from, to, seconds);
+            _instance.Show(prefab, from, to, seconds, speed, length);
         }
 
-        void Show(LineRenderer prefab, Vector3 from, Vector3 to, float seconds)
+        void Show(LineRenderer prefab, Vector3 from, Vector3 to, float seconds, float speed, float length)
         {
             if (!_free.TryGetValue(prefab, out Stack<LineRenderer> free))
             {
@@ -97,8 +113,11 @@ namespace CloseTheDeal.Combat
             LineRenderer line = free.Count > 0 ? free.Pop() : Instantiate(prefab, transform);
             line.positionCount = 2;
             line.useWorldSpace = true;
+            Vector3 path = to - from;
+            float distance = path.magnitude;
+            bool travels = speed > 0f && distance > 0.01f;
             line.SetPosition(0, from);
-            line.SetPosition(1, to);
+            line.SetPosition(1, travels ? from : to);
             line.widthMultiplier = prefab.widthMultiplier;
 
             FadeMode mode = ModeFor(prefab.sharedMaterial, out Color baseColour);
@@ -116,7 +135,17 @@ namespace CloseTheDeal.Combat
             }
 
             line.gameObject.SetActive(true);
-            _live.Add(new Live { Line = line, Prefab = prefab, Left = seconds, Total = seconds, Width = prefab.widthMultiplier, Colour = baseColour, Mode = mode });
+            var live = new Live { Line = line, Prefab = prefab, Left = seconds, Total = seconds, Width = prefab.widthMultiplier, Colour = baseColour, Mode = mode };
+            if (travels)
+            {
+                live.From = from;
+                live.Direction = path / distance;
+                live.Distance = distance;
+                live.Speed = speed;
+                live.Length = Mathf.Max(0.05f, length);
+                live.Left = live.Total = (distance + live.Length) / speed;
+            }
+            _live.Add(live);
         }
 
         FadeMode ModeFor(Material material, out Color baseColour)
@@ -150,6 +179,18 @@ namespace CloseTheDeal.Combat
                 }
 
                 live.Left -= Time.deltaTime;
+                if (live.Speed > 0f)
+                {
+                    if (!Fly(ref live))
+                    {
+                        RecycleAt(i);
+                        continue;
+                    }
+
+                    _live[i] = live;
+                    continue;
+                }
+
                 if (live.Left > 0f)
                 {
                     // Thins and fades as it goes, so a burst reads as streaks rather than a solid bar.
@@ -180,6 +221,21 @@ namespace CloseTheDeal.Combat
 
                 RecycleAt(i);
             }
+        }
+
+        /// <summary>Moves a flying streak on; false once its tail has reached the end.</summary>
+        static bool Fly(ref Live live)
+        {
+            live.Elapsed += Time.deltaTime;
+            float head = live.Speed * live.Elapsed;
+            float tail = head - live.Length;
+            if (tail >= live.Distance)
+                return false;
+
+            // Position 0 is the tail and 1 the head, so a texture bright at its right end reads as the round's glow.
+            live.Line.SetPosition(0, live.From + live.Direction * Mathf.Clamp(tail, 0f, live.Distance));
+            live.Line.SetPosition(1, live.From + live.Direction * Mathf.Min(head, live.Distance));
+            return true;
         }
 
         void RecycleAt(int index)
