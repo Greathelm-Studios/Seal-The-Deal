@@ -1,6 +1,6 @@
 # Seal the Deal — Repo Rules
 
-**Status:** Current · **Last updated:** 2026-10-03
+**Status:** Current · **Last updated:** 2026-11-22
 
 These rules bind every agent and every task in this repo, whoever's agent it is and whichever tool runs it.
 This file is the single entry point: tool-specific files (`CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.cursor/rules/`) only point here.
@@ -10,25 +10,26 @@ If a rule needs changing, change it here.
 
 ## 1. Talking to your human
 
-Adam is the owner: a game designer, not a programmer.
-He runs several sessions at once and skims.
+Seal the Deal is made by a small team: Adam, Alex and Harvey.
+**Nobody owns the design alone. Design is a group decision.**
+Most of the team run several sessions at once and skim.
 
-**Report to the human you are working for.** For Adam's sessions, that is Adam. For a collaborator's agent, it is that collaborator.
-The shape and reporting rules below apply to every human; "he" below means Adam, and a collaborator can set their own preferences in their personal tool config.
+**Report to the human you are working for**: whoever runs your session.
+The shape and reporting rules below apply to every human; each can set their own preferences in their personal tool config.
 
-**Release risks always reach Adam**, whoever you work for: anything that threatens 29 Oct or 7 Oct (§2), scope creep, or a change to netcode authority (§3).
-Add a line under **Release risks** in [docs/WORKBOARD.md](docs/WORKBOARD.md), commit it, and tell your human to push it and tell Adam.
-Design questions (§7) also go to Adam, through your human; don't settle them with your human alone.
+**Release risks reach the whole team**, whoever you work for: anything that threatens 29 Oct or 7 Oct (§2), scope creep, or a change to netcode authority (§3).
+Add a line under **Release risks** in [docs/WORKBOARD.md](docs/WORKBOARD.md), commit it, and tell your human to push it and tell the rest of the team.
+Design questions (§7) are for the team to decide together. Your human takes them to the others; don't treat one person's answer as the team's unless your human says it is agreed.
 
 ### Shape
 
-- **One sentence per line, with a blank line between lines.** He scans the left edge for the line that matters; a dense paragraph has to be read whole first.
-- **Bold the few words that carry the reply**: what landed, the decision he must make, the risk he is carrying. Reading only the bold should still give the reply. When everything is bold, nothing is.
+- **One sentence per line, with a blank line between lines.** Your human scans the left edge for the line that matters; a dense paragraph has to be read whole first.
+- **Bold the few words that carry the reply**: what landed, the decision they must make, the risk they are carrying. Reading only the bold should still give the reply. When everything is bold, nothing is.
 - **Short is the standard.** A status reply is about 5–10 lines, one line per landed thing. A table only when there are numbers to line up.
 - State the finding, not the reasoning that produced it. The commit body and the docs hold the reasoning; point at them.
-- Cut every recap: of the request, of a decision already made, and above all of a finding already reported. Once told, he has it.
+- Cut every recap: of the request, of a decision already made, and above all of a finding already reported. Once told, they have it.
 - End with one line for what is next. No menu of options, no offer to explain further.
-- **Do not over-correct into terse-and-useless.** The budget stretches for a decision he must make, a number that changes what he does, or a risk he doesn't know he is carrying. Spend extra lines on those and nothing else.
+- **Do not over-correct into terse-and-useless.** The budget stretches for a decision they must make, a number that changes what they do, or a risk they don't know they are carrying. Spend extra lines on those and nothing else.
 - Lead with what changes in the game, then the mechanism. Name files and Inspector values; skip call stacks unless asked.
 
 ### What must be reported
@@ -42,11 +43,11 @@ Design questions (§7) also go to Adam, through your human; don't settle them wi
 
 ### What must not be reported
 
-- Paths in the working tree you did not touch. The tree is usually dirty with his own work; see §9.
+- Paths in the working tree you did not touch. The tree is usually dirty with other people's work; see §9.
 
 ### Naming things
 
-- Name a commit by its subject line in quotes: "Add Close the Deal GDD and update README to the new design". Add the hash only when he needs it to act (a cherry-pick, a bisect range), never as the sole identifier.
+- Name a commit by its subject line in quotes: "Add Close the Deal GDD and update README to the new design". Add the hash only when they need it to act (a cherry-pick, a bisect range), never as the sole identifier.
 - Every repo path in chat is a clickable markdown link, folders included, with `:line` when a line is meant.
 
 ### Narrating edits
@@ -60,7 +61,7 @@ Release is **Thu 29 Oct 2026**, Steam Early Access, and it cannot move.
 The store page submission on **7 Oct** cannot slip either: it starts the 14-day Coming Soon clock.
 
 - The v1 launch scope in [docs/GDD.md](docs/GDD.md) is the contract. Anything not on it is roadmap.
-- **If a request adds work outside v1 scope, say so in one line and ask** before building it. Don't refuse; the owner decides.
+- **If a request adds work outside v1 scope, say so in one line and ask** before building it. Don't refuse; the team decides.
 - Prefer the smallest version that feels good in a playtest over the general system. Build for teams of 1–4 (up to 8 players); tune for 2v2 first, and test 4v4 before release. Free-for-all is roadmap; don't build for it yet.
 - Asset-store packs and existing Unity packages beat hand-rolled systems. Say which one you'd use before writing a replacement.
 - When a task is running long, report where it stands and what cutting it would cost, rather than going quiet.
@@ -124,7 +125,7 @@ Character and prop sizes are recorded in the owning system doc once measured; th
 
 Docs are the source of truth.
 
-- [docs/GDD.md](docs/GDD.md) owns design: the loop, the buildings, weapons, v1 scope, roadmap and open questions. Only the owner changes design; ask about an undecided rule rather than inventing one.
+- [docs/GDD.md](docs/GDD.md) owns design: the loop, the buildings, weapons, v1 scope, roadmap and open questions. Design changes are a team decision: ask about an undecided rule rather than inventing one, and change the GDD only when your human says the team has agreed.
 - One current doc per system in `docs/systems/` (created when a system first needs one), named `SCREAMING_SNAKE.md`. It opens with **Status:** (Current / Target / Archived), **Last updated:**, and a few lines on what the player sees.
 - [docs/FEATURES.md](docs/FEATURES.md) is the master feature tracker and documentation index. Update its row (status, verification state, doc link, open gaps) whenever a feature lands, changes state, or is verified in play.
 - Plans, briefs and handovers are temporary. When work lands or is dropped, move them to `docs/archive/` in the same commit with a one-line outcome.
@@ -146,7 +147,7 @@ Docs are the source of truth.
 - **Automated tests are opt-in.** Don't propose, write or run test work unless asked.
 - Without requested tests, report what static or manual validation you did, with exact commands and results.
 - Never claim Play Mode, feel, multiplayer, Steam or performance results you did not observe. Compiling is not playing; one instance is not multiplayer.
-- The owner plays each piece as it lands, so docs carry no "built but unplayed" state.
+- The team plays each piece as it lands, so docs carry no "built but unplayed" state.
 - **Find why a bug happens before calling a change a fix.** Null checks, try/catch, delays, clamps and retries don't fix an unexplained cause. A network bug "fixed" by a delay is not fixed.
 - A necessary temporary workaround is labelled in the report, commented at the code site with the real fix, and listed in the system doc's known limitations. Never stack workarounds.
 - Don't ask permission for routine implementation choices the task already covers. Ask when a gameplay decision or new authorisation is missing.
@@ -210,7 +211,7 @@ Several people's agents, in different tools, work on this repo. These files are 
 
 - **[docs/notes/](docs/notes/)**: durable facts about the project and the people that aren't obvious from code or docs (a preference, a constraint, a lesson). One fact per file, indexed in [docs/notes/INDEX.md](docs/notes/INDEX.md). Read the index at the start of a session. Update a note rather than adding a duplicate; delete one that turns out wrong.
 - **[docs/DECISIONS.md](docs/DECISIONS.md)**: one dated line per technical or process decision: what, who decided, link to the commit or doc. Check it before reopening a question. Design decisions go in the GDD, not here (§7).
-- **[docs/WORKBOARD.md](docs/WORKBOARD.md)**: who is working on what right now, which scenes and prefabs they have claimed, and the **Release risks** list Adam reads (§1). Add your line when you start, remove it when the work lands or stops. A claim only counts once it is pushed, so ask your human to push it. Don't edit someone else's line; ask them through your human.
+- **[docs/WORKBOARD.md](docs/WORKBOARD.md)**: who is working on what right now, which scenes and prefabs they have claimed, and the **Release risks** list the whole team reads (§1). Add your line when you start, remove it when the work lands or stops. A claim only counts once it is pushed, so ask your human to push it. Don't edit someone else's line; ask them through your human.
 - **Handovers**: when you stop with work unfinished, copy [docs/HANDOVER_TEMPLATE.md](docs/HANDOVER_TEMPLATE.md) to `docs/HANDOVER_<topic>.md` and fill it in. The next agent reads it first. When the work lands or is dropped, move it to `docs/archive/` (§7).
 - Board and note edits are small commits of their own (staging rules from §9 still apply), so they don't get stuck behind unfinished code.
 
