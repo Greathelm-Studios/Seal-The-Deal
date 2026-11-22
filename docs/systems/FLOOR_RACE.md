@@ -2,7 +2,7 @@
 
 **Status:** Target · **Last updated:** 2026-11-22
 
-The main game mode, as Harvey set it out on 2026-11-22. Nothing in this doc is built yet. It is a proposal until Adam signs it off: the design in [GDD.md](../GDD.md) and the mode now in the code ([MATCH.md](MATCH.md)) still describe two towers.
+The main game mode, decided by Harvey on 2026-11-22. Nothing in this doc is built yet. It replaces the two-tower design: [GDD.md](../GDD.md) and the mode now in the code ([MATCH.md](MATCH.md)) still describe two towers, so going to one building drops the window fights across the street and the zipline raid.
 
 Lines marked **(proposed)** are the doc's suggestion where Harvey has not decided yet.
 
@@ -114,8 +114,7 @@ Only one floor exists at a time: the next floor is built during the elevator tra
 
 ## Open questions
 
-- **For Adam: one building instead of two towers.** This drops the window fights across the street and the zipline raid, two of the GDD's three key moments.
-- **For Adam: no time limit.** A firm that defends well could keep a match going for a long time. A soft limit, or a stronger push for the trailing firm, may be needed after playtests.
+- **No time limit:** watch match length in playtests. A firm that defends well could keep a match going for a long time. A soft limit, or a stronger push for the trailing firm, may be needed after playtests.
 - **Floor 1 start:** where does each firm start, and does either get the briefcase's general direction?
 - **Can the firm with the briefcase be stalled at the elevator?** If one teammate hides or stays away, the elevator can't leave. Options: a timer that leaves without them, or boarding only needing the teammates near the carrier.
 - **How much cash per floor**, does the win pay extra, and how is it stored and kept from being cheated?
