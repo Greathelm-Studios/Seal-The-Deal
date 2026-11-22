@@ -1,8 +1,8 @@
 # FLOOR_GEN
 
-**Status:** Target · **Last updated:** 2026-11-22
+**Status:** Current · **Last updated:** 2026-11-22
 
-The floor generator for the floor race ([FLOOR_RACE.md](FLOOR_RACE.md)). Nothing here has been played yet; the "Measured" section says what has been checked and how.
+The floor generator for the floor race ([FLOOR_RACE.md](FLOOR_RACE.md)). The "Measured" section says what has been checked and how. Layout drawings: [seed 1, floor 1](../proof/floor_race_2026-11-22/layout_seed1_floor01.png), [seed 77777, floor 10](../proof/floor_race_2026-11-22/layout_seed77777_floor10.png) (grey = furniture, red = open window, yellow = exit lift, orange = arrival lift, green and magenta = the two starts, gold = the briefcase, blue room = the manager's office).
 
 ## What the player sees
 
@@ -137,7 +137,8 @@ Sixteen layouts (four seeds, floors 1, 2, 5 and 10) were drawn and looked at: ri
 - **For scale:** `KitOffice.unity` read the same way from its own camera draws 6,527 draw calls, 497 set-pass calls and 3.2 million triangles. A generated floor is about 40% of that.
 - **Merging is off.** It saves about a fifth of the draw calls and doubles the build time, but it only works in a build if the kit's models are imported with Read/Write on. They are not, and that setting belongs to the kit import. Set-pass calls, which cost more than draw calls with URP's batcher, do not improve.
 - A floor has no walls that hide what is behind them from the renderer (no occlusion culling at runtime), so the camera draws most of the floor from anywhere. That is the reason the draw calls are in the thousands.
-- One floor (seed 1, floor 1) was built and looked at from two eye-height views and from above: walls, doors, glazing, ceilings and furniture stand where the drawing puts them. Nobody has walked one yet, and nothing here was measured in a build.
+- One floor (seed 1, floor 1) was built and looked at from two eye-height views and from above: walls, doors, glazing, ceilings and furniture stand where the drawing puts them.
+- In the floor race's two-instance run a development build generated and built each floor from the synced seed with the same object count as the Editor host ([FLOOR_RACE.md](FLOOR_RACE.md), "Checked so far"). Players were placed on the floors by script; nobody has walked one by hand, and the numbers above were not measured in a build.
 
 ## Known limitations
 

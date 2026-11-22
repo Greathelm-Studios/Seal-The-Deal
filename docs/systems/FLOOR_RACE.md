@@ -1,8 +1,8 @@
 # FLOOR_RACE
 
-**Status:** Target · **Last updated:** 2026-11-22
+**Status:** Current · **Last updated:** 2026-11-22
 
-The main game mode, decided by Harvey on 2026-11-22. It is built and has been played through on the host alone; it stays Target until it has been seen from a client (`AGENTS.md §3`). What has been checked, and how, is under "Checked so far".
+The main game mode, decided by Harvey on 2026-11-22. It is built, and a whole match has been driven by script with a second player watching from a client build. No person has played it yet. What has been checked, and how, is under "Checked so far".
 
 It replaces the two-tower design. [GDD.md](../GDD.md) and the tower mode in the code ([MATCH.md](MATCH.md)) still describe two towers; going to one building drops the window fights across the street and the zipline raid.
 
@@ -153,7 +153,27 @@ Each is an Inspector value or a small rule, picked as the smallest sensible beha
 
 - **Compiled** in the Editor, no errors.
 - **Played on the host alone, Editor, 2026-11-22**, driven by script: a match started; the hidden briefcase was picked up; nine lift rides from floor 1 to floor 10, each with the floor-change screen, the head start and 100 cash; a death that wiped the solo firm and brought it back near the dropped briefcase; a fall from the building that killed the carrier and returned the briefcase inside; the win in the manager's office. 1,000 cash was in the profile at the end, the count of networked objects stayed the same on every floor, and the console showed no errors.
-- **Not yet seen from a client.** Nothing above proves it works for a second player.
+- **Seen from a client, 2026-11-22.** The Editor hosted and a development build joined on the same PC over the local transport (Tugboat), one player per firm. The host moved both bodies by script; the client's pick-up requests were sent from the client by script (the same call its F key makes). Both consoles were clean: no errors or exceptions in the Editor console or the client's log.
+  - **Same floor on both machines:** the client built every floor from the synced seed with the same object count as the host (417, then 450, 405 and 431 on the floors compared). [Client on floor 1, waiting](../proof/floor_race_2026-11-22/c_01_joined_waiting.jpg).
+  - **A steal:** the host player carried the briefcase and dropped it; the client took it. The client's screen went from "Take the briefcase back" with the rival marker to carrying it. [Before](../proof/floor_race_2026-11-22/c_03_host_has_case.jpg), [after](../proof/floor_race_2026-11-22/c_04_client_stole_case.jpg).
+  - **A floor change:** the client carrier stood in the exit lift; the client saw the [floor-change screen](../proof/floor_race_2026-11-22/c_11_transition_screen.jpg), then started [inside the arrival lift with the doors counting down and its cash](../proof/floor_race_2026-11-22/c_07_headstart_in_lift.jpg), while the host, who arrived first, saw ["They arrive in 1. Get ready"](../proof/floor_race_2026-11-22/h_07_headstart_arrived_first.jpg).
+  - **A team wipe and respawn:** the client's only player was killed. Its screen showed the [down card and the dropped briefcase](../proof/floor_race_2026-11-22/c_09_client_down.jpg); two seconds later it [came back in the next room with the briefcase 7 m away](../proof/floor_race_2026-11-22/c_10_client_respawned.jpg), out of the host player's sight.
+  - **The floor 10 win:** the client carried the briefcase up eight more floors and [into the manager's office](../proof/floor_race_2026-11-22/c_12_floor10.jpg); its menu read ["Halloran Voss sealed the deal ... That is your firm"](../proof/floor_race_2026-11-22/c_13_win.jpg). The client's profile file held 1,000 cash and the win; the host's held 0 cash and the loss.
+- **Not checked:** a person playing it; more than one player a firm (so boarding with teammates, and a wipe that is not solo, are untested); Steam instead of the local transport; two PCs; a joiner mid-match; falling out of a window as a client (host only).
+
+## Old two-tower code that can now be deleted
+
+Left in place as asked. This list comes from reading what refers to what, not from deleting anything and compiling.
+
+- **Tower building:** `Scripts/Tower/TowerBuilder.cs`, `TowerLayout.cs`, `TowerProfile.cs`, `FloorTemplate.cs`, `BreakableDoor.cs`; the floor templates in `Assets/_Project/Floors/`; `Profiles/DefaultTower.asset` and `Profiles/Match/LaneTower.asset`; `Editor/Greybox/GreyboxTowerSetup.cs`. `TeamSpawner.cs` stays (the floor race uses it); it only needs `TowerBuilder.TeamCount` and its `TryGetSpawn` fallback moved or removed.
+- **Tower rules in the match:** `MatchReferee.cs`, `MatchRules.cs`, `MatchArena.cs`, `MatchCrossings.cs`, `MatchGates.cs`, and in `MatchDirector` everything about checkpoints, the open floor, gathering in reception, briefcase return to a skybridge and the quarter clock. `MatchProfile` then loses its plaza, skybridge, clock and leaving-the-building fields. Once they are gone `IMatchRuleset` can be folded into the director or kept for a second mode.
+- **Things that read the tower arena:** the floor ladder, checkpoint and gate lines in `MatchHud`; `Nameplates.RaiderMarked`; the arena calls in `Records/LocalDeath.cs` and `MatchRecords.Host.cs`.
+- **Tower props and loot:** `Props/PropSpawner.cs`, `Props/PropMarker.cs`, `Integration/FloorLoot.cs`, `FloorLootTable.cs` and its asset. `GunPickups` then always uses the mode's spawner.
+- **The reception lobby flow**, if the floor race keeps starting from the menu: `Integration/LobbyRunFlow.cs`, `LobbyRoom.cs` and the desk in `Scripts/Lobby/`. That is a design call, not just a clean-up.
+- **Prop stream:** `TowerFrame.From(TowerProfile)` and `PropStream`'s tower attach; `UseBuilding` becomes the only way in.
+- **Editor tools for scenes that no longer exist:** the lane setups under `Editor/Lanes/` that only build deleted scenes (`GameModeLaneSetup` and `ShootingLaneSetup` are still called by the floor race scene tool for the match HUD, briefcase prefab and combat HUD, so those parts stay).
+- **Docs to archive:** `TOWER.md`, `INTEGRATION.md`, and the tower half of `MATCH.md`.
+- **Not part of this:** `Lift/Elevator.cs` is KitOffice's rooftop lift ([ELEVATOR.md](ELEVATOR.md)), unused by the floor race, which works its own lift doors; whether it stays is a question about KitOffice.
 
 ## Known limitations
 
