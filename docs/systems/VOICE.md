@@ -104,8 +104,7 @@ Ranges, bitrate, gate thresholds, buffer delays, and the host cap are named cons
 - **No speaking indicator in HUD or world.** `IsSpeaking(clientId)` and `Transmitting` exist for UI to read, but no icon is drawn yet.
 - **Licence notices not yet in-game.** Opus and RNNoise BSD 3-clause notices must ship in a credits screen or text file beside the release build.
 - **Noise suppression is Windows 64-bit only.** Other platforms fall back to the loudness gate (`GateLevel`).
-- **`KitOffice.unity` has no Audio Listener**, so nothing is heard there.
-- **Walls and floors do not muffle voices.** Only 3D distance applies.
+- **Spatial audio and occlusion** are handled by [AUDIO.md](AUDIO.md) (`SoundSystem`, Steam Audio HRTF with `spatializePostEffects = true`, `SpatialOcclusion` wall/floor muffling, and fallback `AudioListener` in scenes like `KitOffice.unity`). Not yet listened to by a human on headphones.
 - **Dead and waiting players** are treated like any player with a body (design question for Adam).
 - **Both teams hear each other.** No team-only or radio channel.
 - **No per-player mute** and no Steam block-list check.

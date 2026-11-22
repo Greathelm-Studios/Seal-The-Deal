@@ -1,3 +1,4 @@
+using CloseTheDeal.Audio;
 using UnityEngine;
 
 namespace CloseTheDeal.Player
@@ -6,19 +7,21 @@ namespace CloseTheDeal.Player
     /// Plays one body's movement sounds from its motor's events, on every machine: footsteps by
     /// distance travelled, jump, landing by fall speed, the slide's start, loop and stop, climbs and
     /// vaults, and (for the local player only) wind at speed. Your own body is heard flat; other
-    /// players are heard where they are. Added by the motor at runtime when the profile links a
-    /// sound set, so the player prefab carries nothing. An empty slot plays nothing.
+    /// players are heard where they are, with wall/floor occlusion via SoundSystem.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class MovementSounds : MonoBehaviour
     {
         const float StepMinSpeed = 1f;
+        const int MovementPriority = 144;
 
         PlayerMotor _motor;
         MovementSoundSet _set;
         AudioSource _oneShots;
         AudioSource _slideLoop;
         AudioSource _windLoop;
+        SpatialOcclusion _oneShotOcclusion;
+        SpatialOcclusion _slideOcclusion;
         float _stepDistance;
         int _lastStep = -1;
 
@@ -26,8 +29,8 @@ namespace CloseTheDeal.Player
         {
             _motor = motor;
             _set = set;
-            _oneShots = NewSource("Movement one-shots", false);
-            _slideLoop = NewSource("Movement slide loop", true);
+            _oneShots = NewSource("Movement one-shots", false, true, out _oneShotOcclusion);
+            _slideLoop = NewSource("Movement slide loop", true, true, out _slideOcclusion);
             _slideLoop.clip = set.SlideLoop;
             _motor.Jumped += OnJumped;
             _motor.Landed += OnLanded;
@@ -45,18 +48,30 @@ namespace CloseTheDeal.Player
             _motor.MantleStarted -= OnMantleStarted;
         }
 
-        AudioSource NewSource(string name, bool loop)
+        AudioSource NewSource(string name, bool loop, bool spatial, out SpatialOcclusion occlusion)
         {
             var go = new GameObject(name);
             go.transform.SetParent(transform, false);
             var source = go.AddComponent<AudioSource>();
             source.playOnAwake = false;
             source.loop = loop;
-            source.outputAudioMixerGroup = _set.Output;
-            source.rolloffMode = AudioRolloffMode.Linear;
-            source.minDistance = 2f;
-            source.maxDistance = _set.HearingDistance;
-            source.dopplerLevel = 0f;
+            if (spatial)
+            {
+                occlusion = SoundSystem.ConfigurePersistent3D(
+                    source,
+                    _set.Output,
+                    2f,
+                    _set.HearingDistance,
+                    priority: MovementPriority,
+                    useOcclusion: true);
+            }
+            else
+            {
+                source.outputAudioMixerGroup = _set.Output;
+                source.spatialBlend = 0f;
+                source.dopplerLevel = 0f;
+                occlusion = null;
+            }
             return source;
         }
 
@@ -81,7 +96,13 @@ namespace CloseTheDeal.Player
         {
             if (clip == null || volume <= 0f)
                 return;
-            _oneShots.spatialBlend = IsLocal ? 0f : 1f;
+            bool local = IsLocal;
+            _oneShots.spatialBlend = local ? 0f : 1f;
+            _oneShots.spatialize = !local && SoundSystem.SpatializerEnabled;
+            if (local)
+                _oneShotOcclusion?.ResetClear();
+            else
+                _oneShotOcclusion?.SnapNow();
             _oneShots.PlayOneShot(clip, _set.Volume * volume);
         }
 
@@ -102,8 +123,21 @@ namespace CloseTheDeal.Player
                 return;
             if (sliding)
             {
-                _slideLoop.spatialBlend = IsLocal ? 0f : 1f;
-                _slideLoop.volume = _set.Volume;
+                bool local = IsLocal;
+                _slideLoop.spatialBlend = local ? 0f : 1f;
+                _slideLoop.spatialize = !local && SoundSystem.SpatializerEnabled;
+                if (_slideOcclusion != null)
+                {
+                    _slideOcclusion.BaseVolume = _set.Volume;
+                    if (local)
+                        _slideOcclusion.ResetClear();
+                    else
+                        _slideOcclusion.SnapNow();
+                }
+                else
+                {
+                    _slideLoop.volume = _set.Volume;
+                }
                 _slideLoop.Play();
             }
             else
@@ -164,9 +198,8 @@ namespace CloseTheDeal.Player
 
             if (_windLoop == null)
             {
-                _windLoop = NewSource("Movement wind", true);
+                _windLoop = NewSource("Movement wind", true, false, out _);
                 _windLoop.clip = _set.WindLoop;
-                _windLoop.spatialBlend = 0f;
             }
             _windLoop.volume = _set.Volume * level;
             if (!_windLoop.isPlaying)

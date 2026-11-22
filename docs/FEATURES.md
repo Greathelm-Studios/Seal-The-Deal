@@ -68,6 +68,7 @@ Master index of every gameplay, networking, UI, art, and tooling feature in **Se
 | UI glass blur render feature and backdrop | v1 | Current | Compiled; preview captures | [UI_GLASS.md](systems/UI_GLASS.md) | `UI/Glass/` | Check blur cost on min-spec GPU |
 | Live-sky title screen and screen transitions | v1 | Current | Compiled; headless check | [UI_TITLE.md](systems/UI_TITLE.md) | `Scripts/UI/Title/` | Not yet played by a person on gamepad or client |
 | UI sound set, join/leave/tip cues, and audio meter | v1 | Current | Compiled; Adam's chosen sounds landed on main | [UI_SOUND.md](systems/UI_SOUND.md) | `Scripts/UI/Sound/` | Verify final levels in live 2v2 |
+| Spatial audio system, Steam Audio HRTF, and wall/floor occlusion | v1 | Current | Compiled only (unheard) | [AUDIO.md](systems/AUDIO.md) | `Scripts/Audio/`, `Plugins/SteamAudio/` | Needs headphone listening pass for voice HRTF + occlusion cutoffs; ship Apache-2.0 licence notice |
 | In-game HUD, menu, and prediction debug overlay | v1 | Current | Compiled; preview captures | [MENU_AND_HUD.md](systems/MENU_AND_HUD.md) | `Scripts/UI/` | Confirm final HUD kit parity on `Lane_Integration` |
 
 ## Art, Lighting and Build
