@@ -1,10 +1,12 @@
 # Handover: movement lane
 
+**Archived 2026-11-22:** movement landed; current doc [PLAYER_MOVEMENT.md](../systems/PLAYER_MOVEMENT.md).
+
 **Status:** Ready for review (not approved) · **Last updated:** 2026-11-14 (UI only from here, per the owner) · **From:** movement lane session, branch `claude/lane-movement-864d86`
 
 ## Goal
 
-Fast, high-mobility arena movement (the owner's STRAFTAT target; the GDD still says "chaotic, not precise") on the predicted FishNet body, with every input the other lanes need, a read-only animation state, and movement's part of the UI revamp. Owning doc: [docs/systems/PLAYER_MOVEMENT.md](systems/PLAYER_MOVEMENT.md) (feel, states, controls table, UI contract, client results, limitations).
+Fast, high-mobility arena movement (the owner's STRAFTAT target; the GDD still says "chaotic, not precise") on the predicted FishNet body, with every input the other lanes need, a read-only animation state, and movement's part of the UI revamp. Owning doc: [docs/systems/PLAYER_MOVEMENT.md](../systems/PLAYER_MOVEMENT.md) (feel, states, controls table, UI contract, client results, limitations).
 
 ## Where it stands
 

@@ -1,5 +1,7 @@
 # Handover: pickups, furniture and silly weapons lane
 
+**Archived 2026-11-22:** pickups, furniture and gadgets landed; current doc [ITEMS.md](../systems/ITEMS.md).
+
 **Status:** Target · **Last updated:** 2026-11-13 · **From:** Adam / Claude Code (pickups lane session)
 
 ## Goal
@@ -15,7 +17,7 @@ Ready for review, not approved. Built on branch `claude/lane-pickups-bf6f0c` (cu
 - Prefabs: `Assets/_Project/Prefabs/Items/` (cubicle panel, pistol, AR-15, Grenade Case, fire extinguisher, wet floor sign, practice dummy, materials).
 - Generated changes outside the lane folders, in their own commit so the merger can drop them and re-run the menu: `Pickup` on the five greybox props, `ItemCarrier` on `Player.prefab`, FishNet's `DefaultPrefabObjects.asset`.
 - Editor: `Assets/_Project/Editor/Lanes/PickupsLaneSetup.cs` (setup menus and the scripted check run). Scene: `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`.
-- Docs: new [docs/systems/ITEMS.md](systems/ITEMS.md); [docs/systems/PROPS.md](systems/PROPS.md) updated.
+- Docs: new [docs/systems/ITEMS.md](../systems/ITEMS.md); [docs/systems/PROPS.md](../systems/PROPS.md) updated.
 
 The three office weapons proposed were fire extinguisher, wet floor sign and desk fan; the first two are built. The fan was dropped: a wind cone is the weakest read at distance.
 
@@ -92,14 +94,14 @@ Open `Assets/_Project/Scenes/Lanes/Lane_Pickups.unity`, press Play, then **Host 
 
 ## Sound (2026-11-13)
 
-- **Real clips, no stand-ins.** The twelve item sounds in [ITEMS.md](systems/ITEMS.md) "Item sounds" are the UI sound lane's (`Audio/Items/Item_<Slot>.wav`, merged through `buffer`). **Set Up Pickups** fills `Profiles/Items/ItemSounds.asset` from them and routes it to the game mixer's SFX bus. The code-made `ItemTones` are deleted.
+- **Real clips, no stand-ins.** The twelve item sounds in [ITEMS.md](../systems/ITEMS.md) "Item sounds" are the UI sound lane's (`Audio/Items/Item_<Slot>.wav`, merged through `buffer`). **Set Up Pickups** fills `Profiles/Items/ItemSounds.asset` from them and routes it to the game mixer's SFX bus. The code-made `ItemTones` are deleted.
 - **Nobody has heard them**: synthesised and measured by the sound lane; batchmode runs only report sources playing and their bus.
 - Item sounds go through `ItemAudio` (pooled 3D sources on the set's bus); the explosion no longer bypasses the mixer.
 - The Grenade Case, extinguisher and wet floor sign events used to fire twice on the host; they now fire once, so their sounds are not doubled. A joining player hears no grab for items already carried.
 
 ## Item HUD (2026-11-14)
 
-- Built from the UI kit only (`ItemHud`): prompt under the crosshair, too-heavy, refusals with the kit shake and `HandsFull` / `Error` sounds, and the hands slot at the bottom left, above the network-stats panel. Design table in [ITEMS.md](systems/ITEMS.md), "The item HUD (built)".
+- Built from the UI kit only (`ItemHud`): prompt under the crosshair, too-heavy, refusals with the kit shake and `HandsFull` / `Error` sounds, and the hands slot at the bottom left, above the network-stats panel. Design table in [ITEMS.md](../systems/ITEMS.md), "The item HUD (built)".
 - **Captured in `Lane_Integration.unity`** ([docs/handover/pickups/item_hud/](handover/pickups/item_hud/): 9/9 checks; prompt, too heavy, the hands slot sliding in over 250 ms, hands full with its shake, dropped) at 1920×1080 and 1280×720 by `-pickupsRole hud` (the HUD is added to the scene for that run only; the scene file is not saved). To put it in the saved scene: open `Lane_Integration.unity`, **Seal the Deal > Lanes > Add Item HUD To Open Scene**, save. Until then that scene holds the deleted `ItemPromptLabel` as a missing script.
 - **The pistol viewmodel stays drawn while the hands carry a chair** (seen in every capture): the viewmodel / shooting lane should hide or lower the gun while `ItemCarrier.Held` is not null (ItemCarrier already blocks firing then).
 - **Pad players** see pad buttons (Y / RT / DOWN / LT) once they use the pad; checked by script with a virtual pad (captures `hud_08`, `hud_09`). PlayStation symbols are not drawn (Xbox names on every pad): assumption while Adam is away.

@@ -1,5 +1,7 @@
 # Handover: UI wide pass (lane 5)
 
+**Archived 2026-11-22:** the UI wide pass landed; current docs [MENU_AND_HUD.md](../systems/MENU_AND_HUD.md) and [UI_KIT.md](../systems/UI_KIT.md).
+
 **Status:** Target · **Last updated:** 2026-11-14 · **From:** lane 5 UI agent (Claude), worktree `.claude/worktrees/lane-ui`, branch `claude/lane-ui`
 
 Copy rules: when slices 4–6 land, move this to `docs/archive/` with a one-line outcome (AGENTS.md §7).

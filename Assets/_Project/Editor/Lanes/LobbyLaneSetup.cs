@@ -194,7 +194,7 @@ namespace CloseTheDeal.Editor.Lanes
 
         // Probe (2026-11-12): lambert3 hair + shoes, lambert2 skin, lambert5 shirt, lambert4 jacket
         // + trousers, lambert6 belt, lambert7 buckle, standardSurface1 eyes. Only parts with a material of their own can be a category, so hair,
-        // shoes and trousers wait for Alex's split mesh (docs/HANDOVER_lobby.md).
+        // shoes and trousers wait for Alex's split mesh (docs/archive/HANDOVER_lobby.md).
         static readonly StdmcSlot[] StdmcSlots =
         {
             new StdmcSlot

@@ -1,5 +1,7 @@
 # Handover: shooting and breakable glass lane
 
+**Archived 2026-11-22:** guns and breakable glass landed; current docs [WEAPONS.md](../systems/WEAPONS.md) and [GLASS.md](../systems/GLASS.md).
+
 **Status:** Target · **Last updated:** 2026-11-12 · **From:** Adam's Claude session (shooting lane, branch `claude/lane-shooting-e0f93d`)
 
 ## Goal
@@ -8,7 +10,7 @@ Two guns that feel tight and fair at high movement speed, a host that decides ev
 
 ## Where it stands
 
-Built (all under this lane's folders; design and ownership in [WEAPONS.md](systems/WEAPONS.md) and [GLASS.md](systems/GLASS.md)):
+Built (all under this lane's folders; design and ownership in [WEAPONS.md](../systems/WEAPONS.md) and [GLASS.md](../systems/GLASS.md)):
 
 - `WeaponDefinition` per gun (Pistol, AR-15), a `WeaponCatalog`, and `WeaponHolder` on the player with `Equip(definition)` / `Equip(definition, slot)` / `Unequip()` / `Unequip(slot)` for the pickups lane.
 - Host-side hit decision with favour-the-shooter rewind (capped 0.25 s), owner-side instant feedback, learnable recoil patterns, accuracy multipliers for moving and airborne.
@@ -45,7 +47,7 @@ Captures for review (shared notes folder of this session group, `shooting-lane-c
 
 ## UI revamp state (2026-11-13 night)
 
-- **Ready:** the combat HUD contract and the list of gun sounds still needed are in [WEAPONS.md](systems/WEAPONS.md) ("Combat HUD contract", "Sounds the guns still need"). The hit marker, head hit and kill sounds use lane 9's `UiSoundEvent.HitMarker`, `HitMarkerHead` and `KillConfirm`. Gun, reload, impact and glass sounds are asked of lane 9's generator by the orchestrator.
+- **Ready:** the combat HUD contract and the list of gun sounds still needed are in [WEAPONS.md](../systems/WEAPONS.md) ("Combat HUD contract", "Sounds the guns still need"). The hit marker, head hit and kill sounds use lane 9's `UiSoundEvent.HitMarker`, `HitMarkerHead` and `KillConfirm`. Gun, reload, impact and glass sounds are asked of lane 9's generator by the orchestrator.
 - **Agreed with lane 1:** movement owns the one crosshair; the combat HUD feeds it `CurrentSpreadDegrees`, `HitConfirmed` and `KillConfirmed`, and draws its own hit marker around the centre.
 - **Held gun:** `WeaponView`'s "Draw Held Gun" turns off the first-person gun so Alex's `PlayerViewmodel` can show it; other players still see `WeaponView`'s gun on the body. Left **on** by default until Adam decides which owns the held gun. Alex's weapons session has the event list.
 - **Not built yet:** the combat HUD itself; it waits on lane 5's UI foundation.
@@ -73,7 +75,7 @@ Verify when it is built: host and a client each see the same gun in the hand aft
 ## Open questions and risks
 
 - **Feel target, for Adam to confirm** (the orchestrator's reading of "the movement needs to feel like STRAFTAT and high mobility good gun play"): first shot on the crosshair; recoil a fixed, learnable pattern rather than random bloom; running and jumping barely cost accuracy; fast time-to-kill (pistol 3 hits, AR-15 5 hits); instant feedback with a host-confirmed hit and a separate kill confirm; quick draw (0.2 / 0.3 s) and reload (1.1 / 1.7 s). Numbers are starting points on the gun assets.
-- **GDD mismatch:** [GDD.md](GDD.md) still says combat "should feel chaotic rather than precise" and calls the rifle the reliable gun. Built to Adam's newer words; the GDD needs his edit (not changed here).
+- **GDD mismatch:** [GDD.md](../GDD.md) still says combat "should feel chaotic rather than precise" and calls the rifle the reliable gun. Built to Adam's newer words; the GDD needs his edit (not changed here).
 - **Owner decisions newer than the GDD** this lane follows: teams are rival firms; window glass breaks (the GDD and TOWER.md say there is no glass in the bays).
 - **Muzzle light cost unmeasured:** every shot lights a real-time point light for 0.03–0.04 s; eight players on full auto may hit URP's per-object light limit. Profile in a 4v4 build; if it costs, keep the light on the shooter's own gun only.
 - **Release risk carried:** favour-the-shooter means a target can be hit up to 0.25 s after reaching cover on a laggy shooter's screen. That is the price of fair hits on fast targets.

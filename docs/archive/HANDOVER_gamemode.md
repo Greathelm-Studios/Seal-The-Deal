@@ -1,10 +1,12 @@
 # Handover: briefcase game mode (game mode 1)
 
+**Archived 2026-11-22:** the briefcase mode landed; current doc [MATCH.md](../systems/MATCH.md).
+
 **Status:** Target · **Last updated:** 2026-11-12 · **From:** Adam / Claude Code (game mode lane, branch `claude/lane-gamemode-29a356`)
 
 ## Goal
 
-Two rival law firms race for one shared briefcase; the firm whose player carries it onto either roof wins. Nobody climbs above the highest floor the briefcase has been carried onto. At 15:00 the firm holding it (or that carried it last) wins. The system is in [systems/MATCH.md](systems/MATCH.md).
+Two rival law firms race for one shared briefcase; the firm whose player carries it onto either roof wins. Nobody climbs above the highest floor the briefcase has been carried onto. At 15:00 the firm holding it (or that carried it last) wins. The system is in [systems/MATCH.md](../systems/MATCH.md).
 
 ```
 Match (host-owned, synced on change)
@@ -108,7 +110,7 @@ GDD mismatches (the GDD is the authority on design; your 2026-11-12 words win fo
 - **Shots pass through shut gates** (`Let Shots Through` on `MatchGates`, on): a weapon-mask ray passes the panel, bodies are still held. Not checked with a client pressing fire.
 - **Doorways:** the middle reception bay lets players out to the plaza and back over the sill on physics; a glazed bay holds. The kit glass's diagonal streaks are strong now that every window has glass: a look call for the glass owner.
 - **Every match input answers (2026-11-13):** a shut gate pulses brighter the moment you walk into it and plays the refusal sound; the case squashes and settles when it changes hands; the countdown, a floor opening, the case taken or dropped, a checkpoint, the cap warning and the result each play their sound from lane 9's set (`MatchSounds`). Sounds were seen starting in a headless run (the sound player's focus check bypassed for the test); nobody has heard them. After merge, run **Add GameMode To Open Scene** on `Lane_Integration.unity` to give its Match object `MatchSounds`.
-- The UI contract a HUD reads (state, events, types, when they fire, sound mapping) is in [MATCH.md](systems/MATCH.md). The current greybox `MatchHud` / `MatchMenuPanel` are replaced once the UI foundation lands.
+- The UI contract a HUD reads (state, events, types, when they fire, sound mapping) is in [MATCH.md](../systems/MATCH.md). The current greybox `MatchHud` / `MatchMenuPanel` are replaced once the UI foundation lands.
 
 ## Match HUD on the UI kit (2026-11-14)
 

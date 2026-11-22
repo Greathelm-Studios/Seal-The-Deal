@@ -1,8 +1,10 @@
 # Handover: lobby and outfit customisation
 
+**Archived 2026-11-22:** the lobby and outfits landed; current docs [LOBBY.md](../systems/LOBBY.md) and [CUSTOMISATION.md](../systems/CUSTOMISATION.md).
+
 **Status:** Target (lane branch `claude/lane-lobby-085700`, not merged) · **Last updated:** 2026-11-13 · **From:** Claude (lobby lane)
 
-Systems docs: [LOBBY.md](systems/LOBBY.md), [CUSTOMISATION.md](systems/CUSTOMISATION.md). Research: [bean_battles_lobby.md](research/bean_battles_lobby.md).
+Systems docs: [LOBBY.md](../systems/LOBBY.md), [CUSTOMISATION.md](../systems/CUSTOMISATION.md). Research: [bean_battles_lobby.md](../research/bean_battles_lobby.md).
 
 ## Goal
 
