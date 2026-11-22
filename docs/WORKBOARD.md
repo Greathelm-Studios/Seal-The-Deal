@@ -16,6 +16,7 @@ Anything that threatens 7 Oct or 29 Oct, scope creep, or a change to netcode aut
 
 - 2026-11-22, Alex's Claude session: **six of the twelve office posters now use downloaded CC0 images** (wallpapers from "Frutiger Aero Wallpapers" by KnightAnNi, itch.io), and Alex wants more free-licence Frutiger Aero visuals for the office. GDD line 144 says all shipped art is original, so it is a stand-in until Adam decides whether outside images may ship. Record: [ArtSource/Kit/posters/LICENCES.md](../ArtSource/Kit/posters/LICENCES.md).
 - 2026-11-22, Harvey's Antigravity session: **Steam Audio 4.8.1 added for HRTF spatial audio.** Adds native binaural spatializer binaries for Windows x64 and macOS in `Assets/Plugins/SteamAudio/` (Apache 2.0): its licence text (`LICENSE.md` and `THIRDPARTY.md`) must be included in the credits screen or shipped beside the build before release. No netcode authority change; compiled only and needs a headphone listening pass with proximity voice chat. Details: [systems/AUDIO.md](systems/AUDIO.md).
+- 2026-11-22, Harvey's Claude session: **Harvey has described a different main mode from the one built and in the GDD.** Each firm carries its own briefcase up one shared building, floors are random with hidden stairs, and some floors have a lift that a keycard opens. It replaces the shared briefcase and twin towers and drops the window fights across the street. Written up as a Target proposal with open questions in [systems/FLOOR_RACE.md](systems/FLOOR_RACE.md). Needs Adam's yes before anything is built.
 
 ## In progress
 
