@@ -1,10 +1,12 @@
 # Decisions
 
-**Status:** Current · **Last updated:** 2026-11-13
+**Status:** Current · **Last updated:** 2026-11-22
 
 Technical and process decisions, newest first. One line each: date, what, who, link.
 Design decisions live in [GDD.md](GDD.md), not here. Rules: [AGENTS.md](../AGENTS.md) §12.
 
+- 2026-11-22 — Generated floors are a pure function of (match seed, floor number): rooms and corridors on the kit's 4 m grid, checked on a 0.5 m walk map, regenerated with the next attempt number until every check passes. The checks are part of the function, so every machine lands on the same attempt and nothing about a floor is sent. Random numbers are integer-only (our own xorshift), so no machine's float maths can change a layout. Hand-made floor templates picked by seed were rejected: Harvey asked for generated floors. — Harvey's agent (technical call, see owner-defers note). [systems/FLOOR_GEN.md](systems/FLOOR_GEN.md).
+- 2026-11-22 — Each floor of the floor race has two lifts from floor 2 up: the arrival lift the briefcase firm steps out of, and the hidden exit lift. A floor does not depend on the floor below, so the arrival lift is not where the last exit lift stood; the ride is a loading screen. — Harvey's agent (technical call). [systems/FLOOR_GEN.md](systems/FLOOR_GEN.md).
 - 2026-11-15 — Voice chat keeps our own capture, packets and playback but now compresses with Opus (Concentus 2.2.2, plain C#) and cleans the microphone with RNNoise 0.1.1 (a native DLL for 64-bit Windows, built from Xiph's source). Both are BSD-licensed vendor code in `Assets/Plugins/`, each behind one wrapper file; their licence texts must ship with the game. This replaces the ADPCM codec in the line below, which sounded poor. — Harvey ("For the compression, yeah go grab that", "Yes on the RNNoise"). [systems/VOICE.md](systems/VOICE.md).
 - 2026-11-15 — Voice chat is our own: Unity's microphone, our own 4:1 speech compression (IMA ADPCM at 16 kHz, about 8 kB a second per talker) and FishNet broadcasts; the host passes a voice on only to players within earshot of the speaker. No Steam voice, no voice library, no service. Opus would be a third of the size but is a native library to ship. — Harvey ("make our own custom VOIP"), codec chosen by his agent. [systems/VOICE.md](systems/VOICE.md).
 - 2026-11-13 — Integration: players start with the pistol only; the AR-15 is a floor-2 pickup; every match start resets everyone to that and full health. — Agent (integration default, Adam to confirm). [systems/INTEGRATION.md](systems/INTEGRATION.md).
