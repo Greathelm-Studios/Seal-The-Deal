@@ -21,7 +21,7 @@ Master index of every gameplay, networking, UI, art, and tooling feature in **Se
 | Active ragdoll chasing animation clips (`RagdollWorld`) | v1 | Current | Compiled; solo frame strips | [CHARACTER_ANIMATION.md](systems/CHARACTER_ANIMATION.md) | `Scripts/Player/` | Needs live playtest; Kevin Iglesias clips need licence/replacement decision |
 | True-POV first-person arms and held weapon (`PlayerViewmodel`) | v1 | Current | Compiled; solo F5 polish; pistol grip hand seen in play as host, standing (2026-11-21) | [VIEWMODEL.md](systems/VIEWMODEL.md) | `Scripts/Player/Viewmodel/` | `Player.prefab` still runs `WeaponView` alongside `PlayerViewmodel` (needs Adam's call); left hand still the crumpling mitten |
 | Head-mounted animated eye cards | v1 | Current | Compiled; solo checked | [CHARACTER_EYES.md](systems/CHARACTER_EYES.md) | `Scripts/Player/` | Needs visual check in multiplayer |
-| Hit flinch reactions and test dummy/bench | v1 | Current | Compiled; tested on dummy | [HIT_REACTIONS.md](systems/HIT_REACTIONS.md) | `Scripts/Player/` | Player knockdown rules are Target; `PlayerHits` stand-in RPC gated to dev/editor |
+| Hit flinch reactions, death ragdoll, knocked-out stun and test dummy/bench | v1 | Current | Compiled; flinch tested on dummy; death/knockout compiled only | [HIT_REACTIONS.md](systems/HIT_REACTIONS.md) | `Scripts/Player/`, `Scripts/Combat/` | Needs live Play Mode and multi-client verification; confirm final knockout threshold/duration with Adam |
 
 ## Combat, Glass and Effects
 

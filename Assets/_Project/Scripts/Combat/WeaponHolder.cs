@@ -250,6 +250,7 @@ namespace CloseTheDeal.Combat
             _ownerState.OnChange += OnOwnerStateChanged;
             _health.Died += OnDied;
             _health.Respawned += OnRespawned;
+            _health.KnockedOut += OnKnockedOut;
         }
 
         void OnDestroy()
@@ -260,6 +261,7 @@ namespace CloseTheDeal.Combat
             _ownerState.OnChange -= OnOwnerStateChanged;
             _health.Died -= OnDied;
             _health.Respawned -= OnRespawned;
+            _health.KnockedOut -= OnKnockedOut;
             _input?.Dispose();
             _input = null;
         }
@@ -415,7 +417,7 @@ namespace CloseTheDeal.Combat
         public bool Reload()
         {
             WeaponDefinition weapon = ActiveWeapon;
-            if (!IsOwner || weapon == null || _health.IsDead || _state != WeaponState.Ready)
+            if (!IsOwner || weapon == null || _health.IsIncapacitated || _state != WeaponState.Ready)
                 return false;
             if (OwnerAmmo(_localActive) >= weapon.MagazineSize)
                 return false;
@@ -437,7 +439,7 @@ namespace CloseTheDeal.Combat
         {
             if (!IsOwner || slot < 0 || slot >= SlotCount || slot == _localActive)
                 return false;
-            if (_weapons[slot] == null || _health.IsDead)
+            if (_weapons[slot] == null || _health.IsIncapacitated)
                 return false;
 
             CancelOwnerReload();
@@ -536,7 +538,7 @@ namespace CloseTheDeal.Combat
 
         void TryFire(WeaponDefinition weapon, bool pressed)
         {
-            if (_health.IsDead)
+            if (_health.IsIncapacitated)
             {
                 ClearFireInput();
                 return;
@@ -757,7 +759,7 @@ namespace CloseTheDeal.Combat
 
         bool HostMayFire(int slot, WeaponDefinition weapon, uint tick)
         {
-            if (weapon == null || slot != _active.Value || _health.IsDead || (FireHeld != null && FireHeld(this)))
+            if (weapon == null || slot != _active.Value || _health.IsIncapacitated || (FireHeld != null && FireHeld(this)))
                 return false;
             if (tick + TimingSlackTicks < _hostReadyTick)
                 return false;
@@ -914,7 +916,7 @@ namespace CloseTheDeal.Combat
         void ServerReload(byte slot, ushort request)
         {
             WeaponDefinition weapon = slot < SlotCount ? _weapons[slot] : null;
-            if (weapon == null || slot != _active.Value || _health.IsDead || _hostReloading || _hostAmmo[slot] >= weapon.MagazineSize)
+            if (weapon == null || slot != _active.Value || _health.IsIncapacitated || _hostReloading || _hostAmmo[slot] >= weapon.MagazineSize)
             {
                 TargetReloadCancelled(Owner, request);
                 return;
@@ -930,7 +932,7 @@ namespace CloseTheDeal.Combat
         [ServerRpc]
         void ServerSwitch(byte slot)
         {
-            if (slot >= SlotCount || slot == _active.Value || _weapons[slot] == null || _health.IsDead)
+            if (slot >= SlotCount || slot == _active.Value || _weapons[slot] == null || _health.IsIncapacitated)
                 return;
 
             HostSetActive(slot);
@@ -1013,6 +1015,18 @@ namespace CloseTheDeal.Combat
         }
 
         void OnDied(Health health, DamageInfo info)
+        {
+            if (IsServerStarted)
+                HostCancelReload();
+
+            if (IsOwner)
+            {
+                ClearFireInput();
+                CancelOwnerReload();
+            }
+        }
+
+        void OnKnockedOut(Health health, KnockoutInfo info)
         {
             if (IsServerStarted)
                 HostCancelReload();

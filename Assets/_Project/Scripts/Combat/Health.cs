@@ -30,7 +30,22 @@ namespace CloseTheDeal.Combat
         }
     }
 
-    /// <summary>Host-authoritative health, death/respawn timer, position rewind history, and local hit flash/flinch visuals.</summary>
+    /// <summary>One knockout event as every machine hears about it.</summary>
+    public readonly struct KnockoutInfo
+    {
+        public readonly Vector3 Point;
+        public readonly Vector3 Shove;
+        public readonly float Duration;
+
+        public KnockoutInfo(Vector3 point, Vector3 shove, float duration)
+        {
+            Point = point;
+            Shove = shove;
+            Duration = duration;
+        }
+    }
+
+    /// <summary>Host-authoritative health, death/respawn timer, knockout stun, position rewind history, and local hit flash/flinch visuals.</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CapsuleCollider))]
     public sealed class Health : NetworkBehaviour, IDamageable
@@ -44,6 +59,13 @@ namespace CloseTheDeal.Combat
 
         [Tooltip("How fast the body is thrown when something other than a gun kills it (a fall trigger, a script), in metres per second.")]
         [Min(0f)] [SerializeField] float _defaultKillShove = 6f;
+
+        [Header("Knocked out")]
+        [Tooltip("How long a knocked-out player stays ragdolled and stunned before getting back up, in seconds. Higher = longer stun.")]
+        [Min(0.1f)] [SerializeField] float _defaultKnockoutSeconds = 2f;
+
+        [Tooltip("A non-fatal shove or blast at least this fast knocks the player out, in metres per second. 0 = shoves never knock players out automatically.")]
+        [Min(0f)] [SerializeField] float _knockoutShoveSpeed = 8f;
 
         [Header("Hit reaction")]
         [Tooltip("The colour the body flashes when hit.")]
@@ -76,13 +98,21 @@ namespace CloseTheDeal.Combat
         /// <summary>This body is back. Raised on the host and on every client.</summary>
         public event Action<Health> Respawned;
 
+        /// <summary>This body was knocked out and stunned. Raised on the host and on every client.</summary>
+        public event Action<Health, KnockoutInfo> KnockedOut;
+
+        /// <summary>This body recovered from being knocked out. Raised on the host and on every client.</summary>
+        public event Action<Health> Recovered;
+
         /// <summary>Health moved, with current and maximum. For a health bar; raised wherever the synced value lands.</summary>
         public event Action<float, float> HealthChanged;
 
-        /// <summary>The same three, for anything that listens to every body at once (kill feed, the secretary).</summary>
+        /// <summary>The same events, for anything that listens to every body at once (kill feed, the secretary).</summary>
         public static event Action<Health, DamageInfo> AnyDamaged;
         public static event Action<Health, DamageInfo> AnyDied;
         public static event Action<Health> AnyRespawned;
+        public static event Action<Health, KnockoutInfo> AnyKnockedOut;
+        public static event Action<Health> AnyRecovered;
 
         const int HistoryLength = 64;
         const int SafeGroundEveryTicks = 15;
@@ -102,6 +132,7 @@ namespace CloseTheDeal.Combat
         readonly SyncVar<float> _health = new(new SyncTypeSettings(0f));
         readonly SyncVar<int> _lastAttacker = new(-1, new SyncTypeSettings(0f));
         readonly SyncVar<bool> _dead = new(new SyncTypeSettings(0f));
+        readonly SyncVar<bool> _knockedOut = new(new SyncTypeSettings(0f));
 
         readonly Vector3[] _history = new Vector3[HistoryLength];
         readonly uint[] _historyTicks = new uint[HistoryLength];
@@ -112,6 +143,7 @@ namespace CloseTheDeal.Combat
         Vector3 _capsuleCenter;
         Rigidbody _rigidbody;
         PlayerMotor _motor;
+        PlayerRagdoll _ragdoll;
         Renderer[] _renderers;
         MaterialPropertyBlock _block;
         Color[] _savedColours;
@@ -119,11 +151,13 @@ namespace CloseTheDeal.Combat
         bool _flashShown;
 
         uint _respawnTick;
+        uint _recoverTick;
         Vector3 _safePosition;
         bool _hasRespawnOverride;
         Vector3 _respawnOverride;
         float _flashLeft;
         float _respawnAt;
+        float _recoverAt;
         uint _aliveFromTick;
         float _tip;
         Quaternion _tipRest;
@@ -139,11 +173,25 @@ namespace CloseTheDeal.Combat
 
         /// <summary>Seconds until this body comes back, counted on this machine from the moment it heard the death; 0 when alive, and 0 for a death that happened before this machine joined.</summary>
         public float SecondsUntilRespawn => IsDead ? Mathf.Max(0f, _respawnAt - Time.time) : 0f;
+
+        /// <summary>Seconds until this body recovers from being knocked out; 0 when not knocked out.</summary>
+        public float SecondsUntilRecovery => IsKnockedOut ? Mathf.Max(0f, _recoverAt - Time.time) : 0f;
+
+        /// <summary>Default duration of a knockout stun, in seconds.</summary>
+        public float DefaultKnockoutSeconds => _defaultKnockoutSeconds;
+
+        /// <summary>Minimum non-fatal shove speed that automatically knocks this body out, in metres per second. 0 disables automatic shove knockouts.</summary>
+        public float KnockoutShoveSpeed => _knockoutShoveSpeed;
+
         public float Max => _maxHealth;
         public bool IsDead => _dead.Value;
+        public bool IsKnockedOut => _knockedOut.Value && !_dead.Value;
+        public bool IsIncapacitated => _dead.Value || _knockedOut.Value;
 
         /// <summary>Client id of whoever hit this body last, or -1 for the world or nobody yet.</summary>
         public int LastAttackerClientId => _lastAttacker.Value;
+
+        bool HasActiveRagdoll => _ragdoll != null && _ragdoll.Running;
 
         void Awake()
         {
@@ -153,6 +201,7 @@ namespace CloseTheDeal.Combat
             _capsuleCenter = _capsule.center;
             _rigidbody = GetComponent<Rigidbody>();
             _motor = GetComponent<PlayerMotor>();
+            _ragdoll = GetComponentInChildren<PlayerRagdoll>(true);
             _renderers = GetComponentsInChildren<Renderer>(true);
             _savedColours = new Color[_renderers.Length];
             _hadBlock = new bool[_renderers.Length];
@@ -187,6 +236,8 @@ namespace CloseTheDeal.Combat
             base.OnStartServer();
             _health.Value = _maxHealth;
             _dead.Value = false;
+            _knockedOut.Value = false;
+            _recoverTick = 0;
             _lastAttacker.Value = -1;
             _safePosition = transform.position;
             _hasRespawnOverride = false;
@@ -205,7 +256,7 @@ namespace CloseTheDeal.Combat
         {
             base.OnStartClient();
             // A late joiner sees a body that is already down as down, without the fall.
-            _tip = IsDead ? 1f : 0f;
+            _tip = IsDead && !HasActiveRagdoll ? 1f : 0f;
             ApplyTip();
         }
 
@@ -238,12 +289,42 @@ namespace CloseTheDeal.Combat
                 return true;
             }
 
-            if (_motor != null && shove != Vector3.zero)
+            if (_knockoutShoveSpeed > 0f && shove.sqrMagnitude >= _knockoutShoveSpeed * _knockoutShoveSpeed)
+                KnockOut(shove, Mathf.Max(_defaultKnockoutSeconds, controlLossSeconds), point);
+            else if (_motor != null && shove != Vector3.zero)
                 _motor.ApplyKnockback(shove, controlLossSeconds);
 
             RaiseDamaged(info);
             sbyte packedAttacker = (sbyte)(attackerClientId < 0 ? -1 : Math.Min(attackerClientId, (int)sbyte.MaxValue));
             RpcDamaged(amount, point, ShotResolver.PackDirection(direction), packedAttacker);
+            return true;
+        }
+
+        /// <summary>Host only. Knocks this player out: ragdolls and stuns them until the duration passes, then they get back up.</summary>
+        public bool KnockOut(Vector3 shove, float durationSeconds = -1f, Vector3? hitPoint = null)
+        {
+            if (!IsServerStarted || _dead.Value)
+                return false;
+
+            float duration = durationSeconds > 0f ? durationSeconds : _defaultKnockoutSeconds;
+            uint now = TimeManager.Tick;
+            uint targetTick = now + TimeManager.TimeToTicks(duration);
+            if (_knockedOut.Value)
+                _recoverTick = Math.Max(_recoverTick, targetTick);
+            else
+            {
+                _knockedOut.Value = true;
+                _recoverTick = targetTick;
+            }
+
+            float remaining = (float)TimeManager.TicksToTime(_recoverTick - now);
+            if (_motor != null)
+                _motor.ApplyKnockback(shove, remaining + RespawnControlLossSeconds);
+
+            Vector3 point = hitPoint ?? (transform.position + Vector3.up * 0.9f);
+            var info = new KnockoutInfo(point, shove, remaining);
+            RaiseKnockedOut(info);
+            RpcKnockedOut(point, shove, remaining);
             return true;
         }
 
@@ -266,6 +347,8 @@ namespace CloseTheDeal.Combat
 
         void Die(DamageInfo info)
         {
+            _knockedOut.Value = false;
+            _recoverTick = 0;
             _dead.Value = true;
             _respawnTick = TimeManager.Tick + TimeManager.TimeToTicks(_respawnSeconds);
 
@@ -292,6 +375,8 @@ namespace CloseTheDeal.Combat
 
             _health.Value = _maxHealth;
             _dead.Value = false;
+            _knockedOut.Value = false;
+            _recoverTick = 0;
             // Positions from before now belong to the corpse; a rewound shot must not find the new body there.
             _aliveFromTick = TimeManager.Tick;
             if (_motor != null)
@@ -299,6 +384,14 @@ namespace CloseTheDeal.Combat
 
             RaiseRespawned();
             RpcRespawned();
+        }
+
+        void Recover()
+        {
+            _knockedOut.Value = false;
+            _recoverTick = 0;
+            RaiseRecovered();
+            RpcRecovered();
         }
 
         /// <summary>Host, once per tick after physics: position history for lag allowance, the respawn countdown, the last safe ground.</summary>
@@ -312,6 +405,12 @@ namespace CloseTheDeal.Combat
             if (_dead.Value)
             {
                 DeadTick(tick);
+                return;
+            }
+
+            if (_knockedOut.Value)
+            {
+                KnockedOutTick(tick);
                 return;
             }
 
@@ -330,6 +429,18 @@ namespace CloseTheDeal.Combat
             // A blast on the body restarts the motor's own short control loss; a dead player still must not steer.
             if (_motor != null && _motor.State != MoveState.Knocked)
                 _motor.ApplyKnockback(Vector3.zero, (float)TimeManager.TicksToTime(_respawnTick - tick));
+        }
+
+        void KnockedOutTick(uint tick)
+        {
+            if (tick >= _recoverTick)
+            {
+                Recover();
+                return;
+            }
+
+            if (_motor != null && _motor.State != MoveState.Knocked)
+                _motor.ApplyKnockback(Vector3.zero, (float)TimeManager.TicksToTime(_recoverTick - tick));
         }
 
         /// <summary>Host only. Where this body's feet were on a past tick; now, if that tick is no longer remembered.</summary>
@@ -384,6 +495,18 @@ namespace CloseTheDeal.Combat
             RaiseRespawned();
         }
 
+        [ObserversRpc(ExcludeServer = true)]
+        void RpcKnockedOut(Vector3 point, Vector3 shove, float duration)
+        {
+            RaiseKnockedOut(new KnockoutInfo(point, shove, duration));
+        }
+
+        [ObserversRpc(ExcludeServer = true)]
+        void RpcRecovered()
+        {
+            RaiseRecovered();
+        }
+
         void RaiseDamaged(DamageInfo info)
         {
             _flashLeft = _flashSeconds;
@@ -402,14 +525,30 @@ namespace CloseTheDeal.Combat
         void RaiseDied(DamageInfo info)
         {
             _respawnAt = Time.time + _respawnSeconds;
+            _recoverAt = 0f;
             Died?.Invoke(this, info);
             AnyDied?.Invoke(this, info);
         }
 
         void RaiseRespawned()
         {
+            _recoverAt = 0f;
             Respawned?.Invoke(this);
             AnyRespawned?.Invoke(this);
+        }
+
+        void RaiseKnockedOut(KnockoutInfo info)
+        {
+            _recoverAt = Time.time + info.Duration;
+            KnockedOut?.Invoke(this, info);
+            AnyKnockedOut?.Invoke(this, info);
+        }
+
+        void RaiseRecovered()
+        {
+            _recoverAt = 0f;
+            Recovered?.Invoke(this);
+            AnyRecovered?.Invoke(this);
         }
 
         void OnHealthChanged(float previous, float next, bool asServer)
@@ -421,7 +560,7 @@ namespace CloseTheDeal.Combat
 
         void Update()
         {
-            float tipTarget = IsDead ? 1f : 0f;
+            float tipTarget = IsDead && !HasActiveRagdoll ? 1f : 0f;
             if (_flashLeft <= 0f && _tip == tipTarget && !_flinch.IsActive && _flinchAngle == 0f)
                 return;
 

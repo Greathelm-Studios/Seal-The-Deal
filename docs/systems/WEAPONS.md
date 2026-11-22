@@ -43,8 +43,8 @@ Adam points at NorseFPS (his other project, `Greathelm-Studios`) as the bar for 
 | Hit confirmation | Host | `TargetHitConfirmed` to the shooter only: 1-byte flags (killed, precision), reliable | Per hit |
 | Which gun is in each slot, which slot is out | Host | Three 1-byte SyncVars (`_slot0`, `_slot1`, `_active`), to everyone | On change |
 | Magazines, last shot number answered, reloads completed | Host | One packed 8-byte SyncVar (`_ownerState`), **to the owner only** (prevents parts arriving out of sync) | On change (each shot, each reload) |
-| Health, dead flag, last attacker | Host | Three SyncVars on `Health`, to everyone | On change |
-| Hit, death (throw impulse), respawn | Host | One RPC each (`RpcDamaged` unreliable with 32-bit packed direction; `RpcDied` and `RpcRespawned` reliable) | Per event |
+| Health, dead flag, knocked-out flag, last attacker | Host | Four SyncVars on `Health`, to everyone | On change |
+| Hit, death (throw impulse), respawn, knockout, recovery | Host | One RPC each (`RpcDamaged` unreliable with 32-bit packed direction; `RpcDied`, `RpcRespawned`, `RpcKnockedOut`, `RpcRecovered` reliable) | Per event |
 | Reload started (for other players' sound and animation) | Host | `RpcReloadStarted` (`ExcludeOwner = true`) | Per reload |
 | Muzzle flash, tracer, view kick, gun model, hit flash, flinch | Each machine, locally | Nothing | Local only |
 
@@ -134,7 +134,7 @@ Under [Assets/_Project/Scripts/Combat/](../../Assets/_Project/Scripts/Combat/):
 ## Known limitations
 
 - **Not yet judged in a multi-player playtest.** Combat HUD and synthesised placeholder gun/impact sounds are wired, but sound quality and fast-player lag compensation have not been evaluated in a live multi-player match.
-- **No ragdoll in `Health` itself.** `Health` tips the capsule flat and sends the throw impulse on `Health.Died` (see [HIT_REACTIONS.md](HIT_REACTIONS.md) for hit reactions).
+- **Ragdoll death and knocked-out stun:** `PlayerRagdoll` subscribes to `Health.Died`, `Health.Respawned`, `Health.KnockedOut`, and `Health.Recovered` (when no `PlayerRagdoll` is active, `Health` falls back to tipping `_tipPivot` and `WeaponView` falls back to its camera slump). See [HIT_REACTIONS.md](HIT_REACTIONS.md).
 - **Ammo is endless:** reloads always fill the magazine (no reserve pool).
 - **Friendly fire is on.** Team damage filtering awaits Adam's design call.
 - **Fallback respawn** uses last grounded position sampled 4 times/sec; window exits require match-mode `OverrideNextRespawn`.

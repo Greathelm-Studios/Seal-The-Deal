@@ -331,15 +331,16 @@ namespace CloseTheDeal.Combat
             {
                 // Other players see a put-away gun as gone from the hand; skip first-person climb, dip and death math.
                 bool remoteHeld = WeaponHolder.FireHeld != null && WeaponHolder.FireHeld(_holder);
-                ShowView(!_health.IsDead && !remoteHeld);
+                ShowView(!_health.IsIncapacitated && !remoteHeld);
                 return;
             }
 
-            float deathTarget = _health.IsDead ? 1f : 0f;
+            bool inRagdollView = PlayerCamera.Instance != null && PlayerCamera.Instance.InRagdollView;
+            float deathTarget = _health.IsDead && !inRagdollView ? 1f : 0f;
             SettleClimb(dt);
             SettleDip(dt);
-            _death = Mathf.MoveTowards(_death, deathTarget, dt / _deathSeconds);
-            ShowView(!_health.IsDead);
+            _death = inRagdollView ? 0f : Mathf.MoveTowards(_death, deathTarget, dt / _deathSeconds);
+            ShowView(!_health.IsIncapacitated);
 
             Transform cam = PlayerCamera.Instance != null ? PlayerCamera.Instance.transform : null;
             if (cam == null)

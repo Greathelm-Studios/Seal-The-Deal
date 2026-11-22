@@ -1,6 +1,6 @@
 # Hit reactions
 
-**Status:** Current for the dummy, the bench, the flinch (players and dummy) and the dummy's knock-down (its rules are placeholders); **Target** for knock-down on players · **Last updated:** 2026-11-21
+**Status:** Current for the dummy, the bench, the flinch (players and dummy), GMod-style death ragdoll, and host-authoritative player knocked-out stun (compiled, not yet seen from a client) · **Last updated:** 2026-11-22
 
 A player who is shot or struck flinches where everyone can see it, exaggerated so it reads from across a room: a shot snaps the part it hit, a melee swing throws the whole top half back so the body folds at the waist and staggers back up.
 The player keeps running and aiming throughout; only the body shown flinches.
@@ -11,7 +11,9 @@ From an Editor window you hit it with a chosen kind of hit, at a chosen strength
 - **Light hits flinch:** the struck part and the parts joined to it are knocked away and their joints go slack for a fraction of a second, more for a harder hit, then the body pulls itself back to its pose.
 - **Melee hits shove:** part of the push is thrown over the whole upper body (chest, head, both arms), those joints go slack and they take longer to recover.
 - **Blasts push the whole body** away from the blast's centre, the near side harder, so it is turned as well as pushed.
-- **Hard hits knock the dummy down:** the body goes limp and is thrown, falls, lies on the floor as a real ragdoll, then is drawn back up onto its feet where it landed and settles into the idle. With the placeholder rules a thrown desk and any blast do this; a thrown chair, a melee hit and a pistol shot only flinch. **Players are never knocked down** (their profile's knock-down strength is 0).
+- **Hard hits knock the dummy down:** the body goes limp and is thrown, falls, lies on the floor as a real ragdoll, then is drawn back up onto its feet where it landed and settles into the idle. With the placeholder rules a thrown desk and any blast do this; a thrown chair, a melee hit and a pistol shot only flinch.
+- **Death ragdoll (players):** on `Health.Died`, the player's `PlayerRagdoll` goes completely limp with full gravity, normal pelvis inertia and light joint damping, takes the player's velocity plus the killing shove (with an extra localized kick at the hit point), and stays ragdolled until `Health.Respawned` resets it to the respawn pose. The local player's `PlayerCamera` pulls back into an orbitable third-person ragdoll view with wall collision, disables the True-POV head-clip sphere, and hides the held weapon until respawn.
+- **Knocked-out stun (players):** on `Health.KnockOut` (called automatically by strong non-fatal shoves, blasts and heavy thrown items at or above `Health.KnockoutShoveSpeed`, default 8 m/s, for `DefaultKnockoutSeconds`, default 2 s), the host syncs `_knockedOut` and sends `RpcKnockedOut`. The player is held in `MoveState.Knocked`, cannot shoot, reload or switch weapons, and watches their ragdoll in the third-person ragdoll view while the HUD shows the recovery countdown. When the host sends `RpcRecovered`, the ragdoll hoists itself back onto its feet over `GetUpTime` and the camera blends smoothly back into first-person.
 
 The body it runs on is the active ragdoll described in [CHARACTER_ANIMATION.md](CHARACTER_ANIMATION.md).
 
@@ -41,7 +43,8 @@ The body it runs on is the active ragdoll described in [CHARACTER_ANIMATION.md](
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
 | A hit on a player | The host decides it (weapon code calls `PlayerHits.Strike` on the host) | One reliable message to every machine carrying the `HitInfo`, its point relative to the victim (about 35 bytes) | Once per hit; nothing per tick |
-| The player's flinch | Each machine, on its own copy of the victim's ragdoll | Nothing (bones are never streamed) | None |
+| The player's flinch, death ragdoll and knocked-out ragdoll | Each machine, on its own copy of the victim's ragdoll | Nothing (bones are never streamed) | None |
+| Player death and knocked-out state | **Host** (`Health._dead`, `Health._knockedOut`, `RpcDied`, `RpcRespawned`, `RpcKnockedOut`, `RpcRecovered`) | SyncVars + reliable RPCs carrying hit point, shove velocity and duration | Per event |
 | `HitFeed.Struck` (blood and other effects) | Each machine, raised locally after the flinch starts | Nothing | None |
 | Stand-in shot or swing at a player (throwaway) | The shooter's machine asks; the host checks and decides | One reliable message shooter to host: eye position, aim and kind (about 25 bytes) | Once per press that lands on a player |
 | The dummy and its reactions | Each client, for its own screen | Nothing | None |
@@ -114,17 +117,16 @@ The bench's preset strengths are placeholders worked out from weight times speed
 Once the hips have come to rest (or the longest time is up) the spring and the joints return to full strength over the get-up time, which hoists the body into its pose.
 The dummy's own root follows the fallen body ([HitDummy.cs](../../Assets/_Project/Scripts/Player/HitDummy.cs)), so it rises where it landed. A player's ragdoll must never do that: the capsule decides where a player is.
 
-## Target: knock-down on real players (not built)
+## Player death ragdoll and knocked-out stun
 
 The GDD says players ragdoll "on explosions and heavy hits, then recover quickly. It should be funny, not a long stun."
-The rest is undecided and is **Adam's to settle**:
+Host-authoritative death ragdoll and knocked-out stun are wired through `Health` -> `PlayerRagdoll`, `PlayerCamera`, `PlayerViewmodel`, `PlayerHeldWeapon`, `WeaponHolder`, `WeaponView`, and `CombatHud`.
+Play-Mode dev menu shortcuts (`Seal the Deal > Dev > Knock Out Local Player` and `Kill Local Player` in [PlayerStateDevMenu.cs](../../Assets/_Project/Editor/Dev/PlayerStateDevMenu.cs)) trigger both states on the host for quick solo checks.
 
-1. Which hits only flinch and which knock the body down.
-2. How long a knocked-down body stays down, and how it gets up.
-3. Whether a knocked-down player keeps any control (looking, shooting), and whether they can be hit again while down.
-
-Until then the knock-down exists on the dummy only, with those rules as tunable placeholder values on the hit profile. Players already receive hits through `PlayerHits` (above), so a knock-down would start from the same host message.
-Wiring it to real players changes netcode authority (the host decides the trigger and impulse, every client simulates its own ragdoll, bones are never streamed) and needs its ownership table written here and agreed before any code touches `PlayerMotor`.
+Final tuning for **Adam to settle** in playtests:
+1. Exact speed threshold (`Health.KnockoutShoveSpeed`, default 8 m/s) and stun duration (`Health.DefaultKnockoutSeconds`, default 2 s).
+2. Whether bullets or only blasts and heavy thrown items should ever trigger a knockout.
+3. Whether knocked-out players should stay hittable by shots (currently yes, transitioning into a dead ragdoll on lethal damage).
 
 ## Known limitations
 

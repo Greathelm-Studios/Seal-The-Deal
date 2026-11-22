@@ -1,3 +1,4 @@
+using CloseTheDeal.Combat;
 using CloseTheDeal.UI;
 using UnityEngine;
 
@@ -12,6 +13,19 @@ namespace CloseTheDeal.Player
         [Tooltip("Closest the eye gets to a wall when leaning into it, in metres. Keep above the camera's near clip distance or the wall shows through.")]
         [SerializeField] float _wallClearance = 0.2f;
 
+        [Header("Ragdoll view")]
+        [Tooltip("How far behind the ragdolled body the camera pulls back while dead or knocked out, in metres. Stops before walls.")]
+        [Range(0.5f, 8f)] [SerializeField] float _ragdollCameraDistance = 3f;
+
+        [Tooltip("Height above the ragdoll's hips the camera orbits around, in metres.")]
+        [Range(0f, 1.5f)] [SerializeField] float _ragdollCameraHeight = 0.25f;
+
+        [Tooltip("How fast the camera pulls out to watch the ragdoll on death or knockout, in seconds.")]
+        [Range(0.05f, 1f)] [SerializeField] float _ragdollBlendInSeconds = 0.25f;
+
+        [Tooltip("How fast the camera glides back into first-person when recovering from being knocked out, in seconds.")]
+        [Range(0.05f, 1f)] [SerializeField] float _ragdollBlendOutSeconds = 0.35f;
+
         const float AimRange = 200f;
         const string PlayerLayer = "Player";
         const string PropLayer = "Prop";
@@ -20,6 +34,11 @@ namespace CloseTheDeal.Player
         Transform _target;
         PlayerInputReader _input;
         PlayerMotor _motor;
+        Health _health;
+        PlayerRagdoll _ragdoll;
+        PlayerViewmodel _viewmodel;
+        float _ragdollBlend;
+        bool _forcedBodyShown;
         float _yaw;
         float _pitch;
         float _shownLean;
@@ -46,6 +65,9 @@ namespace CloseTheDeal.Player
 
         /// <summary>How far the view looks down (positive) or up (negative), in degrees from level.</summary>
         public float Pitch => _pitch;
+
+        /// <summary>True while the camera is pulled out watching the local player's ragdoll (dead or knocked out).</summary>
+        public bool InRagdollView => _ragdollBlend > 0.001f;
 
         void Awake()
         {
@@ -90,10 +112,19 @@ namespace CloseTheDeal.Player
         {
             if (_motor != null)
                 UnbindFeedback(_motor);
+            if (_health != null)
+                _health.Respawned -= OnFollowedRespawned;
 
             _target = target;
             _input = input;
             _motor = motor;
+            _health = motor != null ? motor.GetComponent<Health>() : null;
+            _ragdoll = motor != null ? motor.GetComponentInChildren<PlayerRagdoll>(true) : null;
+            _viewmodel = motor != null ? motor.GetComponent<PlayerViewmodel>() : null;
+            if (_health != null)
+                _health.Respawned += OnFollowedRespawned;
+            _ragdollBlend = 0f;
+            _forcedBodyShown = false;
             BindFeedback(_motor);
             Hud.CrosshairFeed.EnsureInScene();
             _yaw = target.eulerAngles.y;
@@ -109,11 +140,28 @@ namespace CloseTheDeal.Player
             if (_target != target)
                 return;
 
+            if (_health != null)
+                _health.Respawned -= OnFollowedRespawned;
+            if (_forcedBodyShown && _motor != null && (_viewmodel == null || !_viewmodel.IsShown))
+                _motor.SetOwnBodyShown(false);
+            _forcedBodyShown = false;
+            _ragdollBlend = 0f;
             UnbindFeedback(_motor);
             _target = null;
             _input = null;
             _motor = null;
+            _health = null;
+            _ragdoll = null;
+            _viewmodel = null;
             _camera.fieldOfView = _restFov;
+        }
+
+        void OnFollowedRespawned(Health health)
+        {
+            _ragdollBlend = 0f;
+            if (_forcedBodyShown && _motor != null && (_viewmodel == null || !_viewmodel.IsShown))
+                _motor.SetOwnBodyShown(false);
+            _forcedBodyShown = false;
         }
 
         /// <summary>
@@ -178,7 +226,43 @@ namespace CloseTheDeal.Player
             Quaternion rotation = Quaternion.Euler(_pitch, _yaw, -_shownLean * profile.LeanAngle + roll);
             // The movement kick moves the eye along the view's own axes; it never turns the view.
             Vector3 kick = rotation * StepFeedback(profile, dt);
-            transform.SetPositionAndRotation(head + leanOffset + kick, rotation);
+            Vector3 fpPosition = head + leanOffset + kick;
+
+            bool wantRagdoll = _health != null && _health.IsIncapacitated && _ragdoll != null && _ragdoll.Running;
+            if (wantRagdoll)
+                _ragdollBlend = Mathf.MoveTowards(_ragdollBlend, 1f, dt / Mathf.Max(_ragdollBlendInSeconds, 0.01f));
+            else if (_ragdollBlend > 0f)
+                _ragdollBlend = Mathf.MoveTowards(_ragdollBlend, 0f, dt / Mathf.Max(_ragdollBlendOutSeconds, 0.01f));
+
+            bool inRagdoll = _ragdollBlend > 0.001f && _ragdoll != null && _ragdoll.Running;
+            if (inRagdoll && !_forcedBodyShown && (_viewmodel == null || !_viewmodel.IsShown))
+            {
+                _motor.SetOwnBodyShown(true);
+                _forcedBodyShown = true;
+            }
+            else if (!inRagdoll && _forcedBodyShown)
+            {
+                _forcedBodyShown = false;
+                if (_viewmodel == null || !_viewmodel.IsShown)
+                    _motor.SetOwnBodyShown(false);
+            }
+
+            if (inRagdoll)
+            {
+                Vector3 pivot = _ragdoll.HipsPosition + Vector3.up * _ragdollCameraHeight;
+                Quaternion orbitRotation = Quaternion.Euler(_pitch, _yaw, 0f);
+                Vector3 back = orbitRotation * Vector3.back;
+                float dist = _ragdollCameraDistance;
+                if (Physics.SphereCast(pivot, _wallClearance, back, out RaycastHit wall, dist, _wallMask, QueryTriggerInteraction.Ignore))
+                    dist = Mathf.Max(0f, wall.distance);
+                Vector3 ragdollPosition = pivot + back * dist;
+                float t = Mathf.SmoothStep(0f, 1f, _ragdollBlend);
+                transform.SetPositionAndRotation(Vector3.Lerp(fpPosition, ragdollPosition, t), Quaternion.Slerp(rotation, orbitRotation, t));
+            }
+            else
+            {
+                transform.SetPositionAndRotation(fpPosition, rotation);
+            }
 
             float atSpeed = Mathf.InverseLerp(profile.WalkSpeed, profile.SprintSpeed, _motor.AnimState.PlanarSpeed);
             float widen = Reduced ? 0f : profile.SpeedFovKick * atSpeed + (_motor.AnimState.Sliding ? profile.SlideFovKick : 0f);

@@ -75,6 +75,8 @@ namespace CloseTheDeal.Combat
 
         const string DefaultDownTitle = "YOU HAVE BEEN LET GO";
         const string DefaultDownLine = "BACK ON THIS FLOOR IN";
+        const string KnockedOutTitle = "KNOCKED OUT";
+        const string KnockedOutLine = "RECOVERING IN";
         const string EmptySlot0 = "1  —";
         const string EmptySlot1 = "2  —";
 
@@ -129,6 +131,7 @@ namespace CloseTheDeal.Combat
 
         UiTween _downFade;
         int _shownCount = -1;
+        bool _showingKnockedOut;
         int _shownAmmo = -1;
         int _shownMagazine = -1;
         bool _empty;
@@ -655,7 +658,9 @@ namespace CloseTheDeal.Combat
 
         void ShowDown(float dt)
         {
-            bool down = _health.IsDead;
+            bool dead = _health.IsDead;
+            bool knockedOut = _health.IsKnockedOut;
+            bool down = dead || knockedOut;
             float target = down ? 1f : 0f;
             if (!Mathf.Approximately(_downFade.To, target))
                 _downFade.Start(_downGroup.alpha, target, down ? _tokens.PanelIn : _tokens.PanelOut, down ? _tokens.EaseOut : _tokens.EaseIn);
@@ -663,16 +668,40 @@ namespace CloseTheDeal.Combat
             float downAlpha = _downFade.Step(dt);
             if (!Mathf.Approximately(downAlpha, _downGroup.alpha))
                 _downGroup.alpha = downAlpha;
+
+            if (knockedOut && !_showingKnockedOut)
+            {
+                _showingKnockedOut = true;
+                _shownCount = -1;
+                if (_downTitle != null)
+                    _downTitle.text = KnockedOutTitle;
+                if (_downLine != null)
+                    _downLine.text = KnockedOutLine;
+            }
+            else if (!knockedOut && _showingKnockedOut)
+            {
+                _showingKnockedOut = false;
+                _shownCount = -1;
+                if (!dead)
+                {
+                    if (_downTitle != null)
+                        _downTitle.text = DefaultDownTitle;
+                    if (_downLine != null)
+                        _downLine.text = DefaultDownLine;
+                }
+            }
+
             if (!down)
                 return;
 
-            int seconds = Mathf.CeilToInt(_health.SecondsUntilRespawn);
+            float remaining = dead ? _health.SecondsUntilRespawn : _health.SecondsUntilRecovery;
+            int seconds = Mathf.CeilToInt(remaining);
             if (seconds == _shownCount)
                 return;
 
             _shownCount = seconds;
             _downCount.SetText("{0}", seconds);
-            if (seconds > 0)
+            if (dead && seconds > 0)
                 UiSound.Play(UiSoundEvent.CountdownTick);
         }
 
