@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using CloseTheDeal.Audio;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -35,6 +36,7 @@ namespace CloseTheDeal.Voice
         float _phase;
         int _sampleRate;
         AudioSource _source;
+        SpatialOcclusion _occlusion;
         float _lastSpeech = float.NegativeInfinity;
 
         /// <summary>True while this player is talking, or was a moment ago.</summary>
@@ -77,15 +79,24 @@ namespace CloseTheDeal.Voice
             int outputRate = AudioSettings.outputSampleRate;
 
             _source = GetComponent<AudioSource>();
-            _source.outputAudioMixerGroup = output;
             _source.playOnAwake = false;
             _source.loop = true;
-            _source.dopplerLevel = 0f;
-            _source.spread = 30f;
+            // High priority (32) so proximity voices are never stolen by distant footsteps or impacts.
+            // spatializePostEffects ensures native HRTF plugins process the decoded voice from OnAudioFilterRead.
+            _occlusion = SoundSystem.ConfigurePersistent3D(
+                _source,
+                output != null ? output : SoundSystem.GetMixerGroup("Voice"),
+                fullRange,
+                hearRange,
+                priority: 32,
+                useOcclusion: true,
+                spread: SoundSystem.VoiceSpread,
+                postEffectsSpatialize: true);
+
+            // Preserve the linear 3 m to 24 m fade documented in docs/systems/VOICE.md.
             _source.rolloffMode = AudioRolloffMode.Custom;
             _source.minDistance = fullRange;
             _source.maxDistance = hearRange;
-            // Unity's default logarithmic curve never reaches zero.
             _source.SetCustomCurve(AudioSourceCurveType.CustomRolloff, new AnimationCurve(
                 new Keyframe(0f, 1f, 0f, 0f),
                 new Keyframe(fullRange / hearRange, 1f, 0f, 0f),
@@ -113,10 +124,15 @@ namespace CloseTheDeal.Voice
             _source.Play();
         }
 
-        /// <summary>3D for another player's voice; flat for hearing yourself.</summary>
+        /// <summary>3D with Steam Audio HRTF for another player's voice; flat for hearing yourself.</summary>
         public void SetSpatial(bool spatial)
         {
             _source.spatialBlend = spatial ? 1f : 0f;
+            bool useSpatializer = spatial && SoundSystem.SpatializerEnabled;
+            _source.spatialize = useSpatializer;
+            _source.spatializePostEffects = useSpatializer;
+            if (!spatial && _occlusion != null)
+                _occlusion.ResetClear();
         }
 
         /// <summary>Appends decoded mono samples (-1 to 1) to the lock-free ring buffer (main thread).</summary>
@@ -151,6 +167,8 @@ namespace CloseTheDeal.Voice
             {
                 _paused = false;
                 enabled = true;
+                if (_occlusion != null && _source.spatialBlend >= 0.5f)
+                    _occlusion.SnapNow();
                 if (!_source.isPlaying)
                     _source.Play();
             }

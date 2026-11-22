@@ -1,11 +1,12 @@
 using System.Collections.Generic;
+using CloseTheDeal.Audio;
 using CloseTheDeal.Glass;
 using CloseTheDeal.Player;
 using UnityEngine;
 
 namespace CloseTheDeal.Combat
 {
-    /// <summary>Plays pooled 3D weapon/impact/glass audio and 2D local body feedback from WeaponHolder and Health events.</summary>
+    /// <summary>Plays pooled 3D weapon/impact/glass audio and 2D local body feedback through SoundSystem.</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(WeaponHolder), typeof(Health))]
     public sealed class CombatSounds : MonoBehaviour
@@ -16,17 +17,13 @@ namespace CloseTheDeal.Combat
         const float MagazineOutAt = 0.15f;
         const float MagazineInAt = 0.6f;
         const float ReloadEndAt = 0.85f;
-        const int Voices = 32;
+        const int CombatPriority = 64;
 
-        static AudioSource[] _voices;
-        static int _next;
         static CombatSounds _glassVoice;
-        static Camera _mainCamera;
         static readonly List<CombatSounds> _active = new();
 
         WeaponHolder _holder;
         Health _health;
-        AudioSource _flat;
         WeaponDefinition _reloadWeapon;
         float _reloadStart;
         float _reloadSeconds;
@@ -85,12 +82,9 @@ namespace CloseTheDeal.Combat
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics()
         {
-            _voices = null;
-            _next = 0;
             if (_glassVoice != null)
                 GlassPane.AnyBroken -= _glassVoice.OnPaneBroken;
             _glassVoice = null;
-            _mainCamera = null;
             _active.Clear();
         }
 
@@ -187,37 +181,17 @@ namespace CloseTheDeal.Combat
             if (clip == null || _set == null)
                 return;
 
-            bool hasListener = TryListenerPosition(out Vector3 listenerPos);
-            if (hasListener && (point - listenerPos).sqrMagnitude > _set.FarDistance * _set.FarDistance)
-                return;
-
-            AudioSource voice = NextVoice(listenerPos, hasListener);
-            voice.transform.position = point;
-            voice.outputAudioMixerGroup = _set.Output;
-            voice.minDistance = _set.NearDistance;
-            voice.maxDistance = _set.FarDistance;
-            voice.pitch = vary ? 1f + Random.Range(-_set.PitchVariance, _set.PitchVariance) : 1f;
-            voice.PlayOneShot(clip, _set.Volume);
-        }
-
-        static bool TryListenerPosition(out Vector3 position)
-        {
-            if (PlayerCamera.Instance != null)
-            {
-                position = PlayerCamera.Instance.transform.position;
-                return true;
-            }
-
-            if (_mainCamera == null)
-                _mainCamera = Camera.main;
-            if (_mainCamera != null)
-            {
-                position = _mainCamera.transform.position;
-                return true;
-            }
-
-            position = Vector3.zero;
-            return false;
+            float pitch = vary ? 1f + Random.Range(-_set.PitchVariance, _set.PitchVariance) : 1f;
+            SoundSystem.PlayAt(
+                clip,
+                point,
+                _set.Output,
+                _set.Volume,
+                _set.NearDistance,
+                _set.FarDistance,
+                pitch,
+                CombatPriority,
+                useOcclusion: true);
         }
 
         /// <summary>Your own body's sounds: flat, not placed in the world.</summary>
@@ -226,70 +200,7 @@ namespace CloseTheDeal.Combat
             if (clip == null || _set == null)
                 return;
 
-            if (_flat == null)
-            {
-                _flat = gameObject.AddComponent<AudioSource>();
-                _flat.playOnAwake = false;
-                _flat.spatialBlend = 0f;
-            }
-
-            _flat.outputAudioMixerGroup = _set.Output;
-            _flat.PlayOneShot(clip, _set.Volume);
-        }
-
-        static AudioSource NextVoice(Vector3 listenerPos, bool hasListener)
-        {
-            if (_voices == null || _voices[0] == null)
-                CreateVoices();
-
-            for (int i = 0; i < Voices; i++)
-            {
-                int idx = (_next + i) % Voices;
-                if (!_voices[idx].isPlaying)
-                {
-                    _next = (idx + 1) % Voices;
-                    return _voices[idx];
-                }
-            }
-
-            if (hasListener)
-            {
-                int farthest = 0;
-                float maxSqr = -1f;
-                for (int i = 0; i < Voices; i++)
-                {
-                    float sqr = (_voices[i].transform.position - listenerPos).sqrMagnitude;
-                    if (sqr > maxSqr)
-                    {
-                        maxSqr = sqr;
-                        farthest = i;
-                    }
-                }
-                _next = (farthest + 1) % Voices;
-                return _voices[farthest];
-            }
-
-            AudioSource voice = _voices[_next];
-            _next = (_next + 1) % Voices;
-            return voice;
-        }
-
-        static void CreateVoices()
-        {
-            var holder = new GameObject("Combat Sounds") { hideFlags = HideFlags.HideInHierarchy };
-            DontDestroyOnLoad(holder);
-            _voices = new AudioSource[Voices];
-            for (int i = 0; i < Voices; i++)
-            {
-                var child = new GameObject("Voice " + i);
-                child.transform.SetParent(holder.transform, false);
-                AudioSource voice = child.AddComponent<AudioSource>();
-                voice.playOnAwake = false;
-                voice.spatialBlend = 1f;
-                voice.rolloffMode = AudioRolloffMode.Logarithmic;
-                voice.dopplerLevel = 0f;
-                _voices[i] = voice;
-            }
+            SoundSystem.PlayFlat(clip, _set.Output, _set.Volume);
         }
     }
 }

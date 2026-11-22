@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CloseTheDeal.Audio;
 using CloseTheDeal.Combat;
 using CloseTheDeal.Player;
 using CloseTheDeal.UI;
@@ -642,20 +643,15 @@ namespace CloseTheDeal.Voice
             return heard;
         }
 
-        /// <summary>The mixer's Voice group, found once through the UI sound set that already holds the game's mixer.</summary>
+        /// <summary>The mixer's Voice group, resolved through SoundSystem.</summary>
         AudioMixerGroup Output()
         {
             if (_outputLooked)
                 return _output;
-            UiSoundSet set = UiSoundPlayer.Set;
-            if (set == null || set.output == null || set.output.audioMixer == null)
-                return null; // Not loaded yet: look again for the next speaker.
 
-            _outputLooked = true;
-            AudioMixerGroup[] groups = set.output.audioMixer.FindMatchingGroups(MixerGroupName);
-            _output = groups.Length > 0 ? groups[0] : null;
-            if (_output == null)
-                Debug.LogWarning($"[Voice] The game mixer has no '{MixerGroupName}' group, so the Voice volume slider will not change voice chat.");
+            _output = SoundSystem.GetMixerGroup(MixerGroupName);
+            if (_output != null)
+                _outputLooked = true;
             return _output;
         }
 
