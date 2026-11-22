@@ -403,7 +403,9 @@ namespace CloseTheDeal.FloorGen
                 else
                 {
                     int roll = rng.Range(0, 100);
-                    room.Kind = cells >= 2
+                    room.Kind = cells > 3
+                        ? roll < 70 ? RoomKind.OpenOffice : RoomKind.Meeting
+                        : cells >= 2
                         ? roll < 50 ? RoomKind.OpenOffice : roll < 75 ? RoomKind.Meeting : roll < 87 ? RoomKind.Kitchen : RoomKind.Archive
                         : roll < 30 ? RoomKind.Meeting : roll < 55 ? RoomKind.Kitchen : roll < 80 ? RoomKind.Print : RoomKind.Archive;
                     int finish = rng.Range(0, 100);

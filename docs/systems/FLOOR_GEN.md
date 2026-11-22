@@ -77,20 +77,21 @@ Floor 10 is generated like the others with two changes. The north band is forced
 
 ## Building it at runtime
 
-`FloorBuilder` (in `Scripts/FloorRace/`) turns a layout into objects: one instantiate per placement under a floor root, then the still pieces are merged with `StaticBatchingUtility.Combine`, as `TowerBuilder` does. Tear-down destroys the root and the merged meshes. Floors stand 9 m apart in height (floor `n` at `y = (n - 1) x 9`), so the next floor is built above while the old one still stands and nobody falls during the change.
+`FloorBuilder` (in `Scripts/FloorRace/`) turns a layout into objects: one instantiate per placement under a floor root, plus each lift's car and two door leaves, plus a plain block under the floor standing in for the storeys below. Merging the still pieces with `StaticBatchingUtility.Combine`, as `TowerBuilder` does, is an option that is off (see Measured). Tear-down detaches and destroys the root and any merged meshes. Floors stand 9 m apart in height (floor `n` at `y = (n - 1) x 9`), so the next floor is built above while the old one still stands and nobody falls during the change.
 
 ## Cost per floor
 
-Budget, from the piece counts the generator emits. Measured numbers replace these in "Measured" below.
+The budget, and where the measured numbers below stand against it.
 
-| Thing | Budget |
-|---|---|
-| Kit pieces instantiated | 350 to 500 |
-| Generate (pure) | Under 5 ms |
-| Build (instantiate and merge) | Under 150 ms, hidden by the transition screen |
-| Loose props | 16 or fewer ([PROPS.md](PROPS.md)) |
-| Loot pickups | 8 or fewer (`FloorRaceProfile`) |
-| Realtime lights | None added by the generator |
+| Thing | Budget | Measured |
+|---|---|---|
+| Kit pieces instantiated | 350 to 500 | 399 to 441 |
+| Generate (pure) | Under 5 ms | 3.4 to 6.8 ms |
+| Build | Under 150 ms, hidden by the transition screen | 10.5 to 19.6 ms |
+| Draw calls | No number is set in [PERFORMANCE.md](PERFORMANCE.md) | About 2,700, 40% of KitOffice |
+| Loose props | 16 or fewer ([PROPS.md](PROPS.md)) | 16 spots offered |
+| Loot pickups | 8 or fewer (`FloorRaceProfile`) | Not built yet |
+| Realtime lights | None added by the generator | None |
 
 ## Files
 
@@ -99,6 +100,9 @@ Budget, from the piece counts the generator emits. Measured numbers replace thes
 - [FloorGenerator.cs](../../Assets/_Project/Scripts/FloorGen/FloorGenerator.cs): seed and floor in, layout out.
 - [FloorFitOut.cs](../../Assets/_Project/Scripts/FloorGen/FloorFitOut.cs): furniture patterns and authored spots.
 - [FloorNav.cs](../../Assets/_Project/Scripts/FloorGen/FloorNav.cs): the walk map, distances and the checks.
+- [FloorKit.cs](../../Assets/_Project/Scripts/FloorRace/FloorKit.cs): which kit prefab each piece is, `Assets/_Project/Profiles/FloorRace/FloorKit.asset`. **Seal the Deal > Floor Race > Fill Floor Kit** fills its empty slots by name and never replaces one someone set.
+- [FloorBuilder.cs](../../Assets/_Project/Scripts/FloorRace/FloorBuilder.cs): builds and tears down a floor.
+- [FloorBuildMeasure.cs](../../Assets/_Project/Editor/FloorRace/FloorBuildMeasure.cs): **Seal the Deal > Floor Race > Measure Floor Build (Play Mode)** writes `Temp/FloorGen/build_report.txt`.
 - [FloorLayoutPreview.cs](../../Assets/_Project/Editor/FloorRace/FloorLayoutPreview.cs): **Seal the Deal > Floor Race > Render Layout Previews** draws top-down PNGs of several seeds and floors to `Temp/FloorGen/` and writes a report of every check.
 
 ## Measured
@@ -110,11 +114,30 @@ Budget, from the piece counts the generator emits. Measured numbers replace thes
 | Floors passing every check | 2,000 of 2,000 |
 | Passing on the first attempt | 1,757; the worst floor needed 4 attempts |
 | Same inputs run twice | 200 of 200 identical, piece for piece |
-| Generate time | 6.3 ms a floor on average, retries included. Over the 5 ms budget; most of it is re-checking connectivity for every piece of furniture |
-| Kit pieces a floor | 409 on average, 457 at most |
-| Spawn spots | 43 on the worst floor (24 needed) |
+| Generate time | 3.4 to 6.8 ms a floor on average across three runs, retries included. Around the 5 ms budget; most of it is re-checking connectivity for every piece of furniture |
+| Kit pieces a floor | 410 on average, 456 at most |
+| Spawn spots | 42 on the worst floor (24 needed) |
 
-Sixteen layouts (four seeds, floors 1, 2, 5 and 10) were drawn and looked at: ring, court, named rooms, lifts, starts and floor 10's office all appear where the rules put them. Nobody has walked one yet.
+Sixteen layouts (four seeds, floors 1, 2, 5 and 10) were drawn and looked at: ring, court, named rooms, lifts, starts and floor 10's office all appear where the rules put them.
+
+**Building, 2026-11-22, Editor Play Mode** (`Measure Floor Build (Play Mode)`: three seeds, floors 1, 5 and 10, in an empty scene with one shadow-casting sun; draw calls read from the Game view with one camera at eye height at four spawn spots a floor):
+
+| What | Pieces left separate (the default) | Still pieces merged |
+|---|---|---|
+| Build one floor | 10.5 to 19.6 ms | 18.3 to 32.9 ms |
+| Tear one down | 2.3 to 5.3 ms | 2.1 to 4.7 ms |
+| Objects built | 399 to 441 | same |
+| Colliders | 372 to 410 | same |
+| Draw calls, average of the four views | 2,549 to 2,902 | 2,017 to 2,265 |
+| Draw calls, worst view | 2,949 to 3,235 | 2,379 to 2,544 |
+| Set-pass calls, average | 67 to 104 | 72 to 111 |
+| Triangles, average | 630,000 to 900,000 | same |
+
+- After 18 builds and tear-downs nothing was left under the builder, and memory held one more mesh than before the run: Unity's built-in cube, loaded once for the block under the floor.
+- **For scale:** `KitOffice.unity` read the same way from its own camera draws 6,527 draw calls, 497 set-pass calls and 3.2 million triangles. A generated floor is about 40% of that.
+- **Merging is off.** It saves about a fifth of the draw calls and doubles the build time, but it only works in a build if the kit's models are imported with Read/Write on. They are not, and that setting belongs to the kit import. Set-pass calls, which cost more than draw calls with URP's batcher, do not improve.
+- A floor has no walls that hide what is behind them from the renderer (no occlusion culling at runtime), so the camera draws most of the floor from anywhere. That is the reason the draw calls are in the thousands.
+- One floor (seed 1, floor 1) was built and looked at from two eye-height views and from above: walls, doors, glazing, ceilings and furniture stand where the drawing puts them. Nobody has walked one yet, and nothing here was measured in a build.
 
 ## Known limitations
 
@@ -123,4 +146,6 @@ Sixteen layouts (four seeds, floors 1, 2, 5 and 10) were drawn and looked at: ri
 - Where two walls meet with their thickness on opposite sides, the outer corner shows a 0.2 m notch. The kit has no interior corner post.
 - One storey per floor: no stairs, court voids or bridges.
 - Labels and signs that KitOffice adds in the Editor (room plates, lift indicators, machine labels) are not placed at runtime.
+- Glass does not break on generated floors: the glass registry only indexes the old towers. Partitions stop players and shots; window bays are open.
+- No lights are added. A floor is lit by the scene's sun and ambient light only, so rooms away from the windows are flat.
 - Floors do not get harder as you climb ([FLOOR_RACE.md](FLOOR_RACE.md), open questions).
