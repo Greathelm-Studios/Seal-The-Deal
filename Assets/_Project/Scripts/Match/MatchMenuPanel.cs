@@ -128,7 +128,7 @@ namespace CloseTheDeal.MatchMode
             _action.gameObject.SetActive(action);
             _actionLabel.text = phase == MatchPhase.Ended ? _rematchLabel : _startLabel;
             _action.interactable = host && (_match.CanHostStart || _match.CanHostRematch);
-            _action.RefusalReason = host ? "The towers are still being built." : phase == MatchPhase.Ended ? _waitingForRematch : _waitingForStart;
+            _action.RefusalReason = host ? (MatchDirector.Ruleset != null ? "The floor is still being built." : "The towers are still being built.") : phase == MatchPhase.Ended ? _waitingForRematch : _waitingForStart;
         }
 
         string Headline(MatchPhase phase)
@@ -136,10 +136,12 @@ namespace CloseTheDeal.MatchMode
             switch (phase)
             {
                 case MatchPhase.Waiting:
-                    return "WAITING IN RECEPTION";
+                    return MatchDirector.Ruleset != null ? "WAITING FOR THE HOST" : "WAITING IN RECEPTION";
                 case MatchPhase.Countdown:
                     return "STARTING";
                 case MatchPhase.Running:
+                    if (MatchDirector.Ruleset != null && !MatchDirector.Ruleset.HasClock)
+                        return "FLOOR " + MatchDirector.Ruleset.CurrentFloor;
                     return "QUARTER OPEN  ·  " + MatchHud.FormatClock(_match.SecondsLeft) + " LEFT";
                 default:
                     MatchSnapshot result = _match.Snapshot;

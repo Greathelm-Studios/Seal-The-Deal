@@ -432,6 +432,35 @@ namespace CloseTheDeal.Editor.Lanes
             Debug.Log($"[GameMode] FishNet scene ids assigned to {arguments[2]} object(s) in {scene.name}.");
         }
 
+        /// <summary>Adds the Match, its HUD and its menu section to the open scene for a mode with its own rules (no towers, crossings or gates).</summary>
+        internal static MatchDirector AddMatchWithoutTowers()
+        {
+            MatchProfile profile = EnsureAssets();
+            EnsurePlayerPrefab();
+            MatchDirector match = Object.FindAnyObjectByType<MatchDirector>();
+            if (match == null)
+            {
+                var go = new GameObject(MatchObjectName);
+                go.AddComponent<NetworkObject>();
+                match = go.AddComponent<MatchDirector>();
+            }
+
+            FillIfEmpty(match, "_profile", profile);
+            if (match.GetComponent<MatchSounds>() == null)
+                match.gameObject.AddComponent<MatchSounds>();
+
+            GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
+            if (menu == null)
+            {
+                Debug.LogError("[GameMode] No game menu in the scene, so the match has no HUD or menu section.");
+                return match;
+            }
+
+            EnsureHud(menu, match);
+            EnsureMenuSection(menu, match);
+            return match;
+        }
+
         static void AddMatch(MatchProfile profile)
         {
             MatchDirector match = Object.FindAnyObjectByType<MatchDirector>();

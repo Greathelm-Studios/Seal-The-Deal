@@ -75,6 +75,8 @@ namespace CloseTheDeal.Combat
 
         const string DefaultDownTitle = "YOU HAVE BEEN LET GO";
         const string DefaultDownLine = "BACK ON THIS FLOOR IN";
+        const string HeldDownLine = "BACK WHEN YOUR WHOLE FIRM IS DOWN";
+        const int HeldCount = -2;
         const string KnockedOutTitle = "KNOCKED OUT";
         const string KnockedOutLine = "RECOVERING IN";
         const string EmptySlot0 = "1  —";
@@ -693,6 +695,18 @@ namespace CloseTheDeal.Combat
 
             if (!down)
                 return;
+
+            if (dead && Health.RespawnsHeld)
+            {
+                if (_shownCount != HeldCount)
+                {
+                    _shownCount = HeldCount;
+                    _downCount.SetText(string.Empty);
+                    if (_downLine != null)
+                        _downLine.text = HeldDownLine;
+                }
+                return;
+            }
 
             float remaining = dead ? _health.SecondsUntilRespawn : _health.SecondsUntilRecovery;
             int seconds = Mathf.CeilToInt(remaining);

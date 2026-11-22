@@ -206,6 +206,12 @@ namespace CloseTheDeal.MatchMode
             }
 
             _root.SetActive(true);
+            // A mode with its own rules has no quarter clock and no tower floors to list.
+            IMatchRuleset ruleset = MatchDirector.Ruleset;
+            if (_clockPlate != null)
+                _clockPlate.gameObject.SetActive(ruleset == null || ruleset.HasClock);
+            if (_ladderPlate != null)
+                _ladderPlate.gameObject.SetActive(ruleset == null);
             _bannerGroup.alpha = 0f;
             _noticeGroup.alpha = 0f;
             _countdownGroup.alpha = 0f;
@@ -249,7 +255,7 @@ namespace CloseTheDeal.MatchMode
             RefreshLadder();
             if (next != MatchPhase.Countdown)
                 _countdownGroup.alpha = 0f;
-            if (next == MatchPhase.Running && !_compactFloors)
+            if (next == MatchPhase.Running && !_compactFloors && MatchDirector.Ruleset == null)
                 Say("The quarter is open. Get the briefcase onto a roof.", UiStatusKind.Info);
         }
 
@@ -523,6 +529,11 @@ namespace CloseTheDeal.MatchMode
                     Say($"{_match.Arena.FloorLabel(_match.OpenFloor + 1)} is shut until the briefcase is carried up.", UiStatusKind.Refusal);
                     break;
                 case MatchNotice.FellOut:
+                    if (MatchDirector.Ruleset != null)
+                    {
+                        Say("You fell out of the building.", UiStatusKind.Info);
+                        break;
+                    }
                     int checkpoint = _match.CheckpointFloor(local.Firm);
                     Say($"You left the building. Back to {(checkpoint > 0 ? _match.Arena.FloorLabel(checkpoint) : "Reception")}.", UiStatusKind.Info);
                     break;
@@ -611,6 +622,8 @@ namespace CloseTheDeal.MatchMode
         bool MarkerWanted(Briefcase briefcase, Camera view)
         {
             if (!_match.IsLive || briefcase == null || view == null || _canvasRect == null)
+                return false;
+            if (MatchDirector.Ruleset != null && MatchDirector.Ruleset.BriefcaseHidden(_match.CaseStatus))
                 return false;
             FirmMember local = FirmMember.Local;
             return _match.CaseStatus.State != BriefcaseState.Returning && !(local != null && _match.IsCarrying(local));

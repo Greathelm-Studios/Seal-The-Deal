@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7be43fb98fb2d3248a3f443d3628346b, type: 3}
+  m_Name: FloorRace
+  m_EditorClassIdentifier: Assembly-CSharp::CloseTheDeal.FloorRace.FloorRaceProfile
+  Floors: {fileID: 11400000, guid: c89e37d0fd747684487736384486e0f5, type: 2}
+  DoorSeconds: 0.8
+  DepartHoldSeconds: 0.7
+  CabinSize: {x: 3.2, y: 2.6, z: 3.2}
+  BuildLeadSeconds: 0.5
+  HeadStartSeconds: 12
+  TeardownSeconds: 1
+  WipeRespawnSeconds: 2
+  FallSeconds: 1.2
+  OutsideMargin: 0.75
+  FallDepth: 3
+  MinRivalDistance: 8
+  SightRange: 40
+  MinCaseDistance: 6
+  LootPerFloor: 8
+  Loot:
+  - Prefab: {fileID: 6700126035713234456, guid: 31aed5b546ed84c60a40378d967a8719, type: 3}
+    Weight: 3
+  - Prefab: {fileID: 1482439493815475541, guid: 4eed81abbe26e4ff39569d7acc81859d, type: 3}
+    Weight: 2
+  - Prefab: {fileID: 8429749960946613886, guid: 3904a506348f64515aca8101734eadc0, type: 3}
+    Weight: 1
+  - Prefab: {fileID: 8671774297361233293, guid: a6aac1943d3d44296a42983ddf0e98a4, type: 3}
+    Weight: 1
+  - Prefab: {fileID: 5093474298900817497, guid: 85d04c1019a3240d08cea31c132b6fb6, type: 3}
+    Weight: 1
+  ChairProp: {fileID: 5766994529313306933, guid: 0d955b7778e5c53418832654d9be5008, type: 3}
+  MonitorProp: {fileID: 6984957311658994990, guid: 6003eca1d348d9e4d8e8e3a30b4152b7, type: 3}
+  CabinetProp: {fileID: 6408008661249199825, guid: 8b3cb556d9fd4664abb5c9d84b0b5916, type: 3}
+  DropHeight: 0.3
+  CashPerFloor: 100
+  WinBonusCash: 0
