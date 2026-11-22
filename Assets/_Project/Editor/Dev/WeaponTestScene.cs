@@ -2,6 +2,8 @@ using System.Text;
 using CloseTheDeal.Combat;
 using CloseTheDeal.Editor.Art;
 using CloseTheDeal.Editor.Greybox;
+using CloseTheDeal.Integration;
+using CloseTheDeal.Items;
 using CloseTheDeal.Tower;
 using FishNet.Component.Transforming;
 using FishNet.Object;
@@ -32,6 +34,10 @@ namespace CloseTheDeal.Editor.Dev
         static readonly Vector3 RunnerStart = new(24f, 0f, -20.5f);
         static readonly Vector3 RunnerRun = new(7f, 0f, 0f);
         const float RunnerSpeed = 6f;
+        // Just ahead of and between the two spawns, short of the 5 m target.
+        static readonly Vector3 RoofGunSpot = new(5f, 0f, -17.25f);
+        const float RoofGunYaw = 0f;
+        const string RoofGunItemPath = "Assets/_Project/Profiles/Items/Item_AR15.asset";
 
         const float FloorSearchUp = 2f, FloorSearchDown = 4f;
         const float SpawnLift = 0.1f;
@@ -106,6 +112,8 @@ namespace CloseTheDeal.Editor.Dev
             mover.ApplyModifiedPropertiesWithoutUndo();
             report.Append(Targets.Length).Append(" player-body targets and a moving one on the roof. ");
 
+            AddRoofGun(roof, solid, report);
+
             report.Append(KitOfficeScene.GiveNetworkSceneIds(scene)).Append(' ');
             EditorSceneManager.SaveScene(scene);
             GeneratedAssetGuard.MarkGenerated(AssetDatabase.LoadMainAssetAtPath(ScenePath));
@@ -123,6 +131,31 @@ namespace CloseTheDeal.Editor.Dev
             go.AddComponent<NetworkObject>();
             go.AddComponent<Health>();
             return go;
+        }
+
+        /// <summary>Adds a roof spot to the loose gun spawner copied from KitOffice, so a rifle lies by the spawns.</summary>
+        static void AddRoofGun(Transform roof, int solid, StringBuilder report)
+        {
+            var spawns = Object.FindAnyObjectByType<LooseGunSpawns>(FindObjectsInactive.Include);
+            var gun = AssetDatabase.LoadAssetAtPath<ItemDefinition>(RoofGunItemPath);
+            if (spawns == null || gun == null)
+            {
+                report.Append("No loose gun spawner in KitOffice (run Seal the Deal > Art > Add Gun Pickups To KitOffice) or no ").Append(RoofGunItemPath).Append("; no rifle on the roof. ");
+                return;
+            }
+
+            var spot = new GameObject("AR-15 Spot Roof").transform;
+            spot.SetParent(spawns.transform, true);
+            spot.SetPositionAndRotation(Floor(roof, RoofGunSpot, solid, report), roof.rotation * Quaternion.Euler(0f, RoofGunYaw, 0f));
+
+            var so = new SerializedObject(spawns);
+            SerializedProperty list = so.FindProperty("_spots");
+            list.arraySize++;
+            SerializedProperty entry = list.GetArrayElementAtIndex(list.arraySize - 1);
+            entry.FindPropertyRelative("Place").objectReferenceValue = spot;
+            entry.FindPropertyRelative("Gun").objectReferenceValue = gun;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            report.Append("An AR-15 pickup on the roof floor by the spawns. ");
         }
 
         static Vector3 Floor(Transform roof, Vector3 local, int solid, StringBuilder report)

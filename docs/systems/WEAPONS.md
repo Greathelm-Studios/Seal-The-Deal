@@ -98,7 +98,7 @@ Adam points at NorseFPS (his other project, `Greathelm-Studios`) as the bar for 
 
 ## Weapon test scene
 
-`Assets/_Project/Scenes/WeaponTest.unity` is KitOffice with the players spawning on the roof range (pistol and AR-15 in hand) facing a row of targets at 5, 10, 17, 25 and 33 m, plus one that runs 7 m across the view at 6 m/s. Press Play, choose Host a game, and shoot.
+`Assets/_Project/Scenes/WeaponTest.unity` is KitOffice with the players spawning on the roof range (pistol and AR-15 in hand) facing a row of targets at 5, 10, 17, 25 and 33 m, plus one that runs 7 m across the view at 6 m/s. An AR-15 pickup lies on the roof floor 2 m in front of the spawns (an extra spot on the loose gun spawner copied from KitOffice; it comes back 20 s after it is taken). Press Play, choose Host a game, and shoot.
 
 - **The targets are the player's own body** (`HitDummy.prefab`: the STDMC model and its ragdoll) with `Health` added, so they take gun damage, flash, regenerate, ragdoll on death and stand back up on their spot 5 seconds later, as a player does. The hit dummy's own script that drags it to where its ragdoll lands is left off, so a dead target doesn't come back down the range.
 - **Rebuilt, not edited:** `Seal the Deal > Dev > Build Weapon Test Scene` (`Editor/Dev/WeaponTestScene.cs`) copies the current KitOffice, moves the two fallback spawns onto the roof, places the targets on the clear band between the pool and the arsenal bay, gives the network objects their scene IDs, and saves. Rebuild it after KitOffice changes. KitOffice itself is never touched, and a hand-edited WeaponTest is left alone (`GeneratedAssetGuard`).
