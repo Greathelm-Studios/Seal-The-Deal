@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CloseTheDeal.Combat;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -33,9 +34,11 @@ namespace CloseTheDeal.Player
         }
 
         PlayerMotor _motor;
+        Health _health;
         PlayerViewmodel _view;
         ViewmodelProfile _profile;
         ViewmodelArms _source;
+        bool _gunHiddenForDown;
 
         readonly HandGrip _grip = new();
         readonly HandGrip _support = new();
@@ -112,6 +115,7 @@ namespace CloseTheDeal.Player
             _pivotHeight = _leanPivot.localPosition.y;
 
             FindHandMeshes(transform);
+            _health = _motor.GetComponent<Health>();
             gameObject.AddComponent<HeldWeaponSettle>().Follow(this);
             _ready = true;
 
@@ -168,6 +172,7 @@ namespace CloseTheDeal.Player
                 _gun = copy.Gun;
             }
             _gun.gameObject.SetActive(true);
+            _gunHiddenForDown = false;
             Muzzle = copy.Muzzle;
             ShowOwnHand(_gun.Find(HeldHandName) == null);
 
@@ -229,6 +234,15 @@ namespace CloseTheDeal.Player
         internal void Hold(bool afterRagdoll)
         {
             if (!_ready)
+                return;
+
+            bool down = _health != null && _health.IsIncapacitated;
+            if (_gun != null && down != _gunHiddenForDown)
+            {
+                _gunHiddenForDown = down;
+                _gun.gameObject.SetActive(!down);
+            }
+            if (down)
                 return;
 
             PlayerCamera bodyEye = PlayerMotor.Local == _motor ? PlayerCamera.Instance : null;

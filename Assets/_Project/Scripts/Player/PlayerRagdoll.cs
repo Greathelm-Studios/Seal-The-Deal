@@ -1,3 +1,4 @@
+using CloseTheDeal.Combat;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -49,6 +50,12 @@ namespace CloseTheDeal.Player
         const float RemoteLodResumeDistance = 22f;
         const float RemoteLodFloorDelta = 9f;
         const float RemoteLodResumeFloorDelta = 8f;
+        const float DefaultDownLimpShare = 0.02f;
+        const float DefaultDownFriction = 0.7f;
+        const float DefaultGetUpTime = 0.6f;
+        const float LimpJointDamper = 1.5f;
+        const float MaxLaunchSpeed = 20f;
+        const float HitPointKickShare = 0.35f;
 
         struct Part
         {
@@ -98,6 +105,8 @@ namespace CloseTheDeal.Player
         readonly Part[] _parts = new Part[PartCount];
         GameObject _root;
         PlayerMotor _motor;
+        Health _health;
+        Vector3 _hipsBaseInertia;
         Transform _neck, _leftFoot, _rightFoot;
         float _totalMass;
         Vector3 _hipsTargetWas;
@@ -112,6 +121,9 @@ namespace CloseTheDeal.Player
         float _recover;
         PhysicsMaterial _grippy;
         bool _down;
+        bool _dead;
+        bool _knockedOut;
+        bool _downPhysics;
         float _downTime;
         float _hold = 1f;
 
@@ -128,7 +140,10 @@ namespace CloseTheDeal.Player
         public bool KnocksDown => _hitProfile != null && _hitProfile.KnockDownImpulse > 0f;
 
         /// <summary>True while fallen and awaiting recovery (owners should hold the target pose at the body).</summary>
-        public bool Down => _down;
+        public bool Down => _down || _dead || _knockedOut;
+
+        /// <summary>True while dead, knocked out, fallen, or still blending back up to the standing pose.</summary>
+        public bool IsRagdolled => _dead || _knockedOut || _down || _hold < 1f;
 
         /// <summary>World-space ragdoll hip position.</summary>
         public Vector3 HipsPosition => _built ? _parts[Hips].Body.position : transform.position;
@@ -143,7 +158,20 @@ namespace CloseTheDeal.Player
             }
 
             _motor = GetComponentInParent<PlayerMotor>();
+            _health = GetComponentInParent<Health>();
             Build();
+
+            if (_health != null)
+            {
+                _health.Died += OnDied;
+                _health.Respawned += OnRespawned;
+                _health.KnockedOut += OnKnockedOut;
+                _health.Recovered += OnRecovered;
+                if (_health.IsDead)
+                    EnterDead(Vector3.zero, transform.position);
+                else if (_health.IsKnockedOut)
+                    EnterKnockedOut(Vector3.zero, transform.position);
+            }
         }
 
         void OnEnable()
@@ -171,6 +199,13 @@ namespace CloseTheDeal.Player
 
         void OnDestroy()
         {
+            if (_health != null)
+            {
+                _health.Died -= OnDied;
+                _health.Respawned -= OnRespawned;
+                _health.KnockedOut -= OnKnockedOut;
+                _health.Recovered -= OnRecovered;
+            }
             if (!_built)
                 return;
             RagdollWorld.Remove(this);
@@ -279,7 +314,8 @@ namespace CloseTheDeal.Player
                     Physics.IgnoreCollision(colliders[a], colliders[b]);
             }
 
-            _parts[Hips].Body.inertiaTensor *= HipsSteadiness;
+            _hipsBaseInertia = _parts[Hips].Body.inertiaTensor;
+            _parts[Hips].Body.inertiaTensor = _hipsBaseInertia * HipsSteadiness;
             _hipsTargetWas = _parts[Hips].Body.position;
             _playerWas = transform.position;
             _built = true;
@@ -425,7 +461,8 @@ namespace CloseTheDeal.Player
                     _lodPaused = true;
                     if (_down)
                         EndKnockDownState();
-                    _hold = 1f;
+                    if (!_dead && !_knockedOut)
+                        _hold = 1f;
                     _flinching = false;
                     DeactivateRagdoll();
                 }
@@ -438,6 +475,11 @@ namespace CloseTheDeal.Player
                 ActivateRagdoll();
                 _posed = false;
                 _nextLevelCopy = 0f;
+                if (_dead || _knockedOut)
+                {
+                    _hold = 0f;
+                    SetDownPhysics(true);
+                }
             }
 
             ReadPose(dt, out Quaternion leftFootPose, out Quaternion rightFootPose);
@@ -508,9 +550,33 @@ namespace CloseTheDeal.Player
 
         void Aim(float limp)
         {
+            if (_dead || _knockedOut)
+            {
+                for (int i = 1; i < PartCount; i++)
+                {
+                    ref Part part = ref _parts[i];
+                    if (part.LastDriveHz == 0f && Mathf.Abs(part.LastDriveDamping - LimpJointDamper) < 1e-4f)
+                        continue;
+
+                    part.LastDriveHz = 0f;
+                    part.LastDriveDamping = LimpJointDamper;
+                    part.Joint.slerpDrive = new JointDrive
+                    {
+                        positionSpring = 0f,
+                        positionDamper = LimpJointDamper,
+                        maximumForce = float.MaxValue,
+                        useAcceleration = true
+                    };
+                }
+                return;
+            }
+
             float strength = Brace() * Mathf.Lerp(1f, _profile.LimpShare, limp);
             if (_hold < 1f)
-                strength *= Mathf.Lerp(_hitProfile.DownLimpShare, 1f, Mathf.SmoothStep(0f, 1f, _hold));
+            {
+                float downLimp = _hitProfile != null ? _hitProfile.DownLimpShare : DefaultDownLimpShare;
+                strength *= Mathf.Lerp(downLimp, 1f, Mathf.SmoothStep(0f, 1f, _hold));
+            }
             float damping = _profile.JointDamping;
             for (int i = 1; i < PartCount; i++)
             {
@@ -522,7 +588,7 @@ namespace CloseTheDeal.Player
                     : i == Head ? _profile.HeadStrength
                     : i <= RightLowerArm ? _profile.ArmStrength
                     : _profile.LegStrength) * strength;
-                if (part.Weak > 0f)
+                if (part.Weak > 0f && _hitProfile != null)
                     hz *= Mathf.Lerp(1f, _hitProfile.FlinchLimpShare, part.Weak);
 
                 if (Mathf.Abs(part.LastDriveHz - hz) < 1e-4f && Mathf.Abs(part.LastDriveDamping - damping) < 1e-4f)
@@ -636,42 +702,157 @@ namespace CloseTheDeal.Player
             _flinching = true;
         }
 
+        void OnDied(Health health, DamageInfo info) => EnterDead(info.Shove, info.Point);
+        void OnRespawned(Health health) => ExitDead();
+        void OnKnockedOut(Health health, KnockoutInfo info) => EnterKnockedOut(info.Shove, info.Point);
+        void OnRecovered(Health health) => ExitKnockedOut();
+
+        /// <summary>Goes completely limp as a GMod-style death ragdoll until respawn.</summary>
+        public void EnterDead(Vector3 shove, Vector3 hitPoint)
+        {
+            bool wasRagdolled = _dead || _knockedOut || _down;
+            _dead = true;
+            _knockedOut = false;
+            _down = false;
+            _hold = 0f;
+            if (!Running || _lodPaused)
+                return;
+
+            SetDownPhysics(true);
+            LaunchRagdoll(shove, hitPoint, wasRagdolled);
+        }
+
+        /// <summary>Resets a dead ragdoll back onto the standing respawn pose.</summary>
+        public void ExitDead()
+        {
+            _dead = false;
+            _knockedOut = false;
+            _down = false;
+            _hold = 1f;
+            _flinching = false;
+            if (!Running)
+                return;
+
+            SetDownPhysics(false);
+            _posed = false;
+        }
+
+        /// <summary>Goes limp while knocked out and stunned; stays down until <see cref="ExitKnockedOut"/>.</summary>
+        public void EnterKnockedOut(Vector3 shove, Vector3 hitPoint)
+        {
+            if (_dead)
+                return;
+
+            bool wasRagdolled = _knockedOut || _down;
+            _knockedOut = true;
+            _down = false;
+            _hold = 0f;
+            if (!Running || _lodPaused)
+                return;
+
+            SetDownPhysics(true);
+            LaunchRagdoll(shove, hitPoint, wasRagdolled);
+        }
+
+        /// <summary>Ends the knocked-out stun and smoothly hoists the ragdoll back onto its feet.</summary>
+        public void ExitKnockedOut()
+        {
+            if (!_knockedOut)
+                return;
+
+            _knockedOut = false;
+        }
+
+        void SetDownPhysics(bool down)
+        {
+            if (_downPhysics == down)
+                return;
+
+            _downPhysics = down;
+            if (down)
+            {
+                if (_grippy == null)
+                {
+                    _grippy = new PhysicsMaterial("Ragdoll (down)")
+                    {
+                        bounciness = 0f,
+                        frictionCombine = PhysicsMaterialCombine.Maximum,
+                        bounceCombine = PhysicsMaterialCombine.Minimum
+                    };
+                }
+                _grippy.dynamicFriction = _grippy.staticFriction = _hitProfile != null ? _hitProfile.DownFriction : DefaultDownFriction;
+                _parts[Hips].Body.inertiaTensor = _hipsBaseInertia;
+                for (int i = 0; i < PartCount; i++)
+                {
+                    // Continuous collision while down prevents fast limbs tunnelling through 0.2 m floor slabs.
+                    _parts[i].Body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                    _parts[i].Shape.sharedMaterial = _grippy;
+                }
+            }
+            else
+            {
+                _parts[Hips].Body.inertiaTensor = _hipsBaseInertia * HipsSteadiness;
+                PhysicsMaterial slippery = GetSlipperyMaterial();
+                for (int i = 0; i < PartCount; i++)
+                {
+                    _parts[i].Body.collisionDetectionMode = CollisionDetectionMode.Discrete;
+                    _parts[i].Shape.sharedMaterial = slippery;
+                }
+            }
+        }
+
+        void LaunchRagdoll(Vector3 shove, Vector3 hitPoint, bool wasRagdolled)
+        {
+            if (!_posed)
+            {
+                PutOnPose();
+                _posed = true;
+            }
+
+            if (wasRagdolled)
+            {
+                if (shove.sqrMagnitude > 0.01f)
+                {
+                    for (int i = 0; i < PartCount; i++)
+                        _parts[i].Body.linearVelocity = Vector3.ClampMagnitude(_parts[i].Body.linearVelocity + shove, MaxLaunchSpeed);
+                }
+            }
+            else
+            {
+                Vector3 launch = Vector3.ClampMagnitude(_playerSpeed + shove, MaxLaunchSpeed);
+                for (int i = 0; i < PartCount; i++)
+                    _parts[i].Body.linearVelocity = launch;
+            }
+
+            if (shove.sqrMagnitude > 0.01f)
+            {
+                int struck = NearestPart(hitPoint);
+                Rigidbody body = _parts[struck].Body;
+                body.AddForceAtPosition(shove * (body.mass * HitPointKickShare), hitPoint, ForceMode.Impulse);
+            }
+
+            RagdollWorld.CopyLevelAround(Centre, _solid);
+        }
+
         void KnockDown()
         {
             _down = true;
             _downTime = 0f;
             _hold = 0f;
-            if (_grippy == null)
-            {
-                _grippy = new PhysicsMaterial("Ragdoll (down)")
-                {
-                    bounciness = 0f,
-                    frictionCombine = PhysicsMaterialCombine.Maximum,
-                    bounceCombine = PhysicsMaterialCombine.Minimum
-                };
-            }
-            _grippy.dynamicFriction = _grippy.staticFriction = _hitProfile.DownFriction;
-            for (int i = 0; i < PartCount; i++)
-            {
-                // Continuous collision while down prevents fast limbs tunnelling through 0.2 m floor slabs.
-                _parts[i].Body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-                _parts[i].Shape.sharedMaterial = _grippy;
-            }
+            SetDownPhysics(true);
         }
 
         void EndKnockDownState()
         {
             _down = false;
-            PhysicsMaterial slippery = GetSlipperyMaterial();
-            for (int i = 0; i < PartCount; i++)
-            {
-                _parts[i].Body.collisionDetectionMode = CollisionDetectionMode.Discrete;
-                _parts[i].Shape.sharedMaterial = slippery;
-            }
+            SetDownPhysics(false);
         }
 
         void UpdateKnockDown(float dt)
         {
+            if (_dead || _knockedOut)
+                return;
+
             if (_down)
             {
                 _downTime += dt;
@@ -681,7 +862,11 @@ namespace CloseTheDeal.Player
                     return;
                 EndKnockDownState();
             }
-            _hold = Mathf.MoveTowards(_hold, 1f, dt / Mathf.Max(_hitProfile.GetUpTime, HitReactionProfile.MinFlinchRecover));
+
+            float getUp = _hitProfile != null ? _hitProfile.GetUpTime : DefaultGetUpTime;
+            _hold = Mathf.MoveTowards(_hold, 1f, dt / Mathf.Max(getUp, HitReactionProfile.MinFlinchRecover));
+            if (_hold >= 1f)
+                SetDownPhysics(false);
         }
 
         void RecoverFromHits(float dt)
@@ -704,8 +889,9 @@ namespace CloseTheDeal.Player
             if (!_posed)
                 return;
 
-            Vector3 fall = Physics.gravity * _profile.RagdollGravity + (_hold < 1f ? Vector3.zero : _carryPush);
             float held = _hold < 1f ? Mathf.SmoothStep(0f, 1f, _hold) : 1f;
+            float gravityScale = _hold < 1f ? Mathf.Lerp(1f, _profile.RagdollGravity, held) : _profile.RagdollGravity;
+            Vector3 fall = Physics.gravity * gravityScale + (_hold < 1f ? Vector3.zero : _carryPush);
             for (int i = 0; i < PartCount; i++)
             {
                 ref Part part = ref _parts[i];
@@ -713,6 +899,9 @@ namespace CloseTheDeal.Player
                 part.WasRotation = part.Body.rotation;
                 part.Body.AddForce(fall, ForceMode.Acceleration);
             }
+
+            if (held <= 0f)
+                return;
 
             ref Part hips = ref _parts[Hips];
             float limp = _animator.Limp;

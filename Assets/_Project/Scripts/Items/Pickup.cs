@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CloseTheDeal.Combat;
 using CloseTheDeal.Core;
 using CloseTheDeal.Net;
 using CloseTheDeal.Player;
@@ -681,7 +682,7 @@ namespace CloseTheDeal.Items
         {
             ContactPoint contact = collision.GetContact(0);
             Vector3 direction = _lastVelocity.sqrMagnitude > 0.01f ? _lastVelocity.normalized : -contact.normal;
-            bool shoved = Shove(motor, speed, direction);
+            bool shoved = Shove(motor, speed, direction, contact.point);
             float damage = Hurt(collision.collider.GetComponentInParent<IDamageable>(), speed, contact.point, direction);
             if (!shoved && damage < 0f)
                 return;
@@ -692,13 +693,22 @@ namespace CloseTheDeal.Items
             ServerThrowLanded?.Invoke(this, _lastHolderClientId, struck != null ? struck.gameObject : collision.collider.gameObject, Mathf.Max(0f, damage));
         }
 
-        bool Shove(PlayerMotor motor, float speed, Vector3 direction)
+        bool Shove(PlayerMotor motor, float speed, Vector3 direction, Vector3 hitPoint)
         {
             if (motor == null)
                 return false;
 
             float shove = Mathf.Min(speed * _body.mass * Rules.ShovePerKgMps, Rules.MaxShoveSpeed);
-            motor.ApplyKnockback((direction + Vector3.up * ShoveLift).normalized * shove, Rules.ShoveControlLossSeconds);
+            Vector3 velocity = (direction + Vector3.up * ShoveLift).normalized * shove;
+            if (motor.TryGetComponent(out Health health) && !health.IsDead
+                && health.KnockoutShoveSpeed > 0f && shove >= health.KnockoutShoveSpeed)
+            {
+                health.KnockOut(velocity, Mathf.Max(health.DefaultKnockoutSeconds, Rules.ShoveControlLossSeconds), hitPoint);
+            }
+            else
+            {
+                motor.ApplyKnockback(velocity, Rules.ShoveControlLossSeconds);
+            }
             return true;
         }
 

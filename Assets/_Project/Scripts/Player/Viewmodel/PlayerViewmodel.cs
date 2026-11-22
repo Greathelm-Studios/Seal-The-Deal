@@ -285,7 +285,8 @@ namespace CloseTheDeal.Player
         void OnBeginCameraRendering(ScriptableRenderContext context, Camera rendering)
         {
             bool fitting = FittingRoom.Instance != null && FittingRoom.Instance.IsOpen;
-            if (_active && !fitting && _head != null && rendering == _baseCamera && _profile.BodyViewHeadClip > 0f)
+            bool ragdollView = PlayerCamera.Instance != null && PlayerCamera.Instance.InRagdollView;
+            if (_active && !fitting && !ragdollView && _head != null && rendering == _baseCamera && _profile.BodyViewHeadClip > 0f)
             {
                 Vector3 centre = _head.position + _head.up * HeadClipCenterUp;
                 float r = _profile.BodyViewHeadClip;

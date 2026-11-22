@@ -87,6 +87,11 @@ namespace CloseTheDeal.Combat
                 // A living body takes the damage and the throw together; a dead or health-less one is only thrown.
                 bool handled = health != null && blast.Damage > 0f
                     && health.ApplyHit(damage, chest, chest - point, attackerClientId, velocity, velocity, blast.ControlLossSeconds);
+                if (!handled && health != null && !health.IsDead && health.KnockoutShoveSpeed > 0f
+                    && velocity.sqrMagnitude >= health.KnockoutShoveSpeed * health.KnockoutShoveSpeed)
+                {
+                    handled = health.KnockOut(velocity, Mathf.Max(health.DefaultKnockoutSeconds, blast.ControlLossSeconds), chest);
+                }
                 if (!handled && motor != null)
                     motor.ApplyKnockback(velocity, blast.ControlLossSeconds);
                 return motor != null;
