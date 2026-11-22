@@ -4,9 +4,9 @@ Deadpan, corporate and dry: the joke is that it looks exactly like a real motiva
 
 ## Posters
 
-Format: a glossy Aero stock image (no text in it), a white frame, a big spaced title, a one-line caption, and the title in Japanese, small.
+Format: a Frutiger Aero wallpaper (no text in it; sources in [LICENCES.md](LICENCES.md), no AI-generated images), a white frame, a big spaced title, a one-line caption, and the title in Japanese, small.
 
-| id | title | ja | caption | image (for Codex) |
+| id | title | ja | caption | image idea (not used: the pictures are wallpapers, see LICENCES.md) |
 |---|---|---|---|---|
 | 01 | TEAMWORK | チームワーク | Because nobody should be blamed alone. | rowers in a sleek boat on a glassy blue lake at dawn |
 | 02 | SYNERGY | シナジー | The work of three people. The salary of one. | three glossy aqua spheres merging into one over white |

@@ -6,3 +6,4 @@ Durable facts every agent should know, whatever tool it runs in. One line per no
 - [The game is called Seal the Deal](game-name-seal-the-deal.md) — "Close the Deal" was the working title; never use it in new work
 - [Market research, Nov 2026](market-research-2026-11.md) — comparables, £3 net a copy, 14k–23k wishlists for £18k–30k, US-first buyers, refund rates
 - [Weapon look: flat low-poly](weapon-look-flat-low-poly.md) — simple flat-colour low-poly stylised guns; not toy, realistic, sleek-product or sci-fi
+- [Office visuals: no AI images](office-visuals-no-ai-images.md) — posters use only the CC0 Frutiger Aero wallpaper pack (KnightAnNi); never AI-generated pictures

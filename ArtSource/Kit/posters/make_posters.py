@@ -24,7 +24,7 @@ POSTER_W, POSTER_H = 0.6, 0.8          # poster on the wall, metres (a real 600 
 POSTER_PX_PER_M = 1000                 # texels per metre: caption type ~16 mm cap stays crisp at 2-3 m
 FRAME = 0.018                          # silver frame width, metres
 MAT = 0.022                            # white mat inside the frame, metres
-ART_ASPECT = 4 / 3                     # Codex's images are 1024 x 768
+ART_ASPECT = 4 / 3                     # the poster pictures are 1024 x 768
 NAVY_PANEL = (0x0F, 0x1E, 0x3C)        # the caption panel: deep navy, the classic poster's black in our palette
 SLIDE_W, SLIDE_H = 960, 540            # one slide in the atlas, pixels (16:9)
 SLIDE_COLS, SLIDE_ROWS = 4, 2          # atlas layout, reading order from the top left (REQUEST.md)
@@ -230,4 +230,4 @@ if __name__ == '__main__':
     os.makedirs(os.path.join(HERE, 'review'), exist_ok=True)
     sheet.save(os.path.join(HERE, 'review', 'posters_sheet.png'))
     have = sum(os.path.exists(os.path.join(ART, f'Poster_Art_{r[0]}.png')) for r in posters)
-    print(f'12 posters ({have} with Codex art), 8 slides')
+    print(f'12 posters ({have} with art), 8 slides')
