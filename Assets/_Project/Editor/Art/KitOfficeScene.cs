@@ -24,6 +24,7 @@ namespace CloseTheDeal.Editor.Art
         const float DevMirrorYaw = 180f;
         static readonly Vector3 DevMirrorScale = new Vector3(19.2f, 3.45f, 1f);
         const string HitDummyPath = "Assets/_Project/Prefabs/Dev/HitDummy.prefab";
+        const string GlassProfilePath = "Assets/_Project/Profiles/Glass/DefaultGlass.asset";
         static readonly Vector3 HitDummyPosition = new Vector3(24f, FloorHeight, -25f);
         const float HitDummyYaw = 180f;
 
@@ -417,6 +418,7 @@ namespace CloseTheDeal.Editor.Art
             DevMirror();
             HitDummy();
             Lift();
+            Glass();
             Debug.Log(KitOfficeRoof.AddTo(root));
             AddCamera();
             return count;
@@ -786,6 +788,22 @@ namespace CloseTheDeal.Editor.Art
                 Put("Lift_Door_Panel", LeafEdge.x, y, LeafEdge.y, 180f, $"Door_{stop}_A");
                 Put("Lift_Door_Panel", LeafEdge.x, y, LeafEdge.y, 0f, $"Door_{stop}_B");
             }
+        }
+
+        /// <summary>The registry that makes the scene's glass breakable; without one no pane can break.</summary>
+        static void Glass()
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<CloseTheDeal.Glass.GlassProfile>(GlassProfilePath);
+            if (profile == null)
+            {
+                Debug.LogWarning($"[Kit Office] No glass profile at {GlassProfilePath}; the glass will not break.");
+                return;
+            }
+            var go = new GameObject("Glass");
+            go.AddComponent<FishNet.Object.NetworkObject>();
+            var registry = new SerializedObject(go.AddComponent<CloseTheDeal.Glass.GlassRegistry>());
+            GreyboxSceneSetup.SetReference(registry, "_profile", profile);
+            registry.ApplyModifiedPropertiesWithoutUndo();
         }
 
         static void HitDummy()

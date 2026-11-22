@@ -35,6 +35,12 @@ namespace CloseTheDeal.Glass
         const int MaxPanesPerFloor = 1 << FloorShift;
         /// <summary>Thickest glass, in metres, that gets a fitted box; anything deeper is curved or bent.</summary>
         const float MaxPaneThickness = 0.15f;
+        /// <summary>How far up from drawn glass to look for the kit piece that holds its colliders: its group, the piece, one more.</summary>
+        const int PieceSearchLevels = 3;
+        /// <summary>A collider is the pane's when it covers this fraction of the glass, or this fraction of it lies inside the glass.</summary>
+        const float CoversPane = 0.9f, InsidePane = 0.5f;
+        /// <summary>How far, in metres, off the glass's own sheet a collider or frost band may sit and still belong to it.</summary>
+        const float SheetSlack = 0.005f;
 
         // Each entry is a pane number, plus one bit for which way its shards flew.
         readonly SyncHashSet<uint> _broken = new();
@@ -43,6 +49,8 @@ namespace CloseTheDeal.Glass
         readonly List<GlassPane> _paneList = new();
         readonly List<GlassPane> _found = new();
         readonly List<Renderer> _renderers = new();
+        readonly List<Renderer> _paneRenderers = new();
+        readonly List<Collider> _paneColliders = new();
         readonly List<GameObject> _roots = new();
 
         TowerBuilder _tower;
@@ -237,17 +245,119 @@ namespace CloseTheDeal.Glass
                     continue;
                 if (renderer.GetComponentInParent<GlassPane>() != null)
                     continue;
-                Collider col = renderer.GetComponent<Collider>();
-                if (col == null)
-                    col = AddPaneCollider(renderer);
-                if (col == null)
-                    continue;
+                _paneRenderers.Clear();
+                _paneColliders.Clear();
+                _paneRenderers.Add(renderer);
+
+                Collider own = renderer.GetComponent<Collider>();
+                if (own != null)
+                {
+                    _paneColliders.Add(own);
+                }
+                else
+                {
+                    // Inactive glass reports no size yet, so nothing can be fitted to it.
+                    if (!renderer.gameObject.activeInHierarchy)
+                        continue;
+
+                    TakePieceColliders(renderer);
+                    if (_paneColliders.Count == 0)
+                    {
+                        BoxCollider fitted = AddPaneCollider(renderer);
+                        if (fitted == null)
+                            continue;
+                        _paneColliders.Add(fitted);
+                    }
+                }
 
                 GlassPane.PrepareKnown();
                 var pane = renderer.gameObject.AddComponent<GlassPane>();
                 GlassPane.ClearPrepared();
-                pane.InitKnown(renderer, col);
+                pane.InitKnown(_paneRenderers.ToArray(), _paneColliders.ToArray(), renderer.bounds);
+
+                foreach (Collider col in _paneColliders)
+                {
+                    if (col.gameObject != renderer.gameObject)
+                        col.gameObject.AddComponent<GlassImpactRelay>().Pane = pane;
+                }
             }
+        }
+
+        /// <summary>
+        /// Finds the colliders a kit piece gives its glass, which sit beside the drawn glass rather
+        /// than on it, and anything else set into the same sheet (frost bands). Either one collider
+        /// that covers the whole pane (a partition's wall box, a guard's own glass box), or every
+        /// collider that lies mostly inside it (the panels either side of a glass door).
+        /// </summary>
+        void TakePieceColliders(Renderer glass)
+        {
+            Bounds drawn = glass.bounds;
+            Vector3 size = drawn.size;
+            int thin = size.x <= size.y && size.x <= size.z ? 0 : size.y <= size.z ? 1 : 2;
+            int a = (thin + 1) % 3, b = (thin + 2) % 3;
+            float paneArea = size[a] * size[b];
+            if (paneArea <= 0f)
+                return;
+
+            bool flat = size[thin] <= MaxPaneThickness;
+            Transform piece = glass.transform.parent;
+            for (int level = 0; level < PieceSearchLevels && piece != null && _paneColliders.Count == 0; level++, piece = piece.parent)
+            {
+                Collider covering = null;
+                float coveringArea = float.MaxValue;
+                for (int i = 0; i < piece.childCount; i++)
+                {
+                    Transform child = piece.GetChild(i);
+                    if (!child.TryGetComponent(out Collider col) || col.isTrigger || !col.enabled || !child.gameObject.activeInHierarchy)
+                        continue;
+                    if (child.TryGetComponent(out Renderer _) || GlassPane.TryFind(col, out _))
+                        continue;
+
+                    Bounds box = col.bounds;
+                    if (box.min[thin] > drawn.max[thin] + SheetSlack || box.max[thin] < drawn.min[thin] - SheetSlack)
+                        continue;
+
+                    float shared = Overlap(box, drawn, a) * Overlap(box, drawn, b);
+                    float area = box.size[a] * box.size[b];
+                    if (shared >= paneArea * CoversPane)
+                    {
+                        if (area < coveringArea)
+                        {
+                            covering = col;
+                            coveringArea = area;
+                        }
+                    }
+                    else if (flat && area > 0f && shared >= area * InsidePane)
+                    {
+                        _paneColliders.Add(col);
+                    }
+                }
+
+                if (covering != null)
+                {
+                    _paneColliders.Clear();
+                    _paneColliders.Add(covering);
+                }
+            }
+
+            if (_paneColliders.Count == 0)
+                return;
+
+            Transform group = glass.transform.parent;
+            for (int i = 0; i < group.childCount; i++)
+            {
+                if (!group.GetChild(i).TryGetComponent(out Renderer other) || other == glass || !other.gameObject.activeInHierarchy)
+                    continue;
+
+                Bounds sheet = other.bounds;
+                if (sheet.min[thin] >= drawn.min[thin] - SheetSlack && sheet.max[thin] <= drawn.max[thin] + SheetSlack && sheet.Intersects(drawn))
+                    _paneRenderers.Add(other);
+            }
+        }
+
+        static float Overlap(Bounds one, Bounds other, int axis)
+        {
+            return Mathf.Max(0f, Mathf.Min(one.max[axis], other.max[axis]) - Mathf.Max(one.min[axis], other.min[axis]));
         }
 
         /// <summary>
@@ -258,8 +368,7 @@ namespace CloseTheDeal.Glass
         /// </summary>
         BoxCollider AddPaneCollider(Renderer renderer)
         {
-            // Inactive glass reports no size yet; it stays see-through rather than getting an empty box.
-            if (!_profile.SolidifyGlassWithoutCollider || !(renderer is MeshRenderer) || !renderer.gameObject.activeInHierarchy)
+            if (!_profile.SolidifyGlassWithoutCollider || !(renderer is MeshRenderer))
                 return null;
 
             Transform pane = renderer.transform;

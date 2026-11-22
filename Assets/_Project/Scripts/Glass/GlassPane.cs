@@ -42,19 +42,20 @@ namespace CloseTheDeal.Glass
         internal static void PrepareKnown() => _skipNextAwake = true;
         internal static void ClearPrepared() => _skipNextAwake = false;
 
-        /// <summary>Initializes a pane added dynamically for a known renderer/collider pair without scanning children.</summary>
-        internal void InitKnown(Renderer renderer, Collider collider)
+        /// <summary>Initializes a pane added dynamically for known renderers and colliders without scanning children. drawn is the glass as drawn, world space.</summary>
+        internal void InitKnown(Renderer[] renderers, Collider[] colliders, Bounds drawn)
         {
             if (_initialized)
                 return;
 
             _initialized = true;
-            _renderers = renderer != null ? new[] { renderer } : Array.Empty<Renderer>();
-            _colliders = collider != null ? new[] { collider } : Array.Empty<Collider>();
-            if (collider != null)
-                ByCollider[collider] = this;
+            _renderers = renderers;
+            _colliders = colliders;
+            foreach (Collider c in _colliders)
+                ByCollider[c] = this;
 
-            MeasureShape();
+            if (!MeasureOwnBox())
+                MeasureWorld(drawn);
         }
 
         void Awake()
@@ -79,7 +80,8 @@ namespace CloseTheDeal.Glass
                     ByCollider[c] = this;
             }
 
-            MeasureShape();
+            if (!MeasureOwnBox() && _colliders.Length > 0 && _colliders[0] != null)
+                MeasureWorld(_colliders[0].bounds);
         }
 
         void OnDestroy()
@@ -153,7 +155,10 @@ namespace CloseTheDeal.Glass
         /// Host only. Something heavy hitting the pane fast enough breaks it, and gets back the
         /// speed the glass took, so a thrown player or chair carries on out through the window.
         /// </summary>
-        void OnCollisionEnter(Collision collision)
+        void OnCollisionEnter(Collision collision) => Impact(collision);
+
+        /// <summary>Host only. A hit on one of the pane's colliders; GlassImpactRelay passes on those that sit on another object.</summary>
+        internal void Impact(Collision collision)
         {
             GlassRegistry registry = GlassRegistry.Instance;
             Rigidbody body = collision.rigidbody;
@@ -178,37 +183,40 @@ namespace CloseTheDeal.Glass
                 body.AddForce(givenBack, ForceMode.VelocityChange);
         }
 
-        /// <summary>Finds the pane's middle, its thin axis and its size from its first box collider, or failing that its bounds.</summary>
-        void MeasureShape()
+        /// <summary>Finds the pane's middle, its thin axis and its size from a box collider on this object. False when there is none.</summary>
+        bool MeasureOwnBox()
         {
-            Vector3 scale = transform.lossyScale;
-            Vector3 size;
+            if (_colliders.Length == 0 || !(_colliders[0] is BoxCollider box) || box.transform != transform)
+                return false;
 
-            if (_colliders.Length > 0 && _colliders[0] is BoxCollider box && box.transform == transform)
-            {
-                _localCentre = box.center;
-                size = Vector3.Scale(box.size, scale);
-            }
-            else if (_colliders.Length > 0 && _colliders[0] != null)
-            {
-                Bounds bounds = _colliders[0].bounds;
-                _localCentre = transform.InverseTransformPoint(bounds.center);
-                // World-aligned bounds: right only for panes that are not turned, close enough for shards otherwise.
-                size = bounds.size;
-            }
-            else
-            {
-                return;
-            }
-
+            _localCentre = box.center;
+            Vector3 size = Vector3.Scale(box.size, transform.lossyScale);
             size = new Vector3(Mathf.Abs(size.x), Mathf.Abs(size.y), Mathf.Abs(size.z));
-            int thin = size.x <= size.y && size.x <= size.z ? 0 : size.y <= size.z ? 1 : 2;
-            int up = thin == 1 ? 2 : 1;
-            int across = 3 - thin - up;
+            ThinAxis(size, out int thin, out int up, out int across);
 
             _localNormal = Axis(thin);
             _localUp = Axis(up);
             _size = new Vector3(size[across], size[up], size[thin]);
+            return true;
+        }
+
+        /// <summary>The same from world-aligned bounds: exact for panes turned in quarter turns, close enough for shards otherwise.</summary>
+        void MeasureWorld(Bounds bounds)
+        {
+            Vector3 size = bounds.size;
+            ThinAxis(size, out int thin, out int up, out int across);
+
+            _localCentre = transform.InverseTransformPoint(bounds.center);
+            _localNormal = transform.InverseTransformDirection(Axis(thin));
+            _localUp = transform.InverseTransformDirection(Axis(up));
+            _size = new Vector3(size[across], size[up], size[thin]);
+        }
+
+        static void ThinAxis(Vector3 size, out int thin, out int up, out int across)
+        {
+            thin = size.x <= size.y && size.x <= size.z ? 0 : size.y <= size.z ? 1 : 2;
+            up = thin == 1 ? 2 : 1;
+            across = 3 - thin - up;
         }
 
         static Vector3 Axis(int index)

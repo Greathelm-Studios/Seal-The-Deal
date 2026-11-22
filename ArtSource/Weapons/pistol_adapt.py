@@ -31,6 +31,7 @@ import zipfile
 import bmesh
 import bpy
 from mathutils import Matrix, Vector
+from mathutils.bvhtree import BVHTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC_ZIP = os.path.join(HERE, 'Source', 'GunsLowPoly_SatendraSaraswat', 'guns_low_poly_fbx.zip')
@@ -63,6 +64,15 @@ PANEL_DEPTH = 0.6 * MM
 """Faces this close to the widest point, facing sideways, are the raised grip panels."""
 MAG_BASE_H = 4.0 * MM
 """Thickness of the magazine base plate added under the grip (the source has none)."""
+MAG_BODY_H = 56.0 * MM
+"""Height of the magazine's body above the base plate, metres. It is hidden inside the grip until a reload."""
+MAG_LEAN_LOW, MAG_LEAN_HIGH = 8.0 * MM, 40.0 * MM
+"""Heights above the grip's bottom between which the grip's lean is measured off its back strap, metres."""
+MAG_BODY_WIDTH, MAG_BODY_DEPTH = 0.62, 0.55
+"""The body's width and depth as a share of the grip's bottom, so it stays inside the grip's walls all the way up."""
+MAG_BODY_BACK = 3.0 * MM
+"""How far the body sits toward the back strap from the middle of the grip's bottom, metres. WHY: the front strap
+is set back between the grip's sides, and a centred body 72 % deep showed through it (seen on the sheet, 2026-11-22)."""
 RING_OUTER, RING_INNER, RING_PROUD = 6.0 * MM, 3.9 * MM, 0.5 * MM
 """AONAGI ring on the left grip panel: outer and inner radius and how far it stands out, metres."""
 DOT_R = 2.0 * MM
@@ -287,8 +297,59 @@ ext = bmesh.ops.extrude_face_region(mag_bm, geom=list(mag_bm.faces))
 down = Vector((0, 0, -MAG_BASE_H))
 bmesh.ops.translate(mag_bm, verts=[g for g in ext['geom'] if isinstance(g, bmesh.types.BMVert)], vec=down)
 bmesh.ops.recalc_face_normals(mag_bm, faces=mag_bm.faces)
+
+# The magazine's body: the grip's bottom outline, drawn in, run up inside the grip along the grip's own lean,
+# so the whole magazine can slide out of the bottom along that line without cutting through the grip's walls.
+frame_tree = BVHTree.FromBMesh(frame_bm)
+
+
+def back_strap(z):
+    """Where the back of the grip is at a height: the first surface met coming forward from behind the gun."""
+    hit = frame_tree.ray_cast(Vector((0.0, 1.0, z)), Vector((0, -1, 0)))
+    if hit[0] is None:
+        raise RuntimeError(f'no grip found at height {z}')
+    return hit[0]
+
+
+# WHY the back strap, between these two heights: the trigger guard and the beavertail are part of the same mesh,
+# so the grip's lean is read off its back edge, above the heel and below the beavertail.
+lean = (back_strap(grip_low + MAG_LEAN_HIGH) - back_strap(grip_low + MAG_LEAN_LOW)).normalized()
+body_bm = bmesh.new()
+for f in bottom:
+    body_bm.faces.new([body_bm.verts.new(v.co) for v in f.verts])
+bmesh.ops.remove_doubles(body_bm, verts=body_bm.verts, dist=WELD)
+mid = sum((v.co for v in body_bm.verts), Vector()) / len(body_bm.verts)
+for v in body_bm.verts:
+    v.co = mid + Vector(((v.co.x - mid.x) * MAG_BODY_WIDTH, (v.co.y - mid.y) * MAG_BODY_DEPTH + MAG_BODY_BACK,
+                         v.co.z - mid.z))
+ext = bmesh.ops.extrude_face_region(body_bm, geom=list(body_bm.faces))
+bmesh.ops.translate(body_bm, verts=[g for g in ext['geom'] if isinstance(g, bmesh.types.BMVert)],
+                    vec=lean * (MAG_BODY_H / lean.z))
+open_edges = [e for e in body_bm.edges if len(e.link_faces) == 1]
+if open_edges:
+    bmesh.ops.holes_fill(body_bm, edges=open_edges, sides=0)
+bmesh.ops.recalc_face_normals(body_bm, faces=body_bm.faces)
+
+# Measured, not judged: every corner of the body has to be inside the frame, or it shows through the grip.
+poking = 0
+for v in body_bm.verts:
+    hits, start = 0, v.co.copy()
+    while True:
+        hit = frame_tree.ray_cast(start, Vector((1, 0, 0)))
+        if hit[0] is None:
+            break
+        hits += 1
+        start = hit[0] + Vector((1e-5, 0, 0))
+    if hits % 2 == 0 and v.co.z > grip_low + 1.0 * MM:
+        poking += 1
+        print('MAGAZINE corner outside the frame at mm', tuple(round(c * 1000, 1) for c in v.co - Vector((0, 0, grip_low))))
+me = bpy.data.meshes.new('_magbody')
+body_bm.to_mesh(me)
+mag_bm.from_mesh(me)
+body_bm.free()
 for f in mag_bm.faces:
     f.material_index = SLOT['MagBase']
+lean_degrees = math.degrees(math.atan2(-lean.y, lean.z))
 
 # ---------------------------------------------------------------- AONAGI ring on the left grip panel
 panel = [f for f in frame_bm.faces if f.material_index == SLOT['Grip'] and f.normal.x < 0]
@@ -365,5 +426,6 @@ for me in list(bpy.data.meshes):
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 bpy.ops.wm.save_as_mainfile(filepath=OUT)
 print('ADAPTED', OUT, 'scale', round(s, 6), 'pivot', tuple(round(c * 1000, 1) for c in pivot))
+print('MAGAZINE lean', round(lean_degrees, 1), 'degrees (top toward the muzzle), body corners outside the frame:', poking)
 for ob in made:
     print('PART', ob.name, tuple(round(c * 1000, 1) for c in ob.dimensions), len(ob.data.polygons))

@@ -150,6 +150,7 @@ namespace CloseTheDeal.Combat
             _holder.ReloadStarted += OnReloadStarted;
             _holder.ReloadFinished += OnReloadEnded;
             _holder.ReloadCancelled += OnReloadCancelled;
+            _holder.AmmoChanged += OnAmmoChanged;
         }
 
         void OnDisable()
@@ -160,6 +161,7 @@ namespace CloseTheDeal.Combat
             _holder.ReloadStarted -= OnReloadStarted;
             _holder.ReloadFinished -= OnReloadEnded;
             _holder.ReloadCancelled -= OnReloadCancelled;
+            _holder.AmmoChanged -= OnAmmoChanged;
             if (_fovAdded != 0f && _camera != null && Mathf.Approximately(_camera.fieldOfView, _fovWritten))
                 _camera.fieldOfView -= _fovAdded;
             _fovAdded = 0f;
@@ -181,7 +183,10 @@ namespace CloseTheDeal.Combat
             _reloading = false;
             // A held gun drives the arms model's kick and reload; empty hands give its stand-in keys back.
             if (_viewmodel != null)
+            {
                 _viewmodel.Driven = weapon != null;
+                _viewmodel.ReleaseSlide();
+            }
 
             Transform parent = firstPerson ? PlayerCamera.Instance.transform : _thirdPersonAnchor;
             if (ShouldDraw(weapon, firstPerson) && parent != null)
@@ -372,7 +377,10 @@ namespace CloseTheDeal.Combat
 
             _gunKick.Add(DryFireJolt, _weapon.ViewRecoverySeconds, _weapon.ViewCurve);
             if (_viewmodel != null)
+            {
                 _viewmodel.Fire(HandKick(_weapon).Scaled(DryFireJolt));
+                _viewmodel.LockSlide();
+            }
         }
 
         /// <summary>One flash per player per flash prefab, made on its first shot and reused.</summary>
@@ -397,6 +405,15 @@ namespace CloseTheDeal.Combat
         void OnReloadEnded()
         {
             _reloading = false;
+            if (_viewmodel != null)
+                _viewmodel.ReleaseSlide();
+        }
+
+        // A magazine filled some other way (a respawn) lets a held-back slide go too.
+        void OnAmmoChanged(int rounds, int magazine)
+        {
+            if (rounds > 0 && _viewmodel != null && !_reloading)
+                _viewmodel.ReleaseSlide();
         }
 
         void OnReloadCancelled()

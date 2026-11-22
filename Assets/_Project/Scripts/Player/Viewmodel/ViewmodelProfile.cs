@@ -85,25 +85,46 @@ namespace CloseTheDeal.Player
         [Tooltip("How long the gun takes to settle after a shot, in seconds. Shorter reads as a light, snappy gun.")]
         [Min(0.01f)] public float KickRecoverSeconds = 0.2f;
 
-        [Header("Slide (a pistol's top moving back on each shot, seen by everyone)")]
+        [Header("Slide (a pistol's top moving back on each shot, seen by everyone, and racked on an empty click and after a reload)")]
         [Tooltip("How far the slide snaps back on a shot, in metres of the gun's own size. 0 = the slide never moves. A real pistol's goes back about a sixth of its length.")]
         [Range(0f, 0.06f)] public float SlideTravel = 0.024f;
 
         [Tooltip("How long the slide takes to come forward again, in seconds. Keep it shorter than the time between shots or a fast trigger finger sees it stuck back.")]
         [Range(0.02f, 0.3f)] public float SlideReturnSeconds = 0.075f;
 
+        [Tooltip("How long the slide takes to be pulled back, held and let go when it is racked at the end of a reload, in seconds. A click on an empty magazine pulls it back at the same speed and it stays back until the reload lets it go. Longer reads as a slow, deliberate pull; shorter as a flick.")]
+        [Range(0.08f, 0.8f)] public float SlideRackSeconds = 0.26f;
+
         [Header("Reload")]
-        [Tooltip("How long the reload move lasts, in seconds. Only the look for now; there is no ammunition yet.")]
+        [Tooltip("How long the reload move lasts when no gun from the weapon system is held, in seconds. A real gun's reload lasts as long as the gun's own Reload seconds.")]
         [Min(0.1f)] public float ReloadSeconds = 1.2f;
 
-        [Tooltip("How far the gun drops at the deepest point of the reload, in metres.")]
-        [Min(0f)] public float ReloadDrop = 0.10f;
+        [Tooltip("Where the gun moves to while it is held up for the reload, in metres from its resting place: right, up, forward. Up and toward the middle brings the grip, the magazine and the left hand into view; too low and the whole reload happens below the bottom of the screen.")]
+        public Vector3 ReloadShift = new(-0.03f, 0.06f, -0.01f);
 
-        [Tooltip("How far the muzzle tips up at the deepest point of the reload, in degrees.")]
-        [Range(0f, 80f)] public float ReloadTilt = 40f;
+        [Tooltip("How the gun is turned while it is held up for the reload, in degrees on top of its resting turn: pitch (negative lifts the muzzle), yaw (negative turns the muzzle in toward the middle), roll (negative tips the top of the gun outward, which swings the bottom of the grip toward the left hand so you can see the magazine go in).")]
+        public Vector3 ReloadTurn = new(-25f, -30f, -65f);
 
-        [Tooltip("How far the gun rolls onto its side at the deepest point of the reload, in degrees.")]
-        [Range(0f, 90f)] public float ReloadRoll = 25f;
+        [Tooltip("How far the gun swings past its reload pose as it snaps up, as a fraction of the move. 0 = it eases in with no overshoot; higher is snappier and more cartoony.")]
+        [Range(0f, 0.5f)] public float ReloadOvershoot = 0.12f;
+
+        [Tooltip("How far the magazine slides to come clear of the grip, in metres: the length of the magazine's body. The pistol's is 0.056. Too short and the magazine drops away while its top is still inside the grip; too long and it hangs in the air below the grip before the new one is pushed in.")]
+        [Range(0f, 0.15f)] public float ReloadMagazineLength = 0.058f;
+
+        [Tooltip("How far the grip leans, in degrees: the magazine slides along this line, not straight down. The pistol's grip leans 12.3 (measured from the model). Wrong and the magazine cuts through the front or back of the grip as it slides.")]
+        [Range(-30f, 30f)] public float ReloadMagazineLean = 12.3f;
+
+        [Tooltip("How far the empty magazine falls before it disappears, in metres. Raise it if you can see the magazine vanish in mid-air.")]
+        [Range(0.05f, 1f)] public float ReloadMagazineFall = 0.35f;
+
+        [Tooltip("How hard the gun flicks as the empty magazine is thrown out, in degrees of extra roll.")]
+        [Range(0f, 30f)] public float ReloadEjectFlick = 7f;
+
+        [Tooltip("How far the gun is knocked upward as the new magazine is slapped in, in metres. 0 = no bump.")]
+        [Range(0f, 0.05f)] public float ReloadSeatBump = 0.014f;
+
+        [Tooltip("How much the left hand comes up to push the new magazine in. 0 = the magazine goes in on its own and the left hand stays where it was; 1 = the hand comes all the way to the bottom of the grip.")]
+        [Range(0f, 1f)] public float ReloadHandReach = 1f;
 
         [Header("Body view (looking out of the real body)")]
         [Tooltip("How much of the head QUICK movement the eye takes in the body view: the bob of each step and the jolt of a hit. 0 = none, a gliding eye (most comfortable); 1 = all of it (most likely to make people feel sick). Slow movement, like leaning into a run or looking at the floor, is always followed in full.")]
