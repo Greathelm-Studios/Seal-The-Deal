@@ -38,8 +38,6 @@ Flat dark card, amber for the one primary action per state, white text with a mu
 - [GreyboxUiSetup.cs](../../Assets/_Project/Editor/Greybox/GreyboxUiSetup.cs) `Ensure` and Rebuild Game UI also add the UI kit (Seal the Deal > Lanes > Set Up UI) and keep it pointed at the menu. `Ensure` leaves an existing `GameUI` alone unless it detects legacy pre-TMP `LobbyCanvas` or pre-codeless `JoinCodeGroup` widgets; `Rebuild Game UI` prompts with a confirmation dialog in interactive Editor sessions because scene objects cannot carry `GeneratedAssetGuard` asset labels.
 - [GreyboxSceneSetup.cs](../../Assets/_Project/Editor/Greybox/GreyboxSceneSetup.cs) keeps `SetUpScene` separate from `EnsurePlayRig` so `Greybox.unity` preserves its build order (`Tower` between `NetworkManager` and `UI`), and nests `STDMC_Toon.prefab` inside `Player.prefab` so character model updates propagate without rebuilding `Player.prefab`.
 - [GreyboxUiSetup.cs](../../Assets/_Project/Editor/Greybox/GreyboxUiSetup.cs): builds the whole `GameUI` canvas. **Seal the Deal > Greybox > Rebuild Game UI** deletes and rebuilds it after asking, so change layout, copy and colours there rather than in the scene; hand edits in the scene are lost on a rebuild.
-- [GreyboxUiPreview.cs](../../Assets/_Project/Editor/Greybox/GreyboxUiPreview.cs): **Capture UI Preview** renders the start, hosting, local and in-game states to PNGs without entering Play Mode.
-
 ## Known limitations
 
 - Settings has Controls, Video, Audio and Accessibility ([UI_KIT.md](UI_KIT.md) "Settings"). Mouse sensitivity, invert and key rebinding show once the movement lane's camera and input reader read `InputPrefs`; field of view has no hook yet.

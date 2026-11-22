@@ -22,7 +22,7 @@ The title backdrop and screen transitions are purely local client-side presentat
 | Live sky in the kit's title screen | `Assets/_Project/Scripts/UI/Title/TitleSky.cs` |
 | Idle life of the standalone set, and safe areas | `Assets/_Project/Scripts/UI/Title/TitleBackdrop.cs` |
 | Transitions | `Assets/_Project/Scripts/UI/Title/UiTransition.cs` |
-| Scene and capture tool | `Assets/_Project/Editor/Lanes/TitleLaneSetup.cs`; scene `Assets/_Project/Scenes/Lanes/Lane_Title.unity` |
+| Scene and capture tool | Removed 2026-11-22 with `Lane_Title.unity` (`TitleLaneSetup.cs`, in git history) |
 | Capture output | `ArtSource/UI/passes/c_sky/title/` |
 
 ## The live sky in the title screen (`TitleSky`)
@@ -41,7 +41,7 @@ Render texture lifecycle:
 
 ## The standalone set
 
-`Seal the Deal > Lanes > Set Up Title Screen` (batch: `-executeMethod CloseTheDeal.Editor.Lanes.TitleLaneSetup.SetUpFromCommandLine`) builds `Lane_Title.unity`: three `Window_4m` bays with floor and ceiling `Slab_4x4`, two side walls, a camera pivot 9 m back and 0.55 m up looking 9 degrees up, a sun, then Office Look for the sky, ambient and grade.
+The standalone set `Lane_Title.unity` and the tool that built and captured it (`TitleLaneSetup.cs`) were removed on 2026-11-22; the rest of this section describes them as they were. The tool built three `Window_4m` bays with floor and ceiling `Slab_4x4`, two side walls, a camera pivot 9 m back and 0.55 m up looking 9 degrees up, a sun, then Office Look for the sky, ambient and grade.
 It only replaces a scene whose root is named "Title backdrop" (`MadeByThisTool()`); any other scene at that path is left alone.
 The rival tower is the sky's own foreground towers; there is no real geometry across the gap.
 Hard sun slabs on the floor come from the sun's shadows through the window mullions, not from painted shapes.
@@ -99,6 +99,6 @@ The two kinds the player starts are under 300 ms; only the game start is longer.
 
 ## Checking it
 
-`-executeMethod CloseTheDeal.Editor.Lanes.TitleLanePlayCheck.RunFromCommandLine [-titleOut folder]` (batch, with graphics) enters Play Mode in `Lane_Integration.unity` and checks, writing `play_check.txt` and frame strips (default `ArtSource/UI/passes/c_sky/title/play/`):
+The check tool (`TitleLanePlayCheck.cs`) was removed on 2026-11-22 with `Lane_Integration.unity`, so there is no automated check now. It entered Play Mode in that scene and checked, writing `play_check.txt` and frame strips (default `ArtSource/UI/passes/c_sky/title/play/`):
 the live sky attaches and renders while the title shows; its view moves; each transition covers and finishes near its stated length; a call made during one waits; reduced motion turns a wipe into the fade and stills the sky; hiding the title stops the sky camera and restores the game's sky.
 Last run 2026-11-14: all pass. Measured: CloudWipe covered 0.128 s, done 0.268 s; PaneSlide 0.099 / 0.234; FrameZoom 0.518 / 0.818; Fade 0.031 / 0.093 (the capture makes frames slow, so each phase lands a frame early).
