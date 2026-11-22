@@ -62,7 +62,6 @@ namespace CloseTheDeal.Editor.Greybox
             Transform spawnA = EnsureSpawn("SpawnA", new Vector3(-2f, 0.1f, 0f));
             Transform spawnB = EnsureSpawn("SpawnB", new Vector3(2f, 0.1f, 0f));
             EnsureNetworkManager(playerPrefab, spawnA, spawnB);
-            GreyboxTowerSetup.Ensure();
             SteamLobby lobby = EnsureSteam();
             GreyboxUiSetup.Ensure(lobby);
 
@@ -89,14 +88,13 @@ namespace CloseTheDeal.Editor.Greybox
             SetUpScene();
         }
 
-        /// <summary>Rebuilds Player.prefab, prop prefabs, and floor templates via GeneratedAssetGuard.</summary>
+        /// <summary>Rebuilds Player.prefab and the prop prefabs via GeneratedAssetGuard.</summary>
         [MenuItem("Seal the Deal/Greybox/Rebuild Everything")]
         public static void RebuildEverything()
         {
             EnsureLayers();
             RebuildPlayerPrefabIfOwned();
             GreyboxPropSetup.Ensure(true);
-            GreyboxTowerSetup.RebuildFloorTemplates();
         }
 
         internal static void RebuildPlayerPrefabIfOwned()

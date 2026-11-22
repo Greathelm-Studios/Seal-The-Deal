@@ -47,8 +47,6 @@ namespace CloseTheDeal.MatchMode
             _match.OnClosed += Refresh;
             _match.OnPhaseChanged += OnPhaseChanged;
             _match.OnCountdownChanged += OnSecondPassed;
-            _match.OnClockChanged += OnSecondPassed;
-            _match.OnArenaChanged += Refresh;
             FirmMember.OnRosterChanged += Refresh;
             FirmMember.OnLocalChanged += Refresh;
             _action.Clicked += OnAction;
@@ -64,8 +62,6 @@ namespace CloseTheDeal.MatchMode
             _match.OnClosed -= Refresh;
             _match.OnPhaseChanged -= OnPhaseChanged;
             _match.OnCountdownChanged -= OnSecondPassed;
-            _match.OnClockChanged -= OnSecondPassed;
-            _match.OnArenaChanged -= Refresh;
             FirmMember.OnRosterChanged -= Refresh;
             FirmMember.OnLocalChanged -= Refresh;
             _action.Clicked -= OnAction;
@@ -128,7 +124,7 @@ namespace CloseTheDeal.MatchMode
             _action.gameObject.SetActive(action);
             _actionLabel.text = phase == MatchPhase.Ended ? _rematchLabel : _startLabel;
             _action.interactable = host && (_match.CanHostStart || _match.CanHostRematch);
-            _action.RefusalReason = host ? "The towers are still being built." : phase == MatchPhase.Ended ? _waitingForRematch : _waitingForStart;
+            _action.RefusalReason = host ? "The floor is still being built." : phase == MatchPhase.Ended ? _waitingForRematch : _waitingForStart;
         }
 
         string Headline(MatchPhase phase)
@@ -136,11 +132,11 @@ namespace CloseTheDeal.MatchMode
             switch (phase)
             {
                 case MatchPhase.Waiting:
-                    return "WAITING IN RECEPTION";
+                    return "WAITING FOR THE HOST";
                 case MatchPhase.Countdown:
                     return "STARTING";
                 case MatchPhase.Running:
-                    return "QUARTER OPEN  ·  " + MatchHud.FormatClock(_match.SecondsLeft) + " LEFT";
+                    return MatchDirector.Ruleset != null ? "FLOOR " + MatchDirector.Ruleset.CurrentFloor : "MATCH RUNNING";
                 default:
                     MatchSnapshot result = _match.Snapshot;
                     return result.Winner == MatchDirector.NoFirm ? "NO DEAL" : _match.FirmName(result.Winner).ToUpperInvariant() + " SEALED THE DEAL";

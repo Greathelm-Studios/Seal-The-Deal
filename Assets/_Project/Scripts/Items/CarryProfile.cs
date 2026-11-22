@@ -68,13 +68,7 @@ namespace CloseTheDeal.Items
         [Min(0.1f)] public float LiveThrowSeconds = 3f;
 
         [Header("Leaving the building")]
-        [Tooltip("Outside both towers (out of a window, into the street): how far below where it started a loose thing may fall before it is taken away and put back, in metres. Less than one storey, so a thing thrown out of a first-floor window still comes back; things on a skybridge at their own level stay.")]
-        [Min(0.5f)] public float OutsideDropMetres = 2.5f;
-
-        [Tooltip("Anywhere, inside or out: how far below the ground floor a loose thing may fall before it is taken away and put back, in metres.")]
-        [Min(0f)] public float BelowGroundMetres = 1f;
-
-        [Tooltip("Only where no tower has been built: how far below where it started a loose thing may fall before it is taken away and put back, in metres. Must be more than one storey or things dropped down a stairwell vanish.")]
+        [Tooltip("How far below where it started a loose thing may fall before it is taken away and put back, in metres. Must be more than one storey or things dropped down a stairwell vanish.")]
         [Min(1f)] public float FallReturnDistance = 6f;
 
         [Tooltip("How long a thing that fell out of the building stays gone before it is back where it started, in seconds.")]

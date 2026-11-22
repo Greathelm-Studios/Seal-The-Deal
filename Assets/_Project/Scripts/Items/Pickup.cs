@@ -5,7 +5,6 @@ using CloseTheDeal.Core;
 using CloseTheDeal.Net;
 using CloseTheDeal.Player;
 using CloseTheDeal.Props;
-using CloseTheDeal.Tower;
 using FishNet.Managing.Timing;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
@@ -616,21 +615,7 @@ namespace CloseTheDeal.Items
 
         bool OutOfTheBuilding(Vector3 position)
         {
-            CarryProfile rules = Rules;
-            TowerBuilder tower = TowerBuilder.Instance;
-            if (tower == null || !tower.IsBuilt || tower.Profile == null)
-                return position.y < _homePosition.y - rules.FallReturnDistance;
-
-            Vector3 local = tower.transform.InverseTransformPoint(position);
-            if (local.y < -rules.BelowGroundMetres)
-                return true;
-
-            TowerProfile shape = tower.Profile;
-            float side = Mathf.Abs(local.z);
-            bool inside = Mathf.Abs(local.x) <= shape.Width * 0.5f
-                && side >= shape.Gap * 0.5f
-                && side <= shape.Gap * 0.5f + shape.MainDepth + shape.SpineDepth;
-            return !inside && position.y < _homePosition.y - rules.OutsideDropMetres;
+            return position.y < _homePosition.y - Rules.FallReturnDistance;
         }
 
         void FollowHolder()

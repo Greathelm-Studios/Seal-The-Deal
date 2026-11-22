@@ -49,10 +49,6 @@ namespace CloseTheDeal.Narration
             _match.OnMatchEnded -= OnEnded;
             _match.OnBriefcasePickedUp -= OnPickedUp;
             _match.OnBriefcaseStolen -= OnStolen;
-            _match.OnFloorOpened -= OnFloorOpened;
-            _match.OnCheckpointSaved -= OnCheckpoint;
-            _match.OnCapWarning -= OnCapWarning;
-            _match.OnBriefcaseReturned -= OnReturned;
         }
 
         void HookMatch(MatchDirector match)
@@ -62,10 +58,6 @@ namespace CloseTheDeal.Narration
             _match.OnMatchEnded += OnEnded;
             _match.OnBriefcasePickedUp += OnPickedUp;
             _match.OnBriefcaseStolen += OnStolen;
-            _match.OnFloorOpened += OnFloorOpened;
-            _match.OnCheckpointSaved += OnCheckpoint;
-            _match.OnCapWarning += OnCapWarning;
-            _match.OnBriefcaseReturned += OnReturned;
         }
 
         static int LocalFirm => FirmMember.Local != null ? FirmMember.Local.Firm : MatchDirector.NoFirm;
@@ -100,24 +92,6 @@ namespace CloseTheDeal.Narration
 
         void OnStolen(int byFirm, int fromFirm) =>
             Say(MatchMoment.Steal, new Fill { Firm = byFirm, Rival = fromFirm, Name = CarrierName() });
-
-        void OnFloorOpened(int floor, int byFirm) =>
-            Say(MatchMoment.FloorOpened, new Fill { Firm = byFirm, Floor = floor, Name = CarrierName() });
-
-        void OnCheckpoint(int firm, int floor)
-        {
-            if (firm == LocalFirm)
-                Say(MatchMoment.CheckpointMoved, new Fill { Firm = firm, Floor = floor });
-        }
-
-        void OnCapWarning(int secondsLeft) =>
-            Say(MatchMoment.CapWarning, new Fill { Time = MatchHud.FormatClock(secondsLeft) }, ignoreQuiet: true);
-
-        void OnReturned()
-        {
-            BriefcaseStatus status = _match.CaseStatus;
-            Say(MatchMoment.BriefcaseReturned, new Fill { Place = _match.PlaceLabel(status.Place, status.Floor) });
-        }
 
         void OnKill(KillEntry entry)
         {
@@ -180,7 +154,7 @@ namespace CloseTheDeal.Narration
             return line
                 .Replace("{firm}", FirmName(fill.Firm))
                 .Replace("{rival}", FirmName(fill.Rival))
-                .Replace("{floor}", fill.Floor.HasValue ? _match.Arena.FloorLabel(fill.Floor.Value) : string.Empty)
+                .Replace("{floor}", fill.Floor.HasValue ? "Floor " + fill.Floor.Value : string.Empty)
                 .Replace("{name}", fill.Name ?? string.Empty)
                 .Replace("{killer}", fill.Killer ?? string.Empty)
                 .Replace("{victim}", fill.Victim ?? string.Empty)

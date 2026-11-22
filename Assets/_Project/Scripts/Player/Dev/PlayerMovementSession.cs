@@ -901,9 +901,6 @@ namespace CloseTheDeal.Player.Dev
             if (upper != null)
                 return upper.transform.position.y - StairCentre().y;
 
-            if (CloseTheDeal.Tower.TowerBuilder.Instance != null)
-                return CloseTheDeal.Tower.TowerBuilder.Instance.Profile.FloorHeight;
-
             Vector3 lowest = StairCentre();
             float next = float.MaxValue;
             foreach (Transform t in FindObjectsByType<Transform>(FindObjectsSortMode.None))

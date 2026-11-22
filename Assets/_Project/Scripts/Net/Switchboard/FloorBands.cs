@@ -1,4 +1,3 @@
-using CloseTheDeal.Tower;
 using UnityEngine;
 
 namespace CloseTheDeal.Net
@@ -10,7 +9,7 @@ namespace CloseTheDeal.Net
         Far = 1
     }
 
-    /// <summary>One square of the two-tower grid: which tower, which floor.</summary>
+    /// <summary>One square of the building grid: which half of the frame (the sign of local Z), which floor.</summary>
     public readonly struct FloorCell
     {
         /// <summary>0 = building A (Tower-local Z below zero), 1 = building B.</summary>
@@ -26,7 +25,7 @@ namespace CloseTheDeal.Net
         }
     }
 
-    /// <summary>Captured Tower frame mapping world positions to Tower-local space and floor cells.</summary>
+    /// <summary>A building's frame, mapping world positions to its local space and floor cells.</summary>
     public readonly struct TowerFrame
     {
         /// <summary>Extra room around both towers, in metres, that a thrown body can still be shown in.</summary>
@@ -50,17 +49,10 @@ namespace CloseTheDeal.Net
             LocalBounds = localBounds;
         }
 
-        /// <summary>Captures a TowerFrame from the tower root, profile, and floor count.</summary>
-        public static TowerFrame From(Transform towerRoot, TowerProfile profile, int floorCount)
+        /// <summary>A frame for a building: its packing box (in the root's space), storey height and storey count.</summary>
+        public static TowerFrame FromBounds(Transform root, Bounds localBounds, float floorHeight, int floorCount)
         {
-            float halfWidth = profile.Width * 0.5f + MarginMetres;
-            float halfDepth = profile.Gap * 0.5f + profile.MainDepth + profile.SpineDepth + MarginMetres;
-            float top = floorCount * profile.FloorHeight + MarginMetres;
-            Bounds bounds = new Bounds(
-                new Vector3(0f, (top - MarginMetres) * 0.5f, 0f),
-                new Vector3(halfWidth * 2f, top + MarginMetres, halfDepth * 2f));
-            return new TowerFrame(towerRoot.worldToLocalMatrix, towerRoot.localToWorldMatrix,
-                profile.FloorHeight, floorCount, bounds);
+            return new TowerFrame(root.worldToLocalMatrix, root.localToWorldMatrix, floorHeight, floorCount, localBounds);
         }
 
         public Vector3 ToLocal(Vector3 worldPosition)

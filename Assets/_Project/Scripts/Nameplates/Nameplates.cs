@@ -35,8 +35,6 @@ namespace CloseTheDeal.Nameplates
         [Tooltip("How far above the top of the head the name sits, in metres.")]
         [Range(0f, 1.5f)] [SerializeField] float _headroom = 0.35f;
 
-        [Tooltip("How long a rival who walks into your tower is marked, in seconds, counted from when they enter.")]
-        [Range(0f, 10f)] [SerializeField] float _raiderSeconds = 2f;
 
         [Tooltip("Text size of a name, in pixels at 1920 x 1080. The research note's floor is 18.")]
         [Range(14f, 32f)] [SerializeField] float _nameSize = 18f;
@@ -51,8 +49,6 @@ namespace CloseTheDeal.Nameplates
             public RectTransform Marker;
             public CanvasGroup MarkerGroup;
             public string ShownName;
-            public bool InMyTower;
-            public float MarkerUntil;
         }
 
         const float Padding = 10f;
@@ -266,14 +262,12 @@ namespace CloseTheDeal.Nameplates
         {
             FirmMember me = FirmMember.Local;
             Camera cam = ResolveCamera();
-            MatchDirector match = MatchDirector.Instance;
-            bool running = match != null && match.Phase == MatchPhase.Running && match.Arena != null;
             for (int i = 0; i < _tags.Count; i++)
             {
                 if (me == null || cam == null || _tags[i].Member == null)
                     Hide(_tags[i]);
                 else
-                    Place(_tags[i], me, cam, running ? match : null);
+                    Place(_tags[i], me, cam);
             }
         }
 
@@ -283,18 +277,16 @@ namespace CloseTheDeal.Nameplates
             Fade(tag.MarkerGroup, false);
         }
 
-        void Place(Tag tag, FirmMember me, Camera cam, MatchDirector runningMatch)
+        // Only teammates are named; the rival marker is unused since rivals no longer cross into "your" building.
+        void Place(Tag tag, FirmMember me, Camera cam)
         {
             bool team = tag.Member.Firm == me.Firm;
-            bool marked = !team && runningMatch != null && RaiderMarked(tag, me, runningMatch);
             Vector2 at = default;
-            bool onScreen = (team || marked) && Alive(tag) && TryPlace(tag, cam, out at);
-            Fade(tag.ChipGroup, onScreen && team);
-            Fade(tag.MarkerGroup, onScreen && marked);
-            if (onScreen && team)
+            bool onScreen = team && Alive(tag) && TryPlace(tag, cam, out at);
+            Fade(tag.ChipGroup, onScreen);
+            Fade(tag.MarkerGroup, false);
+            if (onScreen)
                 tag.Chip.anchoredPosition = at;
-            else if (onScreen && marked)
-                tag.Marker.anchoredPosition = at;
         }
 
         Camera ResolveCamera()
@@ -313,15 +305,6 @@ namespace CloseTheDeal.Nameplates
             if ((head - cam.transform.position).sqrMagnitude > _range * _range)
                 return false;
             return WorldToCanvas.TryProject(cam, _canvas, head, out at);
-        }
-
-        bool RaiderMarked(Tag tag, FirmMember me, MatchDirector match)
-        {
-            bool inside = match.Arena.PlaceOf(tag.Member.Position, 0f) == me.Firm;
-            if (inside && !tag.InMyTower)
-                tag.MarkerUntil = Time.time + _raiderSeconds;
-            tag.InMyTower = inside;
-            return inside && Time.time < tag.MarkerUntil;
         }
 
         void Fade(CanvasGroup group, bool show)

@@ -2,6 +2,8 @@
 
 **Status:** Current · **Last updated:** 2026-11-21
 
+**Read this first (2026-11-22):** `Lane_Integration.unity`, the towers, `FloorLoot` and the tool that built the scene were removed when the floor race replaced the two-tower mode ([FLOOR_RACE.md](FLOOR_RACE.md)). What is still in the code and used by `FloorRace.unity`: gun pickups (`GunPickups`, `GunPickupMap`), shared hands (`SharedHands`) and `PlayerParts`. `LobbyRunFlow` and `LobbyRoom` remain but no scene uses them. The rest of this page describes the removed scene.
+
 Plays the Seal the Deal lanes as one game in `Assets/_Project/Scenes/Lanes/Lane_Integration.unity`.
 
 ## What the player sees
@@ -46,7 +48,7 @@ Every match resets everyone to the starting loadout, full magazines, and full he
 
 ## Files and setup
 
-- Scripts under [Assets/_Project/Scripts/Integration/](../../Assets/_Project/Scripts/Integration/): `FloorLoot.cs`, `FloorLootTable.cs`, `GunPickupMap.cs`, `GunPickups.cs` (drops a swapped-out gun through `LooseGunSpawns` when the scene has no `FloorLoot`), `LooseGunSpawns.cs` ([ITEMS.md](ITEMS.md)), `LobbyRoom.cs`, `LobbyRunFlow.cs`, `PlayerParts.cs`, `SharedHands.cs`.
+- Scripts under [Assets/_Project/Scripts/Integration/](../../Assets/_Project/Scripts/Integration/): `FloorLoot.cs`, `FloorLootTable.cs`, `GunPickupMap.cs`, `GunPickups.cs` (drops a swapped-out gun through `LooseGunSpawns` when no mode has set `GunPickups.SpawnLoose`), `LooseGunSpawns.cs` ([ITEMS.md](ITEMS.md)), `LobbyRoom.cs`, `LobbyRunFlow.cs`, `PlayerParts.cs`, `SharedHands.cs`.
 - Scene setup: [IntegrationLaneSetup.cs](../../Assets/_Project/Editor/Lanes/IntegrationLaneSetup.cs), menu **Seal the Deal > Lanes > Set Up Integration** (or CLI `-executeMethod CloseTheDeal.Editor.Lanes.IntegrationLaneSetup.SetUpFromCommandLine`). **Run Integration Check (solo)** automates a check run.
 
 ## Known limitations

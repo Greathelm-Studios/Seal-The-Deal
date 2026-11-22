@@ -1,6 +1,6 @@
 # Seal the Deal — Repo Rules
 
-**Status:** Current · **Last updated:** 2026-10-03
+**Status:** Current · **Last updated:** 2026-11-22
 
 These rules bind every agent and every task in this repo, whoever's agent it is and whichever tool runs it.
 This file is the single entry point: tool-specific files (`CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.cursor/rules/`) only point here.
@@ -10,25 +10,26 @@ If a rule needs changing, change it here.
 
 ## 1. Talking to your human
 
-Adam is the owner: a game designer, not a programmer.
-He runs several sessions at once and skims.
+Seal the Deal is made by a small team: Adam, Alex and Harvey.
+**Nobody owns the design alone. Design is a group decision.**
+Most of the team run several sessions at once and skim.
 
-**Report to the human you are working for.** For Adam's sessions, that is Adam. For a collaborator's agent, it is that collaborator.
-The shape and reporting rules below apply to every human; "he" below means Adam, and a collaborator can set their own preferences in their personal tool config.
+**Report to the human you are working for**: whoever runs your session.
+The shape and reporting rules below apply to every human; each can set their own preferences in their personal tool config.
 
-**Release risks always reach Adam**, whoever you work for: anything that threatens 29 Oct or 7 Oct (§2), scope creep, or a change to netcode authority (§3).
-Add a line under **Release risks** in [docs/WORKBOARD.md](docs/WORKBOARD.md), commit it, and tell your human to push it and tell Adam.
-Design questions (§7) also go to Adam, through your human; don't settle them with your human alone.
+**Release risks reach the whole team**, whoever you work for: anything that threatens 29 Oct or 7 Oct (§2), scope creep, or a change to netcode authority (§3).
+Add a line under **Release risks** in [docs/WORKBOARD.md](docs/WORKBOARD.md), commit it, and tell your human to push it and tell the rest of the team.
+Design questions (§7) are for the team to decide together. Your human takes them to the others; don't treat one person's answer as the team's unless your human says it is agreed.
 
 ### Shape
 
-- **One sentence per line, with a blank line between lines.** He scans the left edge for the line that matters; a dense paragraph has to be read whole first.
-- **Bold the few words that carry the reply**: what landed, the decision he must make, the risk he is carrying. Reading only the bold should still give the reply. When everything is bold, nothing is.
+- **One sentence per line, with a blank line between lines.** Your human scans the left edge for the line that matters; a dense paragraph has to be read whole first.
+- **Bold the few words that carry the reply**: what landed, the decision they must make, the risk they are carrying. Reading only the bold should still give the reply. When everything is bold, nothing is.
 - **Short is the standard.** A status reply is about 5–10 lines, one line per landed thing. A table only when there are numbers to line up.
 - State the finding, not the reasoning that produced it. The commit body and the docs hold the reasoning; point at them.
-- Cut every recap: of the request, of a decision already made, and above all of a finding already reported. Once told, he has it.
+- Cut every recap: of the request, of a decision already made, and above all of a finding already reported. Once told, they have it.
 - End with one line for what is next. No menu of options, no offer to explain further.
-- **Do not over-correct into terse-and-useless.** The budget stretches for a decision he must make, a number that changes what he does, or a risk he doesn't know he is carrying. Spend extra lines on those and nothing else.
+- **Do not over-correct into terse-and-useless.** The budget stretches for a decision they must make, a number that changes what they do, or a risk they don't know they are carrying. Spend extra lines on those and nothing else.
 - Lead with what changes in the game, then the mechanism. Name files and Inspector values; skip call stacks unless asked.
 
 ### What must be reported
@@ -42,11 +43,11 @@ Design questions (§7) also go to Adam, through your human; don't settle them wi
 
 ### What must not be reported
 
-- Paths in the working tree you did not touch. The tree is usually dirty with his own work; see §9.
+- Paths in the working tree you did not touch. The tree is usually dirty with other people's work; see §9.
 
 ### Naming things
 
-- Name a commit by its subject line in quotes: "Add Close the Deal GDD and update README to the new design". Add the hash only when he needs it to act (a cherry-pick, a bisect range), never as the sole identifier.
+- Name a commit by its subject line in quotes: "Add Close the Deal GDD and update README to the new design". Add the hash only when they need it to act (a cherry-pick, a bisect range), never as the sole identifier.
 - Every repo path in chat is a clickable markdown link, folders included, with `:line` when a line is meant.
 
 ### Narrating edits
@@ -60,7 +61,7 @@ Release is **Thu 29 Oct 2026**, Steam Early Access, and it cannot move.
 The store page submission on **7 Oct** cannot slip either: it starts the 14-day Coming Soon clock.
 
 - The v1 launch scope in [docs/GDD.md](docs/GDD.md) is the contract. Anything not on it is roadmap.
-- **If a request adds work outside v1 scope, say so in one line and ask** before building it. Don't refuse; the owner decides.
+- **If a request adds work outside v1 scope, say so in one line and ask** before building it. Don't refuse; the team decides.
 - Prefer the smallest version that feels good in a playtest over the general system. Build for teams of 1–4 (up to 8 players); tune for 2v2 first, and test 4v4 before release. Free-for-all is roadmap; don't build for it yet.
 - Asset-store packs and existing Unity packages beat hand-rolled systems. Say which one you'd use before writing a replacement.
 - When a task is running long, report where it stands and what cutting it would cost, rather than going quiet.
@@ -124,7 +125,7 @@ Character and prop sizes are recorded in the owning system doc once measured; th
 
 Docs are the source of truth.
 
-- [docs/GDD.md](docs/GDD.md) owns design: the loop, the buildings, weapons, v1 scope, roadmap and open questions. Only the owner changes design; ask about an undecided rule rather than inventing one.
+- [docs/GDD.md](docs/GDD.md) owns design: the loop, the buildings, weapons, v1 scope, roadmap and open questions. Design changes are a team decision: ask about an undecided rule rather than inventing one, and change the GDD only when your human says the team has agreed.
 - One current doc per system in `docs/systems/` (created when a system first needs one), named `SCREAMING_SNAKE.md`. It opens with **Status:** (Current / Target / Archived), **Last updated:**, and a few lines on what the player sees.
 - [docs/FEATURES.md](docs/FEATURES.md) is the master feature tracker and documentation index. Update its row (status, verification state, doc link, open gaps) whenever a feature lands, changes state, or is verified in play.
 - Plans, briefs and handovers are temporary. When work lands or is dropped, move them to `docs/archive/` in the same commit with a one-line outcome.
@@ -146,7 +147,7 @@ Docs are the source of truth.
 - **Automated tests are opt-in.** Don't propose, write or run test work unless asked.
 - Without requested tests, report what static or manual validation you did, with exact commands and results.
 - Never claim Play Mode, feel, multiplayer, Steam or performance results you did not observe. Compiling is not playing; one instance is not multiplayer.
-- The owner plays each piece as it lands, so docs carry no "built but unplayed" state.
+- The team plays each piece as it lands, so docs carry no "built but unplayed" state.
 - **Find why a bug happens before calling a change a fix.** Null checks, try/catch, delays, clamps and retries don't fix an unexplained cause. A network bug "fixed" by a delay is not fixed.
 - A necessary temporary workaround is labelled in the report, commented at the code site with the real fix, and listed in the system doc's known limitations. Never stack workarounds.
 - Don't ask permission for routine implementation choices the task already covers. Ask when a gameplay decision or new authorisation is missing.
@@ -174,15 +175,15 @@ The `commit-msg` hook in [tools/git-hooks/](tools/git-hooks/) strips these lines
 
 ## 10. Project map
 
-Two teams of 1–4 race up side-by-side skyscrapers, fighting through the windows. Unity 6000.4.8f1 (URP), FishNet + FishySteamworks, host-authoritative P2P over Steam.
+Two firms of 1–4 fight over one briefcase, floor by floor, up one office building: the floor race ([FLOOR_RACE.md](docs/systems/FLOOR_RACE.md)). The two-tower mode it replaced was removed from the code on 2026-11-22; the GDD still describes it. Unity 6000.4.8f1 (URP), FishNet + FishySteamworks, host-authoritative P2P over Steam.
 
 Everything of ours lives under `Assets/_Project/`. Update this section when it changes.
 
-- Gameplay code: `Assets/_Project/Scripts/<System>/`, namespace `CloseTheDeal.<System>`. Existing: `Audio/` (central `SoundSystem`, Steam Audio HRTF, and raycast wall/floor occlusion, see [AUDIO.md](docs/systems/AUDIO.md)), `Net/` (Steam, lobby; `Net/Switchboard/` is the budgeted prop stream, see [SWITCHBOARD.md](docs/systems/SWITCHBOARD.md)), `Player/` (predicted body, camera, input, a ragdoll body chasing animation clips; `Player/Viewmodel/` is the first-person arms and held weapon, see [VIEWMODEL.md](docs/systems/VIEWMODEL.md)), `Combat/` (knockback), `Voice/` (proximity voice chat: our own capture, packets and playback, with Opus and RNNoise from `Assets/Plugins/`, see [VOICE.md](docs/systems/VOICE.md)), `Tower/` (seeded buildings, team spawns, locked doors), `Props/` (host-simulated furniture), `UI/`, `Integration/` (the glue that plays the lanes as one game; its scene `Lane_Integration.unity` was deleted on 2026-11-22, see [INTEGRATION.md](docs/systems/INTEGRATION.md)).
+- Gameplay code: `Assets/_Project/Scripts/<System>/`, namespace `CloseTheDeal.<System>`. Existing: `Audio/` (central `SoundSystem`, Steam Audio HRTF, and raycast wall/floor occlusion, see [AUDIO.md](docs/systems/AUDIO.md)), `Net/` (Steam, lobby; `Net/Switchboard/` is the budgeted prop stream, see [SWITCHBOARD.md](docs/systems/SWITCHBOARD.md)), `Player/` (predicted body, camera, input, a ragdoll body chasing animation clips; `Player/Viewmodel/` is the first-person arms and held weapon, see [VIEWMODEL.md](docs/systems/VIEWMODEL.md)), `Combat/` (knockback), `Voice/` (proximity voice chat: our own capture, packets and playback, with Opus and RNNoise from `Assets/Plugins/`, see [VOICE.md](docs/systems/VOICE.md)), `Tower/` (only `TeamSpawner`, which seats players in the two firms), `Match/` (the briefcase and match phases shared by game modes, see [MATCH.md](docs/systems/MATCH.md)), `Props/` (host-simulated furniture), `UI/`, `Integration/` (gun pickups and the shared-hands rule, used by the floor race; the reception flow in it has no scene, see [INTEGRATION.md](docs/systems/INTEGRATION.md)).
+- Floor race (the main mode): `FloorGen/` is the pure floor generator, seed and floor number in, layout out, no scene objects ([FLOOR_GEN.md](docs/systems/FLOOR_GEN.md)). Its tuning asset is `Assets/_Project/Profiles/FloorRace/FloorGen.asset`. `FloorRace/` holds the mode: `FloorRaceDirector` (the host's rules and the one synced state value), its HUD, `FloorBuilder`, which builds one generated floor from kit prefabs and tears it down, and `FloorKit` (`Profiles/FloorRace/FloorKit.asset`), the list of which kit prefab is which piece. Tuning is `Profiles/FloorRace/FloorRace.asset`. The mode plugs into `MatchDirector` through `IMatchRuleset` (`Match/MatchRuleset.cs`), so the briefcase and phases are shared with the tower mode. Its scene is `Assets/_Project/Scenes/FloorRace.unity`, written by `Seal the Deal > Floor Race > Build Scene` (never edit it by hand; floors exist only in play). It is not in the build's scene list yet: `StandaloneBuild.cs` still builds KitOffice. Screenshots from its two-instance check are in `docs/proof/`. Menus under `Seal the Deal > Floor Race` (`Assets/_Project/Editor/FloorRace/`): `Render Layout Previews` draws layouts to `Temp/FloorGen/` and sweeps the generator's checks, `Fill Floor Kit` fills the kit list's empty slots, `Measure Floor Build (Play Mode)` times building and reads draw calls. The mode's rules are in [FLOOR_RACE.md](docs/systems/FLOOR_RACE.md).
 - Prefabs: `Assets/_Project/Prefabs/`. `Player.prefab` is the networked player; `Props/` holds the furniture. All are generated by the greybox tool (`Seal the Deal > Greybox > Rebuild Everything` redoes the lot). A designer or artist takes one over just by editing it: the rebuilds then leave it alone (§4). Until then, change the tool rather than the prefab.
 - Tuning assets: `Assets/_Project/Profiles/` (designer-owned ScriptableObjects, §4). Physics materials: `Assets/_Project/Physics/`.
-- Floor templates: `Assets/_Project/Floors/`, one prefab per template, generated by `Seal the Deal > Greybox > Rebuild Floor Templates` until an artist edits or replaces them (an edited one is never rebuilt over). Convention in [docs/systems/TOWER.md](docs/systems/TOWER.md).
-- Scenes: `Assets/_Project/Scenes/`. Only two are kept. `KitOffice.unity` is the art kit's two-storey office floor (the L2 twin-core court, see [ArtSource/Kit/README.md](ArtSource/Kit/README.md)) and the only scene in the build. `WeaponTest.unity` is a generated copy of it for trying guns on player-body targets from the roof (rebuild with `Seal the Deal > Dev > Build Weapon Test Scene`, never edit; see [WEAPONS.md](docs/systems/WEAPONS.md)). The greybox, kit-test and lane scenes were deleted on 2026-11-22; the three tools that could do nothing else went with them (`GreyboxUiPreview`, `TitleLaneSetup`, `TitleLanePlayCheck`). The rest of `Editor/Greybox/` and `Editor/Lanes/`, `Import Kit and Build Test Scene`, and the UI kit and glass captures also generate prefabs and assets the kept scenes use, so they stay; their scene steps still name the deleted scenes and write a fresh scene or fail if run. Don't commit a backup copy of a scene: git history is the backup.
+- Scenes: `Assets/_Project/Scenes/`. Three are kept. `FloorRace.unity` is the game (see the floor race line above). `KitOffice.unity` is the art kit's two-storey office floor (the L2 twin-core court, see [ArtSource/Kit/README.md](ArtSource/Kit/README.md)) and the only scene in the build. `WeaponTest.unity` is a generated copy of it for trying guns on player-body targets from the roof (rebuild with `Seal the Deal > Dev > Build Weapon Test Scene`, never edit; see [WEAPONS.md](docs/systems/WEAPONS.md)). The greybox, kit-test and lane scenes were deleted on 2026-11-22; the three tools that could do nothing else went with them (`GreyboxUiPreview`, `TitleLaneSetup`, `TitleLanePlayCheck`). The rest of `Editor/Greybox/` and `Editor/Lanes/`, `Import Kit and Build Test Scene`, and the UI kit and glass captures also generate prefabs and assets the kept scenes use, so they stay; their scene steps still name the deleted scenes and write a fresh scene or fail if run. Don't commit a backup copy of a scene: git history is the backup.
 - Editor tools: `Assets/_Project/Editor/`, menu-invoked only. `Seal the Deal > Greybox > Set Up Scene` adds anything missing from the greybox scene and never rebuilds what exists. `Rebuild Game UI` regenerates the menu and HUD after asking. `Seal the Deal > Art > Apply Office Look` gives the open scene the art bible's sky, sun, ambient light, haze and post-processing after asking (the sky is the shader `Close the Deal/Office Sky` in `Assets/_Project/Art/Sky/`, see [SKY.md](docs/systems/SKY.md)); tune the look in `Assets/_Project/Art/Look/` (the tool never overwrites those once edited), and re-apply it after `Import Kit and Build Test Scene` rebuilds KitTest. Characters use the cel shader `Close the Deal/Character Toon` in `Assets/_Project/Art/Toon/`; `Seal the Deal > Art > Build Character Toon Materials` writes its starter materials, and the greybox tool nests the character model `Assets/_Project/Art/Characters/STDMC/STDMC_Toon.prefab` in `Player.prefab` as its body (shader and tuning: [CHARACTER_SHADER.md](docs/systems/CHARACTER_SHADER.md)).
 - Players flinch when hit (the host calls `PlayerHits.Strike`; `Seal the Deal > Greybox > Add Hit Reactions to Player` puts it on an existing `Player.prefab`). Hit reactions are tried on a test dummy: `Seal the Deal > Dev > Place Hit Dummy` puts one in the open scene and `Seal the Deal > Dev > Hit Bench` hits it while playing (tools in `Assets/_Project/Editor/Dev/`, see [HIT_REACTIONS.md](docs/systems/HIT_REACTIONS.md)).
 - UI text is TextMeshPro; its essentials live in `Assets/TextMesh Pro/` (committed, vendor content).
@@ -210,7 +211,7 @@ Several people's agents, in different tools, work on this repo. These files are 
 
 - **[docs/notes/](docs/notes/)**: durable facts about the project and the people that aren't obvious from code or docs (a preference, a constraint, a lesson). One fact per file, indexed in [docs/notes/INDEX.md](docs/notes/INDEX.md). Read the index at the start of a session. Update a note rather than adding a duplicate; delete one that turns out wrong.
 - **[docs/DECISIONS.md](docs/DECISIONS.md)**: one dated line per technical or process decision: what, who decided, link to the commit or doc. Check it before reopening a question. Design decisions go in the GDD, not here (§7).
-- **[docs/WORKBOARD.md](docs/WORKBOARD.md)**: who is working on what right now, which scenes and prefabs they have claimed, and the **Release risks** list Adam reads (§1). Add your line when you start, remove it when the work lands or stops. A claim only counts once it is pushed, so ask your human to push it. Don't edit someone else's line; ask them through your human.
+- **[docs/WORKBOARD.md](docs/WORKBOARD.md)**: who is working on what right now, which scenes and prefabs they have claimed, and the **Release risks** list the whole team reads (§1). Add your line when you start, remove it when the work lands or stops. A claim only counts once it is pushed, so ask your human to push it. Don't edit someone else's line; ask them through your human.
 - **Handovers**: when you stop with work unfinished, copy [docs/HANDOVER_TEMPLATE.md](docs/HANDOVER_TEMPLATE.md) to `docs/HANDOVER_<topic>.md` and fill it in. The next agent reads it first. When the work lands or is dropped, move it to `docs/archive/` (§7).
 - Board and note edits are small commits of their own (staging rules from §9 still apply), so they don't get stuck behind unfinished code.
 

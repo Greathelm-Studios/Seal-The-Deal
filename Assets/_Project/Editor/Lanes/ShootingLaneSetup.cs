@@ -9,7 +9,6 @@ using CloseTheDeal.Glass;
 using CloseTheDeal.Net;
 using CloseTheDeal.Player;
 using CloseTheDeal.Props;
-using CloseTheDeal.Tower;
 using CloseTheDeal.UI;
 using CloseTheDeal.Editor.UI;
 using System.Linq;
@@ -32,7 +31,6 @@ namespace CloseTheDeal.Editor.Lanes
 
         const string ScenePath = "Assets/_Project/Scenes/Lanes/Lane_Shooting.unity";
         const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player.prefab";
-        const string DoorPrefabPath = "Assets/_Project/Prefabs/Props/LockedDoor.prefab";
         const string ChairPrefabPath = "Assets/_Project/Prefabs/Props/Chair.prefab";
         const string WeaponProfileFolder = "Assets/_Project/Profiles/Weapons";
         const string GlassProfileFolder = "Assets/_Project/Profiles/Glass";
@@ -309,7 +307,6 @@ namespace CloseTheDeal.Editor.Lanes
         {
             LaneAssets assets = EnsureAssets();
             PatchPlayerPrefab(assets);
-            PatchDoorPrefab();
             BuildScene(assets);
             AssetDatabase.SaveAssets();
             Debug.Log("[Shooting Lane] Set up: assets, Player.prefab and " + ScenePath + ".");
@@ -934,33 +931,6 @@ namespace CloseTheDeal.Editor.Lanes
                 p.intValue = value;
         }
 
-        static void PatchDoorPrefab()
-        {
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(DoorPrefabPath) == null)
-            {
-                Debug.Log("[Shooting Lane] No LockedDoor.prefab here yet; run this menu again once the greybox tool has made it, or bullets won't hurt doors.");
-                return;
-            }
-
-            bool toolOwned = IsToolOwned(DoorPrefabPath);
-            GameObject root = PrefabUtility.LoadPrefabContents(DoorPrefabPath);
-            try
-            {
-                if (root.GetComponent<DoorDamage>() == null && root.GetComponent<BreakableDoor>() != null)
-                {
-                    root.AddComponent<DoorDamage>();
-                    PrefabUtility.SaveAsPrefabAsset(root, DoorPrefabPath);
-                }
-            }
-            finally
-            {
-                PrefabUtility.UnloadPrefabContents(root);
-            }
-
-            if (toolOwned)
-                GeneratedAssetGuard.MarkGenerated(AssetDatabase.LoadMainAssetAtPath(DoorPrefabPath));
-        }
-
         static bool IsToolOwned(string path)
         {
             LogType saved = Debug.unityLogger.filterLogType;
@@ -1321,7 +1291,7 @@ namespace CloseTheDeal.Editor.Lanes
             PlayerInputReader.ScriptedCapture = true;
             Routines.Clear();
             UsePort();
-            Routines.Push(_role == "client" ? ClientRoutine() : _role == "panes" ? PaneCountRoutine() : _role == "hud" ? HudRoutine() : HostRoutine(SessionState.GetBool(WithClientKey, false)));
+            Routines.Push(_role == "client" ? ClientRoutine() : _role == "hud" ? HudRoutine() : HostRoutine(SessionState.GetBool(WithClientKey, false)));
             EditorApplication.update += Step;
             Log($"=== Shooting self-check, role {_role}, Unity {Application.unityVersion} ===");
         }
@@ -1930,52 +1900,6 @@ namespace CloseTheDeal.Editor.Lanes
             Flag("host_kill_done");
 
             yield return Until(() => HasFlagFile("client_done"), 180f, "the client to finish");
-        }
-
-        static IEnumerator PaneCountRoutine()
-        {
-            SteamLobby lobby = null;
-            yield return Until(() => (lobby = Object.FindAnyObjectByType<SteamLobby>()) != null && lobby.Ready, 30f, "lobby ready");
-            lobby.Host();
-            yield return Until(() => GlassRegistry.Instance != null && (TowerBuilder.Instance == null || TowerBuilder.Instance.IsBuilt), 60f, "towers built");
-            yield return Seconds(2f);
-
-            GlassRegistry glass = GlassRegistry.Instance;
-            GlassPane[] panes = Object.FindObjectsByType<GlassPane>(FindObjectsSortMode.None);
-            int inTowers = 0;
-            GlassPane sample = null;
-            foreach (GlassPane pane in panes)
-            {
-                if (TowerBuilder.Instance == null || !pane.transform.IsChildOf(TowerBuilder.Instance.transform))
-                    continue;
-                inTowers++;
-                if (sample == null)
-                    sample = pane;
-            }
-
-            Log($"PANES registry {glass.PaneCount}, in the towers {inTowers}, scene {UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
-            Check("this scene's towers contain breakable glass (none means the floor templates have no panes, not a fault here)", inTowers > 0, $"{inTowers} panes in the towers; first: {(sample != null ? sample.transform.parent.name + "/" + sample.name : "none")}");
-            if (sample == null)
-                yield break;
-
-            Vector3 from = sample.Centre + sample.Normal * 2f;
-            bool blocks = Physics.Raycast(from, -sample.Normal, out RaycastHit hit, 4f, ~0, QueryTriggerInteraction.Ignore) && GlassPane.TryFind(hit.collider, out GlassPane hitPane) && hitPane == sample;
-            Check("an intact tower window stops a ray (people and things)", blocks, $"ray from 2 m out hit {(hit.collider != null ? hit.collider.name : "nothing")}");
-
-            int before = glass.BrokenCount;
-            sample.ApplyDamage(10f, sample.Centre, -sample.Normal, -1);
-            yield return Frames(3);
-            bool through = !Physics.Raycast(from, -sample.Normal, out RaycastHit after, 2.2f, ~0, QueryTriggerInteraction.Ignore) || after.collider == null || !GlassPane.TryFind(after.collider, out _);
-            Check("a shot tower window breaks for the match and lets things through", sample.IsBroken && glass.BrokenCount == before + 1 && through, $"broken {sample.IsBroken}, registry {before} -> {glass.BrokenCount}");
-
-            // A rematch builds new towers that number their panes the same way: they must come up whole.
-            Vector3 where = sample.Centre;
-            TowerBuilder.Instance.Rebuild();
-            yield return Until(() => TowerBuilder.Instance.IsBuilt, 30f, "the rebuilt towers");
-            yield return Seconds(1f);
-            GlassPane again = PaneNear(where);
-            Check("a rematch's new towers start with every pane whole", glass.BrokenCount == 0 && again != null && !again.IsBroken && HiddenPanes() == 0,
-                $"registry {glass.BrokenCount} broken, the same window now broken {again?.IsBroken}, hidden panes {HiddenPanes()}");
         }
 
         static IEnumerator ClientRoutine()

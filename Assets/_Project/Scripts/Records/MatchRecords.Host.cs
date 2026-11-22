@@ -104,7 +104,6 @@ namespace CloseTheDeal.Records
         {
             match.OnPhaseChanged += HostPhaseChanged;
             match.OnBriefcaseChanged += HostBriefcaseChanged;
-            match.OnFloorOpened += HostFloorOpened;
             match.OnClosed += HostClosed;
         }
 
@@ -112,7 +111,6 @@ namespace CloseTheDeal.Records
         {
             match.OnPhaseChanged -= HostPhaseChanged;
             match.OnBriefcaseChanged -= HostBriefcaseChanged;
-            match.OnFloorOpened -= HostFloorOpened;
             match.OnClosed -= HostClosed;
         }
 
@@ -427,17 +425,6 @@ namespace CloseTheDeal.Records
 
         float CarriedSoFar(int clientId) => _carried.TryGetValue(clientId, out float seconds) ? seconds : 0f;
 
-        void HostFloorOpened(int floor, int byFirm)
-        {
-            if (!IsHostCounting || _carrierClient < 0 || !_tally.TryGetValue(_carrierClient, out MatchLine line))
-                return;
-
-            line.FloorsOpened = Add(line.FloorsOpened);
-            if (floor > line.BestFloor)
-                line.BestFloor = (byte)Mathf.Min(floor, byte.MaxValue);
-            HostPut(line);
-        }
-
         void HostItemTaken(ItemCarrier carrier, Pickup pickup)
         {
             if (!IsHostCounting)
@@ -492,7 +479,7 @@ namespace CloseTheDeal.Records
                     continue;
 
                 // A late joiner's line is made before the host seats them in a firm; correct it once that lands.
-                int floor = _match.Arena.FloorOf(member.Position);
+                int floor = MatchDirector.Ruleset != null ? MatchDirector.Ruleset.CurrentFloor : 0;
                 bool firmMoved = line.Firm != member.Firm;
                 if (floor <= line.BestFloor && !firmMoved)
                     continue;

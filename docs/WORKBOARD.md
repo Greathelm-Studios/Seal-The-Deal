@@ -4,7 +4,7 @@ Who is working on what right now. Rules: [AGENTS.md](../AGENTS.md) §12. A line 
 
 ## Release risks
 
-Anything that threatens 7 Oct or 29 Oct, scope creep, or a change to netcode authority. Adam reads this. Date each line and say who raised it; Adam removes it once handled.
+Anything that threatens 7 Oct or 29 Oct, scope creep, or a change to netcode authority. The whole team reads this. Date each line and say who raised it; whoever handles it removes it.
 
 - 2026-10-03, Adam's Claude session: **v1 now supports up to 8 players (1–4 per team), not 2v2.** Netcode and props sync were budgeted for 4; 8 doubles player traffic and the bodies throwing furniture. Needs a 4v4 test over Steam well before 29 Oct. Locked doors and central spiral stairs are new floor-template work too.
 - 2026-11-13, Harvey's Claude session: **prop sync on main is new and has never been seen from a client.** Props now move through Switchboard instead of FishNet's NetworkTransform ([systems/SWITCHBOARD.md](systems/SWITCHBOARD.md)). It compiles; nobody has played it. Needs one editor-plus-build session with furniture being blasted before anything is built on it. Host authority is unchanged. To go back, revert the commit "Move prop sync to Switchboard".
@@ -16,7 +16,6 @@ Anything that threatens 7 Oct or 29 Oct, scope creep, or a change to netcode aut
 
 - 2026-11-22, Alex's Claude session: **all twelve office posters now use downloaded CC0 images, none AI-generated** (wallpapers from "Frutiger Aero Wallpapers" by KnightAnNi, itch.io), and Alex wants more free-licence Frutiger Aero visuals for the office. GDD line 144 says all shipped art is original, so it is a stand-in until Adam decides whether outside images may ship. Record: [ArtSource/Kit/posters/LICENCES.md](../ArtSource/Kit/posters/LICENCES.md).
 - 2026-11-22, Harvey's Antigravity session: **Steam Audio 4.8.1 added for HRTF spatial audio.** Adds native binaural spatializer binaries for Windows x64 and macOS in `Assets/Plugins/SteamAudio/` (Apache 2.0): its licence text (`LICENSE.md` and `THIRDPARTY.md`) must be included in the credits screen or shipped beside the build before release. No netcode authority change; compiled only and needs a headphone listening pass with proximity voice chat. Details: [systems/AUDIO.md](systems/AUDIO.md).
-- 2026-11-22, Harvey's Claude session: **Harvey has described a different main mode from the one built and in the GDD.** Each firm carries its own briefcase up one shared building, floors are random with hidden stairs, and some floors have a lift that a keycard opens. It replaces the shared briefcase and twin towers and drops the window fights across the street. Written up as a Target proposal with open questions in [systems/FLOOR_RACE.md](systems/FLOOR_RACE.md). Needs Adam's yes before anything is built.
 
 ## In progress
 

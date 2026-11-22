@@ -39,7 +39,7 @@ Not yet verified over Steam or under real network latency across multiple comput
 
 ## Loose guns in a scene with no tower
 
-`LooseGunSpawns` (`Scripts/Integration/`) is a host-only component holding a list of spots (a child `Transform` plus which gun from `GunPickupMap`). On server start it spawns the mapped pickup prefab at each spot through FishNet, the same way `FloorLoot` does, and spawns a new one `_respawnSeconds` after a gun is taken (0 = never). Move a spot by moving its child object. When a swapped-out gun drops and the scene has no `FloorLoot`, `GunPickups` drops it through `LooseGunSpawns.ServerSpawnLoose` instead; a swapped-out gun is not put back. `Lane_Integration.unity` is unchanged: it has `FloorLoot` and no `LooseGunSpawns`.
+`LooseGunSpawns` (`Scripts/Integration/`) is a host-only component holding a list of spots (a child `Transform` plus which gun from `GunPickupMap`). On server start it spawns the mapped pickup prefab at each spot through FishNet, and spawns a new one `_respawnSeconds` after a gun is taken (0 = never). Move a spot by moving its child object. When a swapped-out gun drops and no mode has set `GunPickups.SpawnLoose` (the floor race sets it), `GunPickups` drops it through `LooseGunSpawns.ServerSpawnLoose` instead; a swapped-out gun is not put back.
 
 Add it to KitOffice with **Seal the Deal > Art > Add Gun Pickups To KitOffice** (with `KitOffice.unity` open). It adds only what is missing (`GunPickups`, `SharedHands`, `LooseGunSpawns` with four default spots, the item HUD), never moves or rebuilds what exists, and leaves the scene unsaved.
 

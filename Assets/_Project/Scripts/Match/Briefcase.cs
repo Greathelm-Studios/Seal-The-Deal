@@ -52,6 +52,7 @@ namespace CloseTheDeal.MatchMode
         float _shownFade = -1f;
 
         BriefcaseState _state;
+        BriefcaseStatus _status;
         byte _tintFirm = MatchDirector.NoFirm;
         FirmMember _carrier;
         int _carrierId;
@@ -60,7 +61,6 @@ namespace CloseTheDeal.MatchMode
         Quaternion _blendFromRotation;
 
         internal int StrayTicks;
-        internal uint ReturnAtTick;
         internal Vector3 LastCarrierPosition;
 
         /// <summary>World-space centre of the case.</summary>
@@ -84,7 +84,6 @@ namespace CloseTheDeal.MatchMode
         {
             base.OnStartServer();
             StrayTicks = 0;
-            ReturnAtTick = 0;
             Register();
         }
 
@@ -123,11 +122,11 @@ namespace CloseTheDeal.MatchMode
         {
             BriefcaseState previous = _state;
             _state = status.State;
+            _status = status;
             bool handsChanged = (previous == BriefcaseState.Carried) != (status.State == BriefcaseState.Carried);
-            if (handsChanged && status.State != BriefcaseState.Returning)
+            if (handsChanged)
                 _popStarted = Time.unscaledTime;
             _collider.enabled = status.State == BriefcaseState.Dropped;
-            _visual.gameObject.SetActive(status.State != BriefcaseState.Returning);
             _tintFirm = status.State == BriefcaseState.Carried ? status.CarrierFirm : MatchDirector.NoFirm;
             RefreshTint();
             RefreshBeaconColour();
@@ -288,7 +287,9 @@ namespace CloseTheDeal.MatchMode
         float BeaconFade(MatchDirector match, Vector3 viewer, Vector3 foot)
         {
             bool mine = _state == BriefcaseState.Carried && _carrier != null && _carrier == FirmMember.Local;
-            if (!match.IsLive || _state == BriefcaseState.Returning || mine)
+            if (!match.IsLive || mine)
+                return 0f;
+            if (MatchDirector.Ruleset != null && MatchDirector.Ruleset.BriefcaseHidden(_status))
                 return 0f;
 
             float range = match.Profile.BeaconRange;

@@ -874,16 +874,6 @@ namespace CloseTheDeal.Combat
             if (shot.Solid == null)
                 return;
 
-            if (DoorDamage.TryFind(shot.Solid, out DoorDamage door))
-            {
-                if (door.IsBroken)
-                    return;
-
-                door.ApplyDamage(damage, shot.End, direction, OwnerId);
-                ConfirmHit(false, false);
-                return;
-            }
-
             IDamageable target = null;
             if (!shot.Solid.TryGetComponent(out target))
             {

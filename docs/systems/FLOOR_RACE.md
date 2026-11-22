@@ -1,88 +1,179 @@
 # FLOOR_RACE
 
-**Status:** Target · **Last updated:** 2026-11-22
+**Status:** Current · **Last updated:** 2026-11-22
 
-The main game mode, as Harvey described it on 2026-11-22. Nothing in this doc is built yet. It is a proposal until Adam signs it off: the design in [GDD.md](../GDD.md) and the mode now in the code ([MATCH.md](MATCH.md)) still describe two towers and one shared briefcase.
+The main game mode, decided by Harvey on 2026-11-22. It is built, and a whole match has been driven by script with a second player watching from a client build. No person has played it yet. What has been checked, and how, is under "Checked so far".
+
+It replaced the two-tower design, whose code was removed on 2026-11-22. [GDD.md](../GDD.md) still describes two towers; going to one building drops the window fights across the street and the zipline raid.
 
 ## What the player sees
 
-Two firms race up the same office building, one floor at a time. Each firm has its own briefcase, and a firm can only climb when its briefcase goes up with it.
+Two firms fight over one briefcase in one office building. The only way up is the floor's lift, and only the briefcase can take you there.
 
-Every floor is new. The layout is put together at random from a set of authored pieces, so nobody knows where the stairs are until they find them. Both firms arrive on the same floor and search it at the same time, fighting over the same rooms, weapons and office props.
+On the first floor nobody knows where the briefcase or the lift is. Both firms search, and the first to find the briefcase has to get it to the lift. When the carrier and every surviving teammate are inside, the doors close and the floor ends.
 
-Some floors have a lift. If a firm finds that floor's lift keycard, it can take the lift up and skip searching for the stairs. There is only one keycard, and the other firm is looking for it too.
+From then on, the firm that took the briefcase up starts the next floor holding it, behind closed lift doors, while the other firm gets a head start on the floor. The other firm has to take the briefcase off them and get it to that floor's lift instead. The briefcase can change hands any number of times.
 
-The first firm to bring its briefcase to the top wins.
+Floors 1 to 9 are random layouts built from the KitOffice kit ([FLOOR_GEN.md](FLOOR_GEN.md)). Floor 10 holds the manager's office. The firm that carries the briefcase into that office wins.
 
 ## The rules
 
-### Briefcases
+Values in `code font` are on `Assets/_Project/Profiles/FloorRace/FloorRace.asset` unless another asset is named.
 
-- Each firm starts the match with its own briefcase. One player carries it, and any teammate can pick it up when it is dropped.
-- **The briefcase is the firm's ticket up.** A firm's players cannot go above the highest floor its briefcase has reached. When the carrier goes up the stairs or the lift, that floor opens for the whole firm.
-- When the carrier is killed, knocked out or blown out of a window, the briefcase drops where they were.
-- The case shows on screen in the firm's colour, with a beacon through walls so teammates can find a dropped one. The current briefcase already does this ([MATCH.md](MATCH.md)), and each firm would keep it.
+### The briefcase
 
-### Floors
+- There is one briefcase in the match.
+- On floor 1 it lies at a hidden spot the layout picks. Its beacon and screen marker stay off until someone first picks it up.
+- On every later floor it starts in the hands of the firm that brought it up: whoever held it when the lift filled, or a teammate if that player has left.
+- When the carrier dies or is knocked down, the briefcase drops where they fell. Anyone can pick it up, from either firm.
+- If it leaves the building (out of a window, or through the floor) for `Stray Seconds` (2, on the match profile), it is put back at the spawn spot nearest where it was last inside.
+- The case keeps its look and beacon from [MATCH.md](MATCH.md): firm colour on screen, and a glow through walls so a dropped case can be found.
 
-- Each floor is built from a **layout set**: the outer shell is the same on every floor, and the rooms, walls and routes inside it are picked at random from authored templates.
-- **The way up is hidden.** Each layout has several places where stairs could go. On each floor the seed picks one of them for the real stairs, and the rest are walls, locked rooms or dead ends. Players have to search the floor to find the stairs.
-- Both firms play the same sequence of floors, so floor 4 has the same layout for both and neither firm gets an easier one.
-- **The number of floors is not decided.** It is a single tunable value (`FloorCount`), so it can be set after playtests. For the old 12 to 15 minute match target, about 60 to 90 seconds per floor means somewhere between 8 and 12 floors.
+### The lift
 
-### The lift and the keycard
+- Floors 1 to 9 have one exit lift, hidden somewhere in the layout. Its doors stand open. Finding it is part of the floor.
+- It leaves when the briefcase carrier **and every living member of the carrier's firm** are inside the car (`Cabin Size`). The host checks ten times a second.
+- Players of the other firm can stand in the car. They do not stop it leaving and they do not ride: everyone is moved to their own start on the next floor.
+- The ride is a transition, not a trip up a shaft: the doors close (`Door Seconds`, 0.8), a floor-change screen covers every player's view while the next floor is built, and play resumes on the new floor.
+- From floor 2 up there is also an arrival lift, where the briefcase firm starts. It never leaves.
+- There are no stairs and no keycard. The lift is the only way up.
 
-- Some floors have a lift. The seed decides which ones, at a tunable rate (for example one floor in three), and never two lift floors in a row.
-- A lift floor has **one keycard**, hidden at one of several authored spots in that layout. It is a normal carried item, so it can be dropped, knocked loose and taken by either firm.
-- A firm that brings its briefcase and the keycard into the lift rides up and skips the search for the stairs. The keycard is used up.
-- The stairs on a lift floor still work. A firm without the card goes on searching for them.
-- The lift is loud. The other firm hears it leave, which matches the GDD's comeback design.
+### Moving up a floor
+
+When the lift doors close, the whole match moves up together.
+
+- **The firm without the briefcase arrives first**, at the layout's walk-in start, and gets `Head Start Seconds` (12) before the arrival lift's doors open.
+- **The firm with the briefcase arrives in the arrival lift.** Teammates who were dead come back inside the car, so the whole firm steps out together.
+- Dead members of the other firm come back too, so both firms start every floor at full strength. Living players keep the health they had.
+- Loot and props from the floor below are removed, and anything in a player's hands is dropped first. Guns in weapon slots are kept.
+- Floors you leave are gone. Nobody can go back down.
+
+### Death and respawn
+
+- A dead player stays down until their whole firm is dead. Then the whole firm comes back together, `Wipe Respawn Seconds` (2) after the last death.
+- There is no limit on how many times a firm can respawn.
+- Falling out of a window counts as a death: a living player outside the walls (plus `Outside Margin`, 0.75 m) for `Fall Seconds` (1.2), or more than `Fall Depth` (3 m) below the floor, is killed.
+- A solo player has no teammates, so their own death wipes the firm and they come back after the same wait. There is no special rule for them.
+- **Respawn spot:** the layout's authored spawn spot nearest the briefcase on foot, at least `Min Case Distance` (6 m) of walking from it, that no living rival is within `Min Rival Distance` (8 m) of or can see within `Sight Range` (40 m). If none passes, the sight check is dropped first, then both. The firm stands in a ring round the chosen spot.
+
+### Floor 10 and the win
+
+- Floor 10's layout is random like the others, but always contains the manager's office, a fixed set piece ([FLOOR_GEN.md](FLOOR_GEN.md)). It has no exit lift.
+- The firm whose living carrier stands inside the office with the briefcase wins.
+- There is no time limit. The HUD shows no clock.
 
 ### Weapons and props
 
-- Weapons, gadgets and office props are scattered over every floor from authored spawn spots in each layout. The seed picks which spots get used and what goes on them.
-- The existing loose items and gadgets in [ITEMS.md](ITEMS.md) and the guns in [WEAPONS.md](WEAPONS.md) make up the loot pool. The per-floor cap on physics props in [PROPS.md](PROPS.md) still applies.
+- Each floor gets `Loot Per Floor` (8) weapons and gadgets, picked by the seed from the `Loot` list (pistol, AR-15, Grenade Case, fire extinguisher, wet floor sign) and laid on the layout's loot spots.
+- Loose chairs, monitors and cabinets stand at the layout's prop spots, 16 at most, the cap in [PROPS.md](PROPS.md).
+- Everyone starts a match with the scene's starting loadout (the pistol) and full health.
 
-### Death, respawn and winning
+### Cash
 
-- A player killed on a floor comes back after the usual delay at their firm's arrival point on the firm's current floor, meaning the highest floor its briefcase has reached.
-- The first firm to carry its briefcase onto the top floor wins. If the clock cap is hit first, the firm on the highest floor wins, and a tie goes to whoever got there first.
-
-## What changes from the current build
-
-| Now ([MATCH.md](MATCH.md), [TOWER.md](TOWER.md)) | Floor race |
-|---|---|
-| Two towers, one for each firm, with a street between them | One building that both firms climb |
-| One shared briefcase that both firms fight over | One briefcase per firm |
-| One open floor for both towers | A separate open floor for each firm |
-| Stairs in the same place on every floor | The stairs move around and have to be found |
-| Lift only in the KitOffice dev scene ([ELEVATOR.md](ELEVATOR.md)) | Lift on some floors, opened by a keycard |
-| Breakable locked doors hold a team on each floor | Searching for the stairs holds a team on each floor; whether locked doors stay is an open question |
-
-Code that carries over as it is: floor gates (one set per firm instead of one shared set), the briefcase's pickup, drop, beacon and carrier rules, seeded floor building, the host-timed lift ride, item and prop spawning, and the clock.
+- Every time a firm takes the briefcase up a floor, every member of that firm earns `Cash Per Floor` (100). Delivering it to the manager's office pays the same again, plus `Win Bonus Cash` (0).
+- The host tells each player what they earned; the player's own machine adds it to the `Cash` total in their profile ([PROFILE.md](PROFILE.md)) and saves.
+- Nothing spends cash yet, and nothing stops a modified client or host from inventing it (see Open questions).
 
 ## Who owns what (`AGENTS.md §3`)
 
-Target design, to be confirmed when the code is written.
+Decided before the code was written. Everything that matters is the host's; clients send input and build the floor locally.
 
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
-| Building seed | Host, once per match | One `uint` | Once |
-| Each floor's layout, stair spot, lift on or off, keycard spot, loot spots | Built on every machine from the seed and the floor number | Nothing | Never |
-| Each firm's briefcase (state, carrier, floor) | Host | One status value per firm, like today's `BriefcaseStatus` | On change |
-| Each firm's open floor | Host | One byte per firm | On change |
-| Keycard (where it is, who holds it, used or not) | Host, as an item ([ITEMS.md](ITEMS.md)) | Normal item state | On change |
-| Lift ride | Host | One ride value per lift, as in [ELEVATOR.md](ELEVATOR.md) | Once per ride |
-| Spawned weapons and props | Host, as today | Normal item and prop streams | Unchanged |
+| Match seed, floor number, stage of the floor (playing, lift leaving, next floor building, head start), the tick the stage began, which firm took the lift | Host (`FloorRaceDirector`) | One `FloorRaceState` value, about 11 bytes | On change: once at match start, then four times per floor gained |
+| Floor layout, lift positions, floor 1 briefcase spot, spawn, loot and prop spots, the manager's office | Built on every machine from the seed and floor number ([FLOOR_GEN.md](FLOOR_GEN.md)) | Nothing | Never |
+| Lift doors (exit lift closing, arrival lift opening) | Worked out on every machine from the stage and its tick | Nothing | Never |
+| Who is aboard the lift | Host checks the car, 10 times a second | Nothing; a HUD counts its own firm's players in the car locally | Never |
+| Transition screen and head start countdown | Worked out on every machine from the stage and its tick | Nothing | Never |
+| Match phase, winner, reason | Host (`MatchDirector`), as today | `MatchSnapshot`, as today | On change |
+| Briefcase (state, carrier, position when loose) | Host (`MatchDirector`, `Briefcase`), as today | `BriefcaseStatus`, and its `NetworkTransform` while it moves loose, as today | On change; 30 Hz only while loose and moving |
+| Deaths | Host (`Health`), as today. In this mode the host holds every respawn | Existing health and death state | On change |
+| Falling out of a window | Host: a living player outside the floor for `Fall Seconds`, or below it, is killed | Arrives as a death | Per fall |
+| Firm wipe and respawn spot | Host counts the dead and picks the spot | Arrives as each player's respawn (existing) and position | Per wipe |
+| Moving players to the next floor | Host teleports every body | Rides each player's own state, as every teleport does | Once per floor |
+| Cash earned | Host awards | One message to each player of the firm (4 bytes) | Once per floor gained |
+| Spawned weapons, gadgets and props | Host spawns them on the new floor and despawns the old floor's | One FishNet spawn each (up to 8 loot and 16 props); motion through Switchboard, as today | Once per floor |
+| Prop stream's packing box | Set on every machine from the plate size and floor count | Nothing | Never |
 
-Floors are never streamed. A floor is built locally once the first firm reaches the floor below it, and torn down once both firms have left it, so only two or three floors exist at a time.
+**Bandwidth, 8 players:** a floor change costs four state values (about 44 bytes to each client), up to 24 spawn messages and 24 despawns, and one cash message per winning player. Nothing in this mode is sent per tick; the only continuous traffic is what was there already (player state, the loose briefcase, moving props).
 
-## Open questions for Adam
+Only one floor is in play at a time. The next floor is built above the old one while the lift leaves (floors stand 9 m apart), everyone is moved up, and the old floor is torn down a second later, so nobody is ever standing on nothing and floor contents are never streamed.
 
-- **One building or two towers?** This doc assumes one building that both firms climb, which matches "another team finding it too" and Alex's L2 layout ([DECISION_L2.md](../../ArtSource/Kit/concepts/Layout/DECISION_L2.md)). This takes away the window fights across the street and the zipline raid, which are two of the GDD's three moments.
-- **What can a rival do with your briefcase?** Can they carry it, kick it, throw it out of a window, or only knock it loose?
-- **How many floors**, and how long should a match take?
-- **How far does the lift go?** One floor, as Harvey described, or several, as the GDD roadmap says?
-- **Do the locked doors stay** now that searching for the stairs holds a team on each floor?
-- **Are there checkpoint floors**, a boardroom fight and a roof, or is it plain floors up to a top floor?
-- **Does the layout mode clash with the L2 plan?** L2 keeps the stairs in two fixed cores on every floor, but here the stairs move. Either L2 gets several stair spots of which only one is real, or the hidden stairs live inside L2's fixed shell.
+## How it is built
+
+- **One state value drives every machine.** `FloorRaceDirector` syncs `FloorRaceState`. Each machine builds the floor the state names, works the lift doors and the floor-change screen out from the stage's tick, and tears the old floor down `Teardown Seconds` after arriving. Nothing else about a floor change is sent.
+- **The stages of a floor change.** Playing, then Departing when the lift fills (doors close), then Building (the floor number goes up; every machine builds the new floor above; players are still on the old one), then, `Build Lead Seconds` (0.5) later, the host moves everyone up and enters HeadStart, then Playing when the head start ends. Building before moving is why nobody falls: the host only moves players once every machine has had time to build.
+- **The match director is shared, the referee is not.** The briefcase, its pick-up and drop, the phases and the result belong to `MatchDirector` ([MATCH.md](MATCH.md)). A mode registers an `IMatchRuleset` and the director hands it the per-tick referee step, the start button and a few HUD words. The floor race is the only ruleset.
+- **Respawns are held, not timed.** `Health.RespawnsHeld` is switched on by the mode on every machine. A dead body stays down until the host calls `Health.ServerRespawnAt`. The down card says so instead of counting.
+- **The prop stream's building.** The prop stream packs positions into a box the mode gives it with `PropStream.UseBuilding`, set once per session to cover the plate and all ten storeys.
+- **Designer-authored against runtime-derived (`AGENTS.md §4`).** Authored: `FloorRace.asset`, `FloorGen.asset`, `FloorKit.asset`, the match profile, the kit prefabs. Derived: the seed, every layout, the built floors, lift door positions, spawn choices.
+
+## Files and setup
+
+- [Assets/_Project/Scripts/FloorRace/](../../Assets/_Project/Scripts/FloorRace/): `FloorRaceDirector.cs` (state, floors, doors, HUD queries), `FloorRaceDirector.Host.cs` (the host's referee and floor change), `FloorRaceSpawns.cs` (smart respawn), `FloorRaceLoot.cs` (loot and props), `FloorRaceHud.cs`, `FloorRaceProfile.cs`, `FloorBuilder.cs`, `FloorKit.cs`.
+- [Assets/_Project/Scripts/Match/MatchRuleset.cs](../../Assets/_Project/Scripts/Match/MatchRuleset.cs): the seam in the match director.
+- **Seal the Deal > Floor Race > Build Scene** ([FloorRaceSceneSetup.cs](../../Assets/_Project/Editor/FloorRace/FloorRaceSceneSetup.cs)) writes `Assets/_Project/Scenes/FloorRace.unity`: the play rig, the office look, the Match with its HUD and menu section, the combat and item HUDs, the Floor Race object and its HUD. It asks before replacing an existing scene. The scene holds no floor: floors exist only in play.
+- To play: open `FloorRace.unity`, press Play, host, then Esc and **Start the match**.
+
+## HUD
+
+- `FloorRaceHud` adds the floor and room name (top centre), the objective line (top right, under the briefcase tracker), the cash line, and the floor-change screen.
+- `MatchHud` supplies the pick-up and drop prompts, the countdown, one-off lines and the briefcase marker, which stays off while the briefcase is hidden.
+
+## Defaults chosen that the spec did not give
+
+Each is an Inspector value or a small rule, picked as the smallest sensible behaviour.
+
+| Default | Value | Where |
+|---|---|---|
+| Head start | 12 s | `Head Start Seconds` |
+| Wait before a wiped firm returns | 2 s | `Wipe Respawn Seconds` |
+| Rivals in the lift car | Do not block it and do not ride | Rule in `FloorRaceDirector.Host` |
+| A briefcase that leaves the building | Back at the nearest spawn spot to where it was last inside, after 2 s | `Stray Seconds`, match profile |
+| Respawn keeps clear of the briefcase | 6 m of walking | `Min Case Distance` |
+| Respawn distance from rivals and sight range | 8 m, 40 m | `Min Rival Distance`, `Sight Range` |
+| Cash | 100 per floor, the win pays one more floor and no bonus | `Cash Per Floor`, `Win Bonus Cash` |
+| Loot | 8 pickups a floor from five items | `Loot Per Floor`, `Loot` |
+| Floor 1 starts | Firm A and firm B at the layout's two starts; neither is told where the briefcase is | [FLOOR_GEN.md](FLOOR_GEN.md) |
+| Before the host starts | Players walk floor 1 of a throwaway seed; starting builds a fresh floor 1 | Rule |
+| Health on a new floor | The dead come back at full health; the living keep theirs | Rule |
+| The arrival lift | Stays open and never leaves; standing in it does nothing | Rule |
+
+## Open questions
+
+- **No time limit:** watch match length in playtests. A firm that defends well could keep a match going for a long time. A soft limit, or a stronger push for the trailing firm, may be needed.
+- **Floor 1 start:** should either firm get the briefcase's general direction? Today neither does.
+- **Can the firm with the briefcase be stalled at the lift?** If one teammate hides or stays away, the lift can't leave. Options: a timer that leaves without them, or boarding only needing the teammates near the carrier. Today the lift waits.
+- **Should rivals in the car block the lift?** Today they don't, so body-blocking the car is not a defence.
+- **Head start camping:** the other firm has 12 s to set up on the arrival lift's doors. Is that the intended fight, or should the arrival lift be harder to find?
+- **Cash:** how much per floor, does the win pay extra, what does it buy, and how is it stored and kept from being cheated? Harvey wants it tied to the player's online account; today it is a number in the local profile, awarded by the host and trusted.
+- **Difficulty:** floors do not get harder as you climb.
+
+## Checked so far
+
+- **Compiled** in the Editor, no errors.
+- **Played on the host alone, Editor, 2026-11-22**, driven by script: a match started; the hidden briefcase was picked up; nine lift rides from floor 1 to floor 10, each with the floor-change screen, the head start and 100 cash; a death that wiped the solo firm and brought it back near the dropped briefcase; a fall from the building that killed the carrier and returned the briefcase inside; the win in the manager's office. 1,000 cash was in the profile at the end, the count of networked objects stayed the same on every floor, and the console showed no errors.
+- **Seen from a client, 2026-11-22.** The Editor hosted and a development build joined on the same PC over the local transport (Tugboat), one player per firm. The host moved both bodies by script; the client's pick-up requests were sent from the client by script (the same call its F key makes). Both consoles were clean: no errors or exceptions in the Editor console or the client's log.
+  - **Same floor on both machines:** the client built every floor from the synced seed with the same object count as the host (417, then 450, 405 and 431 on the floors compared). [Client on floor 1, waiting](../proof/floor_race_2026-11-22/c_01_joined_waiting.jpg).
+  - **A steal:** the host player carried the briefcase and dropped it; the client took it. The client's screen went from "Take the briefcase back" with the rival marker to carrying it. [Before](../proof/floor_race_2026-11-22/c_03_host_has_case.jpg), [after](../proof/floor_race_2026-11-22/c_04_client_stole_case.jpg).
+  - **A floor change:** the client carrier stood in the exit lift; the client saw the [floor-change screen](../proof/floor_race_2026-11-22/c_11_transition_screen.jpg), then started [inside the arrival lift with the doors counting down and its cash](../proof/floor_race_2026-11-22/c_07_headstart_in_lift.jpg), while the host, who arrived first, saw ["They arrive in 1. Get ready"](../proof/floor_race_2026-11-22/h_07_headstart_arrived_first.jpg).
+  - **A team wipe and respawn:** the client's only player was killed. Its screen showed the [down card and the dropped briefcase](../proof/floor_race_2026-11-22/c_09_client_down.jpg); two seconds later it [came back in the next room with the briefcase 7 m away](../proof/floor_race_2026-11-22/c_10_client_respawned.jpg), out of the host player's sight.
+  - **The floor 10 win:** the client carried the briefcase up eight more floors and [into the manager's office](../proof/floor_race_2026-11-22/c_12_floor10.jpg); its menu read ["Halloran Voss sealed the deal ... That is your firm"](../proof/floor_race_2026-11-22/c_13_win.jpg). The client's profile file held 1,000 cash and the win; the host's held 0 cash and the loss.
+- **Not checked:** a person playing it; more than one player a firm (so boarding with teammates, and a wipe that is not solo, are untested); Steam instead of the local transport; two PCs; a joiner mid-match; falling out of a window as a client (host only).
+
+## The two-tower mode was removed
+
+On 2026-11-22, in the commit "Remove the two-tower mode", after the floor race had been seen from a client.
+
+- **Gone:** the tower builder, layout, profile, floor templates and locked doors; the tower referee, arena, plaza, skybridges and floor gates; checkpoints, the open floor and the quarter clock in `MatchDirector`; `PropSpawner` and `PropMarker`; `FloorLoot` and its table; bullet damage to doors; the tower half of the glass registry; the prop stream's tower hook; the tower and integration scene tools and the scripted checks that drove those scenes; their assets.
+- **Kept:** `TeamSpawner` (seats players in firms); `LobbyRunFlow`, `LobbyRoom` and `Scripts/Lobby/` (the reception desk flow, unused by this scene, a design call); `Lift/Elevator.cs` (KitOffice's rooftop lift); the lane tools that KitOffice, WeaponTest and this scene's tool still call.
+- **Checked after removing it:** it compiles with no errors; a full match (ten floors, a wipe, a fall, the win) was replayed on the host alone in the Editor with a clean console; `KitOffice`, `WeaponTest` and `FloorRace` open with no missing scripts and no prefab has one. The client check above was made before the removal and has not been repeated since.
+
+## Known limitations
+
+- Glass does not break on generated floors and no lights are added ([FLOOR_GEN.md](FLOOR_GEN.md)).
+- Lift doors move once per tick with no smoothing, and are not rewound when a client's movement is replayed, so a client stepping through closing doors can be corrected by a few centimetres.
+- The floor-change screen covers the view but players can still move and shoot under it for the second and a half it takes.
+- Joining mid-match puts the player at their firm's start for the floor, alive, wherever the fight is.
+- Match records count each player's best floor as the floor in play, whichever firm took the lift.
+- The first-run hints and the secretary's lines were written for the towers and are not reworded for this mode; the menu and the result line are.

@@ -87,6 +87,7 @@ In KitOffice this makes 155 panes: glass, frost and header partitions, glass doo
 
 ## Known limitations
 
+- Only panes placed in the scene are indexed. Indexing for buildings made at runtime went with the two-tower mode on 2026-11-22, so glass on the floor race's generated floors does not break ([FLOOR_GEN.md](FLOOR_GEN.md)); the pane-numbering and rematch notes above that mention towers describe that removed half.
 - **Kit glass colliders are chosen or added at runtime.** Fitted axis-aligned boxes are exact for quarter-turn panes and slightly oversized for angled panes. Curved panes thicker than 0.15 m get neither a piece collider nor a fitted box (`Partition_Header_Curve_2x2` does not break). The lasting fix is authoring glass colliders during kit import.
 - **A broken kit pane takes its frame's collision with it.** Most kit pieces have one box for frame and glass together, so once the pane breaks the frame is still drawn but blocks nothing: bullets and bodies pass through a curtain wall's mullions and a header partition's white band above 2.5 m. Guards with their own glass box (`Guard_Glass_*`) keep a solid shoe. The lasting fix is the same: a separate glass collider per piece at kit import.
 - **Not yet seen from a client in KitOffice.** The sync is the same set of pane numbers the lanes use; only the host was checked there.

@@ -40,7 +40,7 @@ namespace CloseTheDeal.Integration
 
         SpotState[] _state = new SpotState[0];
 
-        /// <summary>The spawner in the scene, or null. Lets a swapped-out gun be dropped with no FloorLoot.</summary>
+        /// <summary>The spawner in the scene, or null. Lets a swapped-out gun be dropped when no mode has set GunPickups.SpawnLoose.</summary>
         public static LooseGunSpawns Instance { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

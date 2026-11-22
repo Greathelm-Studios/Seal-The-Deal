@@ -21,6 +21,15 @@ namespace CloseTheDeal.Integration
 
         bool _warnedUnlisted;
 
+        /// <summary>Host only. Spawns a swapped-out gun (prefab, position, rotation, velocity); the mode that sets it despawns what it spawns. Unset, a swapped gun is not dropped.</summary>
+        public static System.Action<NetworkObject, Vector3, Quaternion, Vector3> SpawnLoose;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            SpawnLoose = null;
+        }
+
         void OnEnable()
         {
             ItemCarrier.ServerItemTaken += OnItemTaken;
@@ -102,17 +111,16 @@ namespace CloseTheDeal.Integration
         void DropSwapped(ItemCarrier carrier, WeaponDefinition weapon)
         {
             NetworkObject prefab = _map.PickupFor(weapon);
-            FloorLoot loot = FloorLoot.Instance;
             LooseGunSpawns spawns = LooseGunSpawns.Instance;
-            if (prefab == null || (loot == null && spawns == null))
+            if (prefab == null || (SpawnLoose == null && spawns == null))
                 return;
 
             Transform body = carrier.transform;
             Vector3 forward = body.forward;
             Vector3 at = body.position + Vector3.up * SwapDropHeight + forward * SwapDropReach;
             Quaternion facing = Quaternion.LookRotation(forward, Vector3.up);
-            if (loot != null)
-                loot.ServerSpawnLoose(prefab, at, facing, forward * _swapTossSpeed);
+            if (SpawnLoose != null)
+                SpawnLoose(prefab, at, facing, forward * _swapTossSpeed);
             else
                 spawns.ServerSpawnLoose(prefab, at, facing, forward * _swapTossSpeed);
         }

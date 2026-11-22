@@ -1,6 +1,6 @@
 # PROFILE
 
-**Status:** Current · **Last updated:** 2026-11-21
+**Status:** Current · **Last updated:** 2026-11-22
 
 ## What the player sees
 
@@ -39,6 +39,10 @@ Local only: nothing is networked. `ProfileKeeper` writes career match results ex
 ## Files
 
 Under [Assets/_Project/Scripts/Profile/](../../Assets/_Project/Scripts/Profile/): `PlayerProfile.cs`, `ProfileStore.cs` (includes `BackgroundFileWriter`), `ProfileKeeper.cs`.
+
+## Cash
+
+`ProfileStat.Cash` is the player's unspent cash from floor races ([FLOOR_RACE.md](FLOOR_RACE.md)). It is the last entry of the stats list, so older `profile.json` files load unchanged and start at 0; the file version is still 1. The host sends each player what they earned and that player's own machine calls `ProfileStore.AddCash(amount)`, which saves at once. Unlike match results it is written during a match, floor by floor, so cash earned before a disconnect is kept. Nothing spends it yet, and it is as trusted as the rest of the profile: a local file, awarded by whoever hosts.
 
 ## Known limitations
 

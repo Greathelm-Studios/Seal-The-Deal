@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using CloseTheDeal.Tower;
 using FishNet;
 using FishNet.Broadcast;
 using FishNet.Connection;
@@ -71,6 +70,35 @@ namespace CloseTheDeal.Net
 
         public static PropStream Instance { get; private set; }
 
+        static bool _hasBuilding;
+        static TowerFrame _building;
+
+        /// <summary>Every machine. Gives the stream its packing box and floor grid. The game mode calls it before props spawn, with the same frame on host and clients.</summary>
+        public static void UseBuilding(TowerFrame frame)
+        {
+            _hasBuilding = true;
+            _building = frame;
+            if (Instance != null && Instance._net != null)
+                Instance.ApplyFrame(frame);
+        }
+
+        /// <summary>Every machine. Forgets the frame given by UseBuilding; the stream stops until another building is given.</summary>
+        public static void ClearBuilding()
+        {
+            if (!_hasBuilding)
+                return;
+
+            _hasBuilding = false;
+            if (Instance != null && Instance._net != null)
+                Instance.DropFrame();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetBuilding()
+        {
+            _hasBuilding = false;
+        }
+
         /// <summary>Returns the scene's PropStream, creating one if needed when profile is supplied.</summary>
         internal static PropStream GetOrCreate(SwitchboardProfile profile)
         {
@@ -99,7 +127,6 @@ namespace CloseTheDeal.Net
         uint[] _packedTick = new uint[32];
         int _slotCount;
         NetworkManager _net;
-        TowerBuilder _tower;
         TowerFrame _frame;
         bool _frameReady;
         bool _receiving;
@@ -149,7 +176,8 @@ namespace CloseTheDeal.Net
                 StartServer();
             if (_net.ClientManager.Started)
                 StartClient();
-            AttachTower();
+            if (_hasBuilding)
+                ApplyFrame(_building);
         }
 
         void OnDestroy()
@@ -163,44 +191,14 @@ namespace CloseTheDeal.Net
                 if (_receiving)
                     _net.ClientManager.UnregisterBroadcast<StreamPacket>(OnPacket);
             }
-            if (_tower != null)
-            {
-                _tower.OnBuilt -= OnTowerBuilt;
-                _tower.OnCleared -= OnTowerCleared;
-            }
             if (Instance == this)
                 Instance = null;
             SwitchboardStats.Reset();
         }
 
-        void AttachTower()
+        void ApplyFrame(TowerFrame frame)
         {
-            TowerBuilder tower = TowerBuilder.Instance;
-            if (tower == _tower)
-                return;
-            if (_tower != null)
-            {
-                _tower.OnBuilt -= OnTowerBuilt;
-                _tower.OnCleared -= OnTowerCleared;
-            }
-            _tower = tower;
-            _frameReady = false;
-            if (_tower == null)
-                return;
-            _tower.OnBuilt += OnTowerBuilt;
-            _tower.OnCleared += OnTowerCleared;
-            if (_tower.IsBuilt)
-                OnTowerBuilt();
-        }
-
-        void OnTowerBuilt()
-        {
-            TowerProfile towerProfile = _tower.Profile;
-            int floors = _tower.FloorCount > 0
-                ? _tower.FloorCount
-                : towerProfile.RandomFloors +
-                    (towerProfile.CheckpointEvery > 0 ? towerProfile.RandomFloors / towerProfile.CheckpointEvery : 0) + 3;
-            _frame = TowerFrame.From(_tower.transform, towerProfile, floors);
+            _frame = frame;
             _frameReady = true;
             _hasPacket = false;
             _statsTime = Time.unscaledTimeAsDouble;
@@ -208,7 +206,7 @@ namespace CloseTheDeal.Net
             SwitchboardStats.IsHost = _net != null && _net.ServerManager.Started;
         }
 
-        void OnTowerCleared()
+        void DropFrame()
         {
             _frameReady = false;
             _hasPacket = false;
@@ -626,11 +624,7 @@ namespace CloseTheDeal.Net
             if (_profile == null || _net == null)
                 return;
             if (!_frameReady)
-            {
-                if (_tower == null)
-                    AttachTower();
                 return;
-            }
             if (_receiving && _hasPacket)
             {
                 double rate = _net.TimeManager.TickRate;

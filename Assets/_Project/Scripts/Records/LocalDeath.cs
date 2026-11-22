@@ -70,20 +70,11 @@ namespace CloseTheDeal.Records
             if (Me == null || Me.Owner == null || entry.VictimClientId != Me.Owner.ClientId)
                 return;
 
-            MatchDirector match = MatchDirector.Instance;
             bool fell = entry.Kind == KillKind.Fell || entry.Kind == KillKind.KnockedOut;
             float seconds = fell ? 0f : Me.GetComponent<Health>().RespawnSeconds;
-            Down?.Invoke(new DeathReport(entry.Kind, entry.KillerClientId, seconds, Where(match, fell)));
+            Down?.Invoke(new DeathReport(entry.Kind, entry.KillerClientId, seconds, string.Empty));
             if (fell)
                 Back?.Invoke();
-        }
-
-        static string Where(MatchDirector match, bool fell)
-        {
-            if (match == null || match.Arena == null)
-                return string.Empty;
-            int floor = fell ? match.CheckpointFloor(Me.Firm) : match.Arena.FloorOf(Me.Position);
-            return floor > 0 ? match.Arena.FloorLabel(floor) : "Reception";
         }
 
         static void OnRespawned(Health health)
