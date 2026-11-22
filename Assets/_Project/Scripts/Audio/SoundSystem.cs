@@ -25,8 +25,22 @@ namespace CloseTheDeal.Audio
         public static SpatialAudioProfile Profile { get; private set; }
 
         public static bool OcclusionEnabled => Profile != null ? Profile.EnableOcclusion : true;
-        public static bool SpatializerEnabled => (Profile == null || Profile.EnableSpatializerPlugin)
-            && !string.IsNullOrEmpty(UnityEngine.AudioSettings.GetSpatializerPluginName());
+        public static bool SpatializerEnabled
+        {
+            get
+            {
+                if (Profile != null && !Profile.EnableSpatializerPlugin)
+                    return false;
+                if (string.IsNullOrEmpty(UnityEngine.AudioSettings.GetSpatializerPluginName()))
+                    return false;
+#if STEAMAUDIO_ENABLED
+                // Fall back to built-in Unity 3D panning if Steam Audio's native library failed to load.
+                if (SteamAudio.SteamAudioManager.Singleton == null || SteamAudio.SteamAudioManager.Context == null)
+                    return false;
+#endif
+                return true;
+            }
+        }
         public static bool VoiceBilinearHrtf => Profile == null || Profile.VoiceBilinearHrtf;
         public static float DefaultSpread => Profile != null ? Profile.DefaultSpread : 20f;
         public static float VoiceSpread => Profile != null ? Profile.VoiceSpread : 25f;
@@ -117,16 +131,20 @@ namespace CloseTheDeal.Audio
 
             SceneManager.sceneLoaded += OnSceneLoaded;
             _sceneDirty = true;
-            RefreshListener();
         }
 
         void Start()
         {
+            RefreshListener();
             if (_pool == null)
                 return;
 
+            bool hrtfReady = SpatializerEnabled;
             for (int i = 0; i < _pool.Length; i++)
+            {
+                _pool[i].Source.spatialize = hrtfReady;
                 AttachSteamAudio(_pool[i].Source, bilinearHrtf: false);
+            }
         }
 
         void OnDestroy()
@@ -287,11 +305,13 @@ namespace CloseTheDeal.Audio
             voice.Priority = priority;
 
             AudioSource src = voice.Source;
+            src.Stop();
             src.transform.position = position;
             src.outputAudioMixerGroup = output != null ? output : GetMixerGroup("SFX");
             ApplyDistanceCurve(src, nearDistance, farDistance);
             src.priority = priority;
             src.pitch = pitch;
+            src.spatialize = SpatializerEnabled;
 
             float occlusionGain = 1f;
             float cutoffHz = ClearCutoffHz;
@@ -306,7 +326,11 @@ namespace CloseTheDeal.Audio
                     voice.LowPass.cutoffFrequency = cutoffHz;
             }
 
-            src.PlayOneShot(clip, volume * occlusionGain);
+            // Assign clip + Play() instead of PlayOneShot() so Steam Audio Spatializer processes
+            // the clip cleanly and Unity does not warn "Only custom filters can be played".
+            src.clip = clip;
+            src.volume = volume * occlusionGain;
+            src.Play();
         }
 
         /// <summary>Plays a 2D (non-spatial) one-shot clip for local player feedback (hurt, death, respawn).</summary>

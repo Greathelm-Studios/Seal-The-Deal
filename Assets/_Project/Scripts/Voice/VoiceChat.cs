@@ -638,6 +638,12 @@ namespace CloseTheDeal.Voice
             go.transform.SetParent(transform, false);
             heard = new Heard { Speaker = go.AddComponent<VoiceSpeaker>(), Decoder = new VoiceDecoder(SampleRate) };
             heard.Speaker.Init(SampleRate, Output(), FullRange, HearRange);
+            if (speakerId != SelfId)
+            {
+                heard.Body = FindBody(speakerId);
+                if (heard.Body != null)
+                    heard.Speaker.transform.position = heard.Body.transform.position + Vector3.up * heard.Body.EyeHeight;
+            }
             heard.Speaker.SetSpatial(speakerId != SelfId);
             _heard[speakerId] = heard;
             return heard;
@@ -661,7 +667,7 @@ namespace CloseTheDeal.Voice
             foreach (KeyValuePair<int, Heard> pair in _heard)
             {
                 Heard heard = pair.Value;
-                if (pair.Key == SelfId || heard.Speaker == null || !heard.Speaker.Speaking)
+                if (pair.Key == SelfId || heard.Speaker == null || Time.unscaledTime - heard.Speaker.LastHeard > 1f)
                     continue;
 
                 if (heard.Body == null && Time.unscaledTime >= heard.NextSearch)
@@ -701,6 +707,15 @@ namespace CloseTheDeal.Voice
                 PlayerMotor body = bodies[i];
                 if (body != null && body.OwnerId == clientId)
                     return body;
+            }
+
+            if (_net != null && _net.ClientManager.Started)
+            {
+                foreach (NetworkObject nob in _net.ClientManager.Objects.Spawned.Values)
+                {
+                    if (nob != null && nob.OwnerId == clientId && nob.TryGetComponent(out PlayerMotor clientBody))
+                        return clientBody;
+                }
             }
 
             return null;
