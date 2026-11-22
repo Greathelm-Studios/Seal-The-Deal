@@ -1,6 +1,6 @@
 # MATCH
 
-**Status:** Current · **Last updated:** 2026-11-21
+**Status:** Current · **Last updated:** 2026-11-22
 
 ## What the player sees
 
@@ -57,7 +57,7 @@ Setup: **Seal the Deal > Lanes > Set Up GameMode** ([GameModeLaneSetup.cs](../..
 
 ## Known limitations
 
-- A replacement mode (one briefcase taken up 10 generated floors by elevator, team-wipe respawn) is proposed in [FLOOR_RACE.md](FLOOR_RACE.md) (Target, not built).
+- The floor race ([FLOOR_RACE.md](FLOOR_RACE.md), Target) replaces these two-tower rules in `FloorRace.unity`. It plugs in through `IMatchRuleset` ([MatchRuleset.cs](../../Assets/_Project/Scripts/Match/MatchRuleset.cs)): when a mode sets `MatchDirector.Ruleset`, the director keeps the briefcase, its pick-up and drop, the phases and the result, and hands the mode the per-tick referee step, the host's start, the HUD's place and result wording, and whether the briefcase is hidden. With no ruleset set, everything on this page is unchanged. `MatchArena` now answers "floor 0" and "outside" instead of failing when a scene has no towers.
 - Floor gates and breakable stairwell doors ([TOWER.md](TOWER.md)) both gate climbing; whether to keep both is an open design question.
 - Shut gates sit on Unity's `Ignore Raycast` layer when `Let Shots Through` is enabled, so bullets pass through while bodies and greybox test blasts still collide.
 - Carrying the briefcase opens a floor within 5 cm of the floor surface (at the top step) rather than after clearing the gate.

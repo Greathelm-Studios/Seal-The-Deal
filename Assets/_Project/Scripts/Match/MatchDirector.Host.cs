@@ -28,10 +28,11 @@ namespace CloseTheDeal.MatchMode
             if (!_live)
                 return; // No profile; OnStartNetwork already logged and disabled.
 
-            _referee = new MatchReferee(this);
+            _referee = Ruleset == null ? new MatchReferee(this) : null;
             _gatherOnBuild = false;
             _countdownOnBuild = false;
-            TeamSpawner.SpawnOverride = ChooseJoinSpawn;
+            if (Ruleset == null)
+                TeamSpawner.SpawnOverride = ChooseJoinSpawn;
             _snapshot.Value = new MatchSnapshot { Phase = MatchPhase.Waiting, Winner = NoFirm };
 
             // Towers may already be built before OnStartServer; otherwise OnTowerBuilt calls this.
@@ -48,10 +49,12 @@ namespace CloseTheDeal.MatchMode
         }
 
         /// <summary>True when hosting and waiting in reception.</summary>
-        public bool CanHostStart => IsServerStarted && _arena.Ready && Phase == MatchPhase.Waiting;
+        public bool CanHostStart => IsServerStarted && HostReady && Phase == MatchPhase.Waiting;
 
         /// <summary>True when hosting and a match result is in.</summary>
-        public bool CanHostRematch => IsServerStarted && _arena.Ready && Phase == MatchPhase.Ended;
+        public bool CanHostRematch => IsServerStarted && HostReady && Phase == MatchPhase.Ended;
+
+        bool HostReady => Ruleset != null ? Ruleset.Ready : _arena.Ready;
 
         /// <summary>Host only. Starts the first match with current joiner firms.</summary>
         public void HostStart()
@@ -93,6 +96,12 @@ namespace CloseTheDeal.MatchMode
 
         void ServerNewMatch()
         {
+            if (Ruleset != null)
+            {
+                Ruleset.ServerNewMatch();
+                return;
+            }
+
             _gatherOnBuild = true;
             _countdownOnBuild = true;
             _tower.Rebuild();
@@ -113,7 +122,7 @@ namespace CloseTheDeal.MatchMode
             ApplyGates();
 
             Vector3 spawn = SpawnPosition();
-            Briefcase briefcase = EnsureBriefcase(spawn);
+            Briefcase briefcase = EnsureBriefcase(spawn, _arena.Facing(0));
             if (briefcase != null)
             {
                 briefcase.ServerRelease(spawn, _arena.Facing(0), Vector3.zero);
@@ -137,7 +146,7 @@ namespace CloseTheDeal.MatchMode
             _countdownOnBuild = false;
         }
 
-        Briefcase EnsureBriefcase(Vector3 spawn)
+        Briefcase EnsureBriefcase(Vector3 spawn, Quaternion facing)
         {
             if (Briefcase.Current != null)
                 return Briefcase.Current;
@@ -148,7 +157,7 @@ namespace CloseTheDeal.MatchMode
                 return null;
             }
 
-            NetworkObject spawned = NetworkManager.GetPooledInstantiated(_profile.BriefcasePrefab, spawn, _arena.Facing(0), true);
+            NetworkObject spawned = NetworkManager.GetPooledInstantiated(_profile.BriefcasePrefab, spawn, facing, true);
             if (!spawned.TryGetComponent(out Briefcase briefcase))
             {
                 Debug.LogError("[Match] The briefcase prefab has no Briefcase component.");
@@ -166,12 +175,78 @@ namespace CloseTheDeal.MatchMode
                 ServerRespawn(member);
         }
 
-        internal void ServerBeginRunning(uint tick)
+        /// <summary>Host only, for a ruleset. Starts the countdown before the briefcase unlocks.</summary>
+        public void ServerBeginCountdown()
+        {
+            _snapshot.Value = new MatchSnapshot { Phase = MatchPhase.Countdown, PhaseTick = TimeManager.Tick, Winner = NoFirm };
+        }
+
+        /// <summary>Host only, for a ruleset. Back to waiting for the host to start.</summary>
+        public void ServerBeginWaiting()
+        {
+            _snapshot.Value = new MatchSnapshot { Phase = MatchPhase.Waiting, Winner = NoFirm };
+        }
+
+        /// <summary>Host only, for a ruleset. Puts a fresh, never-carried briefcase down at this spot, spawning it if needed.</summary>
+        public void ServerPlaceBriefcase(Vector3 position, Quaternion rotation, int floor)
+        {
+            Briefcase briefcase = EnsureBriefcase(position, rotation);
+            if (briefcase == null)
+                return;
+
+            briefcase.ServerRelease(position, rotation, Vector3.zero);
+            _briefcase.Value = new BriefcaseStatus
+            {
+                State = BriefcaseState.Dropped,
+                CarrierId = -1,
+                CarrierFirm = NoFirm,
+                LastCarrierFirm = NoFirm,
+                Floor = (byte)floor,
+                Position = position
+            };
+        }
+
+        /// <summary>Host only, for a ruleset. Puts the loose briefcase somewhere else, keeping who carried it last.</summary>
+        public void ServerMoveBriefcase(Vector3 position)
+        {
+            ServerPutDown(position, Quaternion.identity, Vector3.zero);
+        }
+
+        /// <summary>Host only, for a ruleset. Puts the briefcase in this player's hands whatever its state.</summary>
+        public void ServerHandBriefcase(FirmMember member)
+        {
+            if (!IsServerStarted || Briefcase.Current == null || member == null)
+                return;
+
+            BriefcaseStatus status = _briefcase.Value;
+            // Already parked while carried; parking again would set a velocity on a kinematic body.
+            if (status.State != BriefcaseState.Carried)
+                Briefcase.Current.ServerPark();
+            status.State = BriefcaseState.Carried;
+            status.CarrierId = member.ObjectId;
+            status.CarrierFirm = (byte)member.Firm;
+            status.LastCarrierFirm = (byte)member.Firm;
+            status.ReturnTick = 0;
+            _briefcase.Value = status;
+        }
+
+        /// <summary>Host only, for a ruleset. Records which floor the briefcase is on, for the HUD and the result.</summary>
+        public void ServerSetBriefcaseFloor(int floor)
+        {
+            BriefcaseStatus status = _briefcase.Value;
+            if (status.Floor == floor)
+                return;
+
+            status.Floor = (byte)floor;
+            _briefcase.Value = status;
+        }
+
+        public void ServerBeginRunning(uint tick)
         {
             _snapshot.Value = new MatchSnapshot { Phase = MatchPhase.Running, PhaseTick = tick, Winner = NoFirm };
         }
 
-        internal void ServerEnd(byte winner, MatchEndReason reason, uint tick)
+        public void ServerEnd(byte winner, MatchEndReason reason, uint tick)
         {
             float seconds = (float)(ElapsedTicks(tick) * TimeManager.TickDelta);
             _snapshot.Value = new MatchSnapshot
@@ -202,7 +277,7 @@ namespace CloseTheDeal.MatchMode
             _briefcase.Value = status;
         }
 
-        internal void ServerDrop(FirmMember member, DropCause cause)
+        public void ServerDrop(FirmMember member, DropCause cause)
         {
             // Briefcase.Current may already be destroyed during host shutdown.
             if (!IsServerStarted || !IsCarrying(member) || Briefcase.Current == null)
@@ -242,7 +317,7 @@ namespace CloseTheDeal.MatchMode
             ServerDrop(member, DropCause.LeftTheGame);
         }
 
-        internal void ServerDropOrphan()
+        public void ServerDropOrphan()
         {
             ServerPutDown(Briefcase.Current.LastCarrierPosition + Vector3.up, Quaternion.identity, Vector3.zero);
         }

@@ -52,6 +52,7 @@ namespace CloseTheDeal.MatchMode
         float _shownFade = -1f;
 
         BriefcaseState _state;
+        BriefcaseStatus _status;
         byte _tintFirm = MatchDirector.NoFirm;
         FirmMember _carrier;
         int _carrierId;
@@ -123,6 +124,7 @@ namespace CloseTheDeal.MatchMode
         {
             BriefcaseState previous = _state;
             _state = status.State;
+            _status = status;
             bool handsChanged = (previous == BriefcaseState.Carried) != (status.State == BriefcaseState.Carried);
             if (handsChanged && status.State != BriefcaseState.Returning)
                 _popStarted = Time.unscaledTime;
@@ -289,6 +291,8 @@ namespace CloseTheDeal.MatchMode
         {
             bool mine = _state == BriefcaseState.Carried && _carrier != null && _carrier == FirmMember.Local;
             if (!match.IsLive || _state == BriefcaseState.Returning || mine)
+                return 0f;
+            if (MatchDirector.Ruleset != null && MatchDirector.Ruleset.BriefcaseHidden(_status))
                 return 0f;
 
             float range = match.Profile.BeaconRange;

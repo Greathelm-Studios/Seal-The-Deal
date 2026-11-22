@@ -124,6 +124,7 @@ namespace CloseTheDeal.Combat
         const int HistoryLength = 64;
         const int SafeGroundEveryTicks = 15;
         const float RespawnControlLossSeconds = 0.1f;
+        const float HeldKnockSeconds = 1f;
         const float KillLift = 0.35f;
         static readonly int BaseColourId = Shader.PropertyToID("_BaseColor");
 
@@ -134,7 +135,11 @@ namespace CloseTheDeal.Combat
         static void ResetStatics()
         {
             All.Clear();
+            RespawnsHeld = false;
         }
+
+        /// <summary>Every machine. While true a dead body stays down until the host calls ServerRespawnAt: a game mode decides when players come back.</summary>
+        public static bool RespawnsHeld;
 
         readonly SyncVar<float> _health = new(new SyncTypeSettings(0f));
         readonly SyncVar<int> _lastAttacker = new(-1, new SyncTypeSettings(0f));
@@ -181,7 +186,7 @@ namespace CloseTheDeal.Combat
         public float RespawnSeconds => _respawnSeconds;
 
         /// <summary>Seconds until this body comes back, counted on this machine from the moment it heard the death; 0 when alive, and 0 for a death that happened before this machine joined.</summary>
-        public float SecondsUntilRespawn => IsDead ? Mathf.Max(0f, _respawnAt - Time.time) : 0f;
+        public float SecondsUntilRespawn => IsDead && !RespawnsHeld ? Mathf.Max(0f, _respawnAt - Time.time) : 0f;
 
         /// <summary>Seconds until this body recovers from being knocked out; 0 when not knocked out.</summary>
         public float SecondsUntilRecovery => IsKnockedOut ? Mathf.Max(0f, _recoverAt - Time.time) : 0f;
@@ -355,6 +360,18 @@ namespace CloseTheDeal.Combat
             _respawnOverride = position;
         }
 
+        /// <summary>Host only. Brings a dead body back at this position now. Returns false when it is alive.</summary>
+        public bool ServerRespawnAt(Vector3 position)
+        {
+            if (!IsServerStarted || !_dead.Value)
+                return false;
+
+            _hasRespawnOverride = true;
+            _respawnOverride = position;
+            Respawn();
+            return true;
+        }
+
         void Die(DamageInfo info)
         {
             _knockedOut.Value = false;
@@ -454,7 +471,7 @@ namespace CloseTheDeal.Combat
 
         void DeadTick(uint tick)
         {
-            if (tick >= _respawnTick)
+            if (!RespawnsHeld && tick >= _respawnTick)
             {
                 Respawn();
                 return;
@@ -462,7 +479,7 @@ namespace CloseTheDeal.Combat
 
             // A blast on the body restarts the motor's own short control loss; a dead player still must not steer.
             if (_motor != null && _motor.State != MoveState.Knocked)
-                _motor.ApplyKnockback(Vector3.zero, (float)TimeManager.TicksToTime(_respawnTick - tick));
+                _motor.ApplyKnockback(Vector3.zero, tick < _respawnTick ? (float)TimeManager.TicksToTime(_respawnTick - tick) : HeldKnockSeconds);
         }
 
         void KnockedOutTick(uint tick)

@@ -63,6 +63,12 @@ namespace CloseTheDeal.Net
                 profile.FloorHeight, floorCount, bounds);
         }
 
+        /// <summary>A frame for a building that is not a TowerBuilder: its own packing box (in the root's space) and storey height.</summary>
+        public static TowerFrame FromBounds(Transform root, Bounds localBounds, float floorHeight, int floorCount)
+        {
+            return new TowerFrame(root.worldToLocalMatrix, root.localToWorldMatrix, floorHeight, floorCount, localBounds);
+        }
+
         public Vector3 ToLocal(Vector3 worldPosition)
         {
             return _worldToLocal.MultiplyPoint3x4(worldPosition);

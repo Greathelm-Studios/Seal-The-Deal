@@ -22,7 +22,9 @@ namespace CloseTheDeal.MatchMode
         /// <summary>The clock ran out with the briefcase lying loose; the firm that carried it last wins.</summary>
         ClockLastCarried = 3,
         /// <summary>The clock ran out and nobody ever picked the briefcase up. No winner.</summary>
-        ClockNeverCarried = 4
+        ClockNeverCarried = 4,
+        /// <summary>Floor race: a player carried the briefcase into the manager's office on the top floor.</summary>
+        ManagersOffice = 5
     }
 
     public enum BriefcaseState : byte

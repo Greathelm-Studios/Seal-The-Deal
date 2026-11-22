@@ -25,7 +25,9 @@ namespace CloseTheDeal.Profile
         MostKillsInMatch,
         WinStreak,
         BestWinStreak,
-        ThrowHits
+        ThrowHits,
+        /// <summary>Cash earned in floor races and not yet spent.</summary>
+        Cash
     }
 
     /// <summary>How one finished match went for this player, newest first in the profile's history.</summary>

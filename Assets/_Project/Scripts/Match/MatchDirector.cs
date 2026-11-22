@@ -18,11 +18,15 @@ namespace CloseTheDeal.MatchMode
         /// <summary>Every machine. Returns true while another system (items) occupies this player's hands.</summary>
         public static Func<FirmMember, bool> HandsFull;
 
+        /// <summary>The mode that replaces the two-tower rules in this scene, or null for the towers. Set by the mode in Awake.</summary>
+        public static IMatchRuleset Ruleset;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics()
         {
             Instance = null;
             HandsFull = null;
+            Ruleset = null;
         }
 
         /// <summary>The match is live on this machine (hosting or connected).</summary>
@@ -196,6 +200,8 @@ namespace CloseTheDeal.MatchMode
         /// <summary>Where the briefcase is, in words for the HUD: "Floor 3, your tower", "the skybridge on Checkpoint 1", "the plaza".</summary>
         public string PlaceLabel(byte place, int floor)
         {
+            if (Ruleset != null)
+                return Ruleset.PlaceLabel(_briefcase.Value);
             if (place == MatchArena.Neutral)
                 return floor == 0 ? "the plaza" : "the skybridge on " + _arena.FloorLabel(floor);
             if (place >= FirmCount)
@@ -209,6 +215,9 @@ namespace CloseTheDeal.MatchMode
         /// <summary>One-line summary of the match outcome for results UI.</summary>
         public string ReasonLine(MatchSnapshot result, int localFirm)
         {
+            if (Ruleset != null)
+                return Ruleset.ReasonLine(result, localFirm);
+
             string clock = MatchHud.FormatClock(result.EndSeconds);
             string floor = _arena.FloorLabel(result.EndFloor);
             string how;
@@ -259,6 +268,9 @@ namespace CloseTheDeal.MatchMode
             return !Physics.Linecast(eye, centre, _solidMask, QueryTriggerInteraction.Ignore);
         }
 
+        /// <summary>Layers that block reach, drops and sight: everything but players and loose furniture.</summary>
+        public int SolidMask => _solidMask;
+
         void Awake()
         {
             Instance = this;
@@ -293,6 +305,9 @@ namespace CloseTheDeal.MatchMode
             _checkpointB.OnChange += OnCheckpointBChanged;
             _openFloor.OnChange += OnOpenFloorSynced;
             TimeManager.OnPostTick += OnPostTick;
+
+            if (Ruleset != null)
+                return;
 
             if (_tower == null)
             {
@@ -487,11 +502,18 @@ namespace CloseTheDeal.MatchMode
             }
 
             uint tick = TimeManager.Tick;
-            if (IsServerStarted && _referee != null)
-                _referee.Step(tick);
+            if (IsServerStarted)
+            {
+                if (Ruleset != null)
+                    Ruleset.ServerStep(tick);
+                else if (_referee != null)
+                    _referee.Step(tick);
+            }
 
             MatchPhase phase = Phase;
             if (phase != MatchPhase.Countdown && phase != MatchPhase.Running)
+                return;
+            if (phase == MatchPhase.Running && Ruleset != null && !Ruleset.HasClock)
                 return;
 
             float elapsed = (float)(ElapsedTicks(tick) * TimeManager.TickDelta);

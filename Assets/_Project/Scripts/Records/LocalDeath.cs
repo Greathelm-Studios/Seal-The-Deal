@@ -80,7 +80,7 @@ namespace CloseTheDeal.Records
 
         static string Where(MatchDirector match, bool fell)
         {
-            if (match == null || match.Arena == null)
+            if (match == null || match.Arena == null || MatchDirector.Ruleset != null)
                 return string.Empty;
             int floor = fell ? match.CheckpointFloor(Me.Firm) : match.Arena.FloorOf(Me.Position);
             return floor > 0 ? match.Arena.FloorLabel(floor) : "Reception";

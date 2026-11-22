@@ -157,6 +157,8 @@ namespace CloseTheDeal.MatchMode
         /// <summary>The floor a point is on by height alone, clamped to the buildings.</summary>
         public int FloorOf(Vector3 world)
         {
+            if (_profile == null)
+                return 0; // No towers in this scene.
             float height = _worldToLocal0.MultiplyPoint3x4(world).y + FloorSnap;
             return Mathf.Clamp(Mathf.FloorToInt(height / _profile.FloorHeight), 0, RoofFloor);
         }
@@ -175,6 +177,8 @@ namespace CloseTheDeal.MatchMode
 
         bool InsideLocal(Vector3 local, float margin)
         {
+            if (_profile == null)
+                return false; // No towers in this scene.
             float halfWidth = _profile.Width * 0.5f + margin;
             float depth = _profile.MainDepth + _profile.SpineDepth + margin;
             return local.y > -1f && Mathf.Abs(local.x) <= halfWidth && local.z <= margin && local.z >= -depth;

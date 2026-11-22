@@ -95,7 +95,7 @@ Adam points at NorseFPS (his other project, `Greathelm-Studios`) as the bar for 
 - **Starting guns:** Place `StartingLoadout` in the scene. Without one, players start empty-handed.
 - **Damageable objects:** Implement `CloseTheDeal.Core.IDamageable` on the hit collider, its parents, or its attached `Rigidbody`.
 - **Explosions:** `Knockback.Explode(..., attackerClientId)` applies `BlastProfile.Damage`, throws players and `Prop`s, triggers `BreakableDoor.TakeBlast()`, and breaks glass via `GlassRegistry.BreakInRadius`.
-- **Game mode:** `Health.OverrideNextRespawn(position)` on the host overrides the next respawn point once; `Health.AnyDied` carries the attacker's client id.
+- **Game mode:** `Health.OverrideNextRespawn(position)` on the host overrides the next respawn point once; `Health.AnyDied` carries the attacker's client id. A mode that decides respawns itself sets `Health.RespawnsHeld` on every machine: the dead then stay down until the host calls `Health.ServerRespawnAt(position)`, and the down card reads "back when your whole firm is down" instead of counting ([FLOOR_RACE.md](FLOOR_RACE.md)).
 
 ## Weapon test scene
 

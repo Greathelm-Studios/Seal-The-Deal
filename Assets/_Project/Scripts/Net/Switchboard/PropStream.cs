@@ -71,6 +71,35 @@ namespace CloseTheDeal.Net
 
         public static PropStream Instance { get; private set; }
 
+        static bool _hasBuilding;
+        static TowerFrame _building;
+
+        /// <summary>Every machine. Gives the stream its packing box and floor grid in a scene with no TowerBuilder. Call it before props spawn, with the same frame on host and clients.</summary>
+        public static void UseBuilding(TowerFrame frame)
+        {
+            _hasBuilding = true;
+            _building = frame;
+            if (Instance != null && Instance._net != null)
+                Instance.ApplyFrame(frame);
+        }
+
+        /// <summary>Every machine. Forgets the frame given by UseBuilding; the stream stops until a tower or another building appears.</summary>
+        public static void ClearBuilding()
+        {
+            if (!_hasBuilding)
+                return;
+
+            _hasBuilding = false;
+            if (Instance != null && Instance._net != null && Instance._tower == null)
+                Instance.OnTowerCleared();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetBuilding()
+        {
+            _hasBuilding = false;
+        }
+
         /// <summary>Returns the scene's PropStream, creating one if needed when profile is supplied.</summary>
         internal static PropStream GetOrCreate(SwitchboardProfile profile)
         {
@@ -150,6 +179,8 @@ namespace CloseTheDeal.Net
             if (_net.ClientManager.Started)
                 StartClient();
             AttachTower();
+            if (_hasBuilding && _tower == null)
+                ApplyFrame(_building);
         }
 
         void OnDestroy()
@@ -200,7 +231,12 @@ namespace CloseTheDeal.Net
                 ? _tower.FloorCount
                 : towerProfile.RandomFloors +
                     (towerProfile.CheckpointEvery > 0 ? towerProfile.RandomFloors / towerProfile.CheckpointEvery : 0) + 3;
-            _frame = TowerFrame.From(_tower.transform, towerProfile, floors);
+            ApplyFrame(TowerFrame.From(_tower.transform, towerProfile, floors));
+        }
+
+        void ApplyFrame(TowerFrame frame)
+        {
+            _frame = frame;
             _frameReady = true;
             _hasPacket = false;
             _statsTime = Time.unscaledTimeAsDouble;
@@ -627,7 +663,7 @@ namespace CloseTheDeal.Net
                 return;
             if (!_frameReady)
             {
-                if (_tower == null)
+                if (_tower == null && !_hasBuilding)
                     AttachTower();
                 return;
             }

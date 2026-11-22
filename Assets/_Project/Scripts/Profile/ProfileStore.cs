@@ -101,6 +101,18 @@ namespace CloseTheDeal.Profile
             return summary;
         }
 
+        /// <summary>Adds cash the host awarded to this player's profile and saves. Returns the new total.</summary>
+        public static int AddCash(int amount)
+        {
+            if (amount <= 0)
+                return Current.Get(ProfileStat.Cash);
+
+            Current.Add(ProfileStat.Cash, amount);
+            Save();
+            Changed?.Invoke(_current);
+            return _current.Get(ProfileStat.Cash);
+        }
+
         /// <summary>Remembers that a first-run hint was shown, and saves. Returns false if it already was.</summary>
         public static bool MarkHintSeen(string hintId)
         {

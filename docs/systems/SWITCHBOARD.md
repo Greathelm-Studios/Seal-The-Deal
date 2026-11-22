@@ -119,7 +119,7 @@ A prop prefab made by hand needs two things: a `NetBody` with its **Profile** se
 
 - **Not seen running.** Nothing here has been played, on one machine or two. Until it has been watched from a client it is a release risk (see the workboard).
 - Anything that carries or moves a prop must do it on the host. Clients' props are kinematic followers and are overwritten by the next pose.
-- Needs a built tower. In a scene without a `TowerBuilder` the stream stays idle and props do not move on clients.
+- Needs a building. It takes its packing box and floor grid from a built `TowerBuilder`, or from `PropStream.UseBuilding(frame)`, which a mode without towers calls on every machine with the same frame (the floor race does, [FLOOR_RACE.md](FLOOR_RACE.md)). With neither, the stream stays idle and props do not move on clients.
 - The budget is fixed per player. It does not yet shrink for a player whose connection is struggling (see Target, below).
 - The host's own props are not smoothed; they are the simulation.
 

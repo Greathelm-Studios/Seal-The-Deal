@@ -492,7 +492,7 @@ namespace CloseTheDeal.Records
                     continue;
 
                 // A late joiner's line is made before the host seats them in a firm; correct it once that lands.
-                int floor = _match.Arena.FloorOf(member.Position);
+                int floor = MatchDirector.Ruleset != null ? MatchDirector.Ruleset.CurrentFloor : _match.Arena.FloorOf(member.Position);
                 bool firmMoved = line.Firm != member.Firm;
                 if (floor <= line.BestFloor && !firmMoved)
                     continue;
