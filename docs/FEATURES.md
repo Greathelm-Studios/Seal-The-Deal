@@ -11,6 +11,7 @@ Master index of every gameplay, networking, UI, art, and tooling feature in **Se
 | Briefcase match loop (countdown, live, overtime, sudden death) | v1 | Current | Compiled; host tested in integration check | [MATCH.md](systems/MATCH.md) | `Scripts/Match/` | Needs live 2v2 and 4v4 Steam playtest; GDD core loop still reflects old roof race |
 | Floor gates and tower crossings (skybridges) | v1 | Current | Compiled; host tested in integration check | [MATCH.md](systems/MATCH.md) | `Scripts/Match/` | Crossing art and placement pass |
 | Seeded twin-tower generation and static batching | v1 | Current | Compiled; host tested | [TOWER.md](systems/TOWER.md) | `Scripts/Tower/` | Replace greybox floor templates with dressed KitOffice floors |
+| Floor race mode (one briefcase per firm, random floors with hidden stairs, lift keycard skip) | Proposed | Target | Not built; design doc only | [FLOOR_RACE.md](systems/FLOOR_RACE.md) | None yet | Needs Adam's sign-off; one building or two towers, floor count, lift distance, rival briefcase rules |
 | Team spawn assignment and reception integration | v1 | Current | Compiled; host tested | [INTEGRATION.md](systems/INTEGRATION.md) | `Scripts/Integration/` | Confirm starting loadout and drop/interact rules with Adam |
 
 ## Player, Movement and Viewmodel
