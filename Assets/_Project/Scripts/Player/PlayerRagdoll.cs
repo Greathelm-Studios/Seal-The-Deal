@@ -55,7 +55,8 @@ namespace CloseTheDeal.Player
         const float DefaultGetUpTime = 0.6f;
         const float LimpJointDamper = 1.5f;
         const float MaxLaunchSpeed = 20f;
-        const float HitPointKickShare = 0.35f;
+        const float DefaultDeathBodyShare = 0.5f;
+        const float DefaultDeathHitPartShare = 1f;
 
         struct Part
         {
@@ -809,26 +810,30 @@ namespace CloseTheDeal.Player
                 _posed = true;
             }
 
+            float bodyShare = _hitProfile != null ? _hitProfile.DeathBodyShare : DefaultDeathBodyShare;
+            float partShare = _hitProfile != null ? _hitProfile.DeathHitPartShare : DefaultDeathHitPartShare;
+            Vector3 bodyShove = shove * bodyShare;
             if (wasRagdolled)
             {
                 if (shove.sqrMagnitude > 0.01f)
                 {
                     for (int i = 0; i < PartCount; i++)
-                        _parts[i].Body.linearVelocity = Vector3.ClampMagnitude(_parts[i].Body.linearVelocity + shove, MaxLaunchSpeed);
+                        _parts[i].Body.linearVelocity = Vector3.ClampMagnitude(_parts[i].Body.linearVelocity + bodyShove, MaxLaunchSpeed);
                 }
             }
             else
             {
-                Vector3 launch = Vector3.ClampMagnitude(_playerSpeed + shove, MaxLaunchSpeed);
+                Vector3 launch = Vector3.ClampMagnitude(_playerSpeed + bodyShove, MaxLaunchSpeed);
                 for (int i = 0; i < PartCount; i++)
                     _parts[i].Body.linearVelocity = launch;
             }
 
-            if (shove.sqrMagnitude > 0.01f)
+            if (shove.sqrMagnitude > 0.01f && partShare > 0f)
             {
-                int struck = NearestPart(hitPoint);
-                Rigidbody body = _parts[struck].Body;
-                body.AddForceAtPosition(shove * (body.mass * HitPointKickShare), hitPoint, ForceMode.Impulse);
+                // Applied at the hit point, so the struck part both flies and spins the body around it.
+                Rigidbody body = _parts[NearestPart(hitPoint)].Body;
+                Vector3 kick = Vector3.ClampMagnitude(shove * partShare, Mathf.Max(0f, MaxLaunchSpeed - body.linearVelocity.magnitude));
+                body.AddForceAtPosition(kick, hitPoint, ForceMode.VelocityChange);
             }
 
             RagdollWorld.CopyLevelAround(Centre, _solid);

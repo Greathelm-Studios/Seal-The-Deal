@@ -8,6 +8,13 @@ namespace CloseTheDeal.Player
     {
         public const float MinFlinchRecover = 0.05f;
 
+        [Header("Death and knockout: the throw")]
+        [Tooltip("How much of the throw the whole body gets when it goes limp, as a fraction of the throw speed set on the gun or blast. 1 = the body flies off as one piece at full speed; lower = it travels less and crumples around where it was hit.")]
+        [Range(0f, 1f)] public float DeathBodyShare = 0.5f;
+
+        [Tooltip("Extra throw for only the body part that was hit, as a fraction of the throw speed. Higher = a head shot snaps the head back and spins the body over, a leg shot sweeps the legs out. 0 = every part moves the same.")]
+        [Range(0f, 2f)] public float DeathHitPartShare = 1f;
+
         [Header("Flinch: the push")]
         [Tooltip("How much of a hit's push the body takes, as a multiple. 1 = all of it, as the weapon reports it. Lower = every hit moves the body less; higher = everything hits like a truck, for a cartoon flinch.")]
         [Range(0f, 5f)] public float ImpulseShare = 1f;
