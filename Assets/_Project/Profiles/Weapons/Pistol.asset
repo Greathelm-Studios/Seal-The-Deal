@@ -158,8 +158,8 @@ MonoBehaviour:
   EquipSeconds: 0.2
   HitShove: 0
   HitControlLoss: 0
-  KillShove: 13
-  ShoveLift: 0.55
+  KillShove: 10
+  ShoveLift: 0.15
   ShotSound: {fileID: 8300000, guid: 440f94a7491c14792b1dcdc73fb1bb8a, type: 3}
   DryFireSound: {fileID: 8300000, guid: 1969725066cc54f6a9432240f8489bba, type: 3}
   DrawSound: {fileID: 8300000, guid: 51dbba3416c654e26962f360be259b28, type: 3}

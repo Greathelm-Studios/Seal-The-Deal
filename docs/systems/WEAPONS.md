@@ -18,8 +18,9 @@ The gun in the hand is the first-person arms model's toon pistol ([VIEWMODEL.md]
 Every player sees each shot's **muzzle flash** at the gun's barrel: a star-shaped fireball, a flame tongue and short side petals for about two frames, a warm light on the walls and hands, a few sparks, and a little grey smoke that hangs and drifts for about a second.
 The **tracer** is a short glowing streak (5 m) that flies from the muzzle to where the shot landed at 280 m/s; the hit itself is still instant.
 Where a shot hits the building or furniture there is a pop, sparks, dust and stone chips thrown off the surface, and a **bullet hole** stays on it (on furniture it moves with it). The last 128 holes are kept. The hit itself is the host's call; when the host agrees, the shooter gets a hit confirmation (and hit marker) and, on a kill, a separate kill confirmation.
-A hit flashes the target red and rocks it away from the shot (`Health` flinch); by default it does not shove a living target, so being shot never takes a player's movement away (`Hit Shove` on the gun turns that on). The killing shot throws the body hard, **13 m/s with lift by default, which carries a body standing roughly 1.3 to 6 m from a window out through it** (closer than that it hits the 0.6 m sill first).
+A hit flashes the target red and rocks it away from the shot (`Health` flinch); by default it does not shove a living target, so being shot never takes a player's movement away (`Hit Shove` on the gun turns that on). The killing shot knocks the body back **along the shot** rather than up: the pistol and AR-15 throw at **10 m/s with a 0.15 lift**, and the ragdoll gives half of that to the whole body and a full-speed kick to the part that was hit, so a head shot snaps the head back and a leg shot sweeps the legs (`DeathBodyShare`, `DeathHitPartShare` in [HIT_REACTIONS.md](HIT_REACTIONS.md)). Measured on the WeaponTest roof (2026-11-22, pistol, level shot): the hips rise 2 to 5 cm and the body ends up about 3.5 to 3.8 m back along the shot. The earlier 13 m/s with 0.55 lift threw bodies up about 2 m; it carried a body from 1.3 to 6 m away out of a window, which a gun kill now mostly doesn't (blasts still do: the GDD's window shot is the rocket's).
 A dead player falls flat, cannot steer, shoot, reload or switch, and comes back **5 seconds** later on the floor they died on with full magazines.
+A wounded player **regenerates**: **5 seconds** after the last hit, health climbs back at **10 a second** until full, and any new hit restarts the wait (`Health` > Regeneration: Regen Delay Seconds, Regen Per Second; 0 per second turns it off). It pauses while knocked out. Not in the GDD yet: added at Harvey's request on 2026-11-22, and the numbers are a first guess for Adam to confirm.
 Bullets always pass through glass and break it on the way ([GLASS.md](GLASS.md)). Bullets also wear down locked doors via `DoorDamage` on the door prefab.
 While the menu is open (the mouse is free) the fire, reload and slot buttons do nothing.
 
@@ -47,7 +48,7 @@ Adam points at NorseFPS (his other project, `Greathelm-Studios`) as the bar for 
 | Hit confirmation | Host | `TargetHitConfirmed` to the shooter only: 1-byte flags (killed, precision), reliable | Per hit |
 | Which gun is in each slot, which slot is out | Host | Three 1-byte SyncVars (`_slot0`, `_slot1`, `_active`), to everyone | On change |
 | Magazines, last shot number answered, reloads completed | Host | One packed 8-byte SyncVar (`_ownerState`), **to the owner only** (prevents parts arriving out of sync) | On change (each shot, each reload) |
-| Health, dead flag, knocked-out flag, last attacker | Host | Four SyncVars on `Health`, to everyone | On change |
+| Health, dead flag, knocked-out flag, last attacker | Host | Four SyncVars on `Health`, to everyone | On change; regeneration writes whole points only, so about 10 updates a second per healing player rather than one per tick |
 | Hit, death (throw impulse), respawn, knockout, recovery | Host | One RPC each (`RpcDamaged` unreliable with 32-bit packed direction; `RpcDied`, `RpcRespawned`, `RpcKnockedOut`, `RpcRecovered` reliable) | Per event |
 | Reload started (for other players' sound and animation) | Host | `RpcReloadStarted` (`ExcludeOwner = true`) | Per reload |
 | Muzzle flash, smoke, slide, tracer, impact burst, bullet holes, view kick, gun kick, hit flash, flinch | Each machine, locally, from the shots it already gets | Nothing | Local only |
@@ -95,6 +96,14 @@ Adam points at NorseFPS (his other project, `Greathelm-Studios`) as the bar for 
 - **Damageable objects:** Implement `CloseTheDeal.Core.IDamageable` on the hit collider, its parents, or its attached `Rigidbody`.
 - **Explosions:** `Knockback.Explode(..., attackerClientId)` applies `BlastProfile.Damage`, throws players and `Prop`s, triggers `BreakableDoor.TakeBlast()`, and breaks glass via `GlassRegistry.BreakInRadius`.
 - **Game mode:** `Health.OverrideNextRespawn(position)` on the host overrides the next respawn point once; `Health.AnyDied` carries the attacker's client id.
+
+## Weapon test scene
+
+`Assets/_Project/Scenes/WeaponTest.unity` is KitOffice with the players spawning on the roof range (pistol and AR-15 in hand) facing a row of targets at 5, 10, 17, 25 and 33 m, plus one that runs 7 m across the view at 6 m/s. Press Play, choose Host a game, and shoot.
+
+- **The targets are the player's own body** (`HitDummy.prefab`: the STDMC model and its ragdoll) with `Health` added, so they take gun damage, flash, regenerate, ragdoll on death and stand back up on their spot 5 seconds later, as a player does. The hit dummy's own script that drags it to where its ragdoll lands is left off, so a dead target doesn't come back down the range.
+- **Rebuilt, not edited:** `Seal the Deal > Dev > Build Weapon Test Scene` (`Editor/Dev/WeaponTestScene.cs`) copies the current KitOffice, moves the two fallback spawns onto the roof, places the targets on the clear band between the pool and the arsenal bay, gives the network objects their scene IDs, and saves. Rebuild it after KitOffice changes. KitOffice itself is never touched, and a hand-edited WeaponTest is left alone (`GeneratedAssetGuard`).
+- **Seen in the editor, 2026-11-22, host only:** spawn on the roof with the pistol; pistol hits on the 5 m and 17 m targets; a killed target ragdolls and respawns in place at full health; a 60-damage hit on the player regenerated from 40 to 100 between 5 and 11 seconds. Not yet seen from a client.
 
 ## Combat HUD and sound contracts
 

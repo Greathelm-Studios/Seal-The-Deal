@@ -60,6 +60,13 @@ namespace CloseTheDeal.Combat
         [Tooltip("How fast the body is thrown when something other than a gun kills it (a fall trigger, a script), in metres per second.")]
         [Min(0f)] [SerializeField] float _defaultKillShove = 6f;
 
+        [Header("Regeneration")]
+        [Tooltip("How long after the last hit before health starts coming back, in seconds. Any new hit restarts the wait. Higher = a wounded player stays weak for longer.")]
+        [Min(0f)] [SerializeField] float _regenDelaySeconds = 5f;
+
+        [Tooltip("How much health comes back each second once the wait is over, up to full. 0 = no regeneration. At 10, a player on 1 health is full again about 10 seconds later.")]
+        [Min(0f)] [SerializeField] float _regenPerSecond = 10f;
+
         [Header("Knocked out")]
         [Tooltip("How long a knocked-out player stays ragdolled and stunned before getting back up, in seconds. Higher = longer stun.")]
         [Min(0.1f)] [SerializeField] float _defaultKnockoutSeconds = 2f;
@@ -152,6 +159,8 @@ namespace CloseTheDeal.Combat
 
         uint _respawnTick;
         uint _recoverTick;
+        uint _regenFromTick;
+        float _regenOwed;
         Vector3 _safePosition;
         bool _hasRespawnOverride;
         Vector3 _respawnOverride;
@@ -281,6 +290,7 @@ namespace CloseTheDeal.Combat
             bool fatal = left <= 0f;
             _health.Value = left;
             _lastAttacker.Value = attackerClientId;
+            DelayRegen();
 
             var info = new DamageInfo(amount, point, direction, attackerClientId, fatal ? killShove : shove, fatal);
             if (fatal)
@@ -416,6 +426,30 @@ namespace CloseTheDeal.Combat
 
             if (_motor != null && tick % SafeGroundEveryTicks == 0 && _motor.State == MoveState.Grounded)
                 _safePosition = transform.position;
+
+            RegenTick(tick);
+        }
+
+        void DelayRegen()
+        {
+            _regenFromTick = TimeManager.Tick + TimeManager.TimeToTicks(_regenDelaySeconds);
+            _regenOwed = 0f;
+        }
+
+        void RegenTick(uint tick)
+        {
+            float current = _health.Value;
+            if (_regenPerSecond <= 0f || current >= _maxHealth || tick < _regenFromTick)
+                return;
+
+            // Whole points only, so a healing player costs the network about ten updates a second rather than one every tick.
+            _regenOwed += _regenPerSecond * (float)TimeManager.TickDelta;
+            if (_regenOwed < 1f)
+                return;
+
+            float whole = Mathf.Floor(_regenOwed);
+            _regenOwed -= whole;
+            _health.Value = Mathf.Min(_maxHealth, current + whole);
         }
 
         void DeadTick(uint tick)

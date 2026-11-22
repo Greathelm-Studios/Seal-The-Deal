@@ -98,7 +98,7 @@ namespace CloseTheDeal.Editor.Art
         }
 
         // Reflection into internal FishNet scene-ID helpers; throws MissingMethodException if FishNet renames them.
-        static string GiveNetworkSceneIds(Scene scene)
+        internal static string GiveNetworkSceneIds(Scene scene)
         {
             const System.Reflection.BindingFlags Flags = System.Reflection.BindingFlags.NonPublic
                 | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance;
