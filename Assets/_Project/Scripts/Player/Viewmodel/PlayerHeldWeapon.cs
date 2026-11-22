@@ -23,6 +23,9 @@ namespace CloseTheDeal.Player
         const float LeftArmClearX = 0.24f, LeftArmClearY = 0.22f, LeftArmFrontFade = 0.12f;
         const float RemoteCurlDistance = 12f;
 
+        /// <summary>Name of a held model's child that is a hand modelled round the weapon; while it is held, the body's own right hand is hidden.</summary>
+        public const string HeldHandName = "HeldHand";
+
         struct GunCopy
         {
             public Transform Gun;
@@ -59,6 +62,9 @@ namespace CloseTheDeal.Player
         bool _ready;
         WeaponHold _waiting;
         bool _hasWaiting;
+        readonly List<SkinnedMeshRenderer> _handMeshes = new();
+        readonly List<int> _handMeshSlot = new();
+        bool _ownHandHidden;
         readonly Dictionary<Transform, GunCopy> _copies = new();
 
         /// <summary>The muzzle of the held weapon (child named "Muzzle", or the weapon root if none).</summary>
@@ -105,6 +111,7 @@ namespace CloseTheDeal.Player
                 _leanPivot = _leanPivot.parent;
             _pivotHeight = _leanPivot.localPosition.y;
 
+            FindHandMeshes(transform);
             gameObject.AddComponent<HeldWeaponSettle>().Follow(this);
             _ready = true;
 
@@ -162,12 +169,41 @@ namespace CloseTheDeal.Player
             }
             _gun.gameObject.SetActive(true);
             Muzzle = copy.Muzzle;
+            ShowOwnHand(_gun.Find(HeldHandName) == null);
 
             // A different weapon hangs differently; let the steady sag be found again.
             _restOffset = Vector3.zero;
             _restTurn = Quaternion.identity;
             _bodyViewSwing = Vector3.zero;
             _bodyViewSwingTurn = Quaternion.identity;
+        }
+
+        // The body's renderers whose meshes the arms prefab lists; the swap is a mesh reference, nothing is built.
+        void FindHandMeshes(Transform model)
+        {
+            Mesh[] with = _source.WithOwnHand, without = _source.WithoutOwnHand;
+            if (with == null || without == null || with.Length != without.Length)
+                return;
+            foreach (SkinnedMeshRenderer skin in model.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                int slot = System.Array.IndexOf(with, skin.sharedMesh);
+                if (slot >= 0 && without[slot] != null)
+                {
+                    _handMeshes.Add(skin);
+                    _handMeshSlot.Add(slot);
+                }
+            }
+        }
+
+        void ShowOwnHand(bool show)
+        {
+            if (show != _ownHandHidden)
+                return;
+
+            _ownHandHidden = !show;
+            Mesh[] meshes = show ? _source.WithOwnHand : _source.WithoutOwnHand;
+            for (int i = 0; i < _handMeshes.Count; i++)
+                _handMeshes[i].sharedMesh = meshes[_handMeshSlot[i]];
         }
 
         static Transform FindMuzzle(Transform model)

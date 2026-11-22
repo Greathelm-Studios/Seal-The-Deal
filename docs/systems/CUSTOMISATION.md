@@ -22,7 +22,7 @@ Other players see you standing at the mirror and only see your new outfit once k
 | Shirt | White, Pale blue, Silver grey, Deep navy | Deep navy (2 runs) |
 | Belt | Brown leather, Near black, Deep navy, Corporate cobalt | Corporate cobalt (1 run) |
 
-Each choice sets `_BaseColor`, `_ShadowColor`, and `_OutlineColor` on the cel shader ([CHARACTER_SHADER.md](CHARACTER_SHADER.md)).
+Each choice sets `_BaseColor`, `_ShadowColor`, and `_OutlineColor` on the cel shader ([CHARACTER_SHADER.md](CHARACTER_SHADER.md)). Every suit's line is near-black (#05070F) since 2026-11-21 (Alex: the pale line on the dark suits read as white line art round the arm in first person).
 
 ## Ownership and netcode boundary (`AGENTS.md §3`)
 

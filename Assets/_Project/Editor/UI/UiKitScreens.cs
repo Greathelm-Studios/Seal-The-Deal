@@ -31,7 +31,7 @@ namespace CloseTheDeal.Editor.UI
         /// Rebuilds only TitleScreen.prefab from BuildTitle, with the kit's pieces as they are (not rebuilt). The kit
         /// canvas and Lane_Integration nest it, so they pick the change up. For working on the title in small steps.
         /// </summary>
-        [MenuItem("Close the Deal/UI/Rebuild Title Screen")]
+        [MenuItem("Seal the Deal/UI/Rebuild Title Screen")]
         static void RebuildTitleScreen()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)

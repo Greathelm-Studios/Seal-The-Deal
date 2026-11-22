@@ -15,5 +15,5 @@ MonoBehaviour:
   _displayName: Deep navy
   _baseColour: {r: 0.06666667, g: 0.105882354, b: 0.21960784, a: 1}
   _shadowColour: {r: 0.05666667, g: 0.09141176, b: 0.2437255, a: 1}
-  _contourColour: {r: 0.7882353, g: 0.80784315, b: 0.827451, a: 1}
+  _contourColour: {r: 0.019607844, g: 0.02745098, b: 0.05882353, a: 1}
   _runsToUnlock: 0

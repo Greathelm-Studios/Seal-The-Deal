@@ -3,7 +3,47 @@ guid: acaca487caf3fe2499dda0d7f4a9103e
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Pistol_Frame
+    second: {fileID: 2100000, guid: da4a1f1a50dd47e4785379a5a872d200, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Pistol_Grip
+    second: {fileID: 2100000, guid: a404fa7ace6670140abbcc2866cdcab9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Pistol_Hanko
+    second: {fileID: 2100000, guid: 295df58ef6c7149468ef7afe84fddb0b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Pistol_Logo
+    second: {fileID: 2100000, guid: cdd456d2ba86aa24189c9fe7020b48a9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Pistol_MagBase
+    second: {fileID: 2100000, guid: 354cc428bd3795841a7240ec83e47f9f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Pistol_Sights
+    second: {fileID: 2100000, guid: 7c5082e5447416844ad62cae4f23e1f9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Pistol_Slide
+    second: {fileID: 2100000, guid: 3fc6d4b83663f8f468efe191c0918e86, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Pistol_Trigger
+    second: {fileID: 2100000, guid: 8ac0b11848c86e14f8997d0292de8ae8, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

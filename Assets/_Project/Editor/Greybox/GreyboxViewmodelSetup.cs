@@ -31,11 +31,48 @@ namespace CloseTheDeal.Editor.Greybox
 
         const int JointsPerFinger = 3;
         const float ArmWeightShare = 0.5f;
-        static readonly Vector3 GripWristPosition = new(0.03f, 0.005f, -0.055f);
+        /// <summary>
+        /// How far up the forearm from the wrist a mesh must reach not to count as a separate cuff ring, metres. WHY:
+        /// on STDMC the shirt near the wrist is only a cuff ring (vertices 30-40 mm behind and 30-40 mm past the
+        /// wrist, none further up, with long triangles back to the elbow), worn off-centre from the jacket sleeve;
+        /// round the modelled hand it stuck out of the top of the sleeve whenever the arm swung (seen in play,
+        /// 2026-11-21; the character's own hand shows the same), so on the gun arm every triangle touching the
+        /// ring is dropped and the shirt sleeve ends inside the jacket. The jacket and the skin reach right up
+        /// the forearm.
+        /// </summary>
+        const float CuffRingReach = 0.06f;
+        /// <summary>
+        /// How far up the forearm from the wrist a cuff-ring mesh's sleeve is dropped on the gun arm, metres. WHY
+        /// 150 mm: the shirt sleeve also showed through the top of the jacket along the forearm when the arm swung
+        /// (seen in play, 2026-11-21); the jacket covers the forearm, which is 190 mm long, so the elbow is kept.
+        /// </summary>
+        const float InnerSleeveDrop = 0.15f;
+        /// <summary>How far from the forearm's bone a vertex may be and still count as part of the sleeve or cuff, metres. WHY 80 mm: the sleeve is at most 52 mm out (measured on STDMC); the shirt's front is much further.</summary>
+        const float SleeveReach = 0.08f;
+        /// <summary>
+        /// Where the jacket sleeve ends on the gun arm, metres up the forearm from the wrist joint. WHY 12 mm: with the
+        /// hand's skinning moved to the forearm the sleeve no longer bends at the wrist, and it reached 24 mm past the
+        /// joint onto the hand, so the grip hand's palm came out through its wall by up to 35 mm on the gun's left
+        /// (measured in play, 2026-11-22). From 12 mm up the hand fits inside. Pulling the end back keeps every
+        /// triangle; cutting them opened the sleeve's end.
+        /// </summary>
+        const float SleeveEnd = 0.012f;
+        /// <summary>
+        /// How far the jacket's sleeve end is pushed out from the forearm bone on the gun arm, metres, fading to nothing
+        /// over <see cref="CuffFlareLength"/>. WHY 7 mm: the bone runs near the top of the sleeve (its wall 15-17 mm
+        /// above it), and the grip hand's wrist poked 4-6 mm out through the top 15-25 mm up, showing as a skin
+        /// patch from the eye (measured in play, 2026-11-22); 7 mm leaves a little room for the wrist turning.
+        /// </summary>
+        const float CuffFlare = 0.007f;
+        /// <summary>How far up the forearm from <see cref="SleeveEnd"/> the <see cref="CuffFlare"/> fades out, metres. WHY 40 mm: the grip hand's wrist reaches 37 mm up the forearm.</summary>
+        const float CuffFlareLength = 0.04f;
+        // -0.068 forward: the Stylized Handgun's grip is shallower; at -0.055 the fingers closed in front of it.
+        static readonly Vector3 GripWristPosition = new(0.03f, 0.005f, -0.068f);
         static readonly Vector3 GripWristTurn = new(-6f, -4f, 0f);
         static readonly Vector3 SupportWristPosition = new(-0.04f, -0.02f, -0.045f);
         static readonly Vector3 SupportWristTurn = new(-12f, 28f, 0f);
-        const float PistolHandScale = 0.75f;
+        // 0.9: the Stylized Handgun read too small at 0.75 (Alex's pick from renders, 2026-11-21).
+        const float PistolHandScale = 0.9f;
         const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player.prefab";
         const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
 
@@ -192,6 +229,9 @@ namespace CloseTheDeal.Editor.Greybox
             GreyboxSceneSetup.SetReference(serialized, "_foldedUpperArm", FindDeep(model.transform, FoldedUpperArmBone));
             GreyboxSceneSetup.SetReference(serialized, "_idle", Clip(clips, IdleClip));
             GreyboxSceneSetup.SetReference(serialized, "_supportTarget", support);
+            (Mesh[] withOwnHand, Mesh[] withoutOwnHand) = CutRightHand(modelPrefab);
+            SetMeshes(serialized.FindProperty("_withOwnHand"), withOwnHand);
+            SetMeshes(serialized.FindProperty("_withoutOwnHand"), withoutOwnHand);
             if (!WireGrip(serialized, "_grip", model.transform, false) || !WireGrip(serialized, "_supportGrip", model.transform, true))
             {
                 Debug.LogError("[Greybox] The character model is missing arm or knuckle bones; no viewmodel built.");
@@ -204,6 +244,10 @@ namespace CloseTheDeal.Editor.Greybox
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, ArmsPrefabPath);
             Object.DestroyImmediate(root);
             GeneratedAssetGuard.MarkGenerated(prefab);
+            // The cut meshes were written as new objects over their files (SaveCut); the prefab as loaded still
+            // points at the ones they replaced until it is read back from disk.
+            AssetDatabase.ImportAsset(ArmsPrefabPath, ImportAssetOptions.ForceUpdate);
+            prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ArmsPrefabPath);
             Debug.Log("[Greybox] Wrote " + ArmsPrefabPath);
             return prefab.GetComponent<ViewmodelArms>();
         }
@@ -306,21 +350,244 @@ namespace CloseTheDeal.Editor.Greybox
             for (int i = 0; i < bones.Length; i++)
                 armBone[i] = bones[i] != null && IsArmBone(bones[i].name);
 
-            BoneWeight[] weights = source.boneWeights;
-            var armVertex = new bool[weights.Length];
+            bool[] onArm = OnBones(source, armBone);
+            return SaveCut(source, source.name + "_Arms", (a, b, c) => onArm[a] && onArm[b] && onArm[c]);
+        }
+
+        /// <summary>
+        /// The character meshes the right hand moves, and copies of them for weapons that bring a hand modelled
+        /// round their grip (the character's own hand is a mitten that crumples when its fingers curl). The skin
+        /// mesh (the one with the most triangles wholly on the hand) loses every triangle touching the hand; a mesh
+        /// with only a cuff ring round the wrist (<see cref="CuffRingReach"/>) loses every triangle touching it. In every copy what
+        /// was skinned to the hand goes to the forearm, so the jacket sleeve ends in a clean tube at the wrist instead
+        /// of being dragged into flaps when the hand turns round the grip. The jacket keeps all its triangles:
+        /// cutting its hand triangles opened the sleeve's end.
+        /// </summary>
+        static (Mesh[] with, Mesh[] without) CutRightHand(GameObject character)
+        {
+            var renderers = new List<SkinnedMeshRenderer>();
+            var handMasks = new List<bool[]>();
+            var forearms = new List<int>();
+            var hands = new List<int>();
+            int skin = -1, skinCount = 0;
+            foreach (SkinnedMeshRenderer skinned in character.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                Mesh mesh = skinned.sharedMesh;
+                Transform[] bones = skinned.bones;
+                Transform hand = System.Array.Find(bones, b => b != null && b.name == ArmBone(false, "Hand"));
+                int forearm = hand != null ? System.Array.IndexOf(bones, hand.parent) : -1;
+                if (mesh == null || forearm < 0)
+                    continue;
+
+                var handBone = new bool[bones.Length];
+                for (int i = 0; i < bones.Length; i++)
+                    handBone[i] = bones[i] != null && bones[i].IsChildOf(hand);
+                if (!TouchesBones(mesh, handBone))
+                    continue;
+
+                bool[] onHand = OnBones(mesh, handBone);
+                int count = 0;
+                for (int sub = 0; sub < mesh.subMeshCount; sub++)
+                {
+                    int[] all = mesh.GetTriangles(sub);
+                    for (int t = 0; t < all.Length; t += 3)
+                        if (onHand[all[t]] && onHand[all[t + 1]] && onHand[all[t + 2]])
+                            count++;
+                }
+                if (count > skinCount)
+                {
+                    skinCount = count;
+                    skin = renderers.Count;
+                }
+                renderers.Add(skinned);
+                handMasks.Add(handBone);
+                forearms.Add(forearm);
+                hands.Add(System.Array.IndexOf(bones, hand));
+            }
+
+            var with = new Mesh[renderers.Count];
+            var without = new Mesh[renderers.Count];
+            for (int i = 0; i < renderers.Count; i++)
+            {
+                Mesh mesh = renderers[i].sharedMesh;
+                with[i] = mesh;
+                bool[] onHand = OnBones(mesh, handMasks[i]);
+                // The skin loses every triangle touching the hand, or the wrist skin pokes out of the sleeve.
+                System.Func<int, int, int, bool> keep = (a, b, c) => true;
+                System.Action<Mesh> reshape = null;
+                if (i == skin)
+                    keep = (a, b, c) => !(onHand[a] || onHand[b] || onHand[c]);
+                else if (CuffRing(renderers[i], forearms[i], hands[i]) is bool[] ring)
+                    keep = (a, b, c) => !(ring[a] || ring[b] || ring[c]);
+                else
+                {
+                    int forearm = forearms[i], handIndex = hands[i];
+                    reshape = cut => FitSleeveEnd(cut, forearm, handIndex);
+                }
+                without[i] = SaveCut(mesh, mesh.name + "_NoRightHand", keep, handMasks[i], forearms[i], reshape);
+            }
+            return (with, without);
+        }
+
+        /// <summary>
+        /// The sleeve vertices to drop from a mesh whose sleeve ends in a cuff ring round the right wrist (vertices
+        /// near the wrist and none just above <see cref="CuffRingReach"/>): every one within <see cref="InnerSleeveDrop"/>
+        /// of the wrist. Null when the mesh has no such ring.
+        /// </summary>
+        static bool[] CuffRing(SkinnedMeshRenderer renderer, int forearm, int handIndex)
+        {
+            Matrix4x4[] bind = renderer.sharedMesh.bindposes;
+            Matrix4x4 toForearm = bind[forearm];
+            Vector3 wristPoint = toForearm.MultiplyPoint3x4(bind[handIndex].inverse.MultiplyPoint3x4(Vector3.zero));
+            Vector3 axis = wristPoint.normalized;
+            float wrist = wristPoint.magnitude;
+            Vector3[] vertices = renderer.sharedMesh.vertices;
+            var ring = new bool[vertices.Length];
+            bool any = false;
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                Vector3 f = toForearm.MultiplyPoint3x4(vertices[i]);
+                float along = Vector3.Dot(f, axis);
+                if ((f - axis * along).magnitude > SleeveReach)
+                    continue;
+                along -= wrist;
+                if (along <= -CuffRingReach && along > -2f * CuffRingReach)
+                    return null;
+                any |= along > -CuffRingReach;
+                ring[i] = along > -InnerSleeveDrop;
+            }
+            return any ? ring : null;
+        }
+
+        /// <summary>
+        /// Shapes the jacket's gun-arm sleeve end round a weapon's own hand, in the forearm's bind space: every sleeve
+        /// vertex past <see cref="SleeveEnd"/> is pulled back along the forearm onto it, and the last
+        /// <see cref="CuffFlareLength"/> is pushed out from the bone by up to <see cref="CuffFlare"/>.
+        /// </summary>
+        /// <remarks>
+        /// Call after <see cref="MoveWeights"/>: the sleeve end then follows the forearm only, so a bind-space move is a
+        /// move along the posed forearm. WHY moved rather than cut: cutting the jacket's hand triangles opened the
+        /// sleeve's end. The alternative, leaving some of the sleeve end on the hand bone so it bends with the wrist,
+        /// lost because that dragged it into flaps over the back of the hand when the hand turned round the grip.
+        /// Normals are left as they were; the moves are a few millimetres.
+        /// </remarks>
+        static void FitSleeveEnd(Mesh mesh, int forearm, int handIndex)
+        {
+            Matrix4x4[] bind = mesh.bindposes;
+            Matrix4x4 toForearm = bind[forearm];
+            Matrix4x4 fromForearm = toForearm.inverse;
+            Vector3 wristPoint = toForearm.MultiplyPoint3x4(bind[handIndex].inverse.MultiplyPoint3x4(Vector3.zero));
+            Vector3 axis = wristPoint.normalized;
+            float wrist = wristPoint.magnitude;
+            Vector3[] vertices = mesh.vertices;
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                Vector3 f = toForearm.MultiplyPoint3x4(vertices[i]);
+                float along = Vector3.Dot(f, axis);
+                Vector3 radial = f - axis * along;
+                along -= wrist;
+                if (radial.magnitude > SleeveReach || along <= -InnerSleeveDrop)
+                    continue;
+                // along is measured from the wrist toward the fingers, so "up the forearm" is -along.
+                along = Mathf.Min(along, -SleeveEnd);
+                float fade = Mathf.SmoothStep(0f, 1f, 1f - (-SleeveEnd - along) / CuffFlareLength);
+                radial += radial.normalized * (CuffFlare * fade);
+                vertices[i] = fromForearm.MultiplyPoint3x4(axis * (along + wrist) + radial);
+            }
+            mesh.vertices = vertices;
+            mesh.RecalculateBounds();
+        }
+
+        /// <summary>True when any vertex has any skinning on the marked bones.</summary>
+        static bool TouchesBones(Mesh mesh, bool[] boneMask)
+        {
+            foreach (BoneWeight w in mesh.boneWeights)
+            {
+                if ((boneMask[w.boneIndex0] && w.weight0 > 0f) || (boneMask[w.boneIndex1] && w.weight1 > 0f)
+                    || (boneMask[w.boneIndex2] && w.weight2 > 0f) || (boneMask[w.boneIndex3] && w.weight3 > 0f))
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>Moves every vertex's skinning on the marked bones onto bone <paramref name="to"/>, keeping the weights summing to one.</summary>
+        static void MoveWeights(Mesh mesh, bool[] fromBones, int to)
+        {
+            BoneWeight[] weights = mesh.boneWeights;
+            var index = new int[4];
+            var weight = new float[4];
+            for (int v = 0; v < weights.Length; v++)
+            {
+                BoneWeight w = weights[v];
+                index[0] = w.boneIndex0; index[1] = w.boneIndex1; index[2] = w.boneIndex2; index[3] = w.boneIndex3;
+                weight[0] = w.weight0; weight[1] = w.weight1; weight[2] = w.weight2; weight[3] = w.weight3;
+                float moved = 0f;
+                for (int k = 0; k < 4; k++)
+                {
+                    if (fromBones[index[k]] && weight[k] > 0f)
+                    {
+                        moved += weight[k];
+                        weight[k] = 0f;
+                    }
+                }
+                if (moved <= 0f)
+                    continue;
+
+                int slot = System.Array.IndexOf(index, to);
+                if (slot < 0 || weight[slot] <= 0f)
+                {
+                    slot = System.Array.IndexOf(weight, 0f);
+                    index[slot] = to;
+                }
+                weight[slot] += moved;
+
+                // Unity expects the heaviest influence first.
+                for (int a = 0; a < 3; a++)
+                    for (int b = a + 1; b < 4; b++)
+                        if (weight[b] > weight[a])
+                        {
+                            (weight[a], weight[b]) = (weight[b], weight[a]);
+                            (index[a], index[b]) = (index[b], index[a]);
+                        }
+                weights[v] = new BoneWeight
+                {
+                    boneIndex0 = index[0], weight0 = weight[0], boneIndex1 = index[1], weight1 = weight[1],
+                    boneIndex2 = index[2], weight2 = weight[2], boneIndex3 = index[3], weight3 = weight[3],
+                };
+            }
+            mesh.boneWeights = weights;
+        }
+
+        /// <summary>Which vertices have more than <see cref="ArmWeightShare"/> of their skinning on the marked bones.</summary>
+        static bool[] OnBones(Mesh mesh, bool[] boneMask)
+        {
+            BoneWeight[] weights = mesh.boneWeights;
+            var on = new bool[weights.Length];
             for (int i = 0; i < weights.Length; i++)
             {
                 BoneWeight w = weights[i];
                 float share = 0f;
-                if (armBone[w.boneIndex0]) share += w.weight0;
-                if (armBone[w.boneIndex1]) share += w.weight1;
-                if (armBone[w.boneIndex2]) share += w.weight2;
-                if (armBone[w.boneIndex3]) share += w.weight3;
-                armVertex[i] = share > ArmWeightShare;
+                if (boneMask[w.boneIndex0]) share += w.weight0;
+                if (boneMask[w.boneIndex1]) share += w.weight1;
+                if (boneMask[w.boneIndex2]) share += w.weight2;
+                if (boneMask[w.boneIndex3]) share += w.weight3;
+                on[i] = share > ArmWeightShare;
             }
+            return on;
+        }
 
+        /// <summary>
+        /// Saves a copy of <paramref name="source"/> keeping the triangles <paramref name="keep"/> accepts (given
+        /// their three vertex indices), optionally with the skinning on <paramref name="moveFrom"/> handed to bone
+        /// <paramref name="moveTo"/>, then optionally reshaped by <paramref name="reshape"/>.
+        /// </summary>
+        static Mesh SaveCut(Mesh source, string name, System.Func<int, int, int, bool> keep, bool[] moveFrom = null, int moveTo = -1, System.Action<Mesh> reshape = null)
+        {
             Mesh cut = Object.Instantiate(source);
-            cut.name = source.name + "_Arms";
+            cut.name = name;
+            if (moveFrom != null)
+                MoveWeights(cut, moveFrom, moveTo);
+            reshape?.Invoke(cut);
             int kept = 0;
             var triangles = new List<int>();
             for (int sub = 0; sub < source.subMeshCount; sub++)
@@ -329,7 +596,7 @@ namespace CloseTheDeal.Editor.Greybox
                 triangles.Clear();
                 for (int t = 0; t < all.Length; t += 3)
                 {
-                    if (armVertex[all[t]] && armVertex[all[t + 1]] && armVertex[all[t + 2]])
+                    if (keep(all[t], all[t + 1], all[t + 2]))
                     {
                         triangles.Add(all[t]);
                         triangles.Add(all[t + 1]);
@@ -347,19 +614,19 @@ namespace CloseTheDeal.Editor.Greybox
                 return null;
             }
 
-            // Overwrite in place so existing asset GUIDs and prefab references survive a re-cut.
+            // Written as a new mesh over the same file: the asset keeps its GUID, so prefab references survive a
+            // re-cut. WHY not copied into the existing mesh: that left the old cut on the graphics card, and the
+            // Editor kept drawing it until restarted (seen 2026-11-21).
             string path = ArmMeshFolder + "/" + cut.name + ".asset";
-            var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
-            if (existing == null)
-            {
-                AssetDatabase.CreateAsset(cut, path);
-                return cut;
-            }
+            AssetDatabase.CreateAsset(cut, path);
+            return cut;
+        }
 
-            EditorUtility.CopySerialized(cut, existing);
-            Object.DestroyImmediate(cut);
-            EditorUtility.SetDirty(existing);
-            return existing;
+        static void SetMeshes(SerializedProperty list, Mesh[] meshes)
+        {
+            list.arraySize = meshes.Length;
+            for (int i = 0; i < meshes.Length; i++)
+                list.GetArrayElementAtIndex(i).objectReferenceValue = meshes[i];
         }
 
         static bool IsArmBone(string boneName)
@@ -381,8 +648,43 @@ namespace CloseTheDeal.Editor.Greybox
             pistol.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
             pistol.transform.localScale = Vector3.one * PistolHandScale;
 
+            // The hand modelled round this grip (ArtSource/Weapons/pistol_grip_hand.py). Built in the pistol's
+            // own space, so it sits at the pistol's origin. The body shows it instead of its own hand
+            // (PlayerHeldWeapon.HeldHandName).
+            var handModel = AssetDatabase.LoadAssetAtPath<GameObject>(CloseTheDeal.Editor.Art.WeaponToonMaterials.PistolHandPath);
+            if (handModel != null)
+            {
+                var hand = (GameObject)PrefabUtility.InstantiatePrefab(handModel, pistol.transform);
+                hand.name = PlayerHeldWeapon.HeldHandName;
+                hand.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+                hand.transform.localScale = Vector3.one;
+                SwapToOutlineMeshes(hand, CloseTheDeal.Editor.Art.WeaponToonMaterials.PistolHandPath);
+            }
+            else
+            {
+                Debug.LogWarning("[Greybox] No grip hand at " + CloseTheDeal.Editor.Art.WeaponToonMaterials.PistolHandPath + "; the body's own hand holds the pistol.");
+            }
+
             foreach (Renderer renderer in pistol.GetComponentsInChildren<Renderer>(true))
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
+
+            SwapToOutlineMeshes(pistol, PistolPath);
+        }
+
+        static void SwapToOutlineMeshes(GameObject model, string modelPath)
+        {
+            // WHY swap to the outline-baked copies: the gun is low-poly and flat-shaded, and the toon
+            // contour splits open at every hard edge unless it has the smoothed normals the bake adds
+            // (Seal the Deal > Art > Build Weapon Toon Materials writes them). Missing copies leave the
+            // model's own meshes, so the gun still shows, with a broken line.
+            foreach (MeshFilter filter in model.GetComponentsInChildren<MeshFilter>(true))
+            {
+                Mesh baked = filter.sharedMesh != null
+                    ? CloseTheDeal.Editor.Art.CharacterOutlineBake.FindBaked(modelPath, filter.sharedMesh.name)
+                    : null;
+                if (baked != null)
+                    filter.sharedMesh = baked;
+            }
         }
 
         static Dictionary<string, AnimationClip> ImportClips()

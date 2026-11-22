@@ -6,19 +6,19 @@
     {"kind": "solid", "a": [14, 6], "b": [14, 14], "doors": []},
     {"kind": "solid", "a": [8, 18], "b": [8, 14], "doors": [{"at": 15, "room": "print", "face": [-1, 0]}]},
     {"kind": "fluted", "a": [14, 14], "b": [14, 18], "doors": [{"at": 17, "room": "print", "face": [1, 0]}]},
-    {"kind": "solid", "a": [8, 18], "b": [14, 18], "doors": []},
+    {"kind": "solid", "a": [8, 18], "b": [14, 18], "trimB": 0.1, "doors": []},
     {"kind": "solid", "a": [8, 22], "b": [8, 18], "doors": [{"at": 20, "room": "kitchen", "face": [-1, 0]}]},
     {"kind": "louvre", "a": [14, 18], "b": [14, 22], "doors": [{"at": 21, "room": "kitchen", "face": [1, 0]}]},
-    {"kind": "solid", "a": [8, 22], "b": [14, 22], "doors": [{"at": 11, "room": "", "face": [0, 0]}]},
+    {"kind": "solid", "a": [8, 22], "b": [14, 22], "trimA": 0.1, "trimB": 0.1, "doors": [{"at": 11, "room": "", "face": [0, 0]}]},
     {"kind": "fluted", "a": [8, 24], "b": [8, 22], "doors": [{"at": 23, "room": "wc", "face": [-1, 0]}]},
-    {"kind": "solid", "a": [14, 24], "b": [8, 24], "doors": []},
+    {"kind": "solid", "a": [14, 24], "b": [8, 24], "trimB": 0.1, "doors": []},
     {"kind": "solid", "a": [12, 22], "b": [12, 24], "doors": []},
     {"kind": "solid", "a": [14, 22], "b": [14, 24], "doors": []},
-    {"kind": "solid", "a": [0, 8], "b": [4, 8], "doors": [], "trimA": 0.15},
-    {"kind": "solid", "a": [4, 16], "b": [0, 16], "doors": [], "trimB": 0.15},
+    {"kind": "solid", "a": [0, 8], "b": [4, 8], "trimB": 0.1, "doors": [], "trimA": 0.15},
+    {"kind": "solid", "a": [4, 16], "b": [0, 16], "trimA": 0.1, "doors": [], "trimB": 0.15},
     {"kind": "louvre", "a": [4, 8], "b": [4, 16], "doors": [{"at": 9, "room": "conference", "face": [1, 0]}, {"at": 15, "room": "conference", "face": [1, 0]}]},
     {"kind": "frost", "a": [0, 20], "b": [4, 20], "doors": [{"at": 1, "room": "office", "face": [0, -1]}], "trimA": 0.15},
-    {"kind": "solid", "a": [4, 20], "b": [4, 28], "doors": [{"at": 21, "room": "office", "face": [1, 0]}]},
+    {"kind": "solid", "a": [4, 20], "b": [4, 28], "trimA": 0.1, "trimB": 0.1, "doors": [{"at": 21, "room": "office", "face": [1, 0]}]},
     {"kind": "glass", "a": [4, 28], "b": [0, 28], "doors": [], "trimB": 0.15},
     {"kind": "solid", "a": [0, 19], "b": [2, 19], "doors": [], "trimA": 0.15},
     {"kind": "solid", "a": [4, 0], "b": [4, 2], "doors": [], "trimA": 0.2},
@@ -28,7 +28,7 @@
     {"kind": "solid", "a": [20, 28], "b": [20, 32], "doors": [], "trimB": 0.2}
   ],
   "groundHalf": [
-    {"kind": "solid", "a": [10, 14], "b": [14, 14], "doors": []}
+    {"kind": "solid", "a": [10, 14], "b": [14, 14], "trimB": 0.1, "doors": []}
   ],
   "upperHalf": [
     {"kind": "guard", "a": [11.8, 10], "b": [11.8, 14], "doors": []},

@@ -444,8 +444,99 @@ def lightbox_logo():
     return save_label(img, 'Lightbox_Logo')
 
 
+# ---------------------------------------------------------------- notices and sticky notes (2026-11-22)
+# Human-scale jokes (posters/COPY.md, "Notices"): A4 sheets taped to walls and sticky notes on the bench dividers.
+# The warm sticky-note colours are deliberate: the office had no warm accent at all (review 2026-11-22).
+A4 = (0.21, 0.297)              # metres
+STICKY = 0.076                  # metres, a standard 76 mm square note
+NOTE_PX_PER_M = 1400            # texels per metre: body type ~6 mm cap still reads at arm's length
+PAPER = (0xFC, 0xFC, 0xFA)
+TAPE = (0xE8, 0xE4, 0xD4, 200)
+STICKY_COLOURS = {'yellow': (0xFF, 0xE8, 0x7A), 'pink': (0xFF, 0xB3, 0xC7), 'orange': (0xFF, 0xC0, 0x7A)}
+SEAL_RED = (0xC7, 0x47, 0x3E)
+
+NOTICES = [   # name, heading, Japanese heading, body lines (<= ~20 characters each), sign-off, heading colour
+    ('Note_Fridge', 'FRIDGE POLICY', '冷蔵庫の利用について',
+     ['Emptied every', 'Friday at 17:00.', '', 'Leftovers count as', 'team-building.'], '— Facilities  総務部', NAVY),
+    ('Note_Label', 'LABEL YOUR FOOD', '名前を書いてください',
+     ['Unlabelled yoghurt', 'is a shared', 'resource.', '', 'This means you.'], '— Management', NAVY),
+    ('Note_Birthday', 'HAPPY BIRTHDAY', 'お誕生日おめでとう',
+     ['Cake: 15:00.', 'Contribution: ¥500.', '', 'Attendance:', 'mandatory.', 'Fun: optional.'], '— HR  人事部', COBALT),
+    ('Note_Copier', 'OUT OF ORDER', '故障中',
+     ['Fix expected', 'next quarter.', '', 'Please stop', 'kicking it.'], '— IT  情報システム部', SEAL_RED),
+    ('Note_Printing', 'PRINTING', '印刷について',
+     ['Personal printing', 'is monitored.', '', 'Yes, we saw the', 'wedding invites.'], '— IT  情報システム部', NAVY),
+    ('Note_Water', 'HYDRATION', '給水について',
+     ['One cup per', 'billable hour.'], '— Finance  経理部', NAVY),
+]
+
+STICKIES = [   # name, colour, lines
+    ('Sticky_01', 'yellow', ['per my', 'last email']),
+    ('Sticky_02', 'pink', ['circle', 'back??']),
+    ('Sticky_03', 'orange', ['MEETING', 're: meeting', '14:00']),
+    ('Sticky_04', 'yellow', ['who took', 'my stapler']),
+    ('Sticky_05', 'pink', ['UPDATE', 'THE', 'TRACKER!!']),
+    ('Sticky_06', 'orange', ['synergy', 'Thurs?']),
+]
+
+
+def notice(name, heading, ja, body, sign_off, ink):
+    """A taped A4 sheet: heading, Japanese heading, a rule, the body and a small sign-off."""
+    img, den = canvas(*A4, NOTE_PX_PER_M)
+    W, H = img.size
+    d = ImageDraw.Draw(img)
+    m = lpx(0.016, den)
+    d.rectangle((0, 0, W, H), fill=PAPER + (255,))
+    head = fitted(JAPANESE, 0.02, den, 800, heading, W - 2 * m)
+    d.text((m, lpx(0.04, den)), heading, font=head, fill=ink, anchor='ls')
+    fj = fitted(JAPANESE, 0.01, den, 600, ja, W - 2 * m)
+    d.text((m, lpx(0.06, den)), ja, font=fj, fill=ink, anchor='ls')
+    d.rectangle((m, lpx(0.068, den), W - m, lpx(0.0695, den)), fill=ink)
+    fb = fitted(JAPANESE, 0.0115, den, 600, max(body, key=len), W - 2 * m)
+    y = lpx(0.095, den)
+    for line in body:
+        if line:
+            d.text((m, y), line, font=fb, fill=NAVY, anchor='ls')
+        y += lpx(0.021, den)
+    fs = fitted(JAPANESE, 0.006, den, 500)
+    d.text((W - m, H - m), sign_off, font=fs, fill=NAVY, anchor='rs')
+    tw, th = lpx(0.05, den), lpx(0.014, den)   # one strip of tape across the top edge
+    tape = Image.new('RGBA', (tw, th), TAPE)
+    img.alpha_composite(tape, ((W - tw) // 2, 0))
+    return save_label(img, name)
+
+
+def sticky(name, colour, lines):
+    """A square sticky note in a lighter weight, slightly darker along the glued top edge."""
+    img, den = canvas(STICKY, STICKY, NOTE_PX_PER_M)
+    W, H = img.size
+    d = ImageDraw.Draw(img)
+    c = STICKY_COLOURS[colour]
+    d.rectangle((0, 0, W, H), fill=c + (255,))
+    d.rectangle((0, 0, W, lpx(0.012, den)), fill=tuple(int(v * 0.93) for v in c) + (255,))
+    m = lpx(0.008, den)
+    f = fitted(JAPANESE, 0.011, den, 500, max(lines, key=len), W - 2 * m)
+    y = lpx(0.031, den)
+    for line in lines:
+        d.text((m, y), line, font=f, fill=NAVY, anchor='ls')
+        y += lpx(0.017, den)
+    return save_label(img, name)
+
+
+def notes():
+    return [notice(*n) for n in NOTICES] + [sticky(*s) for s in STICKIES]
+
+
 if __name__ == '__main__':
     signs = [zone_sign(k) for k in ZONES]
     spec_sheet(signs)
     label_sheet(labels() + [lightbox_wave(), lightbox_logo()])
+    label_sheet_notes = notes()
+    note_sheet = Image.new('RGB', (sum(i.width for i in label_sheet_notes) + 20 * (len(label_sheet_notes) + 1),
+                                   max(i.height for i in label_sheet_notes) + 40), (0x9A, 0xA6, 0xB4))
+    x = 20
+    for i in label_sheet_notes:
+        note_sheet.paste(i, (x, 20), i)
+        x += i.width + 20
+    note_sheet.save(os.path.join(HERE, 'review', 'notes_sheet.png'))
     print('wrote', len(signs), 'zone signs, the labels, review/sign_spec.png and review/label_sheet.png to', HERE)

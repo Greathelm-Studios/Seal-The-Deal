@@ -360,6 +360,28 @@ Built to [concepts/Mood/DECISION.md](concepts/Mood/DECISION.md) and Alex's refer
 
 Checked in Play, hosting locally: the lift and the roof props spawn, and the louvre drift runs. Captures: `review/unity_office/moodD_phase2.png` and `frost_sheet.png`.
 
+### Quality pass, 2026-11-15 night (Alex: "the clipping and texture work, it all feels basic and amateur")
+
+- **Walls stop at partitions.** Nine solid wall runs ended inside the 10 cm frame of the glass, fluted, louvre or frost
+  partition they met, so the partition's head rail ran through the wall end and left a notch. Those runs now carry a
+  0.1 m `trimA`/`trimB` in `markings/l2_on_kit.json`, so the wall stops at the partition's face.
+- **Real surfaces.** `textures/make_surfaces.py` (run after `make_textures.py`) writes a colour map, a normal map and a
+  metallic/smoothness map for these surfaces. `KitImport.Surfaces` gives each one its repeat in metres.
+  - Wall_PaperWhite: satin paint, gloss 0.6-0.74 instead of a flat 0.85, 2 m repeat.
+  - Ceiling_Tile: matt plaster, 2 m repeat.
+  - Trim_Navy: powder coat.
+  - Frame_Aluminium: brushed along the rails.
+  - Floor_Carpet: recessed joints, and gloss 0.88-0.96 per patch.
+  - Carpet_Dark: loop pile.
+  The normal strengths are deliberately low. At the first strengths tried, the walls read as stucco and the trim as
+  sandpaper.
+- **Wall-base band 5 cm** (`make_markings.py` BASE_BAND, was 0.12 m). At 12 cm, every wall end showed a square
+  coloured foot.
+- **SSAO** (`Assets/Settings/PC_Renderer.asset`, project-wide) is now intensity 0.3 and radius 0.2 (was 0.45 and 0.3).
+  The old values left a dark band at every wall-floor corner.
+- Planter leaves were remodelled by the props session (Planter_Box: real leaf blades instead of flat cards).
+- Review sheets: `review/unity_office/quality_findings.png`, `quality_joins_before_after.png`, `quality_rooms_after.png`.
+
 ## Checks run
 
 - Every piece passes `mdl.mjs check` with no errors (2026-11-12, 26 pieces). The warnings are long thin faces: on thin boxes (rails, panes, slab edges), and where the shadow-gap cuts slice the flat-shaded walls. They are flat faces, so they shade correctly; they would only matter for automatic LODs, which the kit doesn't use. The locked door's lock plates touch its faces without a boolean union (a "faces cut through each other" warning).

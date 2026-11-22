@@ -60,7 +60,7 @@ id_mask(fill("Screen_Smoke", "screen", 6), (255, 0, 255))
 id_mask(fill("Cobalt", "cobalt", 6), (55, 0, 255))
 id_mask(fill("LED_Cyan", "led", 30, emit="led"), (255, 255, 0))
 id_mask(fill("Seal", "seal", 65), (255, 0, 0))
-id_mask(fill("Leaf", "leaf", 76), (55, 255, 0))
+id_mask(fill("Leaf", "leaf", 30), (55, 255, 0))   # WHY 30: glossy waxy leaves (quality pass, 2026-11-15)
 # Print band: fixed artwork (make_print.py) as the base colour, masked by its ID (1, 0.5, 0 bakes as 255, 55, 0).
 prn = fill("Print", "pearl", 30)
 # WHY a versioned file name: Painter reuses an already-imported resource of the same name.

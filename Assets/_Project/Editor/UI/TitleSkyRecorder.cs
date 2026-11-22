@@ -28,7 +28,7 @@ namespace CloseTheDeal.Editor.UI
         static int _lastFrame;
         static int _total;
 
-        [MenuItem("Close the Deal/UI/Record Title Sky (12 s)")]
+        [MenuItem("Seal the Deal/UI/Record Title Sky (12 s)")]
         static void Record()
         {
             if (!EditorApplication.isPlaying)

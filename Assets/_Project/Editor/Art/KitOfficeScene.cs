@@ -219,6 +219,27 @@ namespace CloseTheDeal.Editor.Art
         const float WallTextBand = 0.62f, WallTextY = 3.95f;
         static readonly Vector2 EvacSize = new Vector2(0.6f, 0.42f);
         static readonly Vector2 FloorNoSize = new Vector2(1.2f, 0.9f);
+        /// <summary>Notice size, metres: an A4 sheet drawn at twice real size so it reads from a few steps away.</summary>
+        static readonly Vector2 NoteSize = new Vector2(0.42f, 0.594f);
+        /// <summary>Poster size and centre height, metres: make_posters.py draws 0.6 x 0.8, shown at 1.5x so it reads across a room.</summary>
+        static readonly Vector2 PosterSize = new Vector2(0.9f, 1.2f);
+        const float PosterY = 1.7f;
+        const int PosterCount = 12, StickyCount = 6;
+        /// <summary>Poster walls in firm A's plan (x, y, facing): core west face between the print plate and kitchen
+        /// door, the back-office corridor wall past its zone sign, and the core's south face either side of its planter.</summary>
+        static readonly (float x, float y, float fx, float fy)[] PosterSpots =
+        {
+            (8f, 17.4f, -1f, 0f), (4f, 26.8f, 1f, 0f), (9.6f, 24f, 0f, 1f), (12.4f, 24f, 0f, 1f),
+        };
+        /// <summary>Extra Planter_Box spots in firm A's plan (x, y, yaw): by the office door, under the core's south
+        /// posters, and in the two gaps along the north windows.</summary>
+        static readonly (float x, float y, float yaw)[] PlanterSpots =
+        {
+            (4.25f, 22.9f, 90f), (11f, 24.25f, 0f), (6.2f, 0.7f, 0f), (15f, 0.7f, 0f),
+        };
+        /// <summary>Sticky note on a bench divider: size, centre height, offset along the bench and off its centre
+        /// line (the fluted pane is 18 mm thick, plus a 4 mm gap), and tilt in degrees. Between the two monitors.</summary>
+        const float StickySize = 0.076f, StickyY = 0.98f, StickyAlong = 0.05f, StickyOff = 0.013f, StickyTilt = 4f;
         const float StringerBandHeight = 0.12f;
         static readonly Vector2 StringerFoot = new Vector2(FeatureFootX, 0.05f), StringerTop = new Vector2(CourtX0, 4.35f);
 
@@ -263,6 +284,7 @@ namespace CloseTheDeal.Editor.Art
                 if (decorate) KitSigns.Decorate(go, piece);
                 return go;
             }
+            int poster = 0, sticky = 0;
             Vector2 U(float x, float y, bool turned) => turned ? new Vector2(Width - x, -(Depth - y)) : new Vector2(x, -y);
             GameObject Put(Transform parent, string piece, float x, float y, float yaw, bool turned, bool decorate = true)
             {
@@ -566,7 +588,22 @@ namespace CloseTheDeal.Editor.Art
                         Put(t, "Chair_Pod", 2.4f, 5.2f, 180f, turned);
                         Put(t, "Slipper_Cabinet", 9.2f, 18.2f + 0.175f, 180f, turned);
                     }
+                    Dress(t, level, turned);
                 }
+            }
+
+            // Human-scale jokes and plants (review 2026-11-22: the office read empty). Plan coordinates as in FitOut.
+            void Dress(Transform t, int level, bool turned)
+            {
+                WallDecal(t, "Note_Fridge", 10.2f, 18.2f, 1.55f, 0f, 1f, NoteSize, turned);
+                WallDecal(t, "Note_Label", 10.75f, 18.2f, 1.45f, 0f, 1f, NoteSize, turned);
+                WallDecal(t, "Note_Birthday", 11.65f, 18.2f, 1.6f, 0f, 1f, NoteSize, turned);
+                WallDecal(t, "Note_Water", 12.4f, 18.2f, 1.5f, 0f, 1f, NoteSize, turned);
+                WallDecal(t, "Note_Copier", 12.4f, 18f, 1.4f, 0f, -1f, NoteSize, turned);
+                WallDecal(t, "Note_Printing", 11.2f, 18f, 1.55f, 0f, -1f, NoteSize, turned);
+                foreach (var (x, y, fx, fy) in PosterSpots)
+                    WallDecal(t, $"Poster_{poster++ % PosterCount + 1:00}", x, y, PosterY, fx, fy, PosterSize, turned);
+                foreach (var (x, y, yaw) in PlanterSpots) Put(t, "Planter_Box", x, y, yaw, turned);
             }
 
             void Bench(Transform t, float x, float y, float yaw, bool turned)
@@ -601,6 +638,14 @@ namespace CloseTheDeal.Editor.Art
                 {
                     Item("PC_Tower", -PcTowerX, PcTowerZ, 0f, false);
                     Item("PC_Tower", PcTowerX, -PcTowerZ, 180f, false);
+                }
+                foreach (float side in new[] { 1f, -1f })
+                {
+                    Vector3 normal = q * new Vector3(0f, 0f, side);
+                    Vector3 o = q * new Vector3(side * StickyAlong, 0f, side * StickyOff);
+                    Vector3 up = Quaternion.AngleAxis(sticky % 2 == 0 ? StickyTilt : -StickyTilt, normal) * Vector3.up;
+                    KitSigns.Decal(t, $"Sticky_{sticky++ % StickyCount + 1:00}", new Vector3(c.x + o.x, StickyY, c.y + o.z),
+                                   KitSigns.Facing(normal, up), new Vector2(StickySize, StickySize));
                 }
             }
 
@@ -809,6 +854,9 @@ namespace CloseTheDeal.Editor.Art
             var cam = go.AddComponent<Camera>();
             cam.fieldOfView = CaptureFov;
             go.AddComponent<UniversalAdditionalCameraData>().renderPostProcessing = true;
+            // WHY: the player camera takes over this object at runtime, so without a listener
+            // here KitOffice plays silent and the audio settings meter finds nothing to attach to.
+            go.AddComponent<AudioListener>();
             var v = Views()[0];
             go.transform.SetPositionAndRotation(v.eye, Quaternion.LookRotation(v.target - v.eye));
         }

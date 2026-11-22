@@ -20,23 +20,23 @@ namespace CloseTheDeal.Editor.Art
 
         const float SunElevation = 32f;
         const float SunHeading = 140f;
-        static readonly Color SunColour = Hex(0xFFF3E4);
-        const float SunIntensity = 4.2f;
+        static readonly Color SunColour = Hex(0xFFDCB4);
+        const float SunIntensity = 5.5f;
 
-        static readonly Color AmbientSky = Hex(0xF3F4F6);
-        static readonly Color AmbientEquator = Hex(0xF2F3F5);
-        static readonly Color AmbientGround = Hex(0xEAECEF);
-        const float AmbientLevel = 0.5f;
+        static readonly Color AmbientSky = Hex(0xD6E4FA);
+        static readonly Color AmbientEquator = Hex(0xDEE7F6);
+        static readonly Color AmbientGround = Hex(0xE2E6EC);
+        const float AmbientLevel = 0.4f;
 
         // Must match OfficeSky.shader's default horizon colour so distant geometry fades cleanly into the sky.
         static readonly Color HazeColour = Hex(0x9EE0FC);
         const float HazeStart = 80f;
         const float HazeEnd = 700f;
 
-        const float PostExposure = 1.0f;
+        const float PostExposure = 0.6f;
         const float SkyShownExposure = 0.6f;
         static readonly float SkyExposureComp = Mathf.Pow(2f, -(PostExposure - SkyShownExposure));
-        const float Contrast = 18f;
+        const float Contrast = 25f;
         const float Saturation = 16f;
         static readonly Color ColourFilter = Hex(0xFAFBFD);
         const float Temperature = -2f;

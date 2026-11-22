@@ -15,5 +15,5 @@ MonoBehaviour:
   _displayName: Charcoal
   _baseColour: {r: 0.17254902, g: 0.16862746, b: 0.17254902, a: 1}
   _shadowColour: {r: 0.11490197, g: 0.12780392, b: 0.21078432, a: 1}
-  _contourColour: {r: 0.7882353, g: 0.80784315, b: 0.827451, a: 1}
+  _contourColour: {r: 0.019607844, g: 0.02745098, b: 0.05882353, a: 1}
   _runsToUnlock: 0

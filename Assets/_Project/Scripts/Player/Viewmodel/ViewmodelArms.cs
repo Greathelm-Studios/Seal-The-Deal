@@ -45,6 +45,13 @@ namespace CloseTheDeal.Player
         [Tooltip("Ticked when the weapon in this prefab is held in both hands. Unticked, the left arm is folded away and never shows.")]
         [SerializeField] bool _twoHanded;
 
+        [Header("Own hand")]
+        [Tooltip("The character's meshes that the right hand moves: the skin, the shirt cuff and the sleeve. Filled in by the greybox tool.")]
+        [SerializeField] Mesh[] _withOwnHand = new Mesh[0];
+
+        [Tooltip("The same meshes, in the same order, shown while a weapon brings its own hand modelled round the grip (a child named HeldHand): the skin without the right hand, and the cuff and sleeve held by the forearm alone so they end in a clean tube round the modelled wrist. Cut by the greybox tool.")]
+        [SerializeField] Mesh[] _withoutOwnHand = new Mesh[0];
+
         [Header("Clip")]
         [Tooltip("Looping pose under the arm solve. It supplies the finger curl and which side the elbow bends to.")]
         [SerializeField] AnimationClip _idle;
@@ -54,6 +61,12 @@ namespace CloseTheDeal.Player
         bool _visible = true;
         Transform _equipped;
         bool _supportSeated = true;
+
+        /// <summary>The character's meshes the right hand moves, as the model has them.</summary>
+        public Mesh[] WithOwnHand => _withOwnHand;
+
+        /// <summary>The same meshes, same order, for weapons that bring their own hand.</summary>
+        public Mesh[] WithoutOwnHand => _withoutOwnHand;
 
         /// <summary>The gun arm's settings. The body other players see copies its finger curls and elbow swing.</summary>
         public HandGrip Grip => _grip;

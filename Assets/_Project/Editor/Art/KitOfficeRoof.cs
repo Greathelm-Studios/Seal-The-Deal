@@ -279,11 +279,12 @@ namespace CloseTheDeal.Editor.Art
             SerializedProperty carProp = so.FindProperty("_car");
             if (carProp.objectReferenceValue == null) carProp.objectReferenceValue = body;
             SerializedProperty leavesProp = so.FindProperty("_doorLeaves");
-            if (leavesProp.arraySize == 0) SetArray(leavesProp, doors);
+            // Elevator's lists start pre-sized with empty slots, so "unset" means no slot is filled, not a zero length.
+            if (NoneSet(leavesProp)) SetArray(leavesProp, doors);
             SerializedProperty callsProp = so.FindProperty("_callPoints");
-            if (callsProp.arraySize == 0) SetArray(callsProp, calls);
+            if (NoneSet(callsProp)) SetArray(callsProp, calls);
             SerializedProperty slides = so.FindProperty("_doorSlides");
-            if (slides.arraySize == 0)
+            if (NoneSet(slides))
             {
                 slides.arraySize = doors.Length;
                 for (int i = 0; i < doors.Length; i++)
@@ -301,6 +302,18 @@ namespace CloseTheDeal.Editor.Art
             }
             so.ApplyModifiedPropertiesWithoutUndo();
             report.Append("Lift wired: travel ").Append(RoofHeight).Append(" m, rider box ").Append(cabinSize.ToString("F2")).Append('.');
+        }
+
+        static bool NoneSet(SerializedProperty array)
+        {
+            for (int i = 0; i < array.arraySize; i++)
+            {
+                SerializedProperty e = array.GetArrayElementAtIndex(i);
+                if (e.propertyType == SerializedPropertyType.ObjectReference ? e.objectReferenceValue != null
+                                                                               : e.vector3Value != Vector3.zero)
+                    return false;
+            }
+            return true;
         }
 
         static void SetArray(SerializedProperty array, Transform[] values)

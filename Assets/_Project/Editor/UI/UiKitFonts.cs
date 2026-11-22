@@ -51,7 +51,7 @@ namespace CloseTheDeal.Editor.UI
 
         // ---- 1. Import -------------------------------------------------------------------------------------------
 
-        [MenuItem("Close the Deal/UI/Fonts/1 Import Kit Fonts")]
+        [MenuItem("Seal the Deal/UI/Fonts/1 Import Kit Fonts")]
         static void Import()
         {
             Dictionary<Face, TMP_FontAsset> faces = EnsureFaces();
@@ -152,10 +152,10 @@ namespace CloseTheDeal.Editor.UI
 
         // ---- 2 and 3. Retype -------------------------------------------------------------------------------------
 
-        [MenuItem("Close the Deal/UI/Fonts/2 Retype Report (dry run)")]
+        [MenuItem("Seal the Deal/UI/Fonts/2 Retype Report (dry run)")]
         static void Report() => Retype(false);
 
-        [MenuItem("Close the Deal/UI/Fonts/3 Retype Kit Text")]
+        [MenuItem("Seal the Deal/UI/Fonts/3 Retype Kit Text")]
         static void Apply() => Retype(true);   // no confirm dialog: it never reached a Unity window on another Space
 
         sealed class Row
@@ -174,7 +174,7 @@ namespace CloseTheDeal.Editor.UI
             Dictionary<Face, TMP_FontAsset> faces = LoadFaces();
             if (faces == null)
             {
-                Debug.LogError("[Fonts] Run Close the Deal > UI > Fonts > 1 Import Kit Fonts first.");
+                Debug.LogError("[Fonts] Run Seal the Deal > UI > Fonts > 1 Import Kit Fonts first.");
                 return;
             }
 
@@ -423,7 +423,7 @@ namespace CloseTheDeal.Editor.UI
             var sb = new StringBuilder();
             sb.AppendLine($"# Font swap {(applied ? "applied" : "report (dry run)")}");
             sb.AppendLine();
-            sb.AppendLine("Written by Close the Deal > UI > Fonts. Display = Saira Expanded Light, Label = Archivo SemiExpanded Medium, Body = Archivo SemiExpanded, Mono = Martian Mono Light.");
+            sb.AppendLine("Written by Seal the Deal > UI > Fonts. Display = Saira Expanded Light, Label = Archivo SemiExpanded Medium, Body = Archivo SemiExpanded, Mono = Martian Mono Light.");
             sb.AppendLine();
             foreach (IGrouping<string, Row> g in rows.GroupBy(r => r.Face))
                 sb.AppendLine($"- {g.Key}: {g.Count()}");

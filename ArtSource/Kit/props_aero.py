@@ -60,6 +60,7 @@ PA = params(
     COPIER_DECK_H=0.37,    # paper deck height under the copier, metres: 1.05 less the drawing's 0.68 m machine
     COPIER_DRAWER_H=0.112, # each of the machine's two drawers, metres (the drawing's 0.24 m pair)
     COPIER_BAY_H=0.13,     # open output bay height, metres (the drawing)
+    LEAVES_PER_CLUMP=9,    # leaves in each of the planter's three clumps
     COL_EDGE=0.025,        # pale edge line along the column band's upper side (README: 25 mm)
     # ---- Doors (README_part2.md sheet 6)
     DOOR_TRIM_SET=0.003,   # silver jamb strip face sits this far back from the wall face, metres: a lit edge in the groove
@@ -290,7 +291,8 @@ def monitor_crt():
     lip = PA.CRT_LIP_D                     # silver front lip depth
     # Pearl shell: full face for the front block, then the taper to the rear cap (README_part2: 410 x 250 cap).
     shell = loft_xy([
-        (zf - lip + 0.004, W, PA.CRT_FACE_H, PA.CRT_R, yc),
+        # WHY the shell starts exactly at the lip's back: overlapping flush, the pearl and silver skins z-fought.
+        (zf - lip, W, PA.CRT_FACE_H, PA.CRT_R, yc),
         (zf - PA.CRT_BLOCK_D, W, PA.CRT_FACE_H, PA.CRT_R, yc),
         (zb + 0.06, PA.CRT_CAP_W + 0.06, PA.CRT_CAP_H + 0.05, PA.CRT_R, yc + 0.01),
         (zb + 0.008, PA.CRT_CAP_W, PA.CRT_CAP_H, PA.CRT_R * 0.8, yc + 0.012),
@@ -312,7 +314,7 @@ def monitor_crt():
                       (zf - lip, W, PA.CRT_FACE_H, PA.CRT_R, yc)])
     sw, sh = W - 2 * PA.CRT_BEZEL, PA.CRT_FACE_H - 2 * PA.CRT_BEZEL
     # A domed tube face: the sheet's "smoked curved screen", bulging up to 9 mm in front of the lip.
-    screen = loft_xy([(zf - lip, sw + 0.004, sh + 0.004, 0.03, yc), (zf - 0.01, sw, sh, 0.03, yc),
+    screen = loft_xy([(zf - lip + 0.002, sw + 0.004, sh + 0.004, 0.03, yc), (zf - 0.01, sw, sh, 0.03, yc),
                       (zf - 0.004, sw - 0.03, sh - 0.03, 0.045, yc), (zf - 0.001, sw - 0.12, sh - 0.1, 0.06, yc)])
     led = u(W / 2 - 0.03, W / 2 - 0.022, y0 + 0.008, y0 + 0.016, zf - 0.007, zf - 0.004)
     badge = ring_badge(0.0, y0 + PA.CRT_BEZEL / 2, zf - 0.006, PA.BADGE_D, 3, 6)
@@ -470,7 +472,8 @@ def copier_aero():
     tray_lip = rbox(-0.235, 0.105, y_bay0 - 0.004, y_bay0 + 0.016, front - 0.004, front + 0.008, 0.006, 2)
     logo = badge_disc(0.215, (y_bay0 + y_bay1) / 2 + 0.01, front, 0.1)
     # ---- scanner block: overhangs the bay, then the lid unit and smoked lid on top
-    scanner = moulded(-W / 2, W / 2, y_bay1 - 0.005, 0.99, -D / 2 + 0.004, front + 0.008, 6.0, 0.03, 0.03)
+    # WHY 1.5 mm wider and deeper than the machine: flush, the flanks and back corners z-fought.
+    scanner = moulded(-W / 2 - 0.0015, W / 2 + 0.0015, y_bay1 - 0.005, 0.99, -D / 2 - 0.0015, front + 0.008, 6.0, 0.03, 0.03)
     lid_unit = moulded(-W / 2 + 0.03, W / 2 - 0.03, 0.97, 1.025, -D / 2 + 0.03, front - 0.05, 6.0, 0.0, 0.018)
     lid = moulded(-W / 2 + 0.07, W / 2 - 0.07, 1.012, H, -D / 2 + 0.06, front - 0.09, 7.0, 0.0, 0.012)
     # ---- console: a chunky grey block on the scanner's right, its face leaning back 16 degrees
@@ -500,7 +503,7 @@ def copier_aero():
     led = cylinder(0.0045, 0.004, segments=10, base='bottom')
     move(led, -0.185, -0.05, 0.0)
     on_face(led)
-    vent = u(-W / 2 - 0.0005, -W / 2 + 0.004, y_bay1 + 0.035, y_bay1 + 0.105, front - 0.16, front - 0.05)
+    vent = u(-W / 2 - 0.002, -W / 2 + 0.004, y_bay1 + 0.035, y_bay1 + 0.105, front - 0.16, front - 0.05)
     feet = feet4((-0.25, 0.25), (-0.27, 0.27), 0.018, 0.01)
     ob = part('Kit_Copier', viewer_x(join(paint(join(deck, machine, scanner, lid_unit, *drawers), 0), paint(lid, 1),
                                           paint(join(*grips, start, small), 2), paint(join(feet, seam), 3), paint(keys, 4),
@@ -553,7 +556,7 @@ def keyboard_aero():
 
     shell = prism_zy([(D / 2, 0), (D / 2, hf), (-D / 2, hr), (-D / 2, 0)], -W / 2, W / 2)
     bevel(shell, 0.004, segments=2, angle=30)
-    trim = u(-W / 2 + 0.01, W / 2 - 0.01, 0.004, 0.008, D / 2 - 0.0015, D / 2 + 0.0)
+    trim = u(-W / 2 + 0.01, W / 2 - 0.01, 0.004, 0.008, D / 2 - 0.0015, D / 2 + 0.0015)   # WHY proud: flush, it z-fought
     z0, z1 = -D / 2 + 0.012, D / 2 - 0.02
     keys = prism_zy([(z1, top(z1) + PA.KB_KEY_H), (z0, top(z0) + PA.KB_KEY_H), (z0, top(z0) - 0.002), (z1, top(z1) - 0.002)],
                     -W / 2 + 0.016, W / 2 - 0.016)
@@ -766,12 +769,15 @@ def doc_tray_aero():
     frost = []
     for y in (0.008, 0.098):
         frost.append(rprism_xz(-w / 2, w / 2, -d / 2, d / 2, 0.01, y, y + 0.006, 6))
-        frost.append(rbox(-w / 2, -w / 2 + 0.006, y, y + 0.066, -d / 2, d / 2 - 0.05, 0.002, 1))
-        frost.append(rbox(w / 2 - 0.006, w / 2, y, y + 0.066, -d / 2, d / 2 - 0.05, 0.002, 1))
-        frost.append(rbox(-w / 2, w / 2, y, y + 0.066, -d / 2, -d / 2 + 0.006, 0.002, 1))
-        frost.append(rbox(-w / 2 + 0.006, w / 2 - 0.006, y, y + 0.018, d / 2 - 0.006, d / 2, 0.002, 1))
-    silver = join(rbox(-0.135, -0.115, 0.0, h, -d / 2, -d / 2 + 0.028, 0.006, 2),
-                  rbox(0.115, 0.135, 0.0, h, -d / 2, -d / 2 + 0.028, 0.006, 2))
+        # WHY walls stand on the floor and meet end to end: frost is see-through, so overlapping walls showed doubled
+        # faces and z-fought on the outside.
+        yw = y + 0.006
+        frost.append(rbox(-w / 2, -w / 2 + 0.006, yw, y + 0.066, -d / 2 + 0.006, d / 2 - 0.05, 0.002, 1))
+        frost.append(rbox(w / 2 - 0.006, w / 2, yw, y + 0.066, -d / 2 + 0.006, d / 2 - 0.05, 0.002, 1))
+        frost.append(rbox(-w / 2, w / 2, yw, y + 0.066, -d / 2, -d / 2 + 0.006, 0.002, 1))
+        frost.append(rbox(-w / 2 + 0.006, w / 2 - 0.006, yw, y + 0.018, d / 2 - 0.006, d / 2, 0.002, 1))
+    silver = join(rbox(-0.135, -0.115, 0.0, h, -d / 2 + 0.001, -d / 2 + 0.028, 0.006, 2),   # WHY +1 mm: flush with
+                  rbox(0.115, 0.135, 0.0, h, -d / 2 + 0.001, -d / 2 + 0.028, 0.006, 2))   # the frost back, it z-fought
     paper = u(-w / 2 + 0.02, w / 2 - 0.02, 0.014, 0.034, -d / 2 + 0.02, d / 2 - 0.03)
     feet = feet4((-0.115, 0.115), (-0.14, 0.14), 0.006, 0.008, 8)
     ob = part('Kit_Doc_Tray', join(paint(join(*frost), 0), paint(silver, 1), paint(paper, 2), paint(feet, 3)),
@@ -976,11 +982,11 @@ def slipper_cabinet_aero():
     t = 0.03
     frame = join(rbox(-W / 2, -W / 2 + t, 0.025, H, -zf, zf - 0.002, 0.01, 2),
                  rbox(W / 2 - t, W / 2, 0.025, H, -zf, zf - 0.002, 0.01, 2),
-                 rbox(-W / 2, W / 2, 0.61, H, -zf, zf - 0.002, 0.012, 2),
+                 rbox(-W / 2 + t, W / 2 - t, 0.61, H, -zf, zf - 0.002, 0.012, 2),   # WHY between the posts: overlapping, it z-fought
                  rbox(-W / 2 + t, W / 2 - t, 0.025, 0.04, -zf, zf - 0.002, 0.004, 1))
     grid = join(u(-W / 2 + t, W / 2 - t, 0.04, 0.61, -zf, -zf + 0.012),
                 *[rbox(x - 0.004, x + 0.004, 0.04, 0.61, -zf + 0.012, zf - 0.006, 0.003, 1) for x in (-0.14, 0.14)],
-                rbox(-W / 2 + t, W / 2 - t, 0.321, 0.329, -zf + 0.012, zf - 0.006, 0.003, 1))
+                rbox(-W / 2 + t, W / 2 - t, 0.321, 0.329, -zf + 0.013, zf - 0.007, 0.003, 1))   # WHY 1 mm off: flush ends z-fought
     base = rprism_xz(-0.425, 0.425, -0.15, 0.15, 0.015, 0.0, 0.025, 6)
     plaque = rplate_xy(-0.24, 0.24, 0.625, 0.685, 0.012, zf - 0.004, zf)
     slippers = []
@@ -997,6 +1003,60 @@ def slipper_cabinet_aero():
     collider(ob, 'box')
 
 
+def leaf_blade(length, width, lean0, lean1, fold, thick=0.0025, rows=10, cols=4):
+    """A broad tropical leaf as a thin solid, standing at the origin and arching toward Blender -Y: its midrib curves
+    from `lean0` to `lean1` radians off vertical along its length; its half-width swells from a stalk to `width` / 2
+    and tapers to a point; its two halves fold up from the midrib by `fold` of their half-width (a V section, so the
+    leaf catches light on two planes). Rows run along the leaf, columns across it."""
+    # midrib points and their in-plane normals (the arc lies in the Y-Z plane)
+    mid, nor = [(0.0, 0.0, 0.0)], []
+    seg = length / rows
+    for i in range(rows + 1):
+        a = lean0 + (lean1 - lean0) * (i / rows) ** 1.3
+        t_y, t_z = -math.sin(a), math.cos(a)          # tangent: up, leaning toward -Y
+        nor.append((0.0, t_z, math.sin(a)))           # normal: the leaf's upper face, perpendicular to the tangent
+        if i < rows:
+            y, z = mid[-1][1] + t_y * seg, mid[-1][2] + t_z * seg
+            mid.append((0.0, y, z))
+
+    def half_width(t):
+        stalk = 0.006
+        if t < 0.12:                                   # the stalk, flaring into the blade
+            return stalk + (width * 0.18 - stalk) * (t / 0.12) ** 2
+        u_ = (t - 0.12) / 0.88
+        return max(0.0025, width / 2 * math.sin(math.pi * min(1.0, u_ ** 0.75)) ** 0.8)
+
+    bm = bmesh.new()
+    top, bot = [], []
+    for i in range(rows + 1):
+        t = i / rows
+        hw = half_width(t)
+        mx, my, mz = mid[i]
+        nx, ny, nz = nor[i]
+        trow, brow = [], []
+        for j in range(cols + 1):
+            s = -1.0 + 2.0 * j / cols
+            x = s * hw
+            lift = fold * abs(s) * hw
+            px, py, pz = mx + x, my + ny * lift, mz + nz * lift
+            trow.append(bm.verts.new((px, py, pz)))
+            brow.append(bm.verts.new((px - nx * thick, py - ny * thick, pz - nz * thick)))
+        top.append(trow)
+        bot.append(brow)
+    for i in range(rows):
+        for j in range(cols):
+            bm.faces.new((top[i][j], top[i][j + 1], top[i + 1][j + 1], top[i + 1][j]))
+            bm.faces.new((bot[i][j], bot[i + 1][j], bot[i + 1][j + 1], bot[i][j + 1]))
+    for i in range(rows):                              # the two long edges
+        bm.faces.new((top[i][0], top[i + 1][0], bot[i + 1][0], bot[i][0]))
+        bm.faces.new((top[i][cols], bot[i][cols], bot[i + 1][cols], top[i + 1][cols]))
+    for j in range(cols):                              # stalk end and tip
+        bm.faces.new((top[0][j], bot[0][j], bot[0][j + 1], top[0][j + 1]))
+        bm.faces.new((top[rows][j], top[rows][j + 1], bot[rows][j + 1], bot[rows][j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return bm
+
+
 def planter_box_aero():
     """Planter (sheet 3): a rounded pearl trough with an inset frosted-aqua ribbon, a recessed silver foot over a navy
     shadow, navy soil, and three clusters of broad bent leaves. Pivot bottom centre. Box collider on the trough only;
@@ -1004,36 +1064,38 @@ def planter_box_aero():
     import random
     L, W, H = P.PLANTER_L, P.PLANTER_W, P.PLANTER_H
     walls = moulded(-L / 2, L / 2, 0.04, H, -W / 2, W / 2, 4.5, 0.015, 0.018)
-    walls = boolean(walls, paint(rprism_xz(-0.47, 0.47, -0.195, 0.195, 0.03, 0.515, H + 0.02, 8), 0))
+    # WHY a squircle opening: the trough is one, so an even 30 mm rim runs all the way round (a rounded rectangle
+    # reached the outside at the corners).
+    walls = boolean(walls, paint(moulded(-0.47, 0.47, 0.515, H + 0.02, -0.195, 0.195, 4.5, 0.0, 0.0), 0))
     # WHY a separate ribbon ring over the trough (not a cut): it sits 2 mm proud inside the 1.0 x 0.45 envelope.
-    ribbon = boolean(rprism_xz(-L / 2 - 0.0, L / 2 + 0.0, -W / 2, W / 2, 0.035, 0.457, 0.498, 8),
-                     rprism_xz(-L / 2 + 0.01, L / 2 - 0.01, -W / 2 + 0.01, W / 2 - 0.01, 0.025, 0.45, 0.505, 8))
-    walls = boolean(walls, paint(rprism_xz(-L / 2 - 0.01, L / 2 + 0.01, -W / 2 - 0.01, W / 2 + 0.01, 0.045, 0.455, 0.5, 8), 3))
+    # WHY moulded rings: since the trough became a squircle, rounded-rectangle rings poked out at its corners.
+    ribbon = boolean(moulded(-L / 2 + 0.002, L / 2 - 0.002, 0.457, 0.498, -W / 2 + 0.002, W / 2 - 0.002, 4.5, 0.0, 0.0),
+                     moulded(-L / 2 + 0.012, L / 2 - 0.012, 0.45, 0.505, -W / 2 + 0.012, W / 2 - 0.012, 4.5, 0.0, 0.0))
+    walls = boolean(walls, paint(boolean(moulded(-L / 2 - 0.01, L / 2 + 0.01, 0.455, 0.5, -W / 2 - 0.01, W / 2 + 0.01, 4.5, 0.0, 0.0),
+                                         moulded(-L / 2 + 0.006, L / 2 - 0.006, 0.45, 0.505, -W / 2 + 0.006, W / 2 - 0.006, 4.5, 0.0, 0.0)), 3))
     foot = rprism_xz(-0.46, 0.46, -0.185, 0.185, 0.025, 0.0, 0.025, 6)
     shadow = rprism_xz(-0.47, 0.47, -0.195, 0.195, 0.025, 0.025, 0.04, 6)
-    soil = rprism_xz(-0.47, 0.47, -0.195, 0.195, 0.03, 0.505, 0.515, 8)
+    soil = moulded(-0.47, 0.47, 0.505, 0.522, -0.195, 0.195, 4.5, 0.0, 0.0)   # WHY above 0.515: level with the cut's floor it flickered
     pot_ob = part('Kit_Planter_Box_Pot', join(paint(walls, 0), paint(ribbon, 1), paint(foot, 2), paint(join(shadow, soil), 3)),
                   [M_WALL, M_FROST, M_FRAME, M_TRIM], smooth=35)
     collider(pot_ob, 'box')
     rng = random.Random(5)   # fixed seed: the same planter every build
     leaves = []
+    # WHY real blades, not cards (quality pass, Alex 2026-11-15: KitOffice "feels basic and amateur"): each leaf is a
+    # thin solid that narrows to a stalk at the soil, widens, and tapers to a point, with a folded midrib and an arc
+    # that carries it up and out; clumps mix tall upright leaves in the middle with lower, more arched ones outside.
     for cx in (-0.32, 0.0, 0.32):
-        for k in range(7):
-            ln, wd = rng.uniform(0.24, 0.42), rng.uniform(0.08, 0.13)
-            n = 6
-            prof = [(wd / 2 * math.sin(math.pi * min(1.0, i / n * 1.1)) ** 0.8, ln * i / n) for i in range(n + 1)]
-            outline = prof + [(-x, y) for x, y in reversed(prof[1:-1])]
-            leaf = prism_xy(outline, -0.002, 0.002)
-            for v in leaf.verts:   # bend the blade back toward its tip
-                t = v.co.z / ln
-                v.co.y += 0.12 * t * t
-            rotate(leaf, rng.uniform(18, 42), axis='X')
-            rotate(leaf, 360.0 * k / 7 + rng.uniform(-15, 15), axis='Z')
-            move(leaf, -(cx + rng.uniform(-0.05, 0.05)), -rng.uniform(-0.06, 0.06), 0.5)
+        for k in range(PA.LEAVES_PER_CLUMP):
+            outer = k % 3 != 0                                  # two of every three lean out; one stands up
+            ln = rng.uniform(0.34, 0.48) if outer else rng.uniform(0.5, 0.62)
+            wd = rng.uniform(0.07, 0.11)
+            a0 = math.radians(rng.uniform(12, 25) if outer else rng.uniform(4, 10))     # lean at the soil
+            a1 = math.radians(rng.uniform(70, 105) if outer else rng.uniform(25, 45))   # lean at the tip
+            fold = rng.uniform(0.18, 0.3)
+            leaf = leaf_blade(ln, wd, a0, a1, fold)
+            rotate(leaf, 360.0 * k / PA.LEAVES_PER_CLUMP + rng.uniform(-14, 14), axis='Z')
+            move(leaf, -(cx + rng.uniform(-0.04, 0.04)), -rng.uniform(-0.05, 0.05), 0.508)
             leaves.append(leaf)
-        stem = cylinder(0.006, 0.12, segments=6, base='bottom')
-        move(stem, -cx, 0, 0.5)
-        leaves.append(stem)
     leaf_ob = part('Kit_Planter_Box_Leaves', join(*leaves), M_LEAF, smooth=35)
     group('Kit_Planter_Box', pot_ob, leaf_ob)
 
@@ -1220,7 +1282,7 @@ def lift_door_frame_aero(label):
     # The portal's outer edge traced round the opening; its section runs inward to the opening's edge.
     portal = portal_sweep(u_path(x0 - pw, x1 + pw, oh + pw, PA.LIFT_PORTAL_R),
                           [(-a, o) for a, o in round_section(pw, pp, min(0.02, pp * 0.8))])
-    reveals = join(u(x0, x0 + 0.02, 0, oh, -T, 0), u(x1 - 0.02, x1, 0, oh, -T, 0), u(x0, x1, oh - 0.02, oh, -T, 0))
+    reveals = join(u(x0, x0 + 0.02, 0, oh, -T, 0), u(x1 - 0.02, x1, 0, oh, -T, 0), u(x0 + 0.02, x1 - 0.02, oh - 0.02, oh, -T, 0))   # WHY between the jambs: overlap z-fought
     # WHY two strips: one across the doorway would read as a step into the car.
     kick = join(u(0, x0 - pw, 0, PA.LIFT_KICK_H, 0, 0.004), u(x1 + pw, W, 0, PA.LIFT_KICK_H, 0, 0.004))
     seams = join(*[u(x - 0.004, x + 0.004, PA.LIFT_KICK_H, CLEAR_H, 0, 0.002) for x in (0.6, W - 0.6)])
@@ -1246,7 +1308,7 @@ def lift_door_frame_aero(label):
         arrows.append(prism_xy([(cx - 0.009, by - sgn * 0.005), (cx + 0.009, by - sgn * 0.005), (cx, tip)], 0.024, 0.0255))
         rings.append(ring)
         buttons.append(btn)
-    logo = badge_disc(0.62, 3.45, 0.0, 0.32, 0.002)
+    logo = badge_disc(0.62, 3.45, 0.0, 0.32, 0.004)   # WHY 4 mm: the 2 mm panel seam behind it poked through a thinner disc
     trim = part(f'Kit_Lift_Door_Frame_4m_{tag}_Trim',
                 join(paint(join(portal, reveals, kick, rim, panel, *buttons), 0), paint(face, 1),
                      paint(join(*rings), 2), paint(join(seams, *arrows), 3), paint(logo, 4)),

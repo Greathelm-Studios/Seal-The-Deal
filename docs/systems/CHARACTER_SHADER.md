@@ -3,7 +3,7 @@
 **Status:** Current (on the STDMC character, which every player wears) · **Last updated:** 2026-11-21
 
 Characters are drawn as flat graphic shapes inside a softly lit building: each material is one base colour and one hard-edged, colder shadow colour, with no gradients.
-Pale parts (shirt, skin) carry a thin navy contour so they don't dissolve into white walls; suits and shoes carry none.
+Pale parts (shirt, skin) carry a thin navy contour so they don't dissolve into white walls; suits carry a near-black one (set per outfit, see [CUSTOMISATION.md](CUSTOMISATION.md)).
 The building, glass and props stay on standard URP Lit materials (or [AeroPlastic.shader](../../Assets/_Project/Art/Plastic/AeroPlastic.shader) on trim-sheet props).
 
 This implements art bible §04 ("soft world light + hard character value breaks") and §05 ("base -> cut shadow").
@@ -52,7 +52,7 @@ It is 0 for every camera except the one a player looks out of their own body wit
 | How much room light changes the colours | 0 = colours always exactly as picked. Higher lets a dark service room darken the character. |
 | Contour width | Screen pixels, up close. 0 = off. |
 | Contour is never thicker than | A cap in metres. The line thins as the character gets smaller on screen, so from across the street it does not bury hair and hands. |
-| Contour colour | Pick the opposite value to the surface: a pale line on dark parts (suit, hair), a dark line on pale parts (skin, shirt). A dark line on a dark suit cannot be seen. |
+| Contour colour | Usually the opposite value to the surface: a dark line on pale parts (skin, shirt). Suits now carry a near-black line whatever their colour (#05070F, the weapons' ink; Alex, 2026-11-21): the pale line read as white line art round the arm in first person. A dark line on a dark suit barely shows against dark walls. |
 
 A material built with contour width 0 has its contour pass switched off to save a draw call.
 To give it a contour later, delete the material and re-run the tool with a width set in the tool, or re-enable the `SRPDefaultUnlit` pass in the material's debug Inspector.

@@ -1,5 +1,7 @@
 fileFormatVersion: 2
 guid: 56845a40151c11c4ca75ed93038af85f
+labels:
+- greybox-d3f849a53b48
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}

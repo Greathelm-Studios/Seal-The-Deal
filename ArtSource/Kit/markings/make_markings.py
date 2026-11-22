@@ -46,7 +46,9 @@ RING_W = 0.30                          # ring inlay band
 RING_EDGE = 0.02                       # its silver edge, each side
 COVE_W = 0.12                          # the ceiling cove above it
 THRESHOLD_W = 0.60                     # district threshold strip, wall to wall
-BASE_BAND = 0.12                       # district band at the wall base, beyond each wall face
+BASE_BAND = 0.05                       # district band at the wall base, beyond each wall face. 0.05 since 2026-11-15:
+                                       # at 0.12 every wall end (door jambs, the stair) showed a square coloured foot
+                                       # (the quality pass, Alex: "basic and amateur"); 5 cm reads as a crisp edge line
 SOFFIT_BAND = 0.25                     # district band on the soffit, beyond each solid wall face
 TENANCY_BAND = 0.15                    # each firm's band on the tenancy line
 GATE_W = 0.30                          # gate band at a stair arrival

@@ -78,7 +78,19 @@ namespace CloseTheDeal.Editor.Art
 
         static readonly HashSet<string> ColliderOnly = new HashSet<string> { "Stair_Flight" };
 
-        static readonly HashSet<string> Textured = new HashSet<string> { "Carpet_Dark", "Ceiling_Grid", "Floor_Carpet", "Glass_Fluted", "Glass_Louvre" };
+        static readonly HashSet<string> Textured = new HashSet<string>
+        {
+            "Carpet_Dark", "Ceiling_Grid", "Floor_Carpet", "Glass_Fluted", "Glass_Louvre",
+            "Wall_PaperWhite", "Trim_Navy", "Frame_Aluminium", "Ceiling_Tile",
+        };
+
+        /// <summary>Materials with make_surfaces.py normal and mask maps, and metres per map repeat (1 UV = 1 m).</summary>
+        // Walls and soffit repeat at 2 m so the tone drift doesn't line up with the 1 m panel joints.
+        static readonly Dictionary<string, float> Surfaces = new Dictionary<string, float>
+        {
+            { "Wall_PaperWhite", 2f }, { "Ceiling_Tile", 2f }, { "Trim_Navy", 1f }, { "Frame_Aluminium", 1f },
+            { "Floor_Carpet", 1f }, { "Carpet_Dark", 1f },
+        };
 
         static readonly HashSet<string> RenderMeshColliders = new HashSet<string> { "Slab_Stairwell", "Stair_Flight" };
 
@@ -260,11 +272,38 @@ namespace CloseTheDeal.Editor.Art
                 mat.SetColor("_BaseColor", c);
                 mat.SetFloat("_Metallic", m.metallic);
                 mat.SetFloat("_Smoothness", m.smoothness);
+                if (Surfaces.TryGetValue(m.name, out float repeat)) ApplySurface(mat, m.name, repeat);
                 EditorUtility.SetDirty(mat);
                 GeneratedAssetGuard.MarkGenerated(mat);
                 result[m.name] = mat;
             }
             return result;
+        }
+
+        // URP Lit multiplies mask alpha by _Smoothness, so the slider is 1 and the mask holds absolute values.
+        static void ApplySurface(Material mat, string name, float repeatMetres)
+        {
+            mat.SetTexture("_BumpMap", ImportMap(name + "_Normal", false, true));
+            mat.SetFloat("_BumpScale", 1f);
+            mat.EnableKeyword("_NORMALMAP");
+            mat.SetTexture("_MetallicGlossMap", ImportMap(name + "_Mask", false, false));
+            mat.EnableKeyword("_METALLICSPECGLOSSMAP");
+            mat.SetFloat("_Smoothness", 1f);
+            mat.SetTextureScale("_BaseMap", Vector2.one / repeatMetres);
+        }
+
+        static Texture2D ImportMap(string file, bool srgb, bool normal)
+        {
+            Directory.CreateDirectory(TextureFolder);
+            string dst = $"{TextureFolder}/{file}.png";
+            File.Copy(Path.Combine(TextureSource, file + ".png"), dst, true);
+            AssetDatabase.ImportAsset(dst, ImportAssetOptions.ForceUpdate);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(dst);
+            importer.textureType = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
+            importer.sRGBTexture = srgb;
+            importer.wrapMode = TextureWrapMode.Repeat;
+            importer.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(dst);
         }
 
         static Texture2D ImportTexture(string name)
