@@ -57,7 +57,7 @@ Setup: **Seal the Deal > Lanes > Set Up GameMode** ([GameModeLaneSetup.cs](../..
 
 ## Known limitations
 
-- A replacement mode with one briefcase per firm, random floors and a lift keycard is proposed in [FLOOR_RACE.md](FLOOR_RACE.md) (Target, not built).
+- A replacement mode (one briefcase taken up 10 generated floors by elevator, team-wipe respawn) is proposed in [FLOOR_RACE.md](FLOOR_RACE.md) (Target, not built).
 - Floor gates and breakable stairwell doors ([TOWER.md](TOWER.md)) both gate climbing; whether to keep both is an open design question.
 - Shut gates sit on Unity's `Ignore Raycast` layer when `Let Shots Through` is enabled, so bullets pass through while bodies and greybox test blasts still collide.
 - Carrying the briefcase opens a floor within 5 cm of the floor surface (at the top step) rather than after clearing the gate.
