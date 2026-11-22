@@ -80,6 +80,31 @@ namespace CloseTheDeal.Editor.UI
             AssetDatabase.SaveAssets();
         }
 
+        /// <summary>
+        /// Shell entry: rebuilds the kit's untouched tokens, sprites and component prefabs; no scene is opened or saved.
+        /// -handBack &lt;asset path&gt; first hands that one asset back to the tool (Let the Tool Rebuild Selected);
+        /// -rebuildScreens rebuilds the screen prefabs too.
+        /// </summary>
+        public static void BuildAssetsFromCommandLine()
+        {
+            string[] args = System.Environment.GetCommandLineArgs();
+            int at = System.Array.IndexOf(args, "-handBack");
+            if (at >= 0 && at + 1 < args.Length)
+            {
+                Object asset = AssetDatabase.LoadMainAssetAtPath(args[at + 1]);
+                if (asset == null)
+                {
+                    Debug.LogError("[UI] -handBack: no asset at " + args[at + 1]);
+                    EditorApplication.Exit(1);
+                    return;
+                }
+
+                CloseTheDeal.Editor.Greybox.GeneratedAssetGuard.MarkGenerated(asset);
+            }
+
+            BuildAssets(System.Array.IndexOf(args, "-rebuildScreens") >= 0);
+        }
+
         /// <summary>Builds tokens, sprites, component prefabs, and missing (or requested) screen prefabs.</summary>
         public static void BuildAssets(bool rebuildScreens = false)
         {

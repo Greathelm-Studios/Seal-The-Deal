@@ -65,6 +65,12 @@ namespace CloseTheDeal.Editor.UI
                 case "wide-transitions":
                     yield return StackTransitions(lobby);
                     break;
+                case "wide-probe":
+                    yield return Probe();
+                    break;
+                case "wide-probe-ingame":
+                    yield return ProbeInGame(lobby);
+                    break;
                 case "wide-ingame":
                     yield return InGameMenu(lobby);
                     break;

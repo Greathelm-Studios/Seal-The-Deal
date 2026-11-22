@@ -11,7 +11,7 @@ namespace CloseTheDeal.Editor.UI
     {
         internal const string Folder = "Assets/_Project/UI/Kit/Sprites";
 
-        internal static Sprite White, Outline1, Outline2, Dashed, Bracket, Chevron, Grid, Sky, Barcode, Diamond, Triangle, Pointer;
+        internal static Sprite White, Outline1, Outline2, Dashed, Bracket, Chevron, Grid, Sky, Barcode, Diamond, Triangle, Pointer, Arrow;
 
         // Shape and depth (2026-11-15, after Cocoon's tokens): one radius per class (panel 20, card 16, button 12,
         // small 8), a soft shadow, and a "pillowy" bevel (light along the top inside edge, shade along the bottom).
@@ -36,6 +36,7 @@ namespace CloseTheDeal.Editor.UI
             Diamond = Make("Kit_Diamond", 64, 64, 0, false, (x, y) => Mathf.Clamp01(32.5f - (Mathf.Abs(x + 0.5f - 32f) + Mathf.Abs(y + 0.5f - 32f))));
             Triangle = Make("Kit_Triangle", 64, 64, 0, false, TriangleAlpha);
             Pointer = Make("Kit_Pointer", 20, 24, 0, false, PointerAlpha);
+            Arrow = MakeArrow();
 
             Round8 = Rounded("Kit_Round8", 8);
             Round12 = Rounded("Kit_Round12", 12);
@@ -109,6 +110,22 @@ namespace CloseTheDeal.Editor.UI
                 float rim = Mathf.Clamp01(1f + d / band);                    // 1 at the edge, 0 a band's width in
                 float side = top ? Mathf.Clamp01((y + 0.5f - s * 0.5f) / (s * 0.5f)) : Mathf.Clamp01((s * 0.5f - (y + 0.5f)) / (s * 0.5f));
                 return inside * rim * Mathf.Sqrt(side);
+            });
+        }
+
+        /// <summary>
+        /// The stepper's arrow: one bold right-pointing chevron with round ends, 12 x 20 UI units, stroke 3.5. Drawn at
+        /// 8 texels a unit (2x what an 8K screen shows) so it stays sharp at every size. Point it left by turning it.
+        /// </summary>
+        static Sprite MakeArrow()
+        {
+            const int k = 8;
+            const float w = 12f, h = 20f, half = 1.75f;
+            return MakeHi("Kit_Arrow", (int)(w * k), (int)(h * k), 0, (x, y) =>
+            {
+                float px = (x + 0.5f) / k, py = (y + 0.5f) / k;
+                float d = Mathf.Min(Segment(px, py, 2.5f, 2.5f, 9.5f, 10f), Segment(px, py, 9.5f, 10f, 2.5f, 17.5f));
+                return Mathf.Clamp01((half - d) * k + 0.5f);
             });
         }
 

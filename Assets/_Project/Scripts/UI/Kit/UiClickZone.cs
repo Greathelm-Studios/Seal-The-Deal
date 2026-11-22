@@ -14,7 +14,7 @@ namespace CloseTheDeal.UI
 
     /// <summary>Non-focusable click zone (stepper arrows, swatches) that forwards clicks to its parent UiControl.</summary>
     [AddComponentMenu("Seal the Deal/UI/Click Zone")]
-    public sealed class UiClickZone : MonoBehaviour, IPointerClickHandler, IPointerDownHandler
+    public sealed class UiClickZone : MonoBehaviour, IPointerClickHandler, IPointerDownHandler, IPointerEnterHandler, IPointerExitHandler
     {
         [Tooltip("The control this zone belongs to.")]
         [SerializeField] UiControl _control;
@@ -25,6 +25,18 @@ namespace CloseTheDeal.UI
         {
             if (_control != null && EventSystem.current != null && _control.IsInteractable())
                 EventSystem.current.SetSelectedGameObject(_control.gameObject, eventData);
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            if (_control is IUiZoneHover hover)
+                hover.HoverZone(_value, true);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            if (_control is IUiZoneHover hover)
+                hover.HoverZone(_value, false);
         }
 
         public void OnPointerClick(PointerEventData eventData)

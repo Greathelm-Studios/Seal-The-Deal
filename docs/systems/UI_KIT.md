@@ -1,6 +1,6 @@
 # UI Kit
 
-**Status:** Current (wide pass slices 1-3: edge marker, device key hints, live-sky title, settings fixes, hosting / joining / problem panels; partial client-side verification) · **Last updated:** 2026-11-21
+**Status:** Current (wide pass slices 1-3: edge marker, device key hints, live-sky title, settings fixes, hosting / joining / problem panels; partial client-side verification) · **Last updated:** 2026-11-22
 
 ## What the player sees
 
@@ -88,6 +88,7 @@ Events (frozen with lane 9; append only): None, HoverMove, Focus, Select, Confir
 - Navigation order is explicit: title top to bottom (a greyed-out Host is skipped); settings tab → rows → Reset ↔ Back; dialogs Confirm ↔ Stay.
 - The end of a list nudges the marks (edge bump). Held directions repeat at the token timing.
 - Left / right on a stepper, swatch row or slider changes the value instead of moving focus.
+- A stepper's arrows are bold chevrons (the `Kit_Arrow` sprite, drawn at 8 texels a unit so they stay sharp at 8K). The arrow under the mouse grows (`Hover Grow`, 1.2x), and the arrow on the side the value moved kicks out with a pop and springs back (`Kick`, 12 units; `Kick Pop`, 1.35x; off with Reduce motion), for clicks and keys alike.
 
 ## Edge marker
 
@@ -147,6 +148,8 @@ Changes apply at once (no Apply step; the mockup's Apply / unsaved-changes flow 
   - Screen prefabs nest component prefabs, and rebuilding them generates new internal Unity file IDs (causing noisy YAML diffs for no functional change), so `UiKitSetup.BuildAssets(false)` only builds missing screen prefabs unless `Replace UI` explicitly asks to rebuild them.
   - Before rebuilding or replacing `KitUI`, `UiKitSetup.ParkMatchSection()` temporarily moves the match lane's section back to `GameMenu` so `MatchMenuPanel` keeps its references, then `MoveMatchSection()` moves it into the new `InGameMenu/Content/MatchSlot`.
 - Captures: `-executeMethod CloseTheDeal.Editor.UI.UiKitCapture.RunFromShell -uiCaptureOut <dir> -uiCaptureMode capture|persist-write|persist-read|menu-rule -local [-lanePort n]` with the Editor binary, `-batchmode`, **without** `-quit` or `-nographics`. Writes the title and settings at three sizes, a state sheet per screen, the hover → press → push strip, a 30 fps clip sequence, a sound log and PASS / FAIL lines.
+- Click and resolution probe: `-uiCaptureMode wide-probe` clicks every settings control through the real hit test (the main run sends events straight to controls, so it can't see a click that never lands), presses the arrow keys on each stepper, and films the title and settings from 1024x768 to 7680x4320 with native-pixel crops at 4K and 8K. `wide-probe-ingame` does the clicks in a hosted game, from the in-game menu, with motion live.
+- Kit rebuild from the shell: `-executeMethod CloseTheDeal.Editor.UI.UiKitSetup.BuildAssetsFromCommandLine -quit [-handBack <asset path>]` rebuilds the tokens, sprites and component prefabs without opening a scene; `-handBack` first hands one guarded asset back to the tool (the shell form of Let the Tool Rebuild Selected).
 
 ## Known limitations
 

@@ -211,7 +211,8 @@ namespace CloseTheDeal.Editor.UI
             stepper.sizeDelta = new Vector2(width, stepper.sizeDelta.y);
             foreach (RectTransform part in stepper.GetComponentsInChildren<RectTransform>(true))
             {
-                if (part.name != "Next" && part.name != "NextZone")
+                // Parts pinned to the right edge follow the new width by themselves; moving them too pushes them out.
+                if ((part.name != "Next" && part.name != "NextZone") || part.anchorMax.x > 0f)
                     continue;
                 part.anchoredPosition += new Vector2(added, 0f);
                 EditorUtility.SetDirty(part);
