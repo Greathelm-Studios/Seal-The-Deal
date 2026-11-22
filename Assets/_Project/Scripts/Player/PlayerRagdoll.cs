@@ -60,6 +60,8 @@ namespace CloseTheDeal.Player
             public int Parent;
             public Quaternion StartLocal;
             public Quaternion Frame;
+            public Vector3 BuildLocalPosition;
+            public Quaternion BuildLocalRotation;
             public Vector3 TargetPosition;
             public Quaternion TargetRotation;
             public Vector3 WasPosition;
@@ -154,8 +156,7 @@ namespace CloseTheDeal.Player
                 return;
             }
             _lodPaused = false;
-            _root.SetActive(true);
-            RagdollWorld.Add(this, _root);
+            ActivateRagdoll();
             _posed = false;
             _nextLevelCopy = 0f;
         }
@@ -177,6 +178,29 @@ namespace CloseTheDeal.Player
                 Destroy(_root);
             if (_grippy != null)
                 Destroy(_grippy);
+        }
+
+        void ActivateRagdoll()
+        {
+            if (_root == null)
+                return;
+
+            // ConfigurableJoint captures its zero-angle reference from current transforms on enable,
+            // so restore the Build() T-pose while inactive before PhysX recreates the joints.
+            if (!_root.activeSelf)
+            {
+                for (int i = 0; i < PartCount; i++)
+                {
+                    ref Part part = ref _parts[i];
+                    part.Body.transform.SetLocalPositionAndRotation(part.BuildLocalPosition, part.BuildLocalRotation);
+                    part.LastDriveHz = -1f;
+                    part.LastDriveDamping = -1f;
+                }
+            }
+
+            RagdollWorld.Add(this, _root);
+            if (!_root.activeSelf)
+                _root.SetActive(true);
         }
 
         void DeactivateRagdoll()
@@ -352,6 +376,8 @@ namespace CloseTheDeal.Player
             part.Body = body;
             part.Shape = made;
             part.Parent = parent;
+            part.BuildLocalPosition = go.transform.localPosition;
+            part.BuildLocalRotation = go.transform.localRotation;
             part.TargetPosition = part.WasPosition = joint;
             part.TargetRotation = part.WasRotation = bone.rotation;
             part.LastDriveHz = -1f;
@@ -363,7 +389,9 @@ namespace CloseTheDeal.Player
             part.StartLocal = Quaternion.Inverse(parentBody.rotation) * bone.rotation;
             var link = go.AddComponent<ConfigurableJoint>();
             link.connectedBody = parentBody;
+            link.autoConfigureConnectedAnchor = false;
             link.anchor = Vector3.zero;
+            link.connectedAnchor = parentBody.transform.InverseTransformPoint(joint);
             link.axis = Vector3.right;
             link.secondaryAxis = Vector3.up;
             link.xMotion = link.yMotion = link.zMotion = ConfigurableJointMotion.Locked;
@@ -407,11 +435,7 @@ namespace CloseTheDeal.Player
             if (_lodPaused)
             {
                 _lodPaused = false;
-                if (_root != null)
-                {
-                    _root.SetActive(true);
-                    RagdollWorld.Add(this, _root);
-                }
+                ActivateRagdoll();
                 _posed = false;
                 _nextLevelCopy = 0f;
             }
@@ -677,6 +701,9 @@ namespace CloseTheDeal.Player
         /// <summary>Called by <see cref="RagdollWorld"/> before each 120 Hz physics step to apply gravity, carry, and hip spring forces.</summary>
         public void BeforeStep(float dt)
         {
+            if (!_posed)
+                return;
+
             Vector3 fall = Physics.gravity * _profile.RagdollGravity + (_hold < 1f ? Vector3.zero : _carryPush);
             float held = _hold < 1f ? Mathf.SmoothStep(0f, 1f, _hold) : 1f;
             for (int i = 0; i < PartCount; i++)

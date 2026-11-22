@@ -1,6 +1,6 @@
 # Character animation
 
-**Status:** Current (seventh pass: the active ragdoll chases real animation clips instead of hand-written poses; plus 2026-11-21 remote ragdoll LOD culling and local BodyView head-turn cap. Checked in frame strips from the side and front; **not yet judged by a person and not yet seen in Play Mode**) · **Last updated:** 2026-11-21
+**Status:** Current (seventh pass: the active ragdoll chases real animation clips instead of hand-written poses; plus 2026-11-21 remote ragdoll LOD culling and local BodyView head-turn cap, and 2026-11-22 T-pose restore on ragdoll reactivation. Checked in frame strips from the side and front; **not yet judged by a person and not yet seen in Play Mode**) · **Last updated:** 2026-11-22
 
 The player's body is a real ragdoll: eleven rigidbodies joined like a skeleton, the way TABS and Gang Beasts build theirs.
 It is not limp. Animation clips say what the body should be doing every frame (standing, running any way, sprinting, in the air, landing), and every joint has a motor pulling toward that. What you see is the body trying to do the clip.
@@ -33,7 +33,7 @@ Two screens will show the same player's limbs in different places. Nothing reads
 
 **The ragdoll lives in a physics scene of its own** ([RagdollWorld.cs](../../Assets/_Project/Scripts/Player/RagdollWorld.cs)), stepped by that class at 120 steps a second and by nothing else.
 The game's own physics scene is stepped by FishNet once a tick and re-stepped several times on every reconcile; a ragdoll in it would be simulated many times over and could shove the predicted capsule and the host's props. In its own scene it can do neither.
-The price is that the level's colliders are in the other scene, so the ragdoll scene keeps copies of the solid level geometry within 3 m of each ragdoll (refreshes staggered across ragdolls every 0.2 s, dropped past 8 m hysteresis; disabled-state checks throttled to 0.2 s with last-known bounds cached for disabled colliders). Remote ragdolls beyond 25 m (resume at 22 m) or more than 9 m vertically away (resume at 8 m) pause simulation and leave `RagdollWorld` (re-adding and snapping cleanly when back in range); when no active ragdolls remain, `RagdollWorld` unloads its physics scene and clears its proxy table.
+The price is that the level's colliders are in the other scene, so the ragdoll scene keeps copies of the solid level geometry within 3 m of each ragdoll (refreshes staggered across ragdolls every 0.2 s, dropped past 8 m hysteresis; disabled-state checks throttled to 0.2 s with last-known bounds cached for disabled colliders). Remote ragdolls beyond 25 m (resume at 22 m) or more than 9 m vertically away (resume at 8 m) pause simulation and leave `RagdollWorld`. On reactivation (LOD resume or pooled `OnEnable`), `PlayerRagdoll` restores every part transform to its `Build()` T-pose while `_root` is inactive and moves `_root` into `RagdollWorld` before `SetActive(true)` (with `autoConfigureConnectedAnchor = false`), so `ConfigurableJoint` never re-captures a mid-motion pose as its zero-angle reference; `BeforeStep` also skips unposed ragdolls until `PutOnPose()` runs. When no active ragdolls remain, `RagdollWorld` unloads its physics scene and clears its proxy table.
 
 ## Architecture and design rationale
 
