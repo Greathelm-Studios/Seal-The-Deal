@@ -28,7 +28,7 @@ Master index of every gameplay, networking, UI, art, and tooling feature in **Se
 | Feature | Scope | Status | Verification | Doc | Code | Open Gaps / Decisions |
 |---|---|---|---|---|---|---|
 | Hitscan guns (pistol, AR-15), bloom, reload, lag rewind | v1 | Current | Compiled; solo/host lane checks | [WEAPONS.md](systems/WEAPONS.md) | `Scripts/Combat/` | Soft muzzle flash, flying tracer, impact burst and bullet holes added 2026-11-22 (compiled, offscreen renders only, unplayed); decide friendly fire on/off |
-| Knockback blasts and health/respawn | v1 | Current | Compiled; host checks | [WEAPONS.md](systems/WEAPONS.md) | `Scripts/Combat/` | Confirm blast damage/knockback balance in 4v4 |
+| Knockback blasts, health, regeneration and respawn; weapon test scene | v1 | Current | Compiled; host checks; regeneration and the WeaponTest roof range seen in the editor as host (2026-11-22) | [WEAPONS.md](systems/WEAPONS.md) | `Scripts/Combat/`, `Editor/Dev/WeaponTestScene.cs` | Confirm blast damage/knockback balance in 4v4; regeneration is not in the GDD (Adam to confirm the 5 s wait and 10/s rate); regeneration and targets not yet seen from a client |
 | Breakable glass panes and shard bursts | v1 | Current | Compiled; host lane checks | [GLASS.md](systems/GLASS.md) | `Scripts/Glass/` | Needs multi-client shatter test after `OverlapSphere` blast fix |
 | Local blood splat projector shader and drop bursts | v1 | Current | Compiled; host seen on 1 machine | [BLOOD.md](systems/BLOOD.md) | `Scripts/Effects/` | Needs art-direction sign-off and multi-player visual check |
 
