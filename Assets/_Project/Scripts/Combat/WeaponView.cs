@@ -186,6 +186,8 @@ namespace CloseTheDeal.Combat
             {
                 _viewmodel.Driven = weapon != null;
                 _viewmodel.ReleaseSlide();
+                // On every machine: the hands hold this gun's own model, in the view and on the body.
+                _viewmodel.Equip(weapon != null ? weapon.HeldModel : null);
             }
 
             Transform parent = firstPerson ? PlayerCamera.Instance.transform : _thirdPersonAnchor;

@@ -36,6 +36,40 @@ What the script does to the source:
   Faces are flat-shaded for the low-poly look.
 - **Size:** 1,236 triangles.
 
+## AR-15
+
+`Assets/_Project/Art/Weapons/Models/AR15.fbx` is the pack's `MG5` (Alex picked it from a sheet of the whole pack, 2026-11-22), built by [ar15_adapt.py](ar15_adapt.py) the same way as the pistol:
+
+```bash
+blender -b --factory-startup -P ArtSource/Weapons/ar15_adapt.py -- <out>/AR15.blend
+node <blender-modeling skill>/scripts/mdl.mjs check  --blend <out>/AR15.blend
+node <blender-modeling skill>/scripts/mdl.mjs export --blend <out>/AR15.blend --out <out>/export
+node <blender-modeling skill>/scripts/mdl.mjs verify --manifest <out>/export/manifest.json
+```
+
+Copy `<out>/export/AR15.fbx` into the models folder, then run **Seal the Deal > Art > Build Weapon Toon Materials** and **Seal the Deal > Art > Build Held Weapon Prefabs**.
+
+- 760 mm long, pivot at the middle of the pistol grip, muzzle along +Z in Unity, 3,077 triangles in two objects: `AR15_Body` and `AR15_Magazine` (the source's magazine is its own loose piece, so nothing is cut).
+- 30 % wider than the source, except the round parts (barrel, flash hider, handguard, front sight), which the stretch turned oval. The handguard is then slimmed to 44 mm across so the left hand can wrap it.
+- The pistol's colours: silver barrel and trigger, navy receivers and carry handle, mist handguard, stock and grip, aqua magazine.
+- The script prints the numbers the Unity tool uses (`PRINTED` lines): muzzle, grip lean 24.3 degrees, magazine lean -12.2 degrees and how much of it sits inside the receiver.
+- The source is not watertight (283 open edges); the check passes with that as a warning.
+
+### The rifle's left hand
+
+`Assets/_Project/Art/Weapons/Models/RifleSupportHand.fbx` is the left hand that cups the handguard. It is the grip hand below, mirrored and posed open, from the same script:
+
+```bash
+blender -b --factory-startup --disable-autoexec -P ArtSource/Weapons/pistol_grip_hand.py -- <out>/RifleSupportHand.blend NAME=RifleSupportHand MIRROR=1 KX=0.0 KY=0.0 KZ=0.0 I1=36.0 I2=42.0 I3=32.0 M1=36.0 M2=42.0 M3=32.0 R1=36.0 R2=42.0 R3=32.0 L1=36.0 L2=42.0 L3=32.0 T1=5.0 T2=5.0 T3=5.0 THUMB_TWIST=0.0 THUMB_FOLD=0.0 THUMB_SWING=-100.0
+```
+
+Its origin is the middle knuckle; its fingers point along +Z in Unity and its thumb side is up. All four fingers share one curl (36/42/32 degrees). The pose was chosen by measuring the mesh against a cylinder the size of the handguard (22 mm radius), not by eye:
+- with the thumb in its natural place it lay across the channel the handguard sits in, whatever the finger curl;
+- `THUMB_FOLD=90` got it out of the way but distorted the hand (the mesh check failed);
+- `THUMB_SWING=-100` with a nearly straight thumb seats the cylinder inside the grip, 38 mm to the palm's side and 33 mm back from the middle knuckle, and passes the check. Any thumb curl pushed the cylinder back out.
+
+The handguard was slimmed to 44 mm for this hand (`HANDGUARD_SLIM` in `ar15_adapt.py`): at the source's 61 mm no pose of a hand this size wrapped it. Where it sits on the rifle is in [HeldWeaponPrefabs.cs](../../Assets/_Project/Editor/Art/HeldWeaponPrefabs.cs). Check, export and the two menu items are as for the rifle.
+
 ## Grip hand
 
 `Assets/_Project/Art/Weapons/Models/PistolGripHand.fbx` is the right hand the game shows holding the pistol. It is erik90mx's "Low Poly Hand (Rigged)" (CC0, from BlendSwap; Alex picked it, 2026-11-21) posed round our grip by [pistol_grip_hand.py](pistol_grip_hand.py). The download is kept unchanged in [Source/LowPolyHand_erik90mx/](Source/LowPolyHand_erik90mx/). The character's own hand is a mitten that crumples when its fingers curl, so the body hides it while this hand is held (see [VIEWMODEL.md](../../docs/systems/VIEWMODEL.md)).

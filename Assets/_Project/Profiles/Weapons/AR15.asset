@@ -187,6 +187,7 @@ MonoBehaviour:
   MagazineOutSound: {fileID: 8300000, guid: efb188f0d11a84b5e96bd13925741ad7, type: 3}
   MagazineInSound: {fileID: 8300000, guid: ad622dd94d2e4486d97af071a39f81f4, type: 3}
   ReloadEndSound: {fileID: 8300000, guid: 589ad67b54bd349be85eb0a8157ca440, type: 3}
+  HeldModel: {fileID: 5780342026305785863, guid: 26758b33f1368b54eb28e964cd27c345, type: 3}
   ViewPrefab: {fileID: 509447452055910279, guid: 8413e43c7e859423db7ee3a6109d07c7, type: 3}
   ViewOffset: {x: 0.18, y: -0.2, z: 0.32}
   TracerPrefab: {fileID: 7060885105418946063, guid: c9d151b9600dcc044bfd1dfc62106158, type: 3}

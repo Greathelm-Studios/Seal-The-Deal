@@ -1,6 +1,6 @@
 # ITEMS
 
-**Status:** Current · **Last updated:** 2026-11-21
+**Status:** Current · **Last updated:** 2026-11-22
 
 ## What the player sees
 
@@ -11,7 +11,7 @@ Look at a loose item or throwable prop within reach and a prompt names it (**F -
 - **Grenade Case:** RMB arms a 3.5 s fuse with accelerating beeps and flashing light, then blasts players and furniture wherever it is (even in hand). Visually distinct from the objective briefcase (red hazard styling, keypad, warning light).
 - **Fire Extinguisher:** RMB pulls the pin for 6 s of unstoppable smoke. Carried, it trails smoke behind you; dropped, escaping gas skitters it across the floor.
 - **Wet Floor Sign:** RMB places it ahead on flat ground, spreading a puddle that trips sprinting players from either firm (walking is safe). Picking it up or knocking it aside clears the trap.
-- **Pistol and AR-15:** real pickups; in `Lane_Integration.unity` taking one moves it into weapon slots ([INTEGRATION.md](INTEGRATION.md)), while standalone scenes carry them like loose items.
+- **Pistol and AR-15:** real pickups; in `Lane_Integration.unity` and `KitOffice.unity` taking one moves it into weapon slots (refill if you carry that gun, else an empty slot, else it swaps with the gun in hand, which drops in front of you; [INTEGRATION.md](INTEGRATION.md)), while scenes without `GunPickups` carry them like loose items. In `KitOffice.unity` two pistols and two AR-15s lie near the player spawn and a new one appears at its spot 20 s after it is taken. This works in the Editor too.
 
 Knocked-loose items stay where they drop. Anything falling out of the building returns to its starting spot after 2 seconds. Used-up gadgets respawn at their home spot after `ReturnsAfterUsedSeconds`.
 
@@ -31,8 +31,17 @@ Knocked-loose items stay where they drop. Anything falling out of the building r
 | Extinguisher smoke & skitter | Host | `_ventUntilTick` and `_empty` `SyncVar`s (smoke is local particles) | On pull / empty |
 | Wet floor slips | Host | `_down` `SyncVar` + `ObserversSlipped` | On change / slip |
 | Carry slowdown | Every machine derives from `Held` weight | Nothing | Never |
+| Loose guns at fixed spots (`LooseGunSpawns`, scenes with no tower) | Host spawns the mapped pickup prefab at each spot and again after the respawn delay | Nothing of its own; only the spawned pickups replicate as normal `Pickup` objects | Spawn at start, then once per taken gun after `_respawnSeconds` (default 20 s, 0 = never) |
 
 Not yet verified over Steam or under real network latency across multiple computers.
+
+**Gun pickups in KitOffice and the Editor: checked as host by script, not by hand (2026-11-22).** In KitOffice the four guns spawned at their spots, the real carrier was live in the Editor (`ItemCarrier.Local` set, fire held with full hands), and a scripted take of an AR-15 from 1.8 m used the pickup up and left the gun in its slot. Not checked: pressing F by hand, the on-screen prompt (the test ran with the game menu open, which hides the HUD), the respawn after 20 seconds, a swap that drops the old gun, and anything from a client. The pickups show the guns' own models ([HeldWeaponPrefabs.cs](../../Assets/_Project/Editor/Art/HeldWeaponPrefabs.cs) swaps the stand-in cubes under `Visual`); they stand upright on their colliders rather than lying on their side.
+
+## Loose guns in a scene with no tower
+
+`LooseGunSpawns` (`Scripts/Integration/`) is a host-only component holding a list of spots (a child `Transform` plus which gun from `GunPickupMap`). On server start it spawns the mapped pickup prefab at each spot through FishNet, the same way `FloorLoot` does, and spawns a new one `_respawnSeconds` after a gun is taken (0 = never). Move a spot by moving its child object. When a swapped-out gun drops and the scene has no `FloorLoot`, `GunPickups` drops it through `LooseGunSpawns.ServerSpawnLoose` instead; a swapped-out gun is not put back. `Lane_Integration.unity` is unchanged: it has `FloorLoot` and no `LooseGunSpawns`.
+
+Add it to KitOffice with **Seal the Deal > Art > Add Gun Pickups To KitOffice** (with `KitOffice.unity` open). It adds only what is missing (`GunPickups`, `SharedHands`, `LooseGunSpawns` with four default spots, the item HUD), never moves or rebuilds what exists, and leaves the scene unsaved.
 
 ## Architecture and design rationale
 
@@ -69,7 +78,7 @@ Setup: **Seal the Deal > Lanes > Set Up Pickups** ([PickupsLaneSetup.cs](../../A
 ## Known limitations
 
 - **Workaround in `MotorSpeedOverride`:** Mutates `PlayerMotor`'s private `_profile` field via reflection until `PlayerMotor` exposes a public profile-override method.
-- **Editor/dev build guard in `ItemCarrier.OnStartClient`:** Disabled under `#if UNITY_EDITOR || DEVELOPMENT_BUILD` while `DevCarry` remains active, so Editor/dev builds run `DevCarry` and release builds run `ItemCarrier`.
+- **`DevCarry` stand-in:** `ItemCarrier` now runs in the Editor and dev builds. `DevCarry` (host-only rigidbody grab on F/G) stands down whenever the local player has an `ItemCarrier`, and still serves a player without one. Its thrown-prop hits on the hit dummy (`ThrownHitTracker`) therefore no longer happen where `ItemCarrier` is present; real throws report through `Pickup.ServerThrowLanded`.
 - **Remote item pitch:** Remote players' held items render level at chest height because pitch is not synced.
 - **Moving cover push:** Carried cubicle panels act as unpushable moving walls on the host.
 - **Local smoke puffs:** Extinguisher particle shapes differ slightly across machines (timing and world bounds match).

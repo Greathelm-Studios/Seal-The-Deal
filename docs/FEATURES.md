@@ -37,7 +37,7 @@ Master index of every gameplay, networking, UI, art, and tooling feature in **Se
 
 | Feature | Scope | Status | Verification | Doc | Code | Open Gaps / Decisions |
 |---|---|---|---|---|---|---|
-| Pickups, carrying, throwing, and loose furniture | v1 | Current | Compiled; solo/host lane checks | [ITEMS.md](systems/ITEMS.md) | `Scripts/Items/` | Retire `DevCarry` once unified; test Switchboard `ForceSync` from client |
+| Pickups, carrying, throwing, and loose furniture | v1 | Current | Compiled; solo/host lane checks | [ITEMS.md](systems/ITEMS.md) | `Scripts/Items/` | `DevCarry` now stands down when `ItemCarrier` is on the player (retire it once nothing needs it); gun pickups in KitOffice/Editor not compiled or played; test Switchboard `ForceSync` from client |
 | Gadgets (Grenade Case, Fire Extinguisher, Wet Floor Sign, Panel) | v1 | Current | Compiled; solo/host lane checks | [ITEMS.md](systems/ITEMS.md) | `Scripts/Items/` | Needs 2v2/4v4 client verification |
 | Physics prop spawning, 16/floor cap, and far-floor freezing | v1 | Current | Compiled only after freezing pass | [PROPS.md](systems/PROPS.md) | `Scripts/Props/` | Needs live 4v4 prop physics + Switchboard test |
 | Deterministic networked elevator (`KitOffice`) | Roadmap / Kit | Target | Compiled; host script test | [ELEVATOR.md](systems/ELEVATOR.md) | `Scripts/Lift/` | Not wired into match towers or floor gates yet |

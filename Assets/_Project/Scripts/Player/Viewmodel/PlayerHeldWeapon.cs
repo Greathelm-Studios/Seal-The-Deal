@@ -25,6 +25,17 @@ namespace CloseTheDeal.Player
         const float RemoteCurlDistance = 12f;
         const float RackPulledAt = 0.4f, RackReleasedAt = 0.6f;
         const float ReloadPalmLength = 0.07f, ReloadPalmBelow = 0.015f;
+        // How much longer the left arm may be drawn to reach its seat on a long gun: in your own view, where arms
+        // are routinely lengthened, and on the body others see, where a long arm would show.
+        const float SupportStretchView = 1.45f, SupportStretchBody = 1.15f;
+        // The body's own left hand is shrunk to this share of its size while a modelled hand stands in for it,
+        // and comes back once the reload has taken this much of the hand off the gun. WHY half and not nothing:
+        // the cuff's edge is partly skinned to the hand, and at nothing it was dragged into a spiked point; at
+        // half the hand is hidden inside the modelled hand's palm and the cuff only narrows a little.
+        const float FoldedHandScale = 0.5f, SupportHandLeavesAt = 0.05f;
+
+        /// <summary>Name of a held model's child that is a left hand modelled round the weapon; while it is shown, the body's own left hand is hidden.</summary>
+        public const string SupportHandName = "SupportHand";
 
         /// <summary>Name of a held model's child that is a hand modelled round the weapon; while it is held, the body's own right hand is hidden.</summary>
         public const string HeldHandName = "HeldHand";
@@ -79,6 +90,13 @@ namespace CloseTheDeal.Player
         bool _ready;
         WeaponHold _waiting;
         bool _hasWaiting;
+        WeaponHold _defaultHold;
+        Transform _supportHand;
+        Vector3 _leftHandScale = Vector3.one;
+        bool _ownLeftHandFolded;
+        bool _ownMagazine;
+        float _magazineLength;
+        float _magazineLean;
         readonly List<SkinnedMeshRenderer> _handMeshes = new();
         readonly List<int> _handMeshSlot = new();
         bool _ownHandHidden;
@@ -126,7 +144,10 @@ namespace CloseTheDeal.Player
             Transform supportSeat = _source.SupportTarget;
             _leftArm = _support.Bind(avatar, true);
             if (_leftArm)
+            {
                 _support.CopyTuning(_source.SupportGrip);
+                _leftHandScale = _support.Hand.localScale;
+            }
 
             // The model hangs off the pivot the motor tilts for a lean; its height on the
             // prefab is fixed, a lean only slides it sideways.
@@ -142,13 +163,20 @@ namespace CloseTheDeal.Player
             gameObject.AddComponent<HeldWeaponSettle>().Follow(this);
             _ready = true;
 
+            _defaultHold = supportSeat != null
+                ? new WeaponHold(weapon, seat.localPosition, seat.localRotation, supportSeat.localPosition, supportSeat.localRotation, _source.TwoHanded)
+                : new WeaponHold(weapon, seat.localPosition, seat.localRotation.eulerAngles);
+
             // What the arms prefab holds, unless weapon code has already asked for something else.
-            if (_hasWaiting)
-                Equip(_waiting);
-            else if (supportSeat != null)
-                Equip(new WeaponHold(weapon, seat.localPosition, seat.localRotation, supportSeat.localPosition, supportSeat.localRotation, _view.TwoHanded));
-            else
-                Equip(new WeaponHold(weapon, seat.localPosition, seat.localRotation.eulerAngles));
+            Equip(_hasWaiting ? _waiting : _defaultHold);
+        }
+
+        /// <summary>Puts the arms prefab's own weapon back in the hands; call <see cref="PlayerViewmodel.Equip(HeldWeapon)"/> with null instead so view and body stay in sync.</summary>
+        public void EquipDefault()
+        {
+            _hasWaiting = false;
+            if (_ready)
+                Equip(_defaultHold);
         }
 
         /// <summary>Swaps the weapon on the player's body; call <see cref="PlayerViewmodel.Equip"/> instead so view and body stay in sync.</summary>
@@ -210,7 +238,13 @@ namespace CloseTheDeal.Player
             _slideMoved = false;
             SeatMagazine();
             _held = copy;
+            _ownMagazine = hold.HasMagazine;
+            _magazineLength = hold.MagazineLength;
+            _magazineLean = hold.MagazineLean;
             ShowOwnHand(_gun.Find(HeldHandName) == null);
+            if (_supportHand != null)
+                _supportHand.gameObject.SetActive(false);
+            _supportHand = _leftArm ? _gun.Find(SupportHandName) : null;
 
             // A different weapon hangs differently; let the steady sag be found again.
             _restOffset = Vector3.zero;
@@ -383,7 +417,8 @@ namespace CloseTheDeal.Player
             if (magazine.gameObject.activeSelf != shown)
                 magazine.gameObject.SetActive(shown);
 
-            float along = (outBy * _profile.ReloadMagazineLength + away) * _held.MagazineUnit;
+            float length = _ownMagazine ? _magazineLength : _profile.ReloadMagazineLength;
+            float along = (outBy * length + away) * _held.MagazineUnit;
             magazine.localPosition = _held.MagazineRest - MagazineAxis() * along;
             if (drop > 0f)
                 magazine.position += Vector3.down * drop;
@@ -392,7 +427,7 @@ namespace CloseTheDeal.Player
         /// <summary>The line the magazine slides along, in the gun's own space, pointing up into the grip: the grip leans, so it is not straight up.</summary>
         Vector3 MagazineAxis()
         {
-            float lean = _profile.ReloadMagazineLean * Mathf.Deg2Rad;
+            float lean = (_ownMagazine ? _magazineLean : _profile.ReloadMagazineLean) * Mathf.Deg2Rad;
             return new Vector3(0f, Mathf.Cos(lean), Mathf.Sin(lean));
         }
 
@@ -533,7 +568,9 @@ namespace CloseTheDeal.Player
                     float reloadPose = _view.ReloadPose;
                     gunLocal.x = SoftFloor(gunLocal.x, _profile.BodyViewKeepOutRight * (1f - _view.TwoHandBlend) * (1f - reloadPose), BodyViewCushion);
                     gunLocal.y = Mathf.Lerp(SoftCeiling(gunLocal.y, -_profile.BodyViewKeepOutDown, BodyViewCushion), gunLocal.y, reloadPose);
-                    gunLocal.z = SoftFloor(gunLocal.z, _profile.BodyViewMinForward, BodyViewCushion);
+                    // A gun whose own hold sits closer than the limit (a rifle at the shoulder) is let in as far as that hold.
+                    float nearest = Mathf.Min(_profile.BodyViewMinForward, _view.RestPosition.z + _profile.BodyViewGunShift.z - BodyViewCushion);
+                    gunLocal.z = SoftFloor(gunLocal.z, nearest, BodyViewCushion);
 
                     gunRotation *= _bodyViewSwingTurn;
                     Vector3 gunPosition = eye + look * gunLocal;
@@ -579,23 +616,60 @@ namespace CloseTheDeal.Player
             // After the gun is placed: the thrown magazine falls toward the floor, not along wherever the hand bone was.
             AnimateMagazine();
 
-            if (_hasSupport && _view.TwoHanded)
+            float reloadHand = _leftArm && _held.Magazine != null ? _view.ReloadHand : 0f;
+            bool onSupport = _hasSupport && _view.TwoHanded;
+            if (onSupport)
             {
                 Vector3 leftElbow = look * new Vector3(-elbowHint.x, elbowHint.y, elbowHint.z);
-                _support.Reach(_gun.position + gunRotation * _supportPosition, gunRotation * _supportRotation, leftElbow, curlFingers);
+                _support.Reach(_gun.position + gunRotation * _supportPosition, gunRotation * _supportRotation, leftElbow, curlFingers,
+                    inBodyView ? SupportStretchView : SupportStretchBody);
             }
-            else if (inBodyView && afterRagdoll && _leftArm)
+            else
             {
-                KeepLeftArmClear(eye, look);
+                _support.Relax();
+                if (inBodyView && afterRagdoll && _leftArm)
+                    KeepLeftArmClear(eye, look);
             }
 
-            float reloadHand = _leftArm && _held.Magazine != null ? _view.ReloadHand : 0f;
+            ShowSupportHand(onSupport && reloadHand < SupportHandLeavesAt);
+            // The arm keeps the reach it had on the gun, or it would snap short the moment the hand lets go.
             if (reloadHand > 0f)
-                ReachForMagazine(reloadHand, gunRotation, look * new Vector3(-elbowHint.x, elbowHint.y, elbowHint.z));
+                ReachForMagazine(reloadHand, gunRotation, look * new Vector3(-elbowHint.x, elbowHint.y, elbowHint.z),
+                    onSupport ? (inBodyView ? SupportStretchView : SupportStretchBody) : 1f);
+        }
+
+        /// <summary>
+        /// A model with a left hand modelled round it shows that hand while the left hand is on the gun, and the
+        /// body's own left hand (a mitten that cannot wrap a handguard) is folded away into its wrist. When the
+        /// hand leaves the gun, for a reload, the body's own hand comes back and the modelled one goes.
+        /// </summary>
+        void ShowSupportHand(bool show)
+        {
+            if (_supportHand == null)
+            {
+                if (_ownLeftHandFolded)
+                    FoldOwnLeftHand(false);
+                return;
+            }
+
+            if (_supportHand.gameObject.activeSelf != show)
+                _supportHand.gameObject.SetActive(show);
+            // Every pass: the ragdoll puts each bone's size back every frame.
+            if (show || _ownLeftHandFolded)
+                FoldOwnLeftHand(show);
+        }
+
+        void FoldOwnLeftHand(bool fold)
+        {
+            if (_support.Hand == null)
+                return;
+
+            _support.Hand.localScale = fold ? _leftHandScale * FoldedHandScale : _leftHandScale;
+            _ownLeftHandFolded = fold;
         }
 
         /// <summary>Brings the left hand, palm up, under the grip to push the new magazine home.</summary>
-        void ReachForMagazine(float weight, Quaternion gunRotation, Vector3 elbow)
+        void ReachForMagazine(float weight, Quaternion gunRotation, Vector3 elbow, float maxStretch)
         {
             Vector3 up = gunRotation * MagazineAxis();
             Vector3 palm = _gun.TransformPoint(_held.MagazineWell) - up * (_view.ReloadHandBelow + ReloadPalmBelow);
@@ -610,7 +684,7 @@ namespace CloseTheDeal.Player
 
             Quaternion before = _support.Hand.rotation;
             Quaternion palmUp = Quaternion.LookRotation(fingers, Vector3.Cross(fingers, up));
-            _support.Reach(Vector3.Lerp(_support.Hand.position, wrist, weight), palmUp, elbow, false);
+            _support.Reach(Vector3.Lerp(_support.Hand.position, wrist, weight), palmUp, elbow, false, maxStretch);
             _support.Hand.rotation = Quaternion.Slerp(before, _support.Hand.rotation, weight);
         }
 

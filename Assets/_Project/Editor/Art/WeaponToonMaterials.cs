@@ -33,6 +33,10 @@ namespace CloseTheDeal.Editor.Art
         public const string PistolPath = "Assets/_Project/Art/Weapons/Models/Pistol.fbx";
         /// <summary>The hand modelled round the pistol's grip, shown instead of the character's own hand.</summary>
         public const string PistolHandPath = "Assets/_Project/Art/Weapons/Models/PistolGripHand.fbx";
+        /// <summary>The left hand modelled cupped round the rifle's handguard (pistol_grip_hand.py with MIRROR=1).</summary>
+        public const string RifleSupportHandPath = "Assets/_Project/Art/Weapons/Models/RifleSupportHand.fbx";
+        /// <summary>The AR-15 model (ArtSource/Weapons/ar15_adapt.py).</summary>
+        public const string RiflePath = "Assets/_Project/Art/Weapons/Models/AR15.fbx";
         /// <summary>The character's skin material; the grip hand's material takes its colours, so it matches the arm.</summary>
         const string SkinMaterialPath = "Assets/_Project/Art/Characters/STDMC/Materials/STDMC_lambert2_Toon.mat";
         /// <summary>The grip hand's material name in its FBX.</summary>
@@ -136,9 +140,10 @@ namespace CloseTheDeal.Editor.Art
                 Debug.Log(CharacterOutlineBake.Bake(PistolPath));
             }
 
-            string hand = MapHand(shader, ref written, ref total);
+            string hand = MapHand(shader, PistolHandPath, ref written, ref total) + " " + MapHand(shader, RifleSupportHandPath, ref written, ref total);
+            string rifle = MapRifle(shader, ref written, ref total);
             string report = $"[Weapon Toon] Wrote {written} of {total} materials to {MaterialFolder}; {total - written} left alone (edited by hand)." +
-                            (importer == null ? $" No model at {PistolPath}; nothing remapped." : " Pistol.fbx remapped.") + " " + hand;
+                            (importer == null ? $" No model at {PistolPath}; nothing remapped." : " Pistol.fbx remapped.") + " " + hand + " " + rifle;
             Debug.Log(report);
             return report;
         }
@@ -148,11 +153,12 @@ namespace CloseTheDeal.Editor.Art
         /// contour normals. WHY its own material and not the skin's: the skin's contour is 3 px, and on a hand
         /// wrapped round a 1.5 px gun it read as heavier line art than the gun (Alex, 2026-11-21).
         /// </summary>
-        static string MapHand(Shader shader, ref int written, ref int total)
+        static string MapHand(Shader shader, string handPath, ref int written, ref int total)
         {
-            var importer = AssetImporter.GetAtPath(PistolHandPath) as ModelImporter;
+            string file = System.IO.Path.GetFileName(handPath);
+            var importer = AssetImporter.GetAtPath(handPath) as ModelImporter;
             if (importer == null)
-                return $"No grip hand at {PistolHandPath}.";
+                return $"No hand at {handPath}.";
             var skin = AssetDatabase.LoadAssetAtPath<Material>(SkinMaterialPath);
             if (skin == null)
                 return $"No skin material at {SkinMaterialPath}; grip hand left on its own material.";
@@ -163,8 +169,35 @@ namespace CloseTheDeal.Editor.Art
                 return "Grip hand material missing and not writable.";
             importer.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), HandSkinName), hand);
             importer.SaveAndReimport();
-            Debug.Log(CharacterOutlineBake.Bake(PistolHandPath));
-            return "PistolGripHand.fbx put on Pistol_Hand (skin colours, gun line art).";
+            Debug.Log(CharacterOutlineBake.Bake(handPath));
+            return $"{file} put on Pistol_Hand (skin colours, gun line art).";
+        }
+
+        /// <summary>Writes the AR-15's materials in the pistol's palette, maps AR15.fbx onto them and bakes its contour normals.</summary>
+        static string MapRifle(Shader shader, ref int written, ref int total)
+        {
+            var importer = AssetImporter.GetAtPath(RiflePath) as ModelImporter;
+            if (importer == null)
+                return $"No rifle at {RiflePath}.";
+
+            (string name, Color colour, Color shadow, float highlight)[] parts =
+            {
+                ("AR15_Metal", Silver, SilverShadow, MetalHighlightSize),
+                ("AR15_Receiver", DeepNavy, NavyShadow, 0f),
+                ("AR15_Furniture", Mist, MistShadow, 0f),
+                ("AR15_Magazine", Aqua, AquaShadow, 0f),
+            };
+            foreach (var part in parts)
+            {
+                total++;
+                Material material = Write(shader, part.name, part.colour, part.shadow, part.highlight, ref written);
+                if (material != null)
+                    importer.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), part.name), material);
+            }
+
+            importer.SaveAndReimport();
+            Debug.Log(CharacterOutlineBake.Bake(RiflePath));
+            return "AR15.fbx remapped.";
         }
 
         /// <summary>Writes one material unless a person has taken it over; returns it either way (null only if missing and untouchable).</summary>

@@ -109,6 +109,13 @@ grip it lies along the grip's left side, the side the player's eye sees. The thu
 before, hidden behind the gun from the eye (Alex: "I can't see the thumb", 2026-11-22); going round to the left by
 the palm hinge alone took its base through the top of the grip (13 mm deep) or left it pointing out sideways."""
 
+NAME = arg('NAME', 'PistolGripHand')
+"""Name of the object and mesh written. `NAME=RifleSupportHand` with `MIRROR=1` and an open curl makes the left
+hand that cups the rifle's handguard (the full command is in README.md)."""
+MIRROR = arg('MIRROR', 0)
+"""1 mirrors the finished hand side to side, making a left hand. Its fingers still point at the muzzle and its
+thumb side is still up; its palm then faces the gun's right."""
+
 SKIN = (0.84, 0.78, 0.74)   # the character's skin colour; Unity maps the material onto Pistol_Hand anyway
 
 
@@ -292,12 +299,16 @@ mid = rig.matrix_world @ rig.data.bones['dedo1.005'].tail_local    # middle knuc
 turn = Matrix.Rotation(math.radians(TURN[2]), 4, 'Z') @ Matrix.Rotation(math.radians(TURN[1]), 4, 'Y') \
     @ Matrix.Rotation(math.radians(TURN[0]), 4, 'X')
 bm.transform(Matrix.Translation(KNUCKLES) @ turn @ Matrix.Scale(SCALE, 4) @ to_pistol @ Matrix.Translation(-mid))
+if MIRROR:
+    # A left hand: the same hand mirrored side to side. Mirroring turns every face inside out, so they are turned back.
+    bm.transform(Matrix.Scale(-1.0, 4, Vector((1.0, 0.0, 0.0))))
+    bmesh.ops.reverse_faces(bm, faces=bm.faces)
 bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
 
 # ---------------------------------------------------------------- the result
 for o in list(bpy.data.objects):
     bpy.data.objects.remove(o)
-me = bpy.data.meshes.new('PistolGripHand')
+me = bpy.data.meshes.new(NAME)
 bm.to_mesh(me)
 bm.free()
 mat = bpy.data.materials.new('Hand_Skin')
@@ -313,7 +324,7 @@ for p in me.polygons:
     p.use_smooth = True
 if not me.uv_layers:
     me.uv_layers.new(name='UVMap')
-ob = bpy.data.objects.new('PistolGripHand', me)
+ob = bpy.data.objects.new(NAME, me)
 bpy.context.scene.collection.objects.link(ob)
 for m in list(bpy.data.materials):
     if m != mat:

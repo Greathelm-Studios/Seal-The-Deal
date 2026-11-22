@@ -182,11 +182,6 @@ namespace CloseTheDeal.Items
             base.OnStartClient();
             if (!IsOwner)
                 return;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            // Editor/Dev builds keep DevCarry owning F/G so both don't act in one frame; release uses ItemCarrier.
-            return;
-#endif
-#pragma warning disable CS0162 // unreachable in Editor and development builds, see above
             Local = this;
             _reader = GetComponent<PlayerInputReader>();
             if (_reader != null)
@@ -194,7 +189,6 @@ namespace CloseTheDeal.Items
             CreateInput();
             enabled = true;
             LocalChanged?.Invoke(this);
-#pragma warning restore CS0162
         }
 
         public override void OnStopClient()

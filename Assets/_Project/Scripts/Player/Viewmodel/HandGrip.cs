@@ -59,6 +59,9 @@ namespace CloseTheDeal.Player
         bool _cachedLeft;
         Quaternion _handToLowerRest = Quaternion.identity;
         bool _hasRestTwist;
+        Vector3 _lowerRest, _handRest;
+        bool _hasRestLengths;
+        bool _stretched;
 
         /// <summary>True when the three arm bones are assigned, so <see cref="Reach"/> can run.</summary>
         public bool IsRigged => _upperArm != null && _lowerArm != null && _hand != null;
@@ -130,6 +133,10 @@ namespace CloseTheDeal.Player
                 * Quaternion.LookRotation(middle.position - _hand.position, index.position - little.position);
             _handToLowerRest = Quaternion.Inverse(_hand.rotation) * _lowerArm.rotation;
             _hasRestTwist = true;
+            _lowerRest = _lowerArm.localPosition;
+            _handRest = _hand.localPosition;
+            _hasRestLengths = true;
+            _stretched = false;
 
             _triggerFinger = Joints(humanoid, left ? LeftTriggerBones : TriggerBones);
             _gripFingers = Joints(humanoid, left ? LeftGripBones : GripBones);
@@ -172,12 +179,13 @@ namespace CloseTheDeal.Player
         }
 
         /// <summary>Solves the two-bone arm onto <paramref name="target"/>, orients the hand, and applies finger curls.</summary>
-        public void Reach(Vector3 target, Quaternion targetRotation, Vector3 elbowToward = default, bool curlFingers = true)
+        /// <param name="maxStretch">How much longer than itself the arm may be drawn to reach a target that is too far, as a multiple (1 = never). First-person arms are routinely lengthened this way so a hand can sit on a long gun.</param>
+        public void Reach(Vector3 target, Quaternion targetRotation, Vector3 elbowToward = default, bool curlFingers = true, float maxStretch = 1f)
         {
             if (!IsRigged)
                 return;
 
-            SolveArmBones(target, elbowToward);
+            SolveArmBones(target, elbowToward, maxStretch);
 
             Quaternion handWorld = targetRotation * Quaternion.Inverse(_knuckleFrame);
             if (_hasRestTwist)
@@ -203,8 +211,34 @@ namespace CloseTheDeal.Player
             SolveArmBones(target, elbowToward);
         }
 
-        void SolveArmBones(Vector3 target, Vector3 elbowToward)
+        /// <summary>Puts an arm that <see cref="Reach"/> lengthened back to its own length. Does nothing to an arm that was not.</summary>
+        public void Relax()
         {
+            if (!_stretched)
+                return;
+
+            _lowerArm.localPosition = _lowerRest;
+            _hand.localPosition = _handRest;
+            _stretched = false;
+        }
+
+        void SolveArmBones(Vector3 target, Vector3 elbowToward, float maxStretch = 1f)
+        {
+            Relax();
+            if (maxStretch > 1f && _hasRestLengths)
+            {
+                // Lengthen both bones by the same share, so the arm reads as longer rather than as a pulled wrist.
+                Vector3 shoulder = _upperArm.position;
+                float own = (Vector3.Distance(shoulder, _lowerArm.position) + Vector3.Distance(_lowerArm.position, _hand.position)) * MaximumReachShare;
+                float stretch = own > 0f ? Mathf.Clamp(Vector3.Distance(shoulder, target) / own, 1f, maxStretch) : 1f;
+                if (stretch > 1f)
+                {
+                    _lowerArm.localPosition = _lowerRest * stretch;
+                    _hand.localPosition = _handRest * stretch;
+                    _stretched = true;
+                }
+            }
+
             Vector3 a = _upperArm.position, b = _lowerArm.position, c = _hand.position;
             float upper = Vector3.Distance(a, b), lower = Vector3.Distance(b, c);
             float reach = Mathf.Clamp(Vector3.Distance(a, target), MinimumReach, (upper + lower) * MaximumReachShare);

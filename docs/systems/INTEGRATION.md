@@ -46,7 +46,7 @@ Every match resets everyone to the starting loadout, full magazines, and full he
 
 ## Files and setup
 
-- Scripts under [Assets/_Project/Scripts/Integration/](../../Assets/_Project/Scripts/Integration/): `FloorLoot.cs`, `FloorLootTable.cs`, `GunPickupMap.cs`, `GunPickups.cs`, `LobbyRoom.cs`, `LobbyRunFlow.cs`, `PlayerParts.cs`, `SharedHands.cs`.
+- Scripts under [Assets/_Project/Scripts/Integration/](../../Assets/_Project/Scripts/Integration/): `FloorLoot.cs`, `FloorLootTable.cs`, `GunPickupMap.cs`, `GunPickups.cs` (drops a swapped-out gun through `LooseGunSpawns` when the scene has no `FloorLoot`), `LooseGunSpawns.cs` ([ITEMS.md](ITEMS.md)), `LobbyRoom.cs`, `LobbyRunFlow.cs`, `PlayerParts.cs`, `SharedHands.cs`.
 - Scene setup: [IntegrationLaneSetup.cs](../../Assets/_Project/Editor/Lanes/IntegrationLaneSetup.cs), menu **Seal the Deal > Lanes > Set Up Integration** (or CLI `-executeMethod CloseTheDeal.Editor.Lanes.IntegrationLaneSetup.SetUpFromCommandLine`). **Run Integration Check (solo)** automates a check run.
 
 ## Known limitations

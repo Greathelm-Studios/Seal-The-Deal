@@ -103,13 +103,18 @@ namespace CloseTheDeal.Integration
         {
             NetworkObject prefab = _map.PickupFor(weapon);
             FloorLoot loot = FloorLoot.Instance;
-            if (prefab == null || loot == null)
+            LooseGunSpawns spawns = LooseGunSpawns.Instance;
+            if (prefab == null || (loot == null && spawns == null))
                 return;
 
             Transform body = carrier.transform;
             Vector3 forward = body.forward;
             Vector3 at = body.position + Vector3.up * SwapDropHeight + forward * SwapDropReach;
-            loot.ServerSpawnLoose(prefab, at, Quaternion.LookRotation(forward, Vector3.up), forward * _swapTossSpeed);
+            Quaternion facing = Quaternion.LookRotation(forward, Vector3.up);
+            if (loot != null)
+                loot.ServerSpawnLoose(prefab, at, facing, forward * _swapTossSpeed);
+            else
+                spawns.ServerSpawnLoose(prefab, at, facing, forward * _swapTossSpeed);
         }
 
         void WarnUnlisted(Pickup pickup)

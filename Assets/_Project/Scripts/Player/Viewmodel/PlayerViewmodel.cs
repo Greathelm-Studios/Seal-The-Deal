@@ -33,6 +33,11 @@ namespace CloseTheDeal.Player
         const float ReloadBumpPitch = 3f;
         const float ReloadCancelSeconds = 0.15f;
 
+        // A gun that has just come out: how long it takes to rise into the hands, from how far below, muzzle how far down.
+        const float DrawSeconds = 0.22f;
+        const float DrawDrop = 0.16f;
+        const float DrawTilt = 28f;
+
         /// <summary>Layer name kept for greybox setup and stand-in raycast mask compatibility.</summary>
         public const string LayerName = "Viewmodel";
 
@@ -94,6 +99,9 @@ namespace CloseTheDeal.Player
         float _reloadRaise;
         float _reloadFlick;
         float _reloadBump;
+        HeldWeapon _held;
+        bool _equipped;
+        float _drawElapsed = -1f;
         PlayerHeldWeapon _body;
         PlayerHits _hits;
 
@@ -108,10 +116,10 @@ namespace CloseTheDeal.Player
         }
 
         /// <summary>Where the gun's grip rests relative to the eye right now, in metres: the one-handed place, the two-handed place, or part way between while it moves.</summary>
-        public Vector3 RestPosition => Vector3.Lerp(_profile.GunPosition, _profile.TwoHandedPosition, _twoHand);
+        public Vector3 RestPosition => _held != null ? _held.HoldPosition : Vector3.Lerp(_profile.GunPosition, _profile.TwoHandedPosition, _twoHand);
 
         /// <summary>How the gun is turned at rest right now, blended the same way as <see cref="RestPosition"/>.</summary>
-        public Quaternion RestTurn => Quaternion.Slerp(Quaternion.Euler(_profile.GunTurn), Quaternion.Euler(_profile.TwoHandedTurn), _twoHand);
+        public Quaternion RestTurn => _held != null ? Quaternion.Euler(_held.HoldTurn) : Quaternion.Slerp(Quaternion.Euler(_profile.GunTurn), Quaternion.Euler(_profile.TwoHandedTurn), _twoHand);
 
         /// <summary>0 held in one hand, 1 held in both; smoothly blended between.</summary>
         public float TwoHandBlend => _twoHand;
@@ -138,6 +146,36 @@ namespace CloseTheDeal.Player
             _twoHanded = hold.TwoHanded && hold.HasSupport;
             if (_body != null)
                 _body.Equip(hold);
+        }
+
+        /// <summary>
+        /// Puts a weapon's own held model in the hands, held and reloaded its own way; null puts the arms
+        /// prefab's stand-in pistol back. Call on every machine when a player's held weapon changes; nothing
+        /// here is synced. A gun that was already in the hands is left as it is.
+        /// </summary>
+        public void Equip(HeldWeapon held)
+        {
+            if (held != null && !held.IsComplete)
+                held = null;
+            if (held == _held && _equipped)
+                return;
+
+            _equipped = true;
+            _held = held;
+            EndReload();
+            if (held != null)
+            {
+                Equip(held.ToHold());
+            }
+            else
+            {
+                _twoHanded = _armsPrefab != null && _armsPrefab.TwoHanded;
+                if (_body != null)
+                    _body.EquipDefault();
+            }
+
+            // A gun that has just come out rises into the hands rather than appearing in them.
+            _drawElapsed = 0f;
         }
 
         /// <summary>True from the start of a reload move until the gun is back on aim.</summary>
@@ -409,21 +447,23 @@ namespace CloseTheDeal.Player
             float bodyRoll = _lag.y * _profile.LookLagRoll - leanTilt * _profile.LeanCounterRoll;
 
             // The reload's knock comes along the grip, the way the left hand pushes the magazine in.
-            Quaternion reloadTurn = Quaternion.SlerpUnclamped(Quaternion.identity, Quaternion.Euler(_profile.ReloadTurn), _reloadRaise);
+            Vector3 reloadShift = _held != null ? _held.ReloadShift : _profile.ReloadShift;
+            Quaternion reloadTurn = Quaternion.SlerpUnclamped(Quaternion.identity, Quaternion.Euler(_held != null ? _held.ReloadTurn : _profile.ReloadTurn), _reloadRaise);
+            float draw = DrawDepth(dt);
 
             BodyViewMotionOffset = new Vector3(_lag.y, -_lag.x, 0f) * _profile.LookLagShift
                 + _profile.SprintShift * _sprint
                 + Vector3.back * (_kickNow.PushBack * kick)
-                + _profile.ReloadShift * _reloadRaise
+                + reloadShift * _reloadRaise
                 + reloadTurn * Vector3.up * (_profile.ReloadSeatBump * _reloadBump)
-                + Vector3.down * (_profile.ClimbDrop * _climb);
+                + Vector3.down * (_profile.ClimbDrop * _climb + DrawDrop * draw);
 
             BodyViewMotionRotation = Quaternion.Euler(_lag.x, _lag.y, bodyRoll)
                 * RestTurn
                 * Quaternion.Euler(_profile.SprintTurn * _sprint)
                 * reloadTurn
                 * Quaternion.Euler(
-                    -_kickNow.Flip * kick - ReloadBumpPitch * _reloadBump + _profile.ClimbTilt * _climb,
+                    -_kickNow.Flip * kick - ReloadBumpPitch * _reloadBump + _profile.ClimbTilt * _climb + DrawTilt * draw,
                     _kickNow.Twist * kick,
                     _kickNow.Roll * kick + _profile.ReloadEjectFlick * _reloadFlick);
         }
@@ -548,7 +588,7 @@ namespace CloseTheDeal.Player
             _reloadFlick = Jolt(Mathf.InverseLerp(ReloadMagazineFreeAt, ReloadMagazineGoneAt, t)) * fade;
             _reloadBump = Jolt(Mathf.InverseLerp(ReloadSeatedAt - 0.01f, ReloadHandGoneAt, t)) * fade;
 
-            float length = _profile.ReloadMagazineLength;
+            float length = _held != null ? _held.MagazineLength : _profile.ReloadMagazineLength;
             if (t < ReloadNewMagazineAt)
             {
                 // Thrown out along the grip by the flick, then it drops.
@@ -600,6 +640,23 @@ namespace CloseTheDeal.Player
             ReloadMagazineShown = true;
             ReloadHand = 0f;
             ReloadHandBelow = 0f;
+        }
+
+        /// <summary>How far below its place a gun that has just come out still is: 1 on the frame it is drawn, easing to 0.</summary>
+        float DrawDepth(float dt)
+        {
+            if (_drawElapsed < 0f)
+                return 0f;
+
+            _drawElapsed += dt;
+            if (_drawElapsed >= DrawSeconds)
+            {
+                _drawElapsed = -1f;
+                return 0f;
+            }
+
+            float left = 1f - _drawElapsed / DrawSeconds;
+            return left * left;
         }
 
         /// <summary>0 to 1 that arrives fast, swings past 1 by about the overshoot and comes back.</summary>

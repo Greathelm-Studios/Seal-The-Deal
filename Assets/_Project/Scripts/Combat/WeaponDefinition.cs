@@ -173,7 +173,10 @@ namespace CloseTheDeal.Combat
 
         [Header("Looks")]
 
-        [Tooltip("The gun model shown in the hand. It needs a child called Muzzle where the shot leaves, and may have a child called Flash that is lit for an instant on each shot.")]
+        [Tooltip("The model the character's hands hold, in your own view and on the body other players see: a held-weapon prefab with the gun, where each hand sits on it and how it is held and reloaded. Leave empty and the hands hold the stand-in pistol whatever this gun is.")]
+        public CloseTheDeal.Player.HeldWeapon HeldModel;
+
+        [Tooltip("The gun model shown in the hand on a player with no arms model. It needs a child called Muzzle where the shot leaves, and may have a child called Flash that is lit for an instant on each shot.")]
         public GameObject ViewPrefab;
 
         [Tooltip("Where the gun sits in the shooter's own view, in metres from the eye: right, up, forward.")]

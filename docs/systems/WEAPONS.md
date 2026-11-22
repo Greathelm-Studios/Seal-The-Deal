@@ -160,7 +160,7 @@ Under [Assets/_Project/Scripts/Combat/](../../Assets/_Project/Scripts/Combat/):
 - **GDD mismatch:** [GDD.md](../GDD.md) still describes combat as "chaotic rather than precise"; the current weapons implement tight gunplay per the owner's newer direction.
 - **Bullets do not push physics props.**
 - **The 2026-11-22 shot effects are unplayed.** Compiled, and the flash, smoke, impact, tracer and holes were seen in offscreen renders only (side, shooter's eye, a wall). The kick on the toon pistol, the slide, the light on the scene, the tracer in flight, bloom, and everything from a joining client are unseen; a person has not fired it.
-- **The AR-15 is shown as the toon pistol** in the hand and on the body, because only the pistol has a toon model; its flash and slide follow the pistol's.
+- **Each gun shows its own model in the hands when it has one.** A weapon's **Held model** (a held-weapon prefab, see [VIEWMODEL.md](VIEWMODEL.md)) is put in the hands on every machine when the gun comes out. The AR-15 has one (the pack's rifle, held in both hands); a gun without one is still shown as the toon pistol. Seen as host in stills only (2026-11-22).
 - **Other players' guns do not kick** (only the slide moves); the body's arm holds the aim.
 - **Body hits throw the world impact** (sparks and dust) facing the shooter rather than blood.
 - **Bullet holes are flat quads** a couple of millimetres off the surface: on a curved or thin edge they overhang, and on furniture scaled unevenly they stretch.

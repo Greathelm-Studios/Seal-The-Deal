@@ -42,6 +42,18 @@ namespace CloseTheDeal.Integration
             return null;
         }
 
+        /// <summary>The pickup prefab for a gun item, or null when it is not listed or has none.</summary>
+        public NetworkObject PickupForItem(ItemDefinition item)
+        {
+            for (int i = 0; i < _guns.Length; i++)
+            {
+                if (_guns[i].Item == item)
+                    return _guns[i].Pickup;
+            }
+
+            return null;
+        }
+
         /// <summary>The pickup prefab for a weapon, or null when it has none.</summary>
         public NetworkObject PickupFor(WeaponDefinition weapon)
         {

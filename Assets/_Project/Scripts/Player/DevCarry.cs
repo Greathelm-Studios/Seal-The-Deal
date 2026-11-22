@@ -1,3 +1,4 @@
+using CloseTheDeal.Items;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -37,7 +38,8 @@ namespace CloseTheDeal.Player
         {
             PlayerMotor player = PlayerMotor.Local;
             PlayerCamera view = PlayerCamera.Instance;
-            if (player == null || view == null || !player.IsServerStarted)
+            // A player with the real ItemCarrier uses it; this stand-in only serves players without one.
+            if (player == null || view == null || !player.IsServerStarted || ItemCarrier.Local != null)
             {
                 if (_held != null)
                     Let(Vector3.zero, false);
