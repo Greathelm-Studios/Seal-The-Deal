@@ -224,6 +224,12 @@ namespace CloseTheDeal.FloorRace
             _floor.ArrivalDoors?.Set(arrival);
         }
 
+        /// <summary>Seconds the Building stage lasts: the lift's ride, or just the build lead when nobody took a lift (the match's first floor).</summary>
+        public float RideLength(FloorRaceState state)
+        {
+            return state.LiftFirm == MatchDirector.NoFirm ? _profile.BuildLeadSeconds : Mathf.Max(_profile.BuildLeadSeconds, _profile.RideSeconds);
+        }
+
         /// <summary>The floor players are standing on: the old one while the next is still being built above it.</summary>
         public BuiltFloor StandingFloor => Stage == RaceStage.Building && _oldFloor != null ? _oldFloor : _floor;
 

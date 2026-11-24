@@ -20,6 +20,7 @@ namespace CloseTheDeal.Editor.FloorRace
         const string ReportPath = "Temp/FloorGen/build_report.txt";
         const string SignFontPath = "Assets/_Project/UI/Fonts/SairaExpanded-Light SDF.asset";
         const int PosterCount = 12;
+        const string LiftSoundFolder = "Assets/_Project/Audio/FloorRace";
         const string RingBandPath = "Assets/_Project/Art/Signs/Band_Cobalt_Inlay.mat";
         const string CeilingLightPath = KitMaterialFolder + "/Light_Strip.mat";
         // ArtSource/Kit/posters/COPY.md, "Wall text".
@@ -68,6 +69,10 @@ namespace CloseTheDeal.Editor.FloorRace
                 kit.RingBand = AssetDatabase.LoadAssetAtPath<Material>(RingBandPath);
             if (kit.CeilingLight == null)
                 kit.CeilingLight = AssetDatabase.LoadAssetAtPath<Material>(CeilingLightPath);
+            if (kit.LiftRide == null)
+                kit.LiftRide = AssetDatabase.LoadAssetAtPath<AudioClip>(LiftSoundFolder + "/Lift_Ride.wav");
+            if (kit.LiftArrive == null)
+                kit.LiftArrive = AssetDatabase.LoadAssetAtPath<AudioClip>(LiftSoundFolder + "/Lift_Arrive.wav");
             if (kit.SloganBand == null)
                 kit.SloganBand = AssetDatabase.LoadAssetAtPath<Material>(BelowMaterialPath);
             if (kit.Slogans == null || kit.Slogans.Length == 0)

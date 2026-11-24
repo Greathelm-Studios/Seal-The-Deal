@@ -56,6 +56,9 @@ namespace CloseTheDeal.Player
             StopRumble();
         }
 
+        /// <summary>Pushes the view spring from outside movement, in metres per second along the camera's own axes. Reduce motion ignores it.</summary>
+        public void Nudge(Vector3 velocity) => Kick(velocity);
+
         void Kick(Vector3 velocity)
         {
             if (!Reduced)

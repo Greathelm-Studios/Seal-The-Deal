@@ -34,6 +34,9 @@ namespace CloseTheDeal.FloorRace
         public Vector3 CabinSize = new(3.2f, 2.6f, 3.2f);
 
         [Header("Moving up a floor")]
+        [Tooltip("Seconds the lift takes between floors. The firm aboard rides it standing in the closed car and steps out where they stood; the other firm sees the floor-change screen for as long. The next floor is built during the ride. Longer gives the ride weight and makes every floor change slower.")]
+        [Range(0.5f, 8f)] public float RideSeconds = 3f;
+
         [Tooltip("Seconds the next floor exists before players are moved onto it, so every machine has finished building it. Raise it if clients ever arrive on an unbuilt floor.")]
         [Range(0.2f, 3f)] public float BuildLeadSeconds = 0.5f;
 

@@ -109,7 +109,7 @@ namespace CloseTheDeal.FloorRace
             switch (state.Stage)
             {
                 case RaceStage.Building:
-                    if (since >= _profile.BuildLeadSeconds)
+                    if (since >= RideLength(state))
                         Arrive(tick);
                     break;
                 case RaceStage.HeadStart:
@@ -371,7 +371,7 @@ namespace CloseTheDeal.FloorRace
             for (int i = 0; i < FirmMember.All.Count; i++)
             {
                 FirmMember member = FirmMember.All[i];
-                PutAt(member, StartOf(member.Firm, member.Slot));
+                PutAt(member, Carried(member, state.LiftFirm, out Vector3 inCar) ? inCar : StartOf(member.Firm, member.Slot));
                 if (!_freshMatch)
                     continue;
 
@@ -428,6 +428,25 @@ namespace CloseTheDeal.FloorRace
                 spots = layout.SpawnSpots;
             FloorSpot spot = spots[Mathf.Abs(slot) % spots.Count];
             return _floor.World(spot, SpawnLift);
+        }
+
+        // A rider steps out of the arrival car from the place they stood in the car that left, so the ride has no visible jump.
+        bool Carried(FirmMember member, int liftFirm, out Vector3 position)
+        {
+            position = default;
+            BuiltFloor old = _oldFloor;
+            FloorLayout next = _floor.Layout;
+            if (old == null || member.Firm != liftFirm || IsDown(member) || !next.HasArrivalLift || !old.Layout.HasExitLift || !InExitLift(member.Position))
+                return false;
+
+            FloorLift from = old.Layout.ExitLift, to = next.ArrivalLift;
+            Vector3 plan = old.Plan(member.Position);
+            float dx = plan.x - from.CarX, dy = plan.y - from.CarY;
+            float turn = (to.CarYaw - from.CarYaw) * Mathf.Deg2Rad, cos = Mathf.Cos(turn), sin = Mathf.Sin(turn);
+            float reach = Mathf.Min(_profile.CabinSize.x, _profile.CabinSize.z) * 0.5f - PlayerRadius;
+            float x = Mathf.Clamp(dx * cos - dy * sin, -reach, reach), y = Mathf.Clamp(dx * sin + dy * cos, -reach, reach);
+            position = _floor.World(to.CarX + x, to.CarY + y, to.Level * FloorLayout.StoreyHeight + SpawnLift);
+            return true;
         }
 
         // Alive or dead, the player ends up standing here.

@@ -42,6 +42,7 @@ namespace CloseTheDeal.FloorGen
     public static class FloorGenerator
     {
         public const int MaxAttempts = 24;
+        const uint LiftFacingStream = 7001u;
         const int Unassigned = -2;
         const float LiftCarInset = 2.075f, LiftLeafInset = 0.225f, LiftFrontStep = 0.75f;
         const float FloorToFloor = 4.5f;
@@ -343,6 +344,7 @@ namespace CloseTheDeal.FloorGen
                 List<LiftOption> wanted = options.FindAll(o => o.Inside == inside);
                 if (wanted.Count == 0)
                     wanted = options;
+                wanted = Facing(layout, wanted);
                 if (wanted.Count == 0)
                 {
                     layout.Problems.Add("Nowhere to put the exit lift.");
@@ -372,8 +374,17 @@ namespace CloseTheDeal.FloorGen
                 return;
             }
 
+            arrivals = Facing(layout, arrivals);
             layout.ArrivalLift = Carve(layout, arrivals[rng.Range(0, arrivals.Count)], 0);
             layout.HasArrivalLift = true;
+        }
+
+        // Every lift in a building opens the same way where the plan allows, so the car that arrives matches the car that left.
+        static List<LiftOption> Facing(FloorLayout layout, List<LiftOption> options)
+        {
+            int side = new FloorRandom(layout.Seed, 0u, LiftFacingStream).Range(0, 4);
+            List<LiftOption> same = options.FindAll(o => o.DoorSide == side);
+            return same.Count > 0 ? same : options;
         }
 
         static List<LiftOption> LiftOptions(FloorLayout layout, List<Rect> rects, int awayFromCell, int minCells)

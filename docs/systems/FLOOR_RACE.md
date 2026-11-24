@@ -34,7 +34,9 @@ Values in `code font` are on `Assets/_Project/Profiles/FloorRace/FloorRace.asset
 - Floors 1 to 9 have one exit lift, hidden somewhere in the layout. Its doors stand open. Finding it is part of the floor.
 - It leaves when the briefcase carrier **and every living member of the carrier's firm** are inside the car (`Cabin Size`). The host checks ten times a second.
 - Players of the other firm can stand in the car. They do not stop it leaving and they do not ride: everyone is moved to their own start on the next floor.
-- The ride is a transition, not a trip up a shaft: the doors close (`Door Seconds`, 0.8), a floor-change screen covers every player's view while the next floor is built, and play resumes on the new floor.
+- **The ride.** The doors close (`Door Seconds`, 0.8) and the lift takes `Ride Seconds` (3) to reach the next floor. The firm aboard stays in first person inside the closed car for the whole ride and steps out of the next floor's lift from the place they stood. The other firm, and anyone dead, sees the floor-change screen for as long and is put at their start. The next floor is built during the ride.
+- **What is real and what is a trick.** Floors are stacked: each is built 13.5 m above the last, and only the one in play (and for a moment the one being left) exists, so there is nothing to hide. The car does not travel. With its doors shut a rider cannot see out, so at the end of the ride they are moved into the arrival car, which is a different car in a different place on the plan; their screen dips for `Arrive Blink Seconds` (0.2, on the HUD) to cover the instant.
+- **What the ride feels like aboard**, on that player's machine only (`FloorRaceDirector.Ride.cs`; nothing is synced and no rule reads it): a hum for the length of the ride and a chime on arrival (`Lift Ride` and `Lift Arrive` on `FloorKit.asset`, made with earshot, in `Assets/_Project/Audio/FloorRace/`); light bars running down the inside of the car's back wall, 1.5 m apart, easing through one floor's height; the view dipping as the car starts, trembling by `Ride Shake` and lifting as it stops, through the camera's existing movement spring, so it never turns the aim and Reduce motion switches it off. Every lift in a building opens the same way ([FLOOR_GEN.md](FLOOR_GEN.md)), so the car they arrive in is turned the same as the one they left and their view does not change.
 - From floor 2 up there is also an arrival lift, where the briefcase firm starts. It never leaves.
 - There are no stairs and no keycard. The lift is the only way up.
 
@@ -161,6 +163,9 @@ Each is an Inspector value or a small rule, picked as the smallest sensible beha
   - **The floor 10 win:** the client carried the briefcase up eight more floors and [into the manager's office](../proof/floor_race_2026-11-22/c_12_floor10.jpg); its menu read ["Halloran Voss sealed the deal ... That is your firm"](../proof/floor_race_2026-11-22/c_13_win.jpg). The client's profile file held 1,000 cash and the win; the host's held 0 cash and the loss.
 - **Not checked:** a person playing it; more than one player a firm (so boarding with teammates, and a wipe that is not solo, are untested); Steam instead of the local transport; two PCs; a joiner mid-match; falling out of a window as a client (host only).
 
+- **The lift ride on two storeys, host alone, Editor, 2026-11-24**, driven by script: a match started on a two-storey floor; the carrier was put in an exit lift on the upper storey and it left (the first time boarding upstairs has been seen); the ride stage lasted 3 s with the carrier still inside the old car; they arrived on the next floor's lower storey 0.70 m east and 0.50 m north of the arrival car's centre, exactly where they had stood in the car that left, both cars facing the same way; a second ride from a lower-storey lift did the same; the console had no errors. Before lifts shared a facing, one arrival was turned 90 degrees, which is what prompted that rule. Not seen: the ride from a client, the other firm's screen, a dead rider, or a person at the controls.
+- **The ride's feel, host alone, Editor, 2026-11-24:** a ride ran with the hum, lights, shake and chime switched on and the console clean; the light bars were present during the ride (12 bars, 12 m down at 2.4 s) and gone after it. The bars were rendered from inside the car at three positions and seen stepping down the back wall. Nobody has heard the sounds or felt the shake.
+
 ## The two-tower mode was removed
 
 On 2026-11-22, in the commit "Remove the two-tower mode", after the floor race had been seen from a client.
@@ -170,6 +175,11 @@ On 2026-11-22, in the commit "Remove the two-tower mode", after the floor race h
 - **Checked after removing it:** it compiles with no errors; a full match (ten floors, a wipe, a fall, the win) was replayed on the host alone in the Editor with a clean console; `KitOffice`, `WeaponTest` and `FloorRace` open with no missing scripts and no prefab has one. The client check above was made before the removal and has not been repeated since.
 
 ## Known limitations
+
+- The ride's two sounds have not been listened to by a person. The arrival chime is a new take of a recorded lift ding. The hum is built from recordings of a fridge and an engine room because earshot has no lift motor; its listening model reads it as an electrical hum (z +3.84) and still rates it a sketch.
+- Only the firm aboard hears and feels the ride. The other firm's floor-change screen is silent.
+- The kit README says the lift car has a glass back; the imported `Lift_Car` prefab's back is solid, so the ride lights run inside the car rather than in the shaft behind it.
+- A rider who is jumping when the ride ends lands on the arrival car's floor: their height in the car is not carried over.
 
 - Glass does not break on generated floors ([FLOOR_GEN.md](FLOOR_GEN.md)).
 - Lift doors move once per tick with no smoothing, and are not rewound when a client's movement is replayed, so a client stepping through closing doors can be corrected by a few centimetres.

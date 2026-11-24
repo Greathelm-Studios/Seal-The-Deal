@@ -32,6 +32,9 @@ namespace CloseTheDeal.FloorRace
         [Tooltip("Seconds the floor-change screen takes to fade in once the lift doors start closing, and to fade out on arrival.")]
         [Range(0.1f, 2f)] [SerializeField] float _fadeSeconds = 0.5f;
 
+        [Tooltip("Seconds the screen dips for a player riding the lift as the car arrives. It hides the instant they are moved into the next floor's car. Riders see nothing else: they stay in the closed car for the whole ride.")]
+        [Range(0.05f, 1f)] [SerializeField] float _arriveBlinkSeconds = 0.2f;
+
         [Tooltip("Seconds the cash line stays on screen after a floor is won.")]
         [Range(1f, 10f)] [SerializeField] float _cashSeconds = 4f;
 
@@ -47,6 +50,7 @@ namespace CloseTheDeal.FloorRace
         RaceStage _titleStage = (RaceStage)255;
         int _titleFloor = -1;
         byte _titleFirm = byte.MaxValue;
+        bool _riding;
 
         void OnEnable()
         {
@@ -177,11 +181,17 @@ namespace CloseTheDeal.FloorRace
         void RefreshTransition(FloorRaceState state)
         {
             float since = _race.StageSeconds;
+            FirmMember rider = FirmMember.Local;
+            if (state.Stage == RaceStage.Departing)
+                _riding = rider != null && rider.Firm == state.LiftFirm && _race.InExitLift(rider.Position);
+            else if (state.Stage == RaceStage.Playing || state.Stage == RaceStage.Idle)
+                _riding = false;
+
             float alpha = state.Stage switch
             {
-                RaceStage.Departing => Mathf.Clamp01((since - _race.Profile.DoorSeconds * 0.5f) / _fadeSeconds),
-                RaceStage.Building => 1f,
-                RaceStage.HeadStart => 1f - Mathf.Clamp01(since / _fadeSeconds),
+                RaceStage.Departing => _riding ? 0f : Mathf.Clamp01((since - _race.Profile.DoorSeconds * 0.5f) / _fadeSeconds),
+                RaceStage.Building => _riding ? Mathf.Clamp01((since - _race.RideLength(state)) / _arriveBlinkSeconds + 1f) : 1f,
+                RaceStage.HeadStart => 1f - Mathf.Clamp01(since / (_riding ? _arriveBlinkSeconds : _fadeSeconds)),
                 _ => 0f
             };
             if (!Mathf.Approximately(alpha, _transitionGroup.alpha))

@@ -70,6 +70,9 @@ namespace CloseTheDeal.FloorRace
         // Two storeys and a clear one between, so the next floor can stand above the old one.
         const float MinFloorPitch = 3f * FloorLayout.StoreyHeight;
         const float LightHeight = 4.05f, CeilingLineDrop = 0.012f;
+        // The inside face of the car's back wall is 1.715 m from its centre (measured on a built floor). The back is solid, not glass.
+        const float ShaftLightReach = 1.7f, ShaftLightStep = 1.5f;
+        static readonly Vector2 ShaftLightSize = new(3f, 0.07f);
         const float BandWidth = 0.3f, BandLift = 0.012f, SloganWidth = 3.6f, TextGap = 0.004f;
         const float SillHeight = 0.6f, ClearHeight = 4.3f, BounceLift = 0.15f, BounceAngle = 160f, BounceInner = 40f, WallClearance = 0.5f;
         const float MirrorHeight = 1f, MirrorDepth = 0.42f, MirrorMargin = 0.4f, MirrorBlend = 0.2f, MirrorFar = 120f;
@@ -399,6 +402,28 @@ namespace CloseTheDeal.FloorRace
                 probe.farClipPlane = MirrorFar;
                 probe.RenderProbe();
             }
+        }
+
+        /// <summary>
+        /// Light bars just proud of the inside of a lift car's back wall, stacked far above the car. The caller slides the returned
+        /// object down, and a rider sees the bars run down the wall as the floors pass. They belong to the floor and go when it is torn down.
+        /// </summary>
+        public Transform AddShaftLights(BuiltFloor floor, FloorLift lift)
+        {
+            if (floor == null || floor.Root == null || _kit.CeilingLight == null)
+                return null;
+
+            int back = Side.Opposite(lift.DoorSide);
+            var toward = new Vector3(Side.Dx[back], 0f, -Side.Dy[back]);
+            var holder = new GameObject("Shaft lights").transform;
+            holder.SetParent(floor.Root.transform, false);
+            var group = new GameObject("Bars").transform;
+            group.SetParent(holder, false);
+            Vector3 foot = new Vector3(lift.CarX, lift.Level * FloorLayout.StoreyHeight, -lift.CarY) + toward * ShaftLightReach;
+            Quaternion facing = Quaternion.LookRotation(toward);
+            for (float up = ShaftLightStep * 0.5f; up < FloorPitch + FloorLayout.StoreyHeight; up += ShaftLightStep)
+                Flat(group, _kit.CeilingLight, foot + Vector3.up * up, facing, ShaftLightSize);
+            return group;
         }
 
         void AddCeilingLines(BuiltFloor built)

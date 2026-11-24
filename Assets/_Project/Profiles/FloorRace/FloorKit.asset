@@ -172,6 +172,10 @@ MonoBehaviour:
   - EVERY DEADLINE WAS YESTERDAY
   - PASSION IS UNPAID
   CeilingLight: {fileID: 2100000, guid: 6ee6f133c895add4b9c9495c3fb2a5f4, type: 2}
+  LiftRide: {fileID: 8300000, guid: 3265b602d950e954d99c54cdf62a8369, type: 3}
+  LiftArrive: {fileID: 8300000, guid: 11dd68351a9b35f4b95b0ad82536cdef, type: 3}
+  RideVolume: 0.7
+  RideShake: 6
   LightOdd: {r: 0.52, g: 0.62, b: 1, a: 1}
   LightEven: {r: 0.5, g: 0.84, b: 1, a: 1}
   LightIntensity: 6

@@ -67,6 +67,19 @@ namespace CloseTheDeal.FloorRace
         [Tooltip("What the lit lines on the ceiling are made of: the line over the corridors, the lanes over open halls and the strip rows in rooms. The fill tool sets the kit's own strip light. Empty = no lit lines, and corridors and halls go dark overhead.")]
         public Material CeilingLight;
 
+        [Header("Lift ride")]
+        [Tooltip("The hum a player aboard hears while the lift rides to the next floor. The fill tool sets it. Empty = a silent ride.")]
+        public AudioClip LiftRide;
+
+        [Tooltip("The chime a player aboard hears as the lift arrives. Empty = no chime.")]
+        public AudioClip LiftArrive;
+
+        [Tooltip("How loud the ride hum and the arrival chime are, as a fraction of full volume.")]
+        [Range(0f, 1f)] public float RideVolume = 0.7f;
+
+        [Tooltip("How much the view trembles during the ride. It only moves the view up and down a few millimetres and never turns it. 0 = a still ride; the Reduce motion setting turns it off for that player whatever this says.")]
+        [Range(0f, 20f)] public float RideShake = 6f;
+
         [Header("Room lights")]
         [Tooltip("Colour of the ceiling lights in closed rooms on odd-numbered floors. KitOffice's first firm colour.")]
         public Color LightOdd = new(0.52f, 0.62f, 1f);
