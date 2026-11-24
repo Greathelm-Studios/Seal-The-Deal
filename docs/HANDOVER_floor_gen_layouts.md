@@ -35,7 +35,9 @@ How it is wired, so you know where to cut:
 
 **Layout types (next step 3): a first set of four built on 2026-11-24** (core office, open plan, cellular, gallery), picked by the seed with weights on `FloorGen.asset`. They vary where the ring sits and how rooms are cut; they do not change the corridor topology, and they have no room templates of their own. [systems/FLOOR_GEN.md](systems/FLOOR_GEN.md), "Layout types". Not walked, not seen from a client.
 
-Not started: next steps 4 and 5, and a layout type with a different corridor shape (KitOffice's twin-core court).
+**Two storeys (next step 5, first half): built on 2026-11-24.** The upper storey repeats the lower one's walls, two open stairs join them, and the exit lift may be on either. The mode's lift, respawn, briefcase and loot code reads each spot's storey. [systems/FLOOR_GEN.md](systems/FLOOR_GEN.md), "Two storeys". **No match has been played on it**: the stairs were measured climbable by raycast only, and boarding a lift upstairs, respawns and floor 10 are unseen. Generating a floor now takes about 19 ms and a floor draws as much as KitOffice.
+
+Not started: next step 4, bigger floors, a double-height court, and a layout type with a different corridor shape (KitOffice's twin-core court).
 
 ## What was checked
 

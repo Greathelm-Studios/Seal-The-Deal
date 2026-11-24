@@ -24,7 +24,7 @@ namespace CloseTheDeal.FloorRace
                 _steps = new int[nav.Count];
 
             Vector3 plan = floor.Plan(briefcaseWorld);
-            int from = NearestFree(nav, nav.NodeAt(plan.x, plan.y));
+            int from = NearestFree(nav, nav.NodeAt(plan.x, plan.y, layout.LevelAt(plan.z)));
             if (from >= 0)
                 nav.Distances(from, _steps);
 
@@ -39,10 +39,10 @@ namespace CloseTheDeal.FloorRace
                     if (spot.Room == layout.OfficeRoom)
                         continue;
 
-                    int steps = from >= 0 ? _steps[nav.NodeAt(spot.X, spot.Y)] : i;
+                    int steps = from >= 0 ? _steps[nav.NodeAt(spot.X, spot.Y, spot.Level)] : i;
                     if (steps < 0 || steps >= bestSteps || (pass < 2 && steps < minSteps))
                         continue;
-                    if (pass < 2 && Crowded(floor.World(spot.X, spot.Y, ChestHeight), rivalEyes, minRival, pass == 0 ? sight : 0f, solidMask))
+                    if (pass < 2 && Crowded(floor.World(spot, ChestHeight), rivalEyes, minRival, pass == 0 ? sight : 0f, solidMask))
                         continue;
 
                     best = i;
@@ -50,11 +50,11 @@ namespace CloseTheDeal.FloorRace
                 }
 
                 if (best >= 0)
-                    return floor.World(layout.SpawnSpots[best].X, layout.SpawnSpots[best].Y);
+                    return floor.World(layout.SpawnSpots[best]);
             }
 
             FloorSpot fallback = layout.StartB.Count > 0 ? layout.StartB[0] : layout.SpawnSpots[0];
-            return floor.World(fallback.X, fallback.Y);
+            return floor.World(fallback);
         }
 
         static bool Crowded(Vector3 chest, List<Vector3> rivalEyes, float minRivalSqr, float sightSqr, int solidMask)
@@ -77,7 +77,7 @@ namespace CloseTheDeal.FloorRace
             if (!nav.Blocked[node])
                 return node;
 
-            int a = node % nav.W, b = node / nav.W;
+            int a = node % nav.W, b = node / nav.W % nav.H, level = nav.LevelOf(node);
             for (int reach = 1; reach <= NearestFreeReach; reach++)
                 for (int db = -reach; db <= reach; db++)
                     for (int da = -reach; da <= reach; da++)
@@ -85,8 +85,8 @@ namespace CloseTheDeal.FloorRace
                         int na = a + da, nb = b + db;
                         if (na < 0 || nb < 0 || na >= nav.W || nb >= nav.H)
                             continue;
-                        if (!nav.Blocked[na + nb * nav.W])
-                            return na + nb * nav.W;
+                        if (!nav.Blocked[nav.Index(na, nb, level)])
+                            return nav.Index(na, nb, level);
                     }
 
             return -1;

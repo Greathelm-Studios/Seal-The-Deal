@@ -51,6 +51,9 @@ namespace CloseTheDeal.FloorRace
         /// <summary>A plan position on this floor as a world position, <paramref name="up"/> metres above the floor.</summary>
         public Vector3 World(float x, float y, float up = 0f) => Root.transform.TransformPoint(new Vector3(x, up, -y));
 
+        /// <summary>A spot on this floor as a world position, <paramref name="up"/> metres above the storey it is on.</summary>
+        public Vector3 World(FloorSpot spot, float up = 0f) => World(spot.X, spot.Y, spot.Level * FloorLayout.StoreyHeight + up);
+
         /// <summary>A world position in this floor's plan metres (X east, Y south, Z up from the floor).</summary>
         public Vector3 Plan(Vector3 world)
         {
@@ -64,6 +67,8 @@ namespace CloseTheDeal.FloorRace
     public sealed class FloorBuilder : MonoBehaviour
     {
         const float BelowHeight = 40f, SlabThickness = 0.2f, BelowGap = 0.01f;
+        // Two storeys and a clear one between, so the next floor can stand above the old one.
+        const float MinFloorPitch = 3f * FloorLayout.StoreyHeight;
         const float LightHeight = 4.05f, CeilingLineDrop = 0.012f;
         const float BandWidth = 0.3f, BandLift = 0.012f, SloganWidth = 3.6f, TextGap = 0.004f;
         const float SillHeight = 0.6f, ClearHeight = 4.3f, BounceLift = 0.15f, BounceAngle = 160f, BounceInner = 40f, WallClearance = 0.5f;
@@ -74,7 +79,7 @@ namespace CloseTheDeal.FloorRace
         [Tooltip("Which kit prefab each generated piece is. Without it nothing can be built.")]
         [SerializeField] FloorKit _kit;
 
-        [Tooltip("How far apart in height consecutive floors are built, in metres. It must be more than one storey (4.5) so the next floor can be built above while the old one still stands; 9 leaves a clear storey between them.")]
+        [Tooltip("How far apart in height consecutive floors are built, in metres. The next floor is built above while the old one still stands, so anything under 13.5 (two storeys and a clear one between) is raised to 13.5.")]
         [Min(5f)] [SerializeField] float _floorPitch = 9f;
 
         [Tooltip("Merge the pieces that never move into a few big meshes after building, to cut draw calls. Only works once the kit's models are imported with Read/Write on; leave off until then or a build logs an error for every mesh.")]
@@ -88,10 +93,10 @@ namespace CloseTheDeal.FloorRace
         int _floorNumber;
 
         public FloorKit Kit => _kit;
-        public float FloorPitch => _floorPitch;
+        public float FloorPitch => Mathf.Max(_floorPitch, MinFloorPitch);
 
         /// <summary>Height of a floor's surface above this object, in metres. Floor 1 is at 0.</summary>
-        public float HeightOf(int floor) => (floor - 1) * _floorPitch;
+        public float HeightOf(int floor) => (floor - 1) * FloorPitch;
 
         public BuiltFloor Build(FloorLayout layout)
         {
@@ -282,17 +287,37 @@ namespace CloseTheDeal.FloorRace
             if (_kit.RingBand == null)
                 return;
 
-            const float C = FloorLayout.Cell;
-            float x0 = (layout.RingX0 + 0.5f) * C, x1 = (layout.RingX1 + 0.5f) * C, y0 = (layout.RingY0 + 0.5f) * C, y1 = (layout.RingY1 + 0.5f) * C;
-            Quaternion flat = Quaternion.LookRotation(Vector3.down, Vector3.forward);
             var group = new GameObject("Ring band").transform;
             group.SetParent(parent, false);
-            var along = new Vector2(x1 - x0 + BandWidth, BandWidth);
-            var across = new Vector2(BandWidth, y1 - y0 - BandWidth);
-            Flat(group, _kit.RingBand, new Vector3((x0 + x1) * 0.5f, BandLift, -y0), flat, along);
-            Flat(group, _kit.RingBand, new Vector3((x0 + x1) * 0.5f, BandLift, -y1), flat, along);
-            Flat(group, _kit.RingBand, new Vector3(x0, BandLift, -(y0 + y1) * 0.5f), flat, across);
-            Flat(group, _kit.RingBand, new Vector3(x1, BandLift, -(y0 + y1) * 0.5f), flat, across);
+            for (int level = 0; level < layout.Levels; level++)
+            {
+                float height = level * FloorLayout.StoreyHeight + BandLift;
+                BandSide(group, layout, level, height, layout.RingX0, layout.RingY0, layout.RingX1, layout.RingY0);
+                BandSide(group, layout, level, height, layout.RingX0, layout.RingY1, layout.RingX1, layout.RingY1);
+                BandSide(group, layout, level, height, layout.RingX0, layout.RingY0, layout.RingX0, layout.RingY1);
+                BandSide(group, layout, level, height, layout.RingX1, layout.RingY0, layout.RingX1, layout.RingY1);
+            }
+        }
+
+        // One side of the loop, bay by bay. Upstairs the band stops at a bay whose floor is open over a flight.
+        void BandSide(Transform group, FloorLayout layout, int level, float height, int i0, int j0, int i1, int j1)
+        {
+            const float C = FloorLayout.Cell;
+            int di = i1 > i0 ? 1 : 0, dj = j1 > j0 ? 1 : 0, count = Mathf.Max(i1 - i0, j1 - j0) + 1, start = -1;
+            Quaternion flat = Quaternion.LookRotation(Vector3.down, Vector3.forward);
+            for (int k = 0; k <= count; k++)
+            {
+                bool on = k < count && (level == 0 || layout.StairAt(i0 + di * k, j0 + dj * k) < 0);
+                if (on && start < 0)
+                    start = k;
+                if (on || start < 0)
+                    continue;
+
+                float from = start == 0 ? C * 0.5f - BandWidth * 0.5f : start * C, to = k == count ? (count - 0.5f) * C + BandWidth * 0.5f : k * C;
+                float x = i0 * C + (di == 1 ? (from + to) * 0.5f : C * 0.5f), y = j0 * C + (dj == 1 ? (from + to) * 0.5f : C * 0.5f);
+                Flat(group, _kit.RingBand, new Vector3(x, height, -y), flat, di == 1 ? new Vector2(to - from, BandWidth) : new Vector2(BandWidth, to - from));
+                start = -1;
+            }
         }
 
         // Realtime light has no bounce, so ceilings over sunlit floor stay grey without a soft light where the sun lands.
@@ -312,6 +337,7 @@ namespace CloseTheDeal.FloorRace
             Vector3 reach = travel * (windowMiddle / -travel.y);
             Quaternion up = Quaternion.LookRotation(Vector3.up);
             Transform group = null;
+            for (int level = 0; level < layout.Levels; level++)
             for (int j = 0; j < layout.Rows; j++)
                 for (int i = 0; i < layout.Cols; i++)
                     for (int side = 0; side < 4; side++)
@@ -334,7 +360,7 @@ namespace CloseTheDeal.FloorRace
                         }
                         var go = new GameObject("Bounce light");
                         go.transform.SetParent(group, false);
-                        go.transform.SetLocalPositionAndRotation(new Vector3(patch.x, BounceLift, patch.z), up);
+                        go.transform.SetLocalPositionAndRotation(new Vector3(patch.x, level * FloorLayout.StoreyHeight + BounceLift, patch.z), up);
                         var light = go.AddComponent<Light>();
                         light.type = LightType.Spot;
                         light.color = _kit.BounceColour;
@@ -353,22 +379,26 @@ namespace CloseTheDeal.FloorRace
                 return;
 
             FloorLayout layout = built.Layout;
-            var go = new GameObject("Reflection probe");
-            go.transform.SetParent(built.Root.transform, false);
-            go.transform.localPosition = new Vector3(layout.Width * 0.5f, MirrorHeight, -layout.Depth * MirrorDepth);
+            for (int level = 0; level < layout.Levels; level++)
+            {
+                float up = level * FloorLayout.StoreyHeight;
+                var go = new GameObject("Reflection probe");
+                go.transform.SetParent(built.Root.transform, false);
+                go.transform.localPosition = new Vector3(layout.Width * 0.5f, up + MirrorHeight, -layout.Depth * MirrorDepth);
 
-            var probe = go.AddComponent<ReflectionProbe>();
-            probe.mode = ReflectionProbeMode.Realtime;
-            probe.refreshMode = ReflectionProbeRefreshMode.ViaScripting;
-            probe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
-            probe.boxProjection = true;
-            probe.center = new Vector3(layout.Width * 0.5f, ClearHeight * 0.5f, -layout.Depth * 0.5f) - go.transform.localPosition;
-            probe.size = new Vector3(layout.Width, ClearHeight, layout.Depth) + Vector3.one * (2f * MirrorMargin);
-            probe.blendDistance = MirrorBlend;
-            probe.resolution = Mathf.ClosestPowerOfTwo(_kit.ReflectionSize);
-            probe.hdr = true;
-            probe.farClipPlane = MirrorFar;
-            probe.RenderProbe();
+                var probe = go.AddComponent<ReflectionProbe>();
+                probe.mode = ReflectionProbeMode.Realtime;
+                probe.refreshMode = ReflectionProbeRefreshMode.ViaScripting;
+                probe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
+                probe.boxProjection = true;
+                probe.center = new Vector3(layout.Width * 0.5f, up + ClearHeight * 0.5f, -layout.Depth * 0.5f) - go.transform.localPosition;
+                probe.size = new Vector3(layout.Width + 2f * MirrorMargin, ClearHeight, layout.Depth + 2f * MirrorMargin);
+                probe.blendDistance = MirrorBlend;
+                probe.resolution = Mathf.ClosestPowerOfTwo(_kit.ReflectionSize);
+                probe.hdr = true;
+                probe.farClipPlane = MirrorFar;
+                probe.RenderProbe();
+            }
         }
 
         void AddCeilingLines(BuiltFloor built)
@@ -380,10 +410,10 @@ namespace CloseTheDeal.FloorRace
             var vertices = new Vector3[lines.Count * 4];
             var normals = new Vector3[lines.Count * 4];
             var triangles = new int[lines.Count * 6];
-            float height = FloorCeiling.Soffit - CeilingLineDrop;
             for (int n = 0; n < lines.Count; n++)
             {
                 CeilingLine line = lines[n];
+                float height = line.Level * FloorLayout.StoreyHeight + FloorCeiling.Soffit - CeilingLineDrop;
                 float half = FloorCeiling.WidthOf(line.Kind) * 0.5f;
                 float x0 = line.X0 - (line.AlongX ? 0f : half), x1 = line.X1 + (line.AlongX ? 0f : half);
                 float y0 = line.Y0 - (line.AlongX ? half : 0f), y1 = line.Y1 + (line.AlongX ? half : 0f);
@@ -420,7 +450,7 @@ namespace CloseTheDeal.FloorRace
             {
                 var go = new GameObject("Room light");
                 go.transform.SetParent(group, false);
-                go.transform.SetLocalPositionAndRotation(new Vector3(spot.X, LightHeight, -spot.Y), down);
+                go.transform.SetLocalPositionAndRotation(new Vector3(spot.X, spot.Level * FloorLayout.StoreyHeight + LightHeight, -spot.Y), down);
                 var light = go.AddComponent<Light>();
                 light.type = LightType.Spot;
                 light.color = colour;
@@ -436,9 +466,10 @@ namespace CloseTheDeal.FloorRace
         {
             var group = new GameObject(name).transform;
             group.SetParent(parent, false);
-            GameObject car = Place(group, KitPiece.Lift_Car, lift.CarX, lift.CarY, 0f, lift.CarYaw);
-            GameObject a = Place(group, KitPiece.Lift_Door_Panel, lift.DoorX, lift.DoorY, 0f, lift.CarYaw);
-            GameObject b = Place(group, KitPiece.Lift_Door_Panel, lift.DoorX, lift.DoorY, 0f, lift.CarYaw + 180f);
+            float up = lift.Level * FloorLayout.StoreyHeight;
+            GameObject car = Place(group, KitPiece.Lift_Car, lift.CarX, lift.CarY, up, lift.CarYaw);
+            GameObject a = Place(group, KitPiece.Lift_Door_Panel, lift.DoorX, lift.DoorY, up, lift.CarYaw);
+            GameObject b = Place(group, KitPiece.Lift_Door_Panel, lift.DoorX, lift.DoorY, up, lift.CarYaw + 180f);
             if (car == null || a == null || b == null)
                 return null;
 

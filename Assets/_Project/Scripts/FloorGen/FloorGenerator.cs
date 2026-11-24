@@ -81,7 +81,7 @@ namespace CloseTheDeal.FloorGen
         {
             var rng = new FloorRandom(seed, (uint)floor, (uint)attempt);
             bool top = floor >= profile.FloorCount;
-            var layout = new FloorLayout { Seed = seed, Floor = floor, Attempt = attempt, Cols = profile.Cols, Rows = profile.Rows };
+            var layout = new FloorLayout { Seed = seed, Floor = floor, Attempt = attempt, Cols = profile.Cols, Rows = profile.Rows, Levels = profile.Storeys };
             int cols = layout.Cols, rows = layout.Rows;
             layout.RoomOf = new int[cols * rows];
             Array.Fill(layout.RoomOf, Unassigned);
@@ -123,6 +123,7 @@ namespace CloseTheDeal.FloorGen
             NameRooms(layout, inBand, ref rng, style);
             SetEdges(layout, ref rng, profile);
             AddDoors(layout, ref rng);
+            PlaceStairs(layout, ref rng);
             EmitStructure(layout);
             FloorCeiling.Plan(layout);
 
@@ -349,7 +350,7 @@ namespace CloseTheDeal.FloorGen
                 }
 
                 LiftOption exit = wanted[rng.Range(0, wanted.Count)];
-                layout.ExitLift = Carve(layout, exit);
+                layout.ExitLift = Carve(layout, exit, layout.Levels > 1 && rng.Percent(50) ? 1 : 0);
                 layout.HasExitLift = true;
                 goalCell = exit.Cell;
             }
@@ -371,7 +372,7 @@ namespace CloseTheDeal.FloorGen
                 return;
             }
 
-            layout.ArrivalLift = Carve(layout, arrivals[rng.Range(0, arrivals.Count)]);
+            layout.ArrivalLift = Carve(layout, arrivals[rng.Range(0, arrivals.Count)], 0);
             layout.HasArrivalLift = true;
         }
 
@@ -417,7 +418,7 @@ namespace CloseTheDeal.FloorGen
             return options;
         }
 
-        static FloorLift Carve(FloorLayout layout, LiftOption option)
+        static FloorLift Carve(FloorLayout layout, LiftOption option, int level)
         {
             int i = option.Cell % layout.Cols, j = option.Cell / layout.Cols;
             layout.Rooms[layout.RoomOf[option.Cell]].Cells.Remove(option.Cell);
@@ -428,7 +429,7 @@ namespace CloseTheDeal.FloorGen
             float doorX = cx + ox * FloorLayout.Cell * 0.5f, doorY = cy + oy * FloorLayout.Cell * 0.5f;
             return new FloorLift
             {
-                CellX = i, CellY = j, DoorSide = option.DoorSide,
+                Level = level, CellX = i, CellY = j, DoorSide = option.DoorSide,
                 CarX = doorX - ox * LiftCarInset, CarY = doorY - oy * LiftCarInset, CarYaw = option.DoorSide * 90f,
                 DoorX = doorX - ox * LiftLeafInset, DoorY = doorY - oy * LiftLeafInset,
                 FrontX = doorX + ox * LiftFrontStep, FrontY = doorY + oy * LiftFrontStep
@@ -643,69 +644,217 @@ namespace CloseTheDeal.FloorGen
             }
         }
 
+        static readonly float[] StairYaw = { 180f, 270f, 0f, 90f };
+
+        // Two flights in corridor bays, each against a wall with a clear bay to land on, as far apart as the floor allows.
+        static void PlaceStairs(FloorLayout layout, ref FloorRandom rng)
+        {
+            if (layout.Levels < 2)
+                return;
+
+            const float C = FloorLayout.Cell;
+            var options = new List<FloorStair>();
+            for (int j = 0; j < layout.Rows; j++)
+                for (int i = 0; i < layout.Cols; i++)
+                    for (int dir = 0; dir < 4; dir++)
+                    {
+                        int dx = Side.Dx[dir], dy = Side.Dy[dir];
+                        if (!StairBay(layout, i, j) || !StairBay(layout, i + dx, j + dy) || !StairBay(layout, i + 2 * dx, j + 2 * dy))
+                            continue;
+
+                        // The kit flight is as wide as half a bay and lies to one side of its pivot: (dy, -dx) in plan.
+                        for (int sign = 1; sign >= -1; sign -= 2)
+                        {
+                            int wallSide = dy * sign > 0 ? Side.East : dy * sign < 0 ? Side.West : dx * sign > 0 ? Side.North : Side.South;
+                            if (layout.EdgeOf(i, j, wallSide).Passable || layout.EdgeOf(i + dx, j + dy, wallSide).Passable)
+                                continue;
+
+                            float ox = (i + 0.5f) * C - 2f * dx - 2f * dy, oy = (j + 0.5f) * C - 2f * dy + 2f * dx;
+                            float near = sign > 0 ? 2f : 0f, far = near + 2f, walk = sign > 0 ? 0f : 2f;
+                            var stair = new FloorStair { CellX = i, CellY = j, Dir = dir, Yaw = StairYaw[dir] };
+                            stair.PivotX = ox + FloorLayout.StairLead * dx + near * dy;
+                            stair.PivotY = oy + FloorLayout.StairLead * dy - near * dx;
+                            Span(ox, oy, dx, dy, near, far, out stair.X0, out stair.Y0, out stair.X1, out stair.Y1);
+                            Span(ox, oy, dx, dy, walk, walk + 2f, out stair.WalkX0, out stair.WalkY0, out stair.WalkX1, out stair.WalkY1);
+                            options.Add(stair);
+                        }
+                    }
+
+            if (options.Count == 0)
+            {
+                layout.Problems.Add("Nowhere to put a stair.");
+                return;
+            }
+
+            rng.Shuffle(options);
+            FloorStair first = options[0];
+            layout.Stairs.Add(first);
+            int apart = (layout.Cols + layout.Rows) / 3, second = -1;
+            for (int k = 1; k < options.Count; k++)
+            {
+                int gap = Math.Abs(options[k].CellX - first.CellX) + Math.Abs(options[k].CellY - first.CellY);
+                if (gap < 3)
+                    continue;
+                if (gap >= apart)
+                {
+                    second = k;
+                    break;
+                }
+                if (second < 0)
+                    second = k;
+            }
+
+            if (second >= 0)
+                layout.Stairs.Add(options[second]);
+        }
+
+        static bool StairBay(FloorLayout layout, int i, int j)
+        {
+            int room = layout.RoomAt(i, j);
+            if (room < 0 || !layout.Rooms[room].IsCorridor)
+                return false;
+            for (int side = 0; side < 4; side++)
+                if (layout.EdgeOf(i, j, side).Kind == EdgeKind.LiftDoor)
+                    return false;
+            return true;
+        }
+
+        // The rectangle two bays long from (ox, oy) along (dx, dy), between two offsets across it.
+        static void Span(float ox, float oy, int dx, int dy, float near, float far, out float x0, out float y0, out float x1, out float y1)
+        {
+            float length = 2f * FloorLayout.Cell;
+            float ax = ox + near * dy, ay = oy - near * dx, bx = ox + length * dx + far * dy, by = oy + length * dy - far * dx;
+            x0 = Math.Min(ax, bx); x1 = Math.Max(ax, bx);
+            y0 = Math.Min(ay, by); y1 = Math.Max(ay, by);
+        }
+
         static void EmitStructure(FloorLayout layout)
         {
             const float C = FloorLayout.Cell;
             float width = layout.Width, depth = layout.Depth;
-            for (int j = 0; j < layout.Rows; j++)
+            for (int level = 0; level < layout.Levels; level++)
+            {
+                float up = level * FloorLayout.StoreyHeight;
+                bool storeyAbove = level < layout.Levels - 1;
+                for (int j = 0; j < layout.Rows; j++)
+                    for (int i = 0; i < layout.Cols; i++)
+                    {
+                        int room = layout.RoomOf[layout.CellIndex(i, j)];
+                        int stair = storeyAbove ? layout.StairAt(i, j) : -1;
+                        if (stair < 0)
+                            Add(layout, KitPiece.Slab_4x4, i * C, j * C, 0f, up + FloorToFloor);
+                        else
+                            HalfSlab(layout, layout.Stairs[stair], i, j, up + FloorToFloor);
+                        if (room < 0)
+                            continue;
+
+                        // An upper storey stands on the slab that roofs the one below.
+                        if (level == 0)
+                            Add(layout, KitPiece.Slab_4x4, i * C, j * C, 0f);
+                        RoomKind kind = layout.Rooms[room].Kind;
+                        if (!layout.Rooms[room].IsPublic && (kind == RoomKind.OpenOffice || kind == RoomKind.Meeting || kind == RoomKind.ManagersOffice))
+                            Add(layout, KitPiece.Carpet_Overlay_4x4, i * C, j * C, 0f, up);
+                    }
+
                 for (int i = 0; i < layout.Cols; i++)
                 {
-                    int room = layout.RoomOf[layout.CellIndex(i, j)];
-                    Add(layout, KitPiece.Slab_4x4, i * C, j * C, 0f, FloorToFloor);
-                    if (room < 0)
-                        continue;
-
-                    Add(layout, KitPiece.Slab_4x4, i * C, j * C, 0f);
-                    RoomKind kind = layout.Rooms[room].Kind;
-                    if (!layout.Rooms[room].IsPublic && (kind == RoomKind.OpenOffice || kind == RoomKind.Meeting || kind == RoomKind.ManagersOffice))
-                        Add(layout, KitPiece.Carpet_Overlay_4x4, i * C, j * C, 0f);
+                    Facade(layout, layout.EdgeOf(i, 0, Side.North).Kind, i * C, 0f, 0f, up);
+                    Facade(layout, layout.EdgeOf(i, layout.Rows - 1, Side.South).Kind, (i + 1) * C, depth, 180f, up);
+                    if (i > 0)
+                    {
+                        if (Windowed(layout, i - 1, 0, i, 0, Side.North)) Add(layout, KitPiece.Column_Facade, i * C, 0f, 0f, up);
+                        if (Windowed(layout, i - 1, layout.Rows - 1, i, layout.Rows - 1, Side.South)) Add(layout, KitPiece.Column_Facade, i * C, depth, 180f, up);
+                    }
                 }
 
-            for (int i = 0; i < layout.Cols; i++)
-            {
-                Facade(layout, layout.EdgeOf(i, 0, Side.North).Kind, i * C, 0f, 0f);
-                Facade(layout, layout.EdgeOf(i, layout.Rows - 1, Side.South).Kind, (i + 1) * C, depth, 180f);
-                if (i > 0)
+                for (int j = 0; j < layout.Rows; j++)
                 {
-                    if (Windowed(layout, i - 1, 0, i, 0, Side.North)) Add(layout, KitPiece.Column_Facade, i * C, 0f, 0f);
-                    if (Windowed(layout, i - 1, layout.Rows - 1, i, layout.Rows - 1, Side.South)) Add(layout, KitPiece.Column_Facade, i * C, depth, 180f);
+                    Facade(layout, layout.EdgeOf(0, j, Side.West).Kind, 0f, (j + 1) * C, 270f, up);
+                    Facade(layout, layout.EdgeOf(layout.Cols - 1, j, Side.East).Kind, width, j * C, 90f, up);
+                    if (j > 0)
+                    {
+                        if (Windowed(layout, 0, j - 1, 0, j, Side.West)) Add(layout, KitPiece.Column_Facade, 0f, j * C, 270f, up);
+                        if (Windowed(layout, layout.Cols - 1, j - 1, layout.Cols - 1, j, Side.East)) Add(layout, KitPiece.Column_Facade, width, j * C, 90f, up);
+                    }
                 }
+
+                Add(layout, KitPiece.Column_CornerL, 0f, 0f, 0f, up);
+                Add(layout, KitPiece.Column_CornerR, width, 0f, 0f, up);
+                Add(layout, KitPiece.Column_CornerR, 0f, depth, 180f, up);
+                Add(layout, KitPiece.Column_CornerL, width, depth, 180f, up);
+
+                for (int j = 1; j < layout.Rows; j++)
+                    for (int i = 0; i < layout.Cols; i++)
+                    {
+                        FloorEdge edge = layout.NorthEdges[i + j * layout.Cols];
+                        if (edge.ThickTowardHigh) Wall(layout, edge, i * C, j * C, 0f, 1f, 0f, false, up);
+                        else Wall(layout, edge, (i + 1) * C, j * C, 180f, -1f, 0f, true, up);
+                    }
+
+                for (int j = 0; j < layout.Rows; j++)
+                    for (int i = 1; i < layout.Cols; i++)
+                    {
+                        FloorEdge edge = layout.WestEdges[i + j * (layout.Cols + 1)];
+                        if (edge.ThickTowardHigh) Wall(layout, edge, i * C, (j + 1) * C, 270f, 0f, -1f, true, up);
+                        else Wall(layout, edge, i * C, j * C, 90f, 0f, 1f, false, up);
+                    }
+
+                if (layout.HasExitLift) Shaft(layout, layout.ExitLift, level, up);
+                if (layout.HasArrivalLift) Shaft(layout, layout.ArrivalLift, level, up);
             }
 
-            for (int j = 0; j < layout.Rows; j++)
+            foreach (FloorStair stair in layout.Stairs)
             {
-                Facade(layout, layout.EdgeOf(0, j, Side.West).Kind, 0f, (j + 1) * C, 270f);
-                Facade(layout, layout.EdgeOf(layout.Cols - 1, j, Side.East).Kind, width, j * C, 90f);
-                if (j > 0)
-                {
-                    if (Windowed(layout, 0, j - 1, 0, j, Side.West)) Add(layout, KitPiece.Column_Facade, 0f, j * C, 270f);
-                    if (Windowed(layout, layout.Cols - 1, j - 1, layout.Cols - 1, j, Side.East)) Add(layout, KitPiece.Column_Facade, width, j * C, 90f);
-                }
+                Add(layout, KitPiece.Stair_Straight_2m, stair.PivotX, stair.PivotY, stair.Yaw);
+                StairGuards(layout, stair);
+            }
+        }
+
+        // The walkway half of a bay whose other half is open over a flight.
+        static void HalfSlab(FloorLayout layout, FloorStair stair, int i, int j, float height)
+        {
+            const float C = FloorLayout.Cell;
+            float x0 = Math.Max(i * C, stair.WalkX0), x1 = Math.Min((i + 1) * C, stair.WalkX1);
+            float y0 = Math.Max(j * C, stair.WalkY0);
+            Add(layout, x1 - x0 < 3f ? KitPiece.Slab_2x4 : KitPiece.Slab_4x2, x0, y0, 0f, height);
+        }
+
+        // Glass along the open side of the hole upstairs and across the end over the flight's foot. The top is left open to step off.
+        static void StairGuards(FloorLayout layout, FloorStair stair)
+        {
+            const float C = FloorLayout.Cell;
+            int dx = Side.Dx[stair.Dir], dy = Side.Dy[stair.Dir];
+            float up = FloorLayout.StoreyHeight;
+            if (dx != 0)
+            {
+                bool walkSouth = stair.WalkY0 >= stair.Y1 - 0.01f;
+                float edge = walkSouth ? stair.Y1 : stair.Y0, foot = dx > 0 ? stair.X0 : stair.X1;
+                for (int k = 0; k < 2; k++)
+                    Guard(layout, KitPiece.Guard_Glass_4m, stair.X0 + k * C, edge, stair.X0 + (k + 1) * C, edge, 0, walkSouth ? 1 : -1, up);
+                Guard(layout, KitPiece.Guard_Glass_2m, foot, stair.Y0, foot, stair.Y1, -dx, 0, up);
+            }
+            else
+            {
+                bool walkEast = stair.WalkX0 >= stair.X1 - 0.01f;
+                float edge = walkEast ? stair.X1 : stair.X0, foot = dy > 0 ? stair.Y0 : stair.Y1;
+                for (int k = 0; k < 2; k++)
+                    Guard(layout, KitPiece.Guard_Glass_4m, edge, stair.Y0 + k * C, edge, stair.Y0 + (k + 1) * C, walkEast ? 1 : -1, 0, up);
+                Guard(layout, KitPiece.Guard_Glass_2m, stair.X0, foot, stair.X1, foot, 0, -dy, up);
+            }
+        }
+
+        // The kit guard runs along its own +X and sits on its -Z side, so the run is turned to put that side on the slab.
+        static void Guard(FloorLayout layout, KitPiece piece, float ax, float ay, float bx, float by, int insideX, int insideY, float up)
+        {
+            int sx = Math.Sign(bx - ax), sy = Math.Sign(by - ay);
+            if (-sy != insideX || sx != insideY)
+            {
+                (ax, ay) = (bx, by);
+                sx = -sx;
+                sy = -sy;
             }
 
-            Add(layout, KitPiece.Column_CornerL, 0f, 0f, 0f);
-            Add(layout, KitPiece.Column_CornerR, width, 0f, 0f);
-            Add(layout, KitPiece.Column_CornerR, 0f, depth, 180f);
-            Add(layout, KitPiece.Column_CornerL, width, depth, 180f);
-
-            for (int j = 1; j < layout.Rows; j++)
-                for (int i = 0; i < layout.Cols; i++)
-                {
-                    FloorEdge edge = layout.NorthEdges[i + j * layout.Cols];
-                    if (edge.ThickTowardHigh) Wall(layout, edge, i * C, j * C, 0f, 1f, 0f, false);
-                    else Wall(layout, edge, (i + 1) * C, j * C, 180f, -1f, 0f, true);
-                }
-
-            for (int j = 0; j < layout.Rows; j++)
-                for (int i = 1; i < layout.Cols; i++)
-                {
-                    FloorEdge edge = layout.WestEdges[i + j * (layout.Cols + 1)];
-                    if (edge.ThickTowardHigh) Wall(layout, edge, i * C, (j + 1) * C, 270f, 0f, -1f, true);
-                    else Wall(layout, edge, i * C, j * C, 90f, 0f, 1f, false);
-                }
-
-            if (layout.HasExitLift) Shaft(layout, layout.ExitLift);
-            if (layout.HasArrivalLift) Shaft(layout, layout.ArrivalLift);
+            Add(layout, piece, ax, ay, sx > 0 ? 0f : sy > 0 ? 90f : sx < 0 ? 180f : 270f, up);
         }
 
         static bool Windowed(FloorLayout layout, int ai, int aj, int bi, int bj, int side)
@@ -713,18 +862,18 @@ namespace CloseTheDeal.FloorGen
             return layout.EdgeOf(ai, aj, side).Kind == EdgeKind.FacadeWindow || layout.EdgeOf(bi, bj, side).Kind == EdgeKind.FacadeWindow;
         }
 
-        static void Facade(FloorLayout layout, EdgeKind kind, float x, float y, float yaw)
+        static void Facade(FloorLayout layout, EdgeKind kind, float x, float y, float yaw, float up)
         {
             switch (kind)
             {
-                case EdgeKind.FacadeWindow: Add(layout, KitPiece.Window_4m, x, y, yaw); break;
-                case EdgeKind.FacadeCurtain: Add(layout, KitPiece.Wall_Curtain_4m, x, y, yaw); break;
-                case EdgeKind.FacadeSolid: Add(layout, KitPiece.Wall_Solid_4m, x, y, yaw); break;
+                case EdgeKind.FacadeWindow: Add(layout, KitPiece.Window_4m, x, y, yaw, up); break;
+                case EdgeKind.FacadeCurtain: Add(layout, KitPiece.Wall_Curtain_4m, x, y, yaw, up); break;
+                case EdgeKind.FacadeSolid: Add(layout, KitPiece.Wall_Solid_4m, x, y, yaw, up); break;
             }
         }
 
         // (x, y) is where the run starts, (rx, ry) its direction; reversed means the run goes from the edge's far end back to its start.
-        static void Wall(FloorLayout layout, FloorEdge edge, float x, float y, float yaw, float rx, float ry, bool reversed)
+        static void Wall(FloorLayout layout, FloorEdge edge, float x, float y, float yaw, float rx, float ry, bool reversed, float up)
         {
             if (edge.Kind == EdgeKind.Open || edge.Kind >= EdgeKind.FacadeWindow)
                 return;
@@ -734,7 +883,7 @@ namespace CloseTheDeal.FloorGen
                 KitPiece piece = edge.DoorAt != 0
                     ? (edge.Portal ? KitPiece.Wall_Door_4m_PortalHead : KitPiece.Wall_Door_4m)
                     : (edge.Portal || edge.Accent ? KitPiece.Wall_Solid_4m_Cobalt : KitPiece.Wall_Solid_4m);
-                Add(layout, piece, x, y, yaw);
+                Add(layout, piece, x, y, yaw, up);
                 return;
             }
 
@@ -747,29 +896,30 @@ namespace CloseTheDeal.FloorGen
             };
             if (edge.DoorAt == 0)
             {
-                Add(layout, full, x, y, yaw);
+                Add(layout, full, x, y, yaw, up);
                 return;
             }
 
             bool doorFirst = (edge.DoorAt == 1) != reversed;
             float doorAt = doorFirst ? 0f : 2f, plainAt = doorFirst ? 2f : 0f;
-            Add(layout, KitPiece.Partition_Glass_Door_2m, x + rx * doorAt, y + ry * doorAt, yaw);
-            Add(layout, half, x + rx * plainAt, y + ry * plainAt, yaw);
+            Add(layout, KitPiece.Partition_Glass_Door_2m, x + rx * doorAt, y + ry * doorAt, yaw, up);
+            Add(layout, half, x + rx * plainAt, y + ry * plainAt, yaw, up);
         }
 
-        static void Shaft(FloorLayout layout, FloorLift lift)
+        // The shaft is walled on every storey; only the lift's own storey has the doors.
+        static void Shaft(FloorLayout layout, FloorLift lift, int level, float up)
         {
             const float C = FloorLayout.Cell;
             float x0 = lift.CellX * C, y0 = lift.CellY * C, x1 = x0 + C, y1 = y0 + C;
             for (int side = 0; side < 4; side++)
             {
-                KitPiece piece = side == lift.DoorSide ? KitPiece.Lift_Door_Frame_4m_1F : KitPiece.Lift_Shaft_Wall_4m_Solid;
+                KitPiece piece = side == lift.DoorSide && level == lift.Level ? KitPiece.Lift_Door_Frame_4m_1F : KitPiece.Lift_Shaft_Wall_4m_Solid;
                 switch (side)
                 {
-                    case Side.North: Add(layout, piece, x0, y0, 0f); break;
-                    case Side.East: Add(layout, piece, x1, y0, 90f); break;
-                    case Side.South: Add(layout, piece, x1, y1, 180f); break;
-                    default: Add(layout, piece, x0, y1, 270f); break;
+                    case Side.North: Add(layout, piece, x0, y0, 0f, up); break;
+                    case Side.East: Add(layout, piece, x1, y0, 90f, up); break;
+                    case Side.South: Add(layout, piece, x1, y1, 180f, up); break;
+                    default: Add(layout, piece, x0, y1, 270f, up); break;
                 }
             }
         }
@@ -779,29 +929,31 @@ namespace CloseTheDeal.FloorGen
             layout.Pieces.Add(new KitPlacement { Piece = piece, X = x, Y = y, Height = height, Yaw = yaw, Still = true });
         }
 
-        // The metre in front of every door, both sides, stays free of furniture.
+        // The metre in front of every door, both sides, stays free of furniture on every storey, and so does every flight and landing.
         static bool[] KeepClear(FloorLayout layout)
         {
             FloorNav nav = layout.Nav;
             var clear = new bool[nav.Count];
+            Array.Copy(nav.Reserved, clear, clear.Length);
             const int P = FloorNav.PerCell;
-            for (int j = 0; j < layout.Rows; j++)
-                for (int i = 0; i < layout.Cols; i++)
-                    for (int side = 0; side < 4; side++)
-                    {
-                        FloorEdge edge = layout.EdgeOf(i, j, side);
-                        int door = edge.Kind == EdgeKind.LiftDoor ? 2 : edge.DoorAt;
-                        if (door == 0)
-                            continue;
+            for (int level = 0; level < layout.Levels; level++)
+                for (int j = 0; j < layout.Rows; j++)
+                    for (int i = 0; i < layout.Cols; i++)
+                        for (int side = 0; side < 4; side++)
+                        {
+                            FloorEdge edge = layout.EdgeOf(i, j, side);
+                            int door = edge.Kind == EdgeKind.LiftDoor ? 2 : edge.DoorAt;
+                            if (door == 0)
+                                continue;
 
-                        for (int along = 2 * door - 2; along <= 2 * door + 1; along++)
-                            for (int deep = 0; deep < 3; deep++)
-                            {
-                                int a = side == Side.North || side == Side.South ? i * P + along : side == Side.West ? i * P + deep : i * P + P - 1 - deep;
-                                int b = side == Side.West || side == Side.East ? j * P + along : side == Side.North ? j * P + deep : j * P + P - 1 - deep;
-                                clear[a + b * nav.W] = true;
-                            }
-                    }
+                            for (int along = 2 * door - 2; along <= 2 * door + 1; along++)
+                                for (int deep = 0; deep < 3; deep++)
+                                {
+                                    int a = side == Side.North || side == Side.South ? i * P + along : side == Side.West ? i * P + deep : i * P + P - 1 - deep;
+                                    int b = side == Side.West || side == Side.East ? j * P + along : side == Side.North ? j * P + deep : j * P + P - 1 - deep;
+                                    clear[nav.Index(a, b, level)] = true;
+                                }
+                        }
 
             return clear;
         }
@@ -818,8 +970,18 @@ namespace CloseTheDeal.FloorGen
         // Posters on bare outside walls, the floor number on each coloured room, and a name over every door off a walkway.
         static void AddMarks(FloorLayout layout, ref FloorRandom rng)
         {
-            const float C = FloorLayout.Cell;
             var numbered = new HashSet<int>();
+            for (int level = 0; level < layout.Levels; level++)
+            {
+                numbered.Clear();
+                AddMarks(layout, ref rng, level, numbered);
+            }
+        }
+
+        static void AddMarks(FloorLayout layout, ref FloorRandom rng, int level, HashSet<int> numbered)
+        {
+            const float C = FloorLayout.Cell;
+            float up = level * FloorLayout.StoreyHeight;
             string number = layout.Floor.ToString("00");
             for (int j = 0; j < layout.Rows; j++)
                 for (int i = 0; i < layout.Cols; i++)
@@ -839,13 +1001,13 @@ namespace CloseTheDeal.FloorGen
                             if (here.Kind == RoomKind.ManagersOffice)
                                 continue;
                             int roll = rng.Range(0, 100);
-                            if (roll < LightboxPercent && WallIsBare(layout.Nav, i, j, side, 0, FloorNav.PerCell - 1))
-                                AddLightbox(layout, i, j, side);
-                            else if (roll < LightboxPercent + PosterPercent && WallIsBare(layout.Nav, i, j, side, 2, 5))
+                            if (roll < LightboxPercent && WallIsBare(layout.Nav, i, j, side, 0, FloorNav.PerCell - 1, level))
+                                AddLightbox(layout, i, j, side, up);
+                            else if (roll < LightboxPercent + PosterPercent && WallIsBare(layout.Nav, i, j, side, 2, 5, level))
                                 layout.Marks.Add(new WallMark
                                 {
                                     Kind = MarkKind.Poster, X = mx - dx * (WallThick + MarkGap), Y = my - dy * (WallThick + MarkGap),
-                                    Height = PosterHeight, Width = PosterWidth, Tall = PosterTall, NormalX = -dx, NormalY = -dy,
+                                    Height = up + PosterHeight, Width = PosterWidth, Tall = PosterTall, NormalX = -dx, NormalY = -dy,
                                     Index = rng.Range(0, PosterCount)
                                 });
                             continue;
@@ -861,7 +1023,7 @@ namespace CloseTheDeal.FloorGen
                             layout.Marks.Add(new WallMark
                             {
                                 Kind = MarkKind.RoomName, X = (alongX ? i * C + edge.DoorAt : mx) - dx * MarkGap, Y = (alongX ? my : j * C + edge.DoorAt) - dy * MarkGap,
-                                Height = NameHeight, Width = NameWidth, Tall = NameTall, NormalX = -dx, NormalY = -dy,
+                                Height = up + NameHeight, Width = NameWidth, Tall = NameTall, NormalX = -dx, NormalY = -dy,
                                 Index = edge.Kind == EdgeKind.Solid ? 0 : 1, Text = layout.Rooms[other].Name
                             });
                         }
@@ -870,13 +1032,13 @@ namespace CloseTheDeal.FloorGen
                             layout.Marks.Add(new WallMark
                             {
                                 Kind = MarkKind.Slogan, X = mx - dx * MarkGap, Y = my - dy * MarkGap,
-                                Height = SloganHeight, Width = C, Tall = SloganTall, NormalX = -dx, NormalY = -dy, Index = rng.Range(0, SloganPicks)
+                                Height = up + SloganHeight, Width = C, Tall = SloganTall, NormalX = -dx, NormalY = -dy, Index = rng.Range(0, SloganPicks)
                             });
                             if (numbered.Add(other))
                                 layout.Marks.Add(new WallMark
                                 {
                                     Kind = MarkKind.FloorNumber, X = mx - dx * MarkGap, Y = my - dy * MarkGap,
-                                    Height = NumberHeight, Width = NumberSize, Tall = NumberSize, NormalX = -dx, NormalY = -dy, Text = number
+                                    Height = up + NumberHeight, Width = NumberSize, Tall = NumberSize, NormalX = -dx, NormalY = -dy, Text = number
                                 });
                         }
                     }
@@ -884,7 +1046,7 @@ namespace CloseTheDeal.FloorGen
         }
 
         // The lightbox hangs from one end and faces along its own +Z, so each side of the plate has its own corner and turn.
-        static void AddLightbox(FloorLayout layout, int i, int j, int side)
+        static void AddLightbox(FloorLayout layout, int i, int j, int side, float up)
         {
             const float C = FloorLayout.Cell;
             float x0 = i * C + LightboxInset, x1 = (i + 1) * C - LightboxInset, y0 = j * C + LightboxInset, y1 = (j + 1) * C - LightboxInset;
@@ -895,11 +1057,11 @@ namespace CloseTheDeal.FloorGen
                 Side.West => (x0, y0, 90f),
                 _ => (x1, y1, 270f)
             };
-            layout.Pieces.Add(new KitPlacement { Piece = KitPiece.Lightbox_Wall_Wave, X = x, Y = y, Yaw = yaw, Still = true });
+            layout.Pieces.Add(new KitPlacement { Piece = KitPiece.Lightbox_Wall_Wave, X = x, Y = y, Height = up, Yaw = yaw, Still = true });
         }
 
         // True when nothing stands against this side of the bay between two half-metre steps along it.
-        static bool WallIsBare(FloorNav nav, int i, int j, int side, int from, int to)
+        static bool WallIsBare(FloorNav nav, int i, int j, int side, int from, int to, int level)
         {
             const int P = FloorNav.PerCell;
             for (int along = from; along <= to; along++)
@@ -907,7 +1069,7 @@ namespace CloseTheDeal.FloorGen
                 {
                     int a = side == Side.North || side == Side.South ? i * P + along : side == Side.West ? i * P + deep : i * P + P - 1 - deep;
                     int b = side == Side.West || side == Side.East ? j * P + along : side == Side.North ? j * P + deep : j * P + P - 1 - deep;
-                    if (nav.Blocked[a + b * nav.W])
+                    if (nav.Blocked[nav.Index(a, b, level)])
                         return false;
                 }
             return true;
@@ -921,31 +1083,32 @@ namespace CloseTheDeal.FloorGen
             FloorNav nav = layout.Nav;
             const int P = FloorNav.PerCell;
             var loot = new List<FloorSpot>();
-            for (int j = 0; j < layout.Rows; j++)
-                for (int i = 0; i < layout.Cols; i++)
-                {
-                    int room = layout.RoomOf[layout.CellIndex(i, j)];
-                    if (room < 0)
-                        continue;
-
-                    for (int k = 0; k < SpawnNodes.Length; k += 2)
+            for (int level = 0; level < layout.Levels; level++)
+                for (int j = 0; j < layout.Rows; j++)
+                    for (int i = 0; i < layout.Cols; i++)
                     {
-                        int n = i * P + SpawnNodes[k] + (j * P + SpawnNodes[k + 1]) * nav.W;
-                        if (nav.Blocked[n])
+                        int room = layout.RoomOf[layout.CellIndex(i, j)];
+                        if (room < 0)
                             continue;
-                        layout.SpawnSpots.Add(new FloorSpot { X = nav.X(n), Y = nav.Y(n), Room = room });
-                        break;
-                    }
 
-                    if (layout.Rooms[room].IsCorridor)
-                        continue;
-                    for (int k = 0; k < LootNodes.Length; k += 2)
-                    {
-                        int n = i * P + LootNodes[k] + (j * P + LootNodes[k + 1]) * nav.W;
-                        if (!nav.Blocked[n])
-                            loot.Add(new FloorSpot { X = nav.X(n), Y = nav.Y(n), Room = room });
+                        for (int k = 0; k < SpawnNodes.Length; k += 2)
+                        {
+                            int n = nav.Index(i * P + SpawnNodes[k], j * P + SpawnNodes[k + 1], level);
+                            if (nav.Blocked[n] || nav.Reserved[n])
+                                continue;
+                            layout.SpawnSpots.Add(new FloorSpot { X = nav.X(n), Y = nav.Y(n), Room = room, Level = level });
+                            break;
+                        }
+
+                        if (layout.Rooms[room].IsCorridor)
+                            continue;
+                        for (int k = 0; k < LootNodes.Length; k += 2)
+                        {
+                            int n = nav.Index(i * P + LootNodes[k], j * P + LootNodes[k + 1], level);
+                            if (!nav.Blocked[n])
+                                loot.Add(new FloorSpot { X = nav.X(n), Y = nav.Y(n), Room = room, Level = level });
+                        }
                     }
-                }
 
             rng.Shuffle(loot);
             allLoot.AddRange(loot);
@@ -980,14 +1143,14 @@ namespace CloseTheDeal.FloorGen
 
             var spots = new List<FloorSpot>();
             foreach (FloorSpot spot in layout.SpawnSpots)
-                if (spot.Room != layout.OfficeRoom && toGoal[nav.NodeAt(spot.X, spot.Y)] >= minGoal && !NearExitLift(layout, spot))
+                if (spot.Room != layout.OfficeRoom && toGoal[nav.NodeAt(spot.X, spot.Y, spot.Level)] >= minGoal && !NearExitLift(layout, spot))
                     spots.Add(spot);
             rng.Shuffle(spots);
 
             int nodeA = -1, nodeB = -1;
             if (layout.HasArrivalLift)
             {
-                nodeA = nav.NodeAt(layout.ArrivalLift.FrontX, layout.ArrivalLift.FrontY);
+                nodeA = nav.NodeAt(layout.ArrivalLift.FrontX, layout.ArrivalLift.FrontY, layout.ArrivalLift.Level);
                 nav.Distances(nodeA, fromA);
                 nodeB = PickPartner(nav, spots, toGoal, fromA, toGoal[nodeA], tolerance, minApart);
                 LiftGroup(layout, layout.ArrivalLift);
@@ -996,7 +1159,7 @@ namespace CloseTheDeal.FloorGen
             {
                 for (int k = 0; k < spots.Count && k < 16 && nodeB < 0; k++)
                 {
-                    nodeA = nav.NodeAt(spots[k].X, spots[k].Y);
+                    nodeA = nav.NodeAt(spots[k].X, spots[k].Y, spots[k].Level);
                     nav.Distances(nodeA, fromA);
                     nodeB = PickPartner(nav, spots, toGoal, fromA, toGoal[nodeA], tolerance, minApart);
                 }
@@ -1022,7 +1185,7 @@ namespace CloseTheDeal.FloorGen
             int minCaseGoal = (int)(profile.MinCaseToLift / FloorNav.Node), minCaseStart = (int)(profile.MinCaseToStart / FloorNav.Node);
             foreach (FloorSpot spot in allLoot)
             {
-                int n = nav.NodeAt(spot.X, spot.Y);
+                int n = nav.NodeAt(spot.X, spot.Y, spot.Level);
                 if (toGoal[n] < minCaseGoal || fromA[n] < minCaseStart || fromB[n] < minCaseStart || Math.Abs(fromA[n] - fromB[n]) > tolerance)
                     continue;
 
@@ -1049,12 +1212,12 @@ namespace CloseTheDeal.FloorGen
         static int GoalNode(FloorLayout layout)
         {
             if (layout.HasExitLift)
-                return layout.Nav.NodeAt(layout.ExitLift.FrontX, layout.ExitLift.FrontY);
+                return layout.Nav.NodeAt(layout.ExitLift.FrontX, layout.ExitLift.FrontY, layout.ExitLift.Level);
             if (layout.OfficeRoom < 0)
                 return -1;
             foreach (FloorSpot spot in layout.SpawnSpots)
-                if (spot.Room == layout.OfficeRoom)
-                    return layout.Nav.NodeAt(spot.X, spot.Y);
+                if (spot.Room == layout.OfficeRoom && spot.Level == 0)
+                    return layout.Nav.NodeAt(spot.X, spot.Y, 0);
             return -1;
         }
 
@@ -1062,7 +1225,7 @@ namespace CloseTheDeal.FloorGen
         {
             foreach (FloorSpot spot in spots)
             {
-                int n = nav.NodeAt(spot.X, spot.Y);
+                int n = nav.NodeAt(spot.X, spot.Y, spot.Level);
                 if (fromA[n] >= minApart && Math.Abs(toGoal[n] - goalFromA) <= tolerance)
                     return n;
             }
@@ -1072,17 +1235,17 @@ namespace CloseTheDeal.FloorGen
 
         static void Group(FloorLayout layout, FloorNav nav, int node, List<FloorSpot> into)
         {
-            int a = node % nav.W, b = node / nav.W;
+            int a = node % nav.W, b = node / nav.W % nav.H, level = nav.LevelOf(node);
             int room = layout.RoomAt(a / FloorNav.PerCell, b / FloorNav.PerCell);
             for (int k = 0; k < GroupOffsets.Length && into.Count < 4; k += 2)
             {
                 int na = a + GroupOffsets[k], nb = b + GroupOffsets[k + 1];
                 if (na < 0 || nb < 0 || na >= nav.W || nb >= nav.H)
                     continue;
-                int n = na + nb * nav.W;
-                if (nav.Blocked[n] || layout.RoomAt(na / FloorNav.PerCell, nb / FloorNav.PerCell) != room)
+                int n = nav.Index(na, nb, level);
+                if (nav.Blocked[n] || nav.Reserved[n] || layout.RoomAt(na / FloorNav.PerCell, nb / FloorNav.PerCell) != room)
                     continue;
-                into.Add(new FloorSpot { X = nav.X(n), Y = nav.Y(n), Room = room });
+                into.Add(new FloorSpot { X = nav.X(n), Y = nav.Y(n), Room = room, Level = level });
             }
         }
 
@@ -1093,7 +1256,7 @@ namespace CloseTheDeal.FloorGen
                 layout.StartA.Add(new FloorSpot
                 {
                     X = lift.CarX + ((k & 1) == 0 ? -0.7f : 0.7f), Y = lift.CarY + ((k & 2) == 0 ? -0.7f : 0.7f),
-                    Yaw = yaw, Room = FloorLayout.NoRoom
+                    Yaw = yaw, Room = FloorLayout.NoRoom, Level = lift.Level
                 });
         }
 
@@ -1117,6 +1280,8 @@ namespace CloseTheDeal.FloorGen
                 layout.Problems.Add("No exit lift.");
             if (floor >= 2 && !layout.HasArrivalLift)
                 layout.Problems.Add("No arrival lift.");
+            if (layout.Levels > 1 && layout.Stairs.Count < 2)
+                layout.Problems.Add($"Only {layout.Stairs.Count} stair(s); two storeys need two ways up.");
             if (layout.StartA.Count < 4 || layout.StartB.Count < 4)
                 layout.Problems.Add("A start has fewer than four places to stand.");
             if (Math.Abs(layout.StartAToGoal - layout.StartBToGoal) > profile.FairStartTolerance)
@@ -1148,8 +1313,8 @@ namespace CloseTheDeal.FloorGen
 
                 nav.Distances(from, steps, n =>
                 {
-                    int cell = n % nav.W / P + n / nav.W / P * layout.Cols;
-                    return cell != shut && layout.RoomOf[cell] == 0;
+                    int cell = n % nav.W / P + n / nav.W % nav.H / P * layout.Cols;
+                    return nav.LevelOf(n) == 0 && cell != shut && layout.RoomOf[cell] == 0;
                 });
                 foreach (int cell in cells)
                 {

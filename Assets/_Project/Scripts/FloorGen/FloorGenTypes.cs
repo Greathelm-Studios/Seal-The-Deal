@@ -50,7 +50,12 @@ namespace CloseTheDeal.FloorGen
         Phone_Desk,
         Doc_Tray,
         PC_Tower,
-        Lightbox_Wall_Wave
+        Lightbox_Wall_Wave,
+        Stair_Straight_2m,
+        Slab_2x4,
+        Slab_4x2,
+        Guard_Glass_4m,
+        Guard_Glass_2m
     }
 
     /// <summary>The shape of a floor's plan, picked by the seed.</summary>
@@ -134,8 +139,11 @@ namespace CloseTheDeal.FloorGen
     {
         public float X, Y, Yaw;
         public int Room;
+        /// <summary>Which storey the spot is on: 0 is the lower one.</summary>
+        public int Level;
     }
 
+    /// <summary>Height is measured from the lower storey's floor, so a spot upstairs starts one storey up.</summary>
     public struct PropSpot
     {
         public PropKind Kind;
@@ -192,13 +200,33 @@ namespace CloseTheDeal.FloorGen
     {
         public CeilingLineKind Kind;
         public float X0, Y0, X1, Y1;
+        public int Level;
 
         public bool AlongX => Y0 == Y1;
         public float Length => AlongX ? X1 - X0 : Y1 - Y0;
     }
 
+    /// <summary>
+    /// One straight flight between the storeys. It fills half the width of two corridor bays against a wall and lands on the third bay upstairs.
+    /// The upper floor is open over the flight; the other half of both bays stays a walkway on both storeys.
+    /// </summary>
+    public struct FloorStair
+    {
+        /// <summary>The bay the flight starts in.</summary>
+        public int CellX, CellY;
+        /// <summary>The side of that bay the flight climbs toward.</summary>
+        public int Dir;
+        /// <summary>The flight's footprint in plan metres, both bays long.</summary>
+        public float X0, Y0, X1, Y1;
+        /// <summary>The walkway left beside it, in plan metres.</summary>
+        public float WalkX0, WalkY0, WalkX1, WalkY1;
+        public float PivotX, PivotY, Yaw;
+    }
+
     public struct FloorLift
     {
+        /// <summary>The storey the doors open on. The shaft runs through every storey.</summary>
+        public int Level;
         public int CellX, CellY;
         /// <summary>The side of the cell the doors are on.</summary>
         public int DoorSide;
@@ -228,6 +256,9 @@ namespace CloseTheDeal.FloorGen
     public sealed class FloorLayout
     {
         public const float Cell = 4f;
+        public const float StoreyHeight = 4.5f;
+        /// <summary>How far in from its first bay's back edge a flight starts, leaving room to step on from the side.</summary>
+        public const float StairLead = 0.8f;
         public const int NoRoom = -1;
 
         public uint Seed;
@@ -238,6 +269,9 @@ namespace CloseTheDeal.FloorGen
 
         public FloorPlanType PlanType;
         public int Cols, Rows;
+        /// <summary>How many storeys the floor has. Every storey has the same rooms and walls.</summary>
+        public int Levels = 1;
+        public readonly List<FloorStair> Stairs = new();
         public int RingX0, RingY0, RingX1, RingY1;
         public int[] RoomOf;
         public readonly List<FloorRoom> Rooms = new();
@@ -274,6 +308,29 @@ namespace CloseTheDeal.FloorGen
         public float Width => Cols * Cell;
         public float Depth => Rows * Cell;
         public int CellIndex(int i, int j) => i + j * Cols;
+
+        /// <summary>Which stair fills part of this bay (its first or second), or -1.</summary>
+        public int StairAt(int i, int j)
+        {
+            for (int k = 0; k < Stairs.Count; k++)
+            {
+                FloorStair stair = Stairs[k];
+                if (stair.CellX == i && stair.CellY == j || stair.CellX + Side.Dx[stair.Dir] == i && stair.CellY + Side.Dy[stair.Dir] == j)
+                    return k;
+            }
+
+            return -1;
+        }
+
+        /// <summary>The storey a height above the lower floor belongs to.</summary>
+        public int LevelAt(float up) => System.Math.Clamp((int)System.Math.Floor((up + 0.5f) / StoreyHeight), 0, Levels - 1);
+
+        /// <summary>True when the lift door on this side of this cell opens on this storey.</summary>
+        public bool LiftDoorOn(int i, int j, int side, int level)
+        {
+            return HasExitLift && ExitLift.Level == level && ExitLift.CellX == i && ExitLift.CellY == j && ExitLift.DoorSide == side
+                || HasArrivalLift && ArrivalLift.Level == level && ArrivalLift.CellX == i && ArrivalLift.CellY == j && ArrivalLift.DoorSide == side;
+        }
         public bool InPlate(int i, int j) => i >= 0 && j >= 0 && i < Cols && j < Rows;
 
         public int RoomAt(int i, int j) => InPlate(i, j) ? RoomOf[CellIndex(i, j)] : NoRoom;

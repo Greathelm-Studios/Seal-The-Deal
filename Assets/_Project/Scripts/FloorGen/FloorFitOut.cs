@@ -151,14 +151,22 @@ namespace CloseTheDeal.FloorGen
 
         public static void Place(FloorLayout layout, FloorGenProfile profile, ref FloorRandom rng, bool[] keepClear)
         {
+            for (int level = 0; level < layout.Levels; level++)
+                Place(layout, profile, ref rng, keepClear, level);
+        }
+
+        static void Place(FloorLayout layout, FloorGenProfile profile, ref FloorRandom rng, bool[] keepClear, int level)
+        {
             FloorNav nav = layout.Nav;
+            float up = level * FloorLayout.StoreyHeight;
             var changed = new List<int>();
             foreach (FloorRoom room in layout.Rooms)
             {
-                if (room.Kind == RoomKind.ManagersOffice)
+                // The office itself is on the lower storey; the room over it is a meeting room.
+                if (room.Kind == RoomKind.ManagersOffice && level == 0)
                 {
                     foreach (Item item in OfficeItems)
-                        TryPlace(layout, nav, keepClear, changed, item, layout.OfficeX0, layout.OfficeY0, 0);
+                        TryPlace(layout, nav, keepClear, changed, item, layout.OfficeX0, layout.OfficeY0, 0, level);
                     layout.PropSpots.Add(new PropSpot { Kind = OfficeChair.Kind, X = layout.OfficeX0 + OfficeChair.U, Y = layout.OfficeY0 + OfficeChair.V, Yaw = OfficeChair.Yaw });
                     float middle = (layout.OfficeX0 + layout.OfficeX1) * 0.5f;
                     layout.Pieces.Add(new KitPlacement { Piece = KitPiece.Lightbox_Wall_Wave, X = middle + LightboxHalf, Y = layout.OfficeY0 + WallThick, Yaw = 180f, Still = true });
@@ -168,17 +176,17 @@ namespace CloseTheDeal.FloorGen
                 foreach (int cell in room.Cells)
                 {
                     Pattern pattern = PatternFor(room.Kind, profile, ref rng);
-                    if (pattern == null)
+                    int i = cell % layout.Cols, j = cell / layout.Cols;
+                    if (pattern == null || layout.StairAt(i, j) >= 0)
                         continue;
 
-                    int i = cell % layout.Cols, j = cell / layout.Cols;
                     int turn = BestTurn(layout, pattern, i, j, rng.Range(0, 4));
                     bool placedAny = pattern.Items.Length == 0;
                     foreach (Item item in pattern.Items)
                     {
                         if (item.Need != Need.None && !Backed(layout, i, j, turn, item.Need))
                             continue;
-                        placedAny |= TryPlace(layout, nav, keepClear, changed, item, i * FloorLayout.Cell, j * FloorLayout.Cell, turn);
+                        placedAny |= TryPlace(layout, nav, keepClear, changed, item, i * FloorLayout.Cell, j * FloorLayout.Cell, turn, level);
                     }
 
                     if (!placedAny)
@@ -189,7 +197,7 @@ namespace CloseTheDeal.FloorGen
                         layout.Pieces.Add(new KitPlacement
                         {
                             Piece = fix.Piece, X = i * FloorLayout.Cell + u, Y = j * FloorLayout.Cell + v,
-                            Height = fix.Height, Yaw = (fix.Yaw + 90f * turn) % 360f, Still = true
+                            Height = up + fix.Height, Yaw = (fix.Yaw + 90f * turn) % 360f, Still = true
                         });
                     }
                     foreach (Loose loose in pattern.Props)
@@ -198,7 +206,7 @@ namespace CloseTheDeal.FloorGen
                         layout.PropSpots.Add(new PropSpot
                         {
                             Kind = loose.Kind, X = i * FloorLayout.Cell + u, Y = j * FloorLayout.Cell + v,
-                            Height = loose.Height, Yaw = loose.Yaw + 90f * turn
+                            Height = up + loose.Height, Yaw = loose.Yaw + 90f * turn
                         });
                     }
                 }
@@ -224,8 +232,10 @@ namespace CloseTheDeal.FloorGen
 
             // A fixed chair cannot be shoved aside, so nobody may spawn inside it. One check covers them all on most floors.
             foreach (PropSpot chair in chairs)
-                BlockChair(nav, chair, changed);
-            bool together = nav.AllConnected();
+                BlockChair(layout, chair, changed);
+            bool together = true;
+            for (int level = 0; level < layout.Levels; level++)
+                together &= nav.LevelConnected(level);
             if (!together)
                 nav.Unblock(changed);
             foreach (PropSpot chair in chairs)
@@ -233,26 +243,27 @@ namespace CloseTheDeal.FloorGen
                 if (!together)
                 {
                     changed.Clear();
-                    BlockChair(nav, chair, changed);
-                    if (!nav.AllConnected())
+                    BlockChair(layout, chair, changed);
+                    if (!nav.LevelConnected(layout.LevelAt(chair.Height)))
                     {
                         nav.Unblock(changed);
                         continue;
                     }
                 }
-                layout.Pieces.Add(new KitPlacement { Piece = KitPiece.Chair_Task, X = chair.X, Y = chair.Y, Yaw = chair.Yaw, Still = true });
+                layout.Pieces.Add(new KitPlacement { Piece = KitPiece.Chair_Task, X = chair.X, Y = chair.Y, Height = chair.Height, Yaw = chair.Yaw, Still = true });
             }
         }
 
-        static void BlockChair(FloorNav nav, PropSpot chair, List<int> changed)
+        static void BlockChair(FloorLayout layout, PropSpot chair, List<int> changed)
         {
-            nav.BlockRect(chair.X - ChairHalf, chair.Y - ChairHalf, chair.X + ChairHalf, chair.Y + ChairHalf, PlayerRadius, changed);
+            layout.Nav.BlockRect(chair.X - ChairHalf, chair.Y - ChairHalf, chair.X + ChairHalf, chair.Y + ChairHalf, PlayerRadius, layout.LevelAt(chair.Height), changed);
         }
 
         static Pattern PatternFor(RoomKind kind, FloorGenProfile profile, ref FloorRandom rng)
         {
             switch (kind)
             {
+                case RoomKind.ManagersOffice: return MeetingTable;
                 case RoomKind.Ring:
                     return rng.Percent(profile.CorridorDressingPercent) ? CorridorPatterns[rng.Range(0, CorridorPatterns.Length)] : null;
                 case RoomKind.Court:
@@ -308,7 +319,7 @@ namespace CloseTheDeal.FloorGen
             }
         }
 
-        static bool TryPlace(FloorLayout layout, FloorNav nav, bool[] keepClear, List<int> changed, Item item, float originX, float originY, int turn)
+        static bool TryPlace(FloorLayout layout, FloorNav nav, bool[] keepClear, List<int> changed, Item item, float originX, float originY, int turn, int level)
         {
             Turn(item.U, item.V, turn, out float u, out float v);
             float yaw = (item.Yaw + 90f * turn) % 360f;
@@ -316,18 +327,18 @@ namespace CloseTheDeal.FloorGen
             float hw = sideways ? item.HalfD : item.HalfW, hd = sideways ? item.HalfW : item.HalfD;
             float x = originX + u, y = originY + v;
 
-            if (nav.AnyInRect(keepClear, x - hw, y - hd, x + hw, y + hd, PlayerRadius))
+            if (nav.AnyInRect(keepClear, x - hw, y - hd, x + hw, y + hd, PlayerRadius, level))
                 return false;
 
             changed.Clear();
-            nav.BlockRect(x - hw, y - hd, x + hw, y + hd, PlayerRadius, changed);
-            if (!nav.AllConnected())
+            nav.BlockRect(x - hw, y - hd, x + hw, y + hd, PlayerRadius, level, changed);
+            if (!nav.LevelConnected(level))
             {
                 nav.Unblock(changed);
                 return false;
             }
 
-            layout.Pieces.Add(new KitPlacement { Piece = item.Piece, X = x, Y = y, Yaw = yaw, Still = true });
+            layout.Pieces.Add(new KitPlacement { Piece = item.Piece, X = x, Y = y, Height = level * FloorLayout.StoreyHeight, Yaw = yaw, Still = true });
             return true;
         }
     }

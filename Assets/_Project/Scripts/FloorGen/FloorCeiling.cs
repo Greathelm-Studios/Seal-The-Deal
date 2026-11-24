@@ -30,25 +30,34 @@ namespace CloseTheDeal.FloorGen
                         continue;
 
                     FloorRoom room = layout.Rooms[index];
-                    CeilingKind kind = room.IsCorridor ? CeilingKind.Route
+                    layout.CeilingOf[layout.CellIndex(i, j)] = room.IsCorridor ? CeilingKind.Route
                         : room.Open ? CeilingKind.Lanes
                         : room.Kind == RoomKind.Meeting || room.Kind == RoomKind.ManagersOffice ? CeilingKind.Panels
                         : CeilingKind.Tiles;
-                    layout.CeilingOf[layout.CellIndex(i, j)] = kind;
-                    if (kind != CeilingKind.Tiles && kind != CeilingKind.Panels)
-                        continue;
-
-                    layout.Pieces.Add(new KitPlacement
-                    {
-                        Piece = kind == CeilingKind.Tiles ? KitPiece.Ceiling_Grid_4x4 : KitPiece.Ceiling_Panel_4x4,
-                        X = i * C, Y = j * C, Height = Soffit, Still = true
-                    });
-                    layout.Lights.Add(new FloorSpot { X = (i + 0.5f) * C, Y = (j + 0.5f) * C, Room = index });
                 }
 
-            Spine(layout);
-            Rows(layout, CeilingKind.Lanes, CeilingLineKind.Lane, LaneAt);
-            Rows(layout, CeilingKind.Tiles, CeilingLineKind.Strip, StripAt);
+            for (int level = 0; level < layout.Levels; level++)
+            {
+                float up = level * FloorLayout.StoreyHeight;
+                for (int j = 0; j < layout.Rows; j++)
+                    for (int i = 0; i < layout.Cols; i++)
+                    {
+                        CeilingKind kind = layout.CeilingOf[layout.CellIndex(i, j)];
+                        if (kind != CeilingKind.Tiles && kind != CeilingKind.Panels)
+                            continue;
+
+                        layout.Pieces.Add(new KitPlacement
+                        {
+                            Piece = kind == CeilingKind.Tiles ? KitPiece.Ceiling_Grid_4x4 : KitPiece.Ceiling_Panel_4x4,
+                            X = i * C, Y = j * C, Height = up + Soffit, Still = true
+                        });
+                        layout.Lights.Add(new FloorSpot { X = (i + 0.5f) * C, Y = (j + 0.5f) * C, Room = layout.RoomOf[layout.CellIndex(i, j)], Level = level });
+                    }
+
+                Spine(layout, level);
+                Rows(layout, CeilingKind.Lanes, CeilingLineKind.Lane, LaneAt, level);
+                Rows(layout, CeilingKind.Tiles, CeilingLineKind.Strip, StripAt, level);
+            }
         }
 
         // A closed room's rows run its longer side. Otherwise lines follow the corridor the room fronts, then its window band, then its longer side.
@@ -84,44 +93,50 @@ namespace CloseTheDeal.FloorGen
             return room >= 0 && layout.Rooms[room].IsCorridor;
         }
 
+        // A corridor bay that carries the spine on this storey: not one whose ceiling is open over a flight.
+        static bool IsLit(FloorLayout layout, int i, int j, int level)
+        {
+            return IsRoute(layout, i, j) && (level == layout.Levels - 1 || layout.StairAt(i, j) < 0);
+        }
+
         // East-west runs own every junction, so a north-south run stops at the edge of the run it meets and nothing overlaps.
-        static void Spine(FloorLayout layout)
+        static void Spine(FloorLayout layout, int level)
         {
             const float Half = SpineWidth * 0.5f;
             for (int j = 0; j < layout.Rows; j++)
                 for (int i = 0; i < layout.Cols; i++)
                 {
-                    if (!IsRoute(layout, i, j) || IsRoute(layout, i - 1, j))
+                    if (!IsLit(layout, i, j, level) || IsLit(layout, i - 1, j, level))
                         continue;
                     int end = i;
-                    while (IsRoute(layout, end + 1, j)) end++;
+                    while (IsLit(layout, end + 1, j, level)) end++;
                     if (end > i)
                         layout.CeilingLines.Add(new CeilingLine
                         {
-                            Kind = CeilingLineKind.Spine, X0 = (i + 0.5f) * C - Half, X1 = (end + 0.5f) * C + Half, Y0 = (j + 0.5f) * C, Y1 = (j + 0.5f) * C
+                            Kind = CeilingLineKind.Spine, Level = level, X0 = (i + 0.5f) * C - Half, X1 = (end + 0.5f) * C + Half, Y0 = (j + 0.5f) * C, Y1 = (j + 0.5f) * C
                         });
                 }
 
             for (int i = 0; i < layout.Cols; i++)
                 for (int j = 0; j < layout.Rows; j++)
                 {
-                    if (!IsRoute(layout, i, j) || IsRoute(layout, i, j - 1))
+                    if (!IsLit(layout, i, j, level) || IsLit(layout, i, j - 1, level))
                         continue;
                     int end = j;
-                    while (IsRoute(layout, i, end + 1)) end++;
+                    while (IsLit(layout, i, end + 1, level)) end++;
                     if (end > j)
                         layout.CeilingLines.Add(new CeilingLine
                         {
-                            Kind = CeilingLineKind.Spine, X0 = (i + 0.5f) * C, X1 = (i + 0.5f) * C,
-                            Y0 = (j + 0.5f) * C + (Crossed(layout, i, j) ? Half : -Half), Y1 = (end + 0.5f) * C - (Crossed(layout, i, end) ? Half : -Half)
+                            Kind = CeilingLineKind.Spine, Level = level, X0 = (i + 0.5f) * C, X1 = (i + 0.5f) * C,
+                            Y0 = (j + 0.5f) * C + (Crossed(layout, i, j, level) ? Half : -Half), Y1 = (end + 0.5f) * C - (Crossed(layout, i, end, level) ? Half : -Half)
                         });
                 }
         }
 
-        static bool Crossed(FloorLayout layout, int i, int j) => IsRoute(layout, i - 1, j) || IsRoute(layout, i + 1, j);
+        static bool Crossed(FloorLayout layout, int i, int j, int level) => IsLit(layout, i - 1, j, level) || IsLit(layout, i + 1, j, level);
 
         // One line per offset across the bay, carried through every neighbouring bay it can run into without meeting a wall.
-        static void Rows(FloorLayout layout, CeilingKind kind, CeilingLineKind line, float[] offsets)
+        static void Rows(FloorLayout layout, CeilingKind kind, CeilingLineKind line, float[] offsets, int level)
         {
             for (int j = 0; j < layout.Rows; j++)
                 for (int i = 0; i < layout.Cols; i++)
@@ -144,8 +159,8 @@ namespace CloseTheDeal.FloorGen
 
                     foreach (float offset in offsets)
                         layout.CeilingLines.Add(south
-                            ? new CeilingLine { Kind = line, X0 = i * C + offset, X1 = i * C + offset, Y0 = j * C + EndInset, Y1 = (ej + 1) * C - EndInset }
-                            : new CeilingLine { Kind = line, X0 = i * C + EndInset, X1 = (ei + 1) * C - EndInset, Y0 = j * C + offset, Y1 = j * C + offset });
+                            ? new CeilingLine { Kind = line, Level = level, X0 = i * C + offset, X1 = i * C + offset, Y0 = j * C + EndInset, Y1 = (ej + 1) * C - EndInset }
+                            : new CeilingLine { Kind = line, Level = level, X0 = i * C + EndInset, X1 = (ei + 1) * C - EndInset, Y0 = j * C + offset, Y1 = j * C + offset });
                 }
         }
 
@@ -171,11 +186,17 @@ namespace CloseTheDeal.FloorGen
                     CeilingKind kind = layout.CeilingOf[layout.CellIndex(i, j)];
                     if (kind == CeilingKind.Lanes) laneBays++;
                     if (kind == CeilingKind.Tiles || kind == CeilingKind.Panels) roomBays++;
-                    if (kind != CeilingKind.Route)
-                        continue;
-                    if (IsRoute(layout, i + 1, j)) links++;
-                    if (IsRoute(layout, i, j + 1)) links++;
+                    for (int level = 0; level < layout.Levels; level++)
+                    {
+                        if (!IsLit(layout, i, j, level))
+                            continue;
+                        if (IsLit(layout, i + 1, j, level)) links++;
+                        if (IsLit(layout, i, j + 1, level)) links++;
+                    }
                 }
+
+            laneBays *= layout.Levels;
+            roomBays *= layout.Levels;
 
             int spanned = 0, laned = 0;
             foreach (CeilingLine line in layout.CeilingLines)

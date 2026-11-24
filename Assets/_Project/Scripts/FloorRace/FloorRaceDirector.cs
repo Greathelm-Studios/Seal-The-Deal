@@ -239,7 +239,8 @@ namespace CloseTheDeal.FloorRace
             Vector3 size = _profile.CabinSize;
             bool turned = (lift.DoorSide & 1) == 1;
             float halfX = (turned ? size.z : size.x) * 0.5f, halfY = (turned ? size.x : size.z) * 0.5f;
-            return Mathf.Abs(plan.x - lift.CarX) <= halfX && Mathf.Abs(plan.y - lift.CarY) <= halfY && plan.z > -0.3f && plan.z < size.y;
+            float above = plan.z - lift.Level * FloorLayout.StoreyHeight;
+            return Mathf.Abs(plan.x - lift.CarX) <= halfX && Mathf.Abs(plan.y - lift.CarY) <= halfY && above > -0.3f && above < size.y;
         }
 
         /// <summary>How many of a firm's living players are in the exit lift, and how many living players it has. Works on any machine from what it can see.</summary>

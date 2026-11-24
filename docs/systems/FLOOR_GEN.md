@@ -6,7 +6,7 @@ The floor generator for the floor race ([FLOOR_RACE.md](FLOOR_RACE.md)). The "Me
 
 ## What the player sees
 
-Every floor of the building is a different office plan made from the KitOffice kit, in one of four layout types picked by the seed: a corridor loop you can always find again, named rooms off it, window halls along the glass, and a lift hidden somewhere. Each room's name is over its door, service rooms stand out in cobalt with the floor number on them, and desks are dressed as they are in KitOffice. Floor 10 has the manager's office behind a cobalt portal door. Both players in a match see exactly the same floor.
+Every floor of the building is a different office plan made from the KitOffice kit, in one of four layout types picked by the seed, on two storeys joined by two open stairs: a corridor loop you can always find again, named rooms off it, window halls along the glass, and a lift hidden somewhere. Each room's name is over its door, service rooms stand out in cobalt with the floor number on them, and desks are dressed as they are in KitOffice. Floor 10 has the manager's office behind a cobalt portal door. Both players in a match see exactly the same floor.
 
 ## Rules it follows
 
@@ -51,6 +51,24 @@ Added on 2026-11-24 after generated floors were put beside KitOffice and read as
 - **Desks.** A bench comes with keyboards, phones, document trays and PC towers as fixed pieces, and spots for four chairs and four monitors. The 16 loose props are still picked from all the spots on the floor; a chair or monitor spot that misses the cut gets the fixed `Chair_Task` or `Monitor_Flat` instead, so no desk is bare. A fixed chair closes the walk map round it, so nobody spawns inside one.
 - **Cover.** The lone `Cover_Block_2m` in the court and the halls, which read as a stray white box, is now a `Counter_Capsule_2m` (the same crouch cover), with pod seats in the halls.
 - **The manager's office** adds a wave lightbox behind the desk and two visitor seats.
+
+## Two storeys
+
+Added on 2026-11-24. `Storeys` on `FloorGen.asset` is 1 or 2 (default 2). The model is KitOffice: the walls repeat on both storeys, the fit-out does not. [Drawings of both storeys and both ceilings](../proof/floor_gen_2026-11-24/two_storeys_1_drawings_seed1_floor1.png), [the stair and upper storey built](../proof/floor_gen_2026-11-24/two_storeys_2_built_seed1_floor1.png).
+
+- **One plan, two levels.** Rooms, walls and doors are decided once and built on each storey, 4.5 m apart. Furniture, posters, lightboxes, spawn, loot and prop spots are chosen per storey. A spot records its storey (`FloorSpot.Level`); a prop spot's height is measured from the lower floor.
+- **Stairs.** Two straight flights (`Stair_Straight_2m`, 2 m wide, 7.2 m long). Each fills half the width of two corridor bays against a wall and needs a third corridor bay in line to land on. The other half of both bays stays a 2 m walkway on both storeys. Upstairs those two bays have a half slab (`Slab_2x4` or `Slab_4x2`), glass guards along the hole and across the end over the flight's foot, and the top left open to step off. The flight starts 0.8 m into its first bay so it can be stepped onto from the walkway. The second flight is the first candidate at least a third of the plate's width plus depth away from the first, so there are two ways up and neither is a choke point.
+- **Lifts.** The shaft is walled on both storeys. The exit lift's doors are on the upper storey on half of floors (a random draw); the arrival lift and the manager's office are always on the lower storey. The room over the office is fitted out as a meeting room.
+- **Walk map.** One grid per storey. A flight's own nodes on the lower grid stand for being on it: they open only along the climb, and the top row joins the first row of the landing bay upstairs, so a stair costs its 8 m of walking in every distance. The floor under the hole upstairs is closed. A lift's bay is closed on the storey where it has no doors. Nothing may stand, spawn or be placed on a flight or its landing.
+- **Checks.** Every check runs over both storeys through the stairs: one connected area, fair starts, the briefcase's distances. A floor with fewer than two stairs fails. The ring check stays on the lower storey.
+- **Ceiling.** Planned per storey. On the lower storey the spine stops where the floor above is open over a flight; upstairs the cobalt floor band stops at the same bays.
+- **Floors stand 13.5 m apart**, not 9: two storeys and a clear one between, so the next floor can be built above the old one. `FloorBuilder` raises any smaller Floor Pitch to that.
+
+**Who owns what (`AGENTS.md §3`):** nothing new is synced. Stairs, holes, guards and the upper storey are part of the layout, so every machine builds the same ones from the seed and floor number, and the host's checks (lift, office, fall, respawn) read the same layout.
+
+Rejected for this first version: a double-height court (an upper storey with its cross corridor missing needs its own door and exit rules); a different room plan per storey (two sets of walls to keep aligned with shafts and stairs); enclosed return stairs like KitOffice's E1 and E2 (they need 2 m walls the generator does not place).
+
+**Cost of the furniture check.** Each piece of furniture is tested for cutting the floor in two. Flooding both storeys for every piece took generating to about 38 ms a floor. A piece can only close nodes on its own storey and stairs are never closed, so the test now floods that storey alone (`FloorNav.LevelConnected`): about 19 ms.
 
 ## Layout types
 
@@ -127,7 +145,7 @@ Floor 10 is generated like the others with two changes. The north band is forced
 
 ## Building it at runtime
 
-`FloorBuilder` (in `Scripts/FloorRace/`) turns a layout into objects: one instantiate per placement under a floor root, plus each lift's car and two door leaves, plus a plain block under the floor standing in for the storeys below. Merging the still pieces with `StaticBatchingUtility.Combine`, as `TowerBuilder` does, is an option that is off (see Measured). Tear-down detaches and destroys the root and any merged meshes. Floors stand 9 m apart in height (floor `n` at `y = (n - 1) x 9`), so the next floor is built above while the old one still stands and nobody falls during the change.
+`FloorBuilder` (in `Scripts/FloorRace/`) turns a layout into objects: one instantiate per placement under a floor root, plus each lift's car and two door leaves, plus a plain block under the floor standing in for the storeys below. Merging the still pieces with `StaticBatchingUtility.Combine`, as `TowerBuilder` does, is an option that is off (see Measured). Tear-down detaches and destroys the root and any merged meshes. Floors stand 13.5 m apart in height (floor `n` at `y = (n - 1) x 13.5`), so the next floor is built above while the old one still stands and nobody falls during the change.
 
 ## Cost per floor
 
@@ -135,13 +153,13 @@ The budget, and where the measured numbers below stand against it.
 
 | Thing | Budget | Measured |
 |---|---|---|
-| Kit pieces instantiated | 350 to 500 before the dressing; not re-set since | 469 to 685 with the dressing |
-| Generate (pure) | Under 5 ms | 5.1 to 5.4 ms with layout types (5.4 to 5.6 ms before them); over budget |
-| Build | Under 150 ms, hidden by the transition screen | 10.9 to 14.4 ms with layout types |
-| Draw calls | No number is set in [PERFORMANCE.md](PERFORMANCE.md) | 2,800 to 3,500 on average with layout types, 4,800 in the worst view |
+| Kit pieces instantiated | 350 to 500 before the dressing; not re-set since | 897 to 1,542 on two storeys |
+| Generate (pure) | Under 5 ms | About 19 ms on two storeys, 5.1 to 5.4 ms on one; nearly four times the budget |
+| Build | Under 150 ms, hidden by the transition screen | 26 to 36 ms on two storeys |
+| Draw calls | No number is set in [PERFORMANCE.md](PERFORMANCE.md) | 5,300 to 7,000 on average on two storeys, 8,300 in the worst view; KitOffice draws 6,527 |
 | Loose props | 16 or fewer ([PROPS.md](PROPS.md)) | 16 spots offered |
 | Loot pickups | 8 or fewer (`FloorRaceProfile`) | Not built yet |
-| Realtime lights | No number set | One shadowless spot per closed room bay |
+| Realtime lights | No number set | One shadowless spot per closed room bay per storey: 68 a floor on average, plus the daylight bounce lights on both storeys |
 
 ## Files
 
@@ -263,8 +281,35 @@ Sixteen layouts (four seeds, floors 1, 2, 5 and 10) were drawn and looked at: ri
 - Looked at: one floor of each type as a layout drawing, a ceiling drawing, two eye-height views and the whole ceiling from below.
 - Not checked: a client build, a person walking any type, and whether the fairness numbers feel right on an open plan floor, where the starts can see each other sooner.
 
+**Two storeys, 2026-11-24, edit mode sweep and one clean Play Mode run.**
+
+| What | One storey (layout types) | Two storeys |
+|---|---|---|
+| Floors passing every check (200 seeds x 10 floors) | 2,000 of 2,000 | 2,000 of 2,000 |
+| On the first attempt, most attempts needed | 1,788, 4 | 1,595, 5 |
+| Ceiling plans with a fault | 0 | 0 |
+| Generate time a floor | 5.07 to 5.38 ms | 19.4 ms |
+| Kit pieces a floor, average and most | 564, 948 | 1,073, 1,868 |
+| Fewest spawn spots on any floor | 33 | 75 |
+| Build one floor (first cold build left out) | 10.9 to 14.4 ms | 25.8 to 35.7 ms |
+| Tear one down | about 2 to 4 ms | 5.3 to 9.5 ms |
+| Colliders | about 500 to 680 | 892 to 1,471 |
+| Draw calls, average of four views | 2,803 to 3,521 | 5,268 to 6,974 |
+| Draw calls, worst view | 4,800 | 8,270 |
+| Triangles, average | 1.1 to 2.4 million | 2.2 to 5.8 million |
+
+- **The stairs can be climbed, by measurement, not yet by a person.** On a built floor (seed 1, floor 1) a ray dropped every metre along both flights met a surface rising from 0.31 m to 4.06 m and then the upper floor at 4.50 m, with 1.9 m of clear headroom at every point, the upper walkway at 4.50 m, the lower walkway at 0, and glass between the upper walkway and the hole.
+- Looked at: both storeys and both ceilings of seed 1 floor 1 as drawings, and the same floor built, from the foot of a stair, the upper walkway beside the hole, the top of the stair and along the upper ring.
+- Hosted once in the Editor in `FloorRace.unity`: floor 1 (a gallery, exit lift upstairs) was built with both storeys and both stairs, the host spawned in the court with the HUD naming the room, floors stood 13.5 m apart, and the console had no errors. The match was not started.
+- The loose prop cap (16) and loot spots (24 offered) are unchanged, so they are spread over twice the area.
+- Not checked: frame time on two storeys, a client build, a person walking it, a full match on it (lift boarding on the upper storey, respawns, the briefcase falling through a stair hole), and floor 10 in play.
+
 ## Known limitations
 
+- Both storeys have the same rooms and walls. There is no double-height space except the two stair holes.
+- A flight can only stand in a corridor against a wall with a third corridor bay to land on; a floor with no such place twice is thrown away and generated again.
+- Players cannot walk under a flight on the walk map, though they can in the world: nothing spawns or is placed there.
+- Each storey's reflection probe sees only its own storey.
 - A gallery's cross corridors all run the same way on most floors, because the middle block is cut across its shorter side first.
 
 - The spine, lanes and strips all use one material at one brightness, and a line ends square: there is no end cap or junction piece.
@@ -275,6 +320,5 @@ Sixteen layouts (four seeds, floors 1, 2, 5 and 10) were drawn and looked at: ri
 - Furniture patterns are a code table, not designer assets. A designer cannot add a room pattern without a programmer until there is an authoring tool.
 - Walls only run on the 4 m cell lines, so there are no 2 m corridors, alcoves or curved pieces.
 - Where two walls meet with their thickness on opposite sides, the outer corner shows a 0.2 m notch. The kit has no interior corner post.
-- One storey per floor: no stairs, court voids or bridges.
 - Glass does not break on generated floors: the glass registry only indexes the old towers. Partitions stop players and shots; window bays are open.
 - Floors do not get harder as you climb ([FLOOR_RACE.md](FLOOR_RACE.md), open questions).

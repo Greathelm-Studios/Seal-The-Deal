@@ -201,8 +201,8 @@ namespace CloseTheDeal.Editor.FloorRace
             Run run = _run;
             FloorLayout layout = run.Floor.Layout;
             FloorSpot spot = layout.SpawnSpots[run.View * (layout.SpawnSpots.Count - 1) / (ViewsPerFloor - 1)];
-            Vector3 eye = run.Floor.World(spot.X, spot.Y, Eye);
-            Vector3 centre = run.Floor.World(layout.Width * 0.5f, layout.Depth * 0.5f, Eye);
+            Vector3 eye = run.Floor.World(spot, Eye);
+            Vector3 centre = run.Floor.World(layout.Width * 0.5f, layout.Depth * 0.5f, spot.Level * FloorLayout.StoreyHeight + Eye);
             run.Camera.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(centre - eye));
             run.Wait = SettleFrames;
         }

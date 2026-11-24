@@ -97,7 +97,7 @@ Decided before the code was written. Everything that matters is the host's; clie
 
 **Bandwidth, 8 players:** a floor change costs four state values (about 44 bytes to each client), up to 24 spawn messages and 24 despawns, and one cash message per winning player. Nothing in this mode is sent per tick; the only continuous traffic is what was there already (player state, the loose briefcase, moving props).
 
-Only one floor is in play at a time. The next floor is built above the old one while the lift leaves (floors stand 9 m apart), everyone is moved up, and the old floor is torn down a second later, so nobody is ever standing on nothing and floor contents are never streamed.
+Only one floor is in play at a time. The next floor is built above the old one while the lift leaves (floors stand 13.5 m apart: two storeys and a clear one between), everyone is moved up, and the old floor is torn down a second later, so nobody is ever standing on nothing and floor contents are never streamed.
 
 ## How it is built
 

@@ -37,7 +37,7 @@ namespace CloseTheDeal.FloorRace
             {
                 FloorSpot spot = layout.LootSpots[i];
                 NetworkObject prefab = Pick(rng.Range(0, totalWeight));
-                Spawn(prefab, floor.World(spot.X, spot.Y, _profile.DropHeight), Quaternion.Euler(0f, rng.Range(0, 360), 0f));
+                Spawn(prefab, floor.World(spot, _profile.DropHeight), Quaternion.Euler(0f, rng.Range(0, 360), 0f));
             }
 
             foreach (PropSpot spot in layout.PropSpots)

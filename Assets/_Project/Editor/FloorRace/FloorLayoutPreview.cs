@@ -60,9 +60,13 @@ namespace CloseTheDeal.Editor.FloorRace
                 {
                     int number = Mathf.Min(floor, profile.FloorCount);
                     FloorLayout layout = FloorGenerator.Generate(seed, number, profile);
-                    string name = $"floor_seed{seed}_f{number:00}_{layout.PlanType}.png";
-                    File.WriteAllBytes(Path.Combine(folder, name), Draw(layout));
-                    File.WriteAllBytes(Path.Combine(folder, $"ceiling_seed{seed}_f{number:00}_{layout.PlanType}.png"), DrawCeiling(layout));
+                    string name = $"floor_seed{seed}_f{number:00}_{layout.PlanType}";
+                    for (int level = 0; level < layout.Levels; level++)
+                    {
+                        string storey = layout.Levels > 1 ? (level == 0 ? "_lower" : "_upper") : "";
+                        File.WriteAllBytes(Path.Combine(folder, name + storey + ".png"), Draw(layout, level));
+                        File.WriteAllBytes(Path.Combine(folder, "ceiling" + name.Substring(5) + storey + ".png"), DrawCeiling(layout, level));
+                    }
                     Describe(layout, name, report);
                 }
 
@@ -178,6 +182,8 @@ namespace CloseTheDeal.Editor.FloorRace
                 longest = Mathf.Max(longest, line.Length);
             }
             report.AppendLine($"   Ceiling: {spine} spine runs ({spineMetres:0} m), {lanes} hall lanes, {strips} room strips, longest line {longest:0.0} m, {layout.Lights.Count} room lights.");
+            if (layout.Levels > 1)
+                report.AppendLine($"   {layout.Levels} storeys, {layout.Stairs.Count} stairs. Exit lift doors on the {(layout.HasExitLift ? (layout.ExitLift.Level == 0 ? "lower" : "upper") : "no")} storey.");
             report.AppendLine($"   Walking metres: start A to goal {layout.StartAToGoal:0.0}, start B to goal {layout.StartBToGoal:0.0}, starts apart {layout.StartsApart:0.0}.");
             if (layout.HasBriefcase)
                 report.AppendLine($"   Briefcase: {layout.CaseToGoal:0.0} m from the lift, {layout.CaseToStartA:0.0} m from A, {layout.CaseToStartB:0.0} m from B, in {layout.Rooms[layout.Briefcase.Room].Name}.");
@@ -211,7 +217,17 @@ namespace CloseTheDeal.Editor.FloorRace
             _ => new Color32(40, 90, 200, 255)
         };
 
-        static byte[] Draw(FloorLayout layout)
+        static readonly Color32 FlightColour = new(70, 190, 170, 255), HoleColour = new(255, 255, 255, 255);
+
+        static void DrawStairs(Canvas canvas, FloorLayout layout, int level)
+        {
+            if (layout.Levels < 2)
+                return;
+            foreach (FloorStair stair in layout.Stairs)
+                canvas.Rect(stair.X0, stair.Y0, stair.X1, stair.Y1, level == 0 ? FlightColour : HoleColour);
+        }
+
+        static byte[] Draw(FloorLayout layout, int level)
         {
             int width = (int)(layout.Width * PixelsPerMetre) + 2 * Margin, height = (int)(layout.Depth * PixelsPerMetre) + 2 * Margin;
             var pixels = new Color32[width * height];
@@ -231,8 +247,9 @@ namespace CloseTheDeal.Editor.FloorRace
 
             FloorNav nav = layout.Nav;
             for (int n = 0; n < nav.Count; n++)
-                if (nav.Blocked[n])
+                if (nav.Blocked[n] && nav.LevelOf(n) == level)
                     canvas.Rect(nav.X(n) - 0.25f, nav.Y(n) - 0.25f, nav.X(n) + 0.25f, nav.Y(n) + 0.25f, new Color32(150, 155, 165, 255));
+            DrawStairs(canvas, layout, level);
 
             for (int j = 0; j <= layout.Rows; j++)
                 for (int i = 0; i < layout.Cols; i++)
@@ -241,13 +258,13 @@ namespace CloseTheDeal.Editor.FloorRace
                 for (int i = 0; i <= layout.Cols; i++)
                     Edge(canvas, layout.WestEdges[i + j * (layout.Cols + 1)], i * C, j * C, false);
 
-            foreach (FloorSpot spot in layout.SpawnSpots) canvas.Dot(spot.X, spot.Y, 2, new Color32(120, 120, 120, 255));
-            foreach (FloorSpot spot in layout.LootSpots) canvas.Dot(spot.X, spot.Y, 3, new Color32(230, 140, 0, 255));
-            foreach (PropSpot spot in layout.PropSpots) canvas.Dot(spot.X, spot.Y, 2, new Color32(140, 90, 40, 255));
-            foreach (FloorSpot spot in layout.StartA) canvas.Dot(spot.X, spot.Y, 5, new Color32(0, 170, 60, 255));
-            foreach (FloorSpot spot in layout.StartB) canvas.Dot(spot.X, spot.Y, 5, new Color32(210, 0, 190, 255));
-            if (layout.HasBriefcase) canvas.Dot(layout.Briefcase.X, layout.Briefcase.Y, 7, new Color32(200, 150, 0, 255));
-            if (layout.HasExitLift) canvas.Dot(layout.ExitLift.FrontX, layout.ExitLift.FrontY, 4, new Color32(110, 60, 140, 255));
+            foreach (FloorSpot spot in layout.SpawnSpots) if (spot.Level == level) canvas.Dot(spot.X, spot.Y, 2, new Color32(120, 120, 120, 255));
+            foreach (FloorSpot spot in layout.LootSpots) if (spot.Level == level) canvas.Dot(spot.X, spot.Y, 3, new Color32(230, 140, 0, 255));
+            foreach (PropSpot spot in layout.PropSpots) if (layout.LevelAt(spot.Height) == level) canvas.Dot(spot.X, spot.Y, 2, new Color32(140, 90, 40, 255));
+            foreach (FloorSpot spot in layout.StartA) if (spot.Level == level) canvas.Dot(spot.X, spot.Y, 5, new Color32(0, 170, 60, 255));
+            foreach (FloorSpot spot in layout.StartB) if (spot.Level == level) canvas.Dot(spot.X, spot.Y, 5, new Color32(210, 0, 190, 255));
+            if (layout.HasBriefcase && layout.Briefcase.Level == level) canvas.Dot(layout.Briefcase.X, layout.Briefcase.Y, 7, new Color32(200, 150, 0, 255));
+            if (layout.HasExitLift && layout.ExitLift.Level == level) canvas.Dot(layout.ExitLift.FrontX, layout.ExitLift.FrontY, 4, new Color32(110, 60, 140, 255));
 
             foreach (FloorRoom room in layout.Rooms)
             {
@@ -265,7 +282,7 @@ namespace CloseTheDeal.Editor.FloorRace
         }
 
         // The ceiling as planned, north up like the layout drawing. Seen from below in play it is mirrored east to west.
-        static byte[] DrawCeiling(FloorLayout layout)
+        static byte[] DrawCeiling(FloorLayout layout, int level)
         {
             int width = (int)(layout.Width * PixelsPerMetre) + 2 * Margin, height = (int)(layout.Depth * PixelsPerMetre) + 2 * Margin;
             var pixels = new Color32[width * height];
@@ -305,8 +322,14 @@ namespace CloseTheDeal.Editor.FloorRace
                 for (int i = 0; i <= layout.Cols; i++)
                     Edge(canvas, layout.WestEdges[i + j * (layout.Cols + 1)], i * C, j * C, false, wall);
 
+            if (level < layout.Levels - 1)
+                foreach (FloorStair stair in layout.Stairs)
+                    canvas.Rect(stair.X0, stair.Y0, stair.X1, stair.Y1, new Color32(22, 26, 36, 255));
+
             foreach (CeilingLine line in layout.CeilingLines)
             {
+                if (line.Level != level)
+                    continue;
                 float half = FloorCeiling.WidthOf(line.Kind) * 0.5f;
                 Color32 colour = line.Kind == CeilingLineKind.Spine ? new Color32(255, 255, 255, 255)
                     : line.Kind == CeilingLineKind.Lane ? new Color32(255, 236, 160, 255) : new Color32(160, 228, 255, 255);
@@ -314,7 +337,7 @@ namespace CloseTheDeal.Editor.FloorRace
                 else canvas.Rect(line.X0 - half, line.Y0, line.X0 + half, line.Y1, colour);
             }
 
-            foreach (FloorSpot spot in layout.Lights) canvas.Dot(spot.X, spot.Y, 3, new Color32(255, 140, 60, 255));
+            foreach (FloorSpot spot in layout.Lights) if (spot.Level == level) canvas.Dot(spot.X, spot.Y, 3, new Color32(255, 140, 60, 255));
             foreach (FloorRoom room in layout.Rooms)
             {
                 if (room.Cells.Count == 0)

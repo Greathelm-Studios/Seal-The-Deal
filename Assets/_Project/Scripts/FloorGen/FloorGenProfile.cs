@@ -13,6 +13,9 @@ namespace CloseTheDeal.FloorGen
         [Tooltip("How many 4 m bays deep a floor is, north to south. 8 = 32 metres, the KitOffice plate.")]
         [Range(6, 10)] public int Rows = 8;
 
+        [Tooltip("How many storeys each floor of the race has. With 2, every floor is an upper and a lower office with the same walls, joined by two open stairs, and the lift's doors may be on either. 2 doubles the area to search and roughly doubles what is drawn.")]
+        [Range(1, 2)] public int Storeys = 2;
+
         [Header("Layout types")]
         [Tooltip("How often a floor is a core office: the corridor loop round a block of rooms, with rooms and halls along the windows. This is the share out of the four numbers added together; 0 = never. If all four are 0 every floor is this one.")]
         [Range(0, 100)] public int CoreOfficeWeight = 40;

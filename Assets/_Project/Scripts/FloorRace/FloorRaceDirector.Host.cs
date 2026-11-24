@@ -240,11 +240,13 @@ namespace CloseTheDeal.FloorRace
         {
             Vector3 plan = floor.Plan(world);
             FloorLayout layout = floor.Layout;
-            int best = 0;
+            int best = 0, level = layout.LevelAt(plan.z);
             float bestDistance = float.MaxValue;
             for (int i = 0; i < layout.SpawnSpots.Count; i++)
             {
                 FloorSpot spot = layout.SpawnSpots[i];
+                if (spot.Level != level)
+                    continue;
                 float distance = (spot.X - plan.x) * (spot.X - plan.x) + (spot.Y - plan.y) * (spot.Y - plan.y);
                 if (distance < bestDistance)
                 {
@@ -253,7 +255,7 @@ namespace CloseTheDeal.FloorRace
                 }
             }
 
-            return floor.World(layout.SpawnSpots[best].X, layout.SpawnSpots[best].Y);
+            return floor.World(layout.SpawnSpots[best]);
         }
 
         // A firm comes back only when all of it is down, together, near the briefcase.
@@ -386,7 +388,7 @@ namespace CloseTheDeal.FloorRace
                 _freshMatch = false;
                 if (layout.HasBriefcase)
                 {
-                    Vector3 spot = _floor.World(layout.Briefcase.X, layout.Briefcase.Y, CaseReturnHeight);
+                    Vector3 spot = _floor.World(layout.Briefcase, CaseReturnHeight);
                     Match.ServerPlaceBriefcase(spot, Quaternion.identity, layout.Floor);
                     _caseHome = spot;
                     _hasCaseHome = true;
@@ -425,7 +427,7 @@ namespace CloseTheDeal.FloorRace
             if (spots.Count == 0)
                 spots = layout.SpawnSpots;
             FloorSpot spot = spots[Mathf.Abs(slot) % spots.Count];
-            return _floor.World(spot.X, spot.Y, SpawnLift);
+            return _floor.World(spot, SpawnLift);
         }
 
         // Alive or dead, the player ends up standing here.
