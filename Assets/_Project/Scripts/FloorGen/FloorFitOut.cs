@@ -114,17 +114,16 @@ namespace CloseTheDeal.FloorGen
         };
         static readonly Loose OfficeChair = new(PropKind.Chair, 4f, 1.4f, 180f);
 
-        static readonly List<int> Changed = new();
-
         public static void Place(FloorLayout layout, FloorGenProfile profile, ref FloorRandom rng, bool[] keepClear)
         {
             FloorNav nav = layout.Nav;
+            var changed = new List<int>();
             foreach (FloorRoom room in layout.Rooms)
             {
                 if (room.Kind == RoomKind.ManagersOffice)
                 {
                     foreach (Item item in OfficeItems)
-                        TryPlace(layout, nav, keepClear, item, layout.OfficeX0, layout.OfficeY0, 0);
+                        TryPlace(layout, nav, keepClear, changed, item, layout.OfficeX0, layout.OfficeY0, 0);
                     layout.PropSpots.Add(new PropSpot { Kind = OfficeChair.Kind, X = layout.OfficeX0 + OfficeChair.U, Y = layout.OfficeY0 + OfficeChair.V, Yaw = OfficeChair.Yaw });
                     continue;
                 }
@@ -142,7 +141,7 @@ namespace CloseTheDeal.FloorGen
                     {
                         if (item.Need != Need.None && !Backed(layout, i, j, turn, item.Need))
                             continue;
-                        placedAny |= TryPlace(layout, nav, keepClear, item, i * FloorLayout.Cell, j * FloorLayout.Cell, turn);
+                        placedAny |= TryPlace(layout, nav, keepClear, changed, item, i * FloorLayout.Cell, j * FloorLayout.Cell, turn);
                     }
 
                     if (!placedAny)
@@ -219,7 +218,7 @@ namespace CloseTheDeal.FloorGen
             }
         }
 
-        static bool TryPlace(FloorLayout layout, FloorNav nav, bool[] keepClear, Item item, float originX, float originY, int turn)
+        static bool TryPlace(FloorLayout layout, FloorNav nav, bool[] keepClear, List<int> changed, Item item, float originX, float originY, int turn)
         {
             Turn(item.U, item.V, turn, out float u, out float v);
             float yaw = (item.Yaw + 90f * turn) % 360f;
@@ -230,11 +229,11 @@ namespace CloseTheDeal.FloorGen
             if (nav.AnyInRect(keepClear, x - hw, y - hd, x + hw, y + hd, PlayerRadius))
                 return false;
 
-            Changed.Clear();
-            nav.BlockRect(x - hw, y - hd, x + hw, y + hd, PlayerRadius, Changed);
+            changed.Clear();
+            nav.BlockRect(x - hw, y - hd, x + hw, y + hd, PlayerRadius, changed);
             if (!nav.AllConnected())
             {
-                nav.Unblock(Changed);
+                nav.Unblock(changed);
                 return false;
             }
 

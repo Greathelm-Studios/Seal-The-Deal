@@ -13,6 +13,7 @@ namespace CloseTheDeal.Editor.FloorRace
     public static class FloorLayoutPreview
     {
         public const string ProfileFolder = "Assets/_Project/Profiles/FloorRace";
+        public const string KitPath = ProfileFolder + "/FloorKit.asset";
         public const string GenProfilePath = ProfileFolder + "/FloorGen.asset";
         const string OutFolder = "Temp/FloorGen";
         const int PixelsPerMetre = 20, Margin = 30;

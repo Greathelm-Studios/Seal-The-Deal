@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CloseTheDeal.Combat;
 using CloseTheDeal.Editor.Art;
 using CloseTheDeal.Editor.Greybox;
@@ -20,7 +21,6 @@ namespace CloseTheDeal.Editor.FloorRace
     {
         public const string ScenePath = "Assets/_Project/Scenes/FloorRace.unity";
         const string RaceProfilePath = FloorLayoutPreview.ProfileFolder + "/FloorRace.asset";
-        const string KitPath = FloorLayoutPreview.ProfileFolder + "/FloorKit.asset";
         const string ItemFolder = "Assets/_Project/Prefabs/Items/";
         const string PropFolder = "Assets/_Project/Prefabs/Props/";
         const string GunMapPath = "Assets/_Project/Profiles/Integration/GunPickupMap.asset";
@@ -51,14 +51,19 @@ namespace CloseTheDeal.Editor.FloorRace
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
 
-            Debug.Log(BuildAndSave());
+            string result = BuildAndSave();
+            if (result.Contains(" problem"))
+                Debug.LogError(result);
+            else
+                Debug.Log(result);
         }
 
         /// <summary>Builds and saves the scene without asking. The menu item asks first.</summary>
         public static string BuildAndSave()
         {
             Debug.Log(FloorBuildMeasure.FillKit());
-            FloorRaceProfile profile = EnsureRaceProfile();
+            var problems = new List<string>();
+            FloorRaceProfile profile = EnsureRaceProfile(problems);
             string profilePath = AssetDatabase.GetAssetPath(profile);
 
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -68,14 +73,15 @@ namespace CloseTheDeal.Editor.FloorRace
             OfficeLook.Apply(askFirst: false);
 
             GameModeLaneSetup.AddMatch();
-            AddStartingLoadout();
+            AddStartingLoadout(problems);
             // Health, ammo and hit marks; it leaves the pistol-only loadout above alone.
             ShootingLaneSetup.AddToOpenScene();
             PickupsLaneSetup.BuildPromptCanvas();
-            AddIntegration();
+            AddIntegration(problems);
             // A new scene unloads unused assets; references taken before it would save as "none".
-            AddRace(AssetDatabase.LoadAssetAtPath<FloorRaceProfile>(profilePath));
-            FloorRaceHudSetup.AddToOpenScene();
+            AddRace(Need<FloorRaceProfile>(profilePath, problems), problems);
+            if (!FloorRaceHudSetup.AddToOpenScene())
+                problems.Add("The Floor Race HUD was not added (see the earlier error).");
             // Moves the match section (the host's Start button) into the kit's in-game menu.
             UiKitSetup.AddToOpenScene();
 
@@ -83,10 +89,13 @@ namespace CloseTheDeal.Editor.FloorRace
             string ids = KitOfficeScene.GiveNetworkSceneIds(scene);
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
-            return $"[Floor Race] Built {ScenePath}. {ids}";
+            string built = $"[Floor Race] Built {ScenePath}";
+            return problems.Count == 0
+                ? $"{built}. {ids}"
+                : $"{built} with {problems.Count} {(problems.Count == 1 ? "problem" : "problems")}: {string.Join(" ", problems)} {ids}";
         }
 
-        static FloorRaceProfile EnsureRaceProfile()
+        static FloorRaceProfile EnsureRaceProfile(List<string> problems)
         {
             var existing = AssetDatabase.LoadAssetAtPath<FloorRaceProfile>(RaceProfilePath);
             if (existing != null)
@@ -97,23 +106,34 @@ namespace CloseTheDeal.Editor.FloorRace
             profile.Loot = new FloorRaceProfile.LootEntry[DefaultLoot.Length];
             for (int i = 0; i < DefaultLoot.Length; i++)
             {
-                profile.Loot[i].Prefab = Load(ItemFolder + DefaultLoot[i].prefab + ".prefab");
+                profile.Loot[i].Prefab = Load(ItemFolder + DefaultLoot[i].prefab + ".prefab", problems);
                 profile.Loot[i].Weight = DefaultLoot[i].weight;
             }
-            profile.ChairProp = Load(PropFolder + "Chair.prefab");
-            profile.MonitorProp = Load(PropFolder + "Monitor.prefab");
-            profile.CabinetProp = Load(PropFolder + "Cabinet.prefab");
+            profile.ChairProp = Load(PropFolder + "Chair.prefab", problems);
+            profile.MonitorProp = Load(PropFolder + "Monitor.prefab", problems);
+            profile.CabinetProp = Load(PropFolder + "Cabinet.prefab", problems);
             EditorUtility.SetDirty(profile);
             AssetDatabase.SaveAssetIfDirty(profile);
             return profile;
         }
 
-        static NetworkObject Load(string path)
+        static NetworkObject Load(string path, List<string> problems)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<NetworkObject>(path);
             if (prefab == null)
+            {
                 Debug.LogWarning($"[Floor Race] No networked prefab at {path}; that loot or prop slot is left empty.");
+                problems.Add($"No networked prefab at {path}, so that loot or prop slot is empty.");
+            }
             return prefab;
+        }
+
+        static T Need<T>(string path, List<string> problems) where T : Object
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<T>(path);
+            if (asset == null)
+                problems.Add($"No {typeof(T).Name} at {path}.");
+            return asset;
         }
 
         static void AddCamera()
@@ -127,32 +147,32 @@ namespace CloseTheDeal.Editor.FloorRace
             go.transform.SetPositionAndRotation(CameraAt, Quaternion.LookRotation(CameraLook - CameraAt));
         }
 
-        static void AddStartingLoadout()
+        static void AddStartingLoadout(List<string> problems)
         {
             if (Object.FindAnyObjectByType<StartingLoadout>() != null)
                 return;
 
             var go = new GameObject("Starting Loadout");
-            go.AddComponent<StartingLoadout>().Weapons = new[] { AssetDatabase.LoadAssetAtPath<WeaponDefinition>(PistolPath) };
+            go.AddComponent<StartingLoadout>().Weapons = new[] { Need<WeaponDefinition>(PistolPath, problems) };
         }
 
-        static void AddIntegration()
+        static void AddIntegration(List<string> problems)
         {
             var go = new GameObject("Integration");
             go.AddComponent<SharedHands>();
             var guns = go.AddComponent<GunPickups>();
             var serialized = new SerializedObject(guns);
-            GreyboxSceneSetup.SetReference(serialized, "_map", AssetDatabase.LoadAssetAtPath<GunPickupMap>(GunMapPath));
+            GreyboxSceneSetup.SetReference(serialized, "_map", Need<GunPickupMap>(GunMapPath, problems));
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        static void AddRace(FloorRaceProfile profile)
+        static void AddRace(FloorRaceProfile profile, List<string> problems)
         {
             var go = new GameObject(RaceObjectName);
             go.AddComponent<NetworkObject>();
             var builder = go.AddComponent<FloorBuilder>();
             var serializedBuilder = new SerializedObject(builder);
-            GreyboxSceneSetup.SetReference(serializedBuilder, "_kit", AssetDatabase.LoadAssetAtPath<FloorKit>(KitPath));
+            GreyboxSceneSetup.SetReference(serializedBuilder, "_kit", Need<FloorKit>(FloorLayoutPreview.KitPath, problems));
             serializedBuilder.ApplyModifiedPropertiesWithoutUndo();
 
             var director = go.AddComponent<FloorRaceDirector>();

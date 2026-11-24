@@ -127,8 +127,9 @@ namespace CloseTheDeal.FloorGen
             if (!layout.Nav.AllConnected())
                 layout.Problems.Add("The bare floor is not one connected area.");
             FloorFitOut.Place(layout, profile, ref rng, KeepClear(layout));
-            PlaceSpots(layout, ref rng, profile);
-            PlaceStarts(layout, ref rng, profile, floor);
+            var allLoot = new List<FloorSpot>();
+            PlaceSpots(layout, ref rng, profile, allLoot);
+            PlaceStarts(layout, ref rng, profile, floor, allLoot);
             Check(layout, profile, floor, top);
             layout.Valid = layout.Problems.Count == 0;
             return layout;
@@ -755,7 +756,7 @@ namespace CloseTheDeal.FloorGen
         static readonly int[] SpawnNodes = { 4, 4, 2, 2, 5, 5, 2, 5, 5, 2 };
         static readonly int[] LootNodes = { 1, 1, 6, 6, 6, 1, 1, 6 };
 
-        static void PlaceSpots(FloorLayout layout, ref FloorRandom rng, FloorGenProfile profile)
+        static void PlaceSpots(FloorLayout layout, ref FloorRandom rng, FloorGenProfile profile, List<FloorSpot> allLoot)
         {
             FloorNav nav = layout.Nav;
             const int P = FloorNav.PerCell;
@@ -787,8 +788,7 @@ namespace CloseTheDeal.FloorGen
                 }
 
             rng.Shuffle(loot);
-            _allLoot.Clear();
-            _allLoot.AddRange(loot);
+            allLoot.AddRange(loot);
             float spacing = profile.LootSpacing * profile.LootSpacing;
             foreach (FloorSpot spot in loot)
             {
@@ -806,10 +806,9 @@ namespace CloseTheDeal.FloorGen
                 layout.PropSpots.RemoveRange(profile.MaxProps, layout.PropSpots.Count - profile.MaxProps);
         }
 
-        static readonly List<FloorSpot> _allLoot = new();
         static readonly int[] GroupOffsets = { 0, 0, 2, 0, 0, 2, -2, 0, 0, -2, 2, 2, -2, -2, 2, -2, -2, 2 };
 
-        static void PlaceStarts(FloorLayout layout, ref FloorRandom rng, FloorGenProfile profile, int floor)
+        static void PlaceStarts(FloorLayout layout, ref FloorRandom rng, FloorGenProfile profile, int floor, List<FloorSpot> allLoot)
         {
             FloorNav nav = layout.Nav;
             int goal = GoalNode(layout);
@@ -865,7 +864,7 @@ namespace CloseTheDeal.FloorGen
                 return;
 
             int minCaseGoal = (int)(profile.MinCaseToLift / FloorNav.Node), minCaseStart = (int)(profile.MinCaseToStart / FloorNav.Node);
-            foreach (FloorSpot spot in _allLoot)
+            foreach (FloorSpot spot in allLoot)
             {
                 int n = nav.NodeAt(spot.X, spot.Y);
                 if (toGoal[n] < minCaseGoal || fromA[n] < minCaseStart || fromB[n] < minCaseStart || Math.Abs(fromA[n] - fromB[n]) > tolerance)

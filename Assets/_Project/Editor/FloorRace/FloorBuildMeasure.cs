@@ -13,7 +13,6 @@ namespace CloseTheDeal.Editor.FloorRace
     /// <summary>Play Mode measuring run: builds and tears down generated floors, recording build time, draw calls and anything left behind.</summary>
     public static class FloorBuildMeasure
     {
-        const string KitPath = FloorLayoutPreview.ProfileFolder + "/FloorKit.asset";
         const string KitPrefabFolder = "Assets/_Project/Art/Kit/Prefabs";
         const string BelowMaterialPath = "Assets/_Project/Art/Kit/Materials/Wall_PaperWhite.mat";
         const string ReportPath = "Temp/FloorGen/build_report.txt";
@@ -28,7 +27,7 @@ namespace CloseTheDeal.Editor.FloorRace
         /// <summary>Creates FloorKit.asset if missing and fills its empty slots from the kit prefabs by name. Never replaces a slot someone set.</summary>
         public static string FillKit()
         {
-            FloorKit kit = FloorLayoutPreview.EnsureAsset<FloorKit>(KitPath);
+            FloorKit kit = FloorLayoutPreview.EnsureAsset<FloorKit>(FloorLayoutPreview.KitPath);
             string[] names = System.Enum.GetNames(typeof(KitPiece));
             if (kit.Prefabs.Length != names.Length)
                 System.Array.Resize(ref kit.Prefabs, names.Length);
@@ -92,7 +91,7 @@ namespace CloseTheDeal.Editor.FloorRace
             go.transform.position = new Vector3(0f, 500f, 0f);
             var run = new Run { Builder = go.AddComponent<FloorBuilder>() };
             var serialized = new SerializedObject(run.Builder);
-            serialized.FindProperty("_kit").objectReferenceValue = AssetDatabase.LoadAssetAtPath<FloorKit>(KitPath);
+            serialized.FindProperty("_kit").objectReferenceValue = AssetDatabase.LoadAssetAtPath<FloorKit>(FloorLayoutPreview.KitPath);
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             foreach (Camera other in Camera.allCameras)

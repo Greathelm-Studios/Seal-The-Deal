@@ -21,7 +21,7 @@ namespace CloseTheDeal.Editor.FloorRace
         const float TrackerBottom = 116f;
         const float TitleSize = 64f;
 
-        public static void AddToOpenScene()
+        public static bool AddToOpenScene()
         {
             GameMenu menu = Object.FindAnyObjectByType<GameMenu>();
             Transform hud = menu != null ? menu.transform.Find("Hud") : null;
@@ -32,7 +32,7 @@ namespace CloseTheDeal.Editor.FloorRace
             if (hud == null || race == null || match == null || tokens == null || plate == null)
             {
                 Debug.LogError("[Floor Race] No HUD added: the scene needs the game menu, the Match, the Floor Race object and the UI kit.");
-                return;
+                return false;
             }
 
             Transform old = hud.Find(HudName);
@@ -81,6 +81,7 @@ namespace CloseTheDeal.Editor.FloorRace
             UiKitAssets.Set(component, "_transitionTitle", title);
             UiKitAssets.Set(component, "_transitionLine", line);
             root.gameObject.SetActive(false);
+            return true;
         }
 
         static RectTransform Plate(GameObject prefab, Transform parent, string name, Vector2 anchor, Vector2 position, Vector2 size)

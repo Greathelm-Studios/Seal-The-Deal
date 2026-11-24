@@ -16,7 +16,7 @@ namespace CloseTheDeal.Editor.Art
         const string VolumeObjectName = "Office Look";
         const string SunObjectName = "Sun";
 
-        const string SkyShaderName = "Seal the Deal/Office Sky";
+        const string SkyShaderName = "Close the Deal/Office Sky";
 
         const float SunElevation = 32f;
         const float SunHeading = 140f;

@@ -1,6 +1,6 @@
 # FLOOR_GEN
 
-**Status:** Current · **Last updated:** 2026-11-22
+**Status:** Current · **Last updated:** 2026-11-24
 
 The floor generator for the floor race ([FLOOR_RACE.md](FLOOR_RACE.md)). The "Measured" section says what has been checked and how. Layout drawings: [seed 1, floor 1](../proof/floor_race_2026-11-22/layout_seed1_floor01.png), [seed 77777, floor 10](../proof/floor_race_2026-11-22/layout_seed77777_floor10.png) (grey = furniture, red = open window, yellow = exit lift, orange = arrival lift, green and magenta = the two starts, gold = the briefcase, blue room = the manager's office).
 
@@ -139,6 +139,21 @@ Sixteen layouts (four seeds, floors 1, 2, 5 and 10) were drawn and looked at: ri
 - A floor has no walls that hide what is behind them from the renderer (no occlusion culling at runtime), so the camera draws most of the floor from anywhere. That is the reason the draw calls are in the thousands.
 - One floor (seed 1, floor 1) was built and looked at from two eye-height views and from above: walls, doors, glazing, ceilings and furniture stand where the drawing puts them.
 - In the floor race's two-instance run a development build generated and built each floor from the synced seed with the same object count as the Editor host ([FLOOR_RACE.md](FLOOR_RACE.md), "Checked so far"). Players were placed on the floors by script; nobody has walked one by hand, and the numbers above were not measured in a build.
+
+**GPU Resident Drawer, 2026-11-24, Editor Play Mode** (URP's `GPU Resident Drawer` set to Instanced Drawing on `PC_RPAsset` with `BatchRendererGroup Variants` set to Keep All, against the shipped setting of off; same `Measure Floor Build` run, same empty scene with one soft-shadow sun, both runs in one Editor session):
+
+| What | Off (shipped) | On |
+|---|---|---|
+| Draw calls, average of the four views | 2,351 to 2,778 | 262 to 384 |
+| Draw calls, worst view | 2,902 to 3,228 | 321 to 401 |
+| Set-pass calls, average | 64 to 104 | 44 to 82 |
+| Build one floor | 4.3 to 9.6 ms | 5.2 to 7.4 ms |
+| Frame time on one floor (seed 77777, floor 10, one view, median of 300 frames, three runs) | 3.0 to 3.1 ms main thread, 3.1 ms GPU | 3.0 to 3.1 ms main thread, 3.2 ms GPU |
+
+- It cuts draw calls to about an eighth and needs no Read/Write on the kit models. On this PC the frame time did not change, so draw calls are not what limits a generated floor here.
+- It is left off. Turning it on changes two project settings and keeps more shader variants in a build; whether it helps on a slower PC or in a build has not been measured.
+- Merged pieces are not picked up by it: with both on, draw calls were the same as with both off.
+- Counting free walk-map nodes with a running total instead of a scan was tried the same day and did not change generate time (about 3 ms a floor over 2,000 floors either way), so it was not kept. The time is in the flood fill itself.
 
 ## Known limitations
 
