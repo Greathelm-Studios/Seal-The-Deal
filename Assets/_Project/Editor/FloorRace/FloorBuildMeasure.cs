@@ -15,11 +15,13 @@ namespace CloseTheDeal.Editor.FloorRace
     public static class FloorBuildMeasure
     {
         const string KitPrefabFolder = "Assets/_Project/Art/Kit/Prefabs";
-        const string BelowMaterialPath = "Assets/_Project/Art/Kit/Materials/Wall_PaperWhite.mat";
+        const string KitMaterialFolder = "Assets/_Project/Art/Kit/Materials";
+        const string BelowMaterialPath = KitMaterialFolder + "/Wall_PaperWhite.mat";
         const string ReportPath = "Temp/FloorGen/build_report.txt";
         const string SignFontPath = "Assets/_Project/UI/Fonts/SairaExpanded-Light SDF.asset";
         const int PosterCount = 12;
         const string RingBandPath = "Assets/_Project/Art/Signs/Band_Cobalt_Inlay.mat";
+        const string CeilingLightPath = KitMaterialFolder + "/Light_Strip.mat";
         // ArtSource/Kit/posters/COPY.md, "Wall text".
         static readonly string[] DefaultSlogans =
         {
@@ -64,6 +66,8 @@ namespace CloseTheDeal.Editor.FloorRace
                 kit.Posters = Posters(missing);
             if (kit.RingBand == null)
                 kit.RingBand = AssetDatabase.LoadAssetAtPath<Material>(RingBandPath);
+            if (kit.CeilingLight == null)
+                kit.CeilingLight = AssetDatabase.LoadAssetAtPath<Material>(CeilingLightPath);
             if (kit.SloganBand == null)
                 kit.SloganBand = AssetDatabase.LoadAssetAtPath<Material>(BelowMaterialPath);
             if (kit.Slogans == null || kit.Slogans.Length == 0)

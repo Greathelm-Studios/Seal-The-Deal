@@ -63,6 +63,10 @@ namespace CloseTheDeal.FloorRace
         [Tooltip("Lines written high on coloured walls, one per wall bay, picked by the floor's seed. Keep them short: a line is shrunk to fit 3.6 metres. Empty = no slogans.")]
         public string[] Slogans = new string[0];
 
+        [Header("Ceiling")]
+        [Tooltip("What the lit lines on the ceiling are made of: the line over the corridors, the lanes over open halls and the strip rows in rooms. The fill tool sets the kit's own strip light. Empty = no lit lines, and corridors and halls go dark overhead.")]
+        public Material CeilingLight;
+
         [Header("Room lights")]
         [Tooltip("Colour of the ceiling lights in closed rooms on odd-numbered floors. KitOffice's first firm colour.")]
         public Color LightOdd = new(0.52f, 0.62f, 1f);

@@ -166,6 +166,7 @@ MonoBehaviour:
   - WE'LL REMEMBER YOU AT THE NEXT RESTRUCTURING
   - EVERY DEADLINE WAS YESTERDAY
   - PASSION IS UNPAID
+  CeilingLight: {fileID: 2100000, guid: 6ee6f133c895add4b9c9495c3fb2a5f4, type: 2}
   LightOdd: {r: 0.52, g: 0.62, b: 1, a: 1}
   LightEven: {r: 0.5, g: 0.84, b: 1, a: 1}
   LightIntensity: 6

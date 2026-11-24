@@ -46,7 +46,7 @@ namespace CloseTheDeal.FloorRace
         public FloorLiftDoors ExitDoors, ArrivalDoors;
         public int Objects;
         public double BuildMilliseconds;
-        internal readonly List<Mesh> Merged = new();
+        internal readonly List<Mesh> OwnedMeshes = new();
 
         /// <summary>A plan position on this floor as a world position, <paramref name="up"/> metres above the floor.</summary>
         public Vector3 World(float x, float y, float up = 0f) => Root.transform.TransformPoint(new Vector3(x, up, -y));
@@ -64,7 +64,7 @@ namespace CloseTheDeal.FloorRace
     public sealed class FloorBuilder : MonoBehaviour
     {
         const float BelowHeight = 40f, SlabThickness = 0.2f, BelowGap = 0.01f;
-        const float LightHeight = 4.05f;
+        const float LightHeight = 4.05f, CeilingLineDrop = 0.012f;
         const float BandWidth = 0.3f, BandLift = 0.012f, SloganWidth = 3.6f, TextGap = 0.004f;
         const float SillHeight = 0.6f, ClearHeight = 4.3f, BounceLift = 0.15f, BounceAngle = 160f, BounceInner = 40f, WallClearance = 0.5f;
         const float MirrorHeight = 1f, MirrorDepth = 0.42f, MirrorMargin = 0.4f, MirrorBlend = 0.2f, MirrorFar = 120f;
@@ -131,6 +131,7 @@ namespace CloseTheDeal.FloorRace
             AddBuildingBelow(root.transform, layout);
             AddMarks(root.transform, layout);
             AddRingBand(root.transform, layout);
+            AddCeilingLines(built);
             AddLights(root.transform, layout);
             AddBounce(root.transform, layout);
 
@@ -161,10 +162,10 @@ namespace CloseTheDeal.FloorRace
                 Destroy(floor.Root);
             }
 
-            foreach (Mesh mesh in floor.Merged)
+            foreach (Mesh mesh in floor.OwnedMeshes)
                 if (mesh != null)
                     Destroy(mesh);
-            floor.Merged.Clear();
+            floor.OwnedMeshes.Clear();
             floor.Root = null;
         }
 
@@ -370,6 +371,42 @@ namespace CloseTheDeal.FloorRace
             probe.RenderProbe();
         }
 
+        void AddCeilingLines(BuiltFloor built)
+        {
+            List<CeilingLine> lines = built.Layout.CeilingLines;
+            if (_kit.CeilingLight == null || lines.Count == 0)
+                return;
+
+            var vertices = new Vector3[lines.Count * 4];
+            var normals = new Vector3[lines.Count * 4];
+            var triangles = new int[lines.Count * 6];
+            float height = FloorCeiling.Soffit - CeilingLineDrop;
+            for (int n = 0; n < lines.Count; n++)
+            {
+                CeilingLine line = lines[n];
+                float half = FloorCeiling.WidthOf(line.Kind) * 0.5f;
+                float x0 = line.X0 - (line.AlongX ? 0f : half), x1 = line.X1 + (line.AlongX ? 0f : half);
+                float y0 = line.Y0 - (line.AlongX ? half : 0f), y1 = line.Y1 + (line.AlongX ? half : 0f);
+                int v = n * 4, t = n * 6;
+                vertices[v] = new Vector3(x0, height, -y1);
+                vertices[v + 1] = new Vector3(x1, height, -y1);
+                vertices[v + 2] = new Vector3(x1, height, -y0);
+                vertices[v + 3] = new Vector3(x0, height, -y0);
+                normals[v] = normals[v + 1] = normals[v + 2] = normals[v + 3] = Vector3.down;
+                triangles[t] = v; triangles[t + 1] = v + 1; triangles[t + 2] = v + 2;
+                triangles[t + 3] = v; triangles[t + 4] = v + 2; triangles[t + 5] = v + 3;
+            }
+
+            var mesh = new Mesh { name = "Ceiling lines", vertices = vertices, normals = normals, triangles = triangles };
+            built.OwnedMeshes.Add(mesh);
+            var go = new GameObject("Ceiling lines");
+            go.transform.SetParent(built.Root.transform, false);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var renderer = go.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = _kit.CeilingLight;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+        }
+
         void AddLights(Transform parent, FloorLayout layout)
         {
             if (layout.Lights.Count == 0 || _kit.LightIntensity <= 0f)
@@ -441,8 +478,8 @@ namespace CloseTheDeal.FloorRace
             for (int i = 0; i < _still.Count; i++)
             {
                 Mesh now = _still[i].GetComponent<MeshFilter>().sharedMesh;
-                if (now != null && now != _own[i] && !built.Merged.Contains(now))
-                    built.Merged.Add(now);
+                if (now != null && now != _own[i] && !built.OwnedMeshes.Contains(now))
+                    built.OwnedMeshes.Add(now);
             }
             _own.Clear();
         }

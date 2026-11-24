@@ -155,6 +155,39 @@ namespace CloseTheDeal.FloorGen
         public string Text;
     }
 
+    /// <summary>What hangs over one bay.</summary>
+    public enum CeilingKind : byte
+    {
+        /// <summary>A lift shaft: nothing.</summary>
+        None,
+        /// <summary>Bare soffit over a corridor, carrying the spine.</summary>
+        Route,
+        /// <summary>Bare soffit over an open hall, with one lane down the bay.</summary>
+        Lanes,
+        /// <summary>A flush tiled ceiling with two rows of strips.</summary>
+        Tiles,
+        /// <summary>A floating panel with a glowing edge.</summary>
+        Panels
+    }
+
+    public enum CeilingLineKind : byte
+    {
+        /// <summary>The lit line over the corridors: one closed loop over the ring, joined by every cross corridor.</summary>
+        Spine,
+        Lane,
+        Strip
+    }
+
+    /// <summary>One straight lit line on the ceiling, by its centre line in plan metres. Runs east (Y0 = Y1) or south (X0 = X1).</summary>
+    public struct CeilingLine
+    {
+        public CeilingLineKind Kind;
+        public float X0, Y0, X1, Y1;
+
+        public bool AlongX => Y0 == Y1;
+        public float Length => AlongX ? X1 - X0 : Y1 - Y0;
+    }
+
     public struct FloorLift
     {
         public int CellX, CellY;
@@ -174,6 +207,8 @@ namespace CloseTheDeal.FloorGen
         public bool Open;
         public EdgeKind Front;
         public int Exits;
+        /// <summary>True when this room's ceiling lines run north to south.</summary>
+        public bool CeilingAlongY;
         public readonly List<int> Cells = new();
 
         public bool IsCorridor => Kind == RoomKind.Ring || Kind == RoomKind.Court;
@@ -216,7 +251,10 @@ namespace CloseTheDeal.FloorGen
         public readonly List<FloorSpot> SpawnSpots = new();
         public readonly List<FloorSpot> LootSpots = new();
         public readonly List<PropSpot> PropSpots = new();
-        /// <summary>Centres of the bays that get a ceiling light, in plan metres.</summary>
+        /// <summary>The ceiling over each cell, planned for the whole floor at once by FloorCeiling.</summary>
+        public CeilingKind[] CeilingOf;
+        public readonly List<CeilingLine> CeilingLines = new();
+        /// <summary>Where the ceiling plan puts a room light, in plan metres.</summary>
         public readonly List<FloorSpot> Lights = new();
         public readonly List<WallMark> Marks = new();
 

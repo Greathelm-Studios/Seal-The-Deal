@@ -44,7 +44,7 @@ namespace CloseTheDeal.FloorGen
         public const int MaxAttempts = 24;
         const int Unassigned = -2;
         const float LiftCarInset = 2.075f, LiftLeafInset = 0.225f, LiftFrontStep = 0.75f;
-        const float Soffit = 4.3f, FloorToFloor = 4.5f;
+        const float FloorToFloor = 4.5f;
 
         struct Rect
         {
@@ -122,6 +122,7 @@ namespace CloseTheDeal.FloorGen
             SetEdges(layout, ref rng, profile);
             AddDoors(layout, ref rng);
             EmitStructure(layout);
+            FloorCeiling.Plan(layout);
 
             layout.Nav = new FloorNav(layout);
             if (!layout.Nav.AllConnected())
@@ -598,24 +599,13 @@ namespace CloseTheDeal.FloorGen
                 for (int i = 0; i < layout.Cols; i++)
                 {
                     int room = layout.RoomOf[layout.CellIndex(i, j)];
-                    FloorRoom r = room >= 0 ? layout.Rooms[room] : null;
-                    // Routes and open halls keep a bare soffit whose light line follows the way you walk.
-                    if (r != null && !r.IsPublic)
-                        Add(layout, KitPiece.Slab_4x4, i * C, j * C, 0f, FloorToFloor);
-                    else if (r != null && LinesRunSouth(layout, r, i, j))
-                        Add(layout, KitPiece.Slab_4x4_LightLine, (i + 1) * C, j * C, 90f, FloorToFloor);
-                    else
-                        Add(layout, KitPiece.Slab_4x4_LightLine, i * C, j * C, 0f, FloorToFloor);
-                    if (r == null)
+                    Add(layout, KitPiece.Slab_4x4, i * C, j * C, 0f, FloorToFloor);
+                    if (room < 0)
                         continue;
 
                     Add(layout, KitPiece.Slab_4x4, i * C, j * C, 0f);
-                    if (r.IsPublic)
-                        continue;
-                    bool carpeted = r.Kind == RoomKind.OpenOffice || r.Kind == RoomKind.Meeting || r.Kind == RoomKind.ManagersOffice;
-                    Add(layout, carpeted ? KitPiece.Ceiling_Panel_4x4 : KitPiece.Ceiling_Grid_4x4, i * C, j * C, 0f, Soffit);
-                    layout.Lights.Add(new FloorSpot { X = (i + 0.5f) * C, Y = (j + 0.5f) * C, Room = room });
-                    if (carpeted)
+                    RoomKind kind = layout.Rooms[room].Kind;
+                    if (!layout.Rooms[room].IsPublic && (kind == RoomKind.OpenOffice || kind == RoomKind.Meeting || kind == RoomKind.ManagersOffice))
                         Add(layout, KitPiece.Carpet_Overlay_4x4, i * C, j * C, 0f);
                 }
 
@@ -664,31 +654,6 @@ namespace CloseTheDeal.FloorGen
 
             if (layout.HasExitLift) Shaft(layout, layout.ExitLift);
             if (layout.HasArrivalLift) Shaft(layout, layout.ArrivalLift);
-        }
-
-        // A corridor bay follows the corridor. An open hall takes one direction for the whole room: along its windows, or its longer side.
-        static bool LinesRunSouth(FloorLayout layout, FloorRoom room, int i, int j)
-        {
-            if (room.IsCorridor)
-                return Corridor(layout, i, j - 1) + Corridor(layout, i, j + 1) > Corridor(layout, i - 1, j) + Corridor(layout, i + 1, j);
-
-            int i0 = layout.Cols, i1 = -1, j0 = layout.Rows, j1 = -1;
-            foreach (int cell in room.Cells)
-            {
-                int ci = cell % layout.Cols, cj = cell / layout.Cols;
-                i0 = Math.Min(i0, ci); i1 = Math.Max(i1, ci);
-                j0 = Math.Min(j0, cj); j1 = Math.Max(j1, cj);
-            }
-
-            if (j1 < layout.RingY0 || j0 > layout.RingY1) return false;
-            if (i1 < layout.RingX0 || i0 > layout.RingX1) return true;
-            return j1 - j0 > i1 - i0;
-        }
-
-        static int Corridor(FloorLayout layout, int i, int j)
-        {
-            int room = layout.RoomAt(i, j);
-            return room >= 0 && layout.Rooms[room].IsCorridor ? 1 : 0;
         }
 
         static bool Windowed(FloorLayout layout, int ai, int aj, int bi, int bj, int side)

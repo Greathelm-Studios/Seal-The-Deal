@@ -31,7 +31,9 @@ How it is wired, so you know where to cut:
 - `Scripts/FloorRace/FloorKit.cs` and `Profiles/FloorRace/FloorKit.asset` map pieces to prefabs and hold the sign, light and reflection settings. `Seal the Deal > Floor Race > Fill Floor Kit` fills empty slots only.
 - The ceiling is decided in `EmitStructure` in `FloorGenerator.cs`, one bay at a time: a bare `Slab_4x4_LightLine` over corridors and open halls (turned to follow a corridor, or one direction per hall), a floating `Ceiling_Panel_4x4` over each carpeted room bay, a flush `Ceiling_Grid_4x4` over each service room bay. **This per-bay rule is what Harvey is rejecting.**
 
-Not started: everything under Next steps.
+**Ceiling plan (next step 2): built on 2026-11-24, not committed when this was written.** `FloorCeiling.cs` plans the whole ceiling in one pass and `FloorBuilder` draws its lit lines as one mesh; the layout preview tool draws it and the sweep checks it. Design, numbers and what was looked at: [systems/FLOOR_GEN.md](systems/FLOOR_GEN.md), "The ceiling plan". Harvey has not walked it yet and it has not been seen from a client.
+
+Not started: next steps 3, 4 and 5.
 
 ## What was checked
 
@@ -52,8 +54,8 @@ Not started: everything under Next steps.
 
 ## Open questions and risks
 
-- **Scope (AGENTS.md §2).** Two-storey floors and bigger floors are design changes to the floor race, and [GDD.md](GDD.md) still describes the two towers. Harvey asked for them; Adam and Alex have not weighed in. A line is on [WORKBOARD.md](WORKBOARD.md) under Release risks. Ask Harvey whether the team has agreed before building items 3 and 4.
-- **What "tilesets" means.** My reading: authored room and zone templates (walls, furniture, ceiling and lights designed together) that the generator picks and fits, grouped into a few layout types. Confirm with Harvey before designing the data format. FLOOR_GEN.md already lists "furniture patterns are a code table" as a limitation.
+- **Scope: agreed.** Harvey said on 2026-11-24 that the team has agreed two-storey and bigger floors. [GDD.md](GDD.md) still describes the two towers; it needs the floor race written into it. The line on [WORKBOARD.md](WORKBOARD.md) under Release risks now carries the cost only.
+- **What "tilesets" means: answered.** Harvey, 2026-11-24: "so the building is still coherent even when randomly generated". It is a goal, not a data format: he is not asking for authored room templates. The ceiling plan is the pattern to repeat: decide a thing once for the whole floor from the finished plan, then place pieces from that decision, instead of choosing bay by bay. Furniture, wall finishes and signs are still chosen bay by bay or room by room. FLOOR_GEN.md still lists "furniture patterns are a code table" as a limitation; that is a separate question from this one.
 - **Two storeys touch the mode, not only the generator.** Things that assume one storey today: the 2D walk map (`FloorNav`) and every fairness check on it; `FloorBuilder`'s 9 m floor pitch (the next floor is built above while the old one stands, so two storeys need more); `FloorRaceDirector.InExitLift`, `RoomNameAt` and `BuildingFrame`; the fall check (`Fall Depth` 3 m below the floor); respawn spot choice in `FloorRaceSpawns`; the reflection probe's box. The kit has the parts (`Stair_Straight_2m`, `Stair_Straight_Half_2m`, `Slab_2x2` for holes, `Guard_Glass_*`), and `KitOfficeScene.cs` shows them used with a court void.
 - **Bigger floors cost.** The plate is 10 x 8 bays (40 x 32 m), tunable to 12 x 10 on `FloorGenProfile`. Pieces, colliders and draw calls scale with area, generate time has a 5 ms budget, and the loose prop cap of 16 and 8 loot pickups will feel thin. The GPU Resident Drawer result is the first lever if draw calls bite. A maze also wants walls off the 4 m grid; the kit has 2 m walls, doors and partitions the generator does not use yet.
 - **Netcode (AGENTS.md §3).** Nothing here should change authority: layouts stay a pure function of seed and floor, built locally. Anything new that players can stand on or be blocked by must be in the layout, not added by the builder. It is not done until it has been seen from a client.
@@ -61,7 +63,7 @@ Not started: everything under Next steps.
 
 ## Next steps
 
-1. Ask Harvey the two questions above (team agreement on scope; what a tileset is to him) and whether the ceiling comes first.
+1. Done: both questions answered (see Open questions and risks).
 2. **Ceiling plan.** Replace the per-bay rule with one pass that plans the whole ceiling after rooms and walls are known: continuous light runs along each route from end to end with a defined treatment where runs meet; one centred, aligned field per room instead of a panel per bay; lights placed from that plan, not per bay. Add a ceiling drawing to `Seal the Deal > Floor Race > Render Layout Previews` so a plan can be judged without entering Play Mode, then check it looking up in Play Mode beside KitOffice. Unused kit pieces worth a look: `Ceiling_LightStrip`, `Ceiling_Beams_4x4`, `Light_Pendant_Linear`, `Pendant_Sphere`, `Ribbon_Ceiling_16m`.
 3. **Layout types.** Today there is one plan shape (ring, core blocks, window bands). Add a few more picked by the seed, each with its own room templates. KitOffice's twin-core court is the obvious second.
 4. Fix the small things in the screenshot notes (door name size and repeats, cobalt on door bays).
@@ -73,7 +75,8 @@ Working notes for the next machine:
 - Driving the Editor from the command line is in [notes/driving-unity-from-the-cli.md](notes/driving-unity-from-the-cli.md). A trap found this session: setting `Application.runInBackground` from a script in the Editor rewrites `ProjectSettings.asset`.
 - To see a floor: open `FloorRace.unity`, press Play, and host (the Esc menu, or `SteamLobby.Host()`); floor 1 of a throwaway seed is built at once.
 - `FloorRace.unity` is tool-written. Do not edit it by hand, and claim it on the workboard before rebuilding it.
-- The captures under `Temp/FloorGen/` are on Harvey's main PC only.
+- Unity empties `Temp/` when the Editor starts, so captures and reports under `Temp/FloorGen/` do not survive a restart. Keep the ones that matter in `docs/proof/`.
+- Leave Play Mode before handing the Editor to another session. The Editor crashed once on 2026-11-24 when a capture script destroyed a just-built floor at once in a session that was still hosting a game; the cause was not pinned down.
 
 ## Prompt to start the next session
 

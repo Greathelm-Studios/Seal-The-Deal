@@ -39,8 +39,8 @@ Every floor of the building is a different office plan made from the KitOffice k
 
 Added on 2026-11-24 after generated floors were put beside KitOffice and read as bare. Each rule copies what `KitOfficeScene.cs` does by hand.
 
-- **Ceilings.** Corridors and open halls keep the bare soffit, and its light line follows the way you walk: along each corridor, and one direction for a whole hall (along its windows, or its longer side). Carpeted rooms (offices, meeting rooms, the manager's office) get the floating `Ceiling_Panel_4x4`. Kitchens, print rooms and archives get the flush `Ceiling_Grid_4x4`. Before this, every room bay had a floating panel and every light line ran east to west, so lines cut across the north and south corridors.
-- **Room lights.** One shadowless spot under the ceiling of every closed room bay, with KitOffice's light-pool values (intensity 6, range 6 m, 100 degree cone, its two firm tints by odd and even floor). The values are on `FloorKit.asset`.
+- **Ceilings.** Planned for the whole floor in one pass once rooms and walls are known ([the ceiling plan](#the-ceiling-plan)). KitOffice's rules are the model: bare soffit with lit lines over circulation, a light line above the ring, floating panels only over rooms.
+- **Room lights.** One shadowless spot under the ceiling of every closed room bay, placed by the ceiling plan, with KitOffice's light-pool values (intensity 6, range 6 m, 100 degree cone, its two firm tints by odd and even floor). The values are on `FloorKit.asset`.
 - **Colour.** A room whose front is a solid wall shows `Wall_Solid_4m_Cobalt` to the walkway, and one of those walls per room carries the floor number 2.6 m tall. Bare solid outside walls get a `Lightbox_Wall_Wave` (40 in 100) or a poster (40 in 100), skipped where furniture stands against the wall.
 - **Signs.** Each door off a walkway has the room's name over it: navy on white walls, white on the dark rail of a glass door. Each lift's indicator panel shows the floor ("5F"). Numbers and names are TextMesh Pro text in the UI's Saira face, so they are always right for the floor; KitOffice's own number, plate and lift textures say 1F and 2F and are not used.
 - **Slogans.** Every coloured wall bay has a pale stripe at 3.95 m with one line from the wall-text list in `ArtSource/Kit/posters/COPY.md`, picked by the seed. The lines are a list on `FloorKit.asset`.
@@ -52,6 +52,22 @@ Added on 2026-11-24 after generated floors were put beside KitOffice and read as
 - **Cover.** The lone `Cover_Block_2m` in the court and the halls, which read as a stray white box, is now a `Counter_Capsule_2m` (the same crouch cover), with pod seats in the halls.
 - **The manager's office** adds a wave lightbox behind the desk and two visitor seats.
 
+## The ceiling plan
+
+`FloorCeiling.Plan` runs once per floor, after walls and doors and before furniture. It draws no random numbers, so adding it changed no floor: the same seeds give the same rooms, starts and furniture as before. [Drawing of seed 1, floor 1](../proof/floor_gen_2026-11-24/ceiling_plan_drawing_seed1_floor1.png); before, after and KitOffice side by side are the `ceiling_*` sheets in the same folder.
+
+- **The spine.** One lit line, 0.3 m wide, over the middle of every corridor. Over the ring it is a closed loop, the partner of the cobalt band on the floor. Every cross corridor's line runs into it, so the lit network overhead is the route network. East-west runs own each junction and north-south runs stop at their edge, so nothing overlaps.
+- **Lanes.** Open halls and lounges keep the bare soffit with one 0.2 m line down the middle of each bay. A room's lines follow the corridor it fronts (most shared bays wins), then its window band, then its longer side. A lane carries on through every neighbouring hall bay that runs the same way and stops 0.5 m short of a wall or of a hall whose lanes run across it.
+- **Tiles.** Offices, kitchens, print rooms and archives get the flush `Ceiling_Grid_4x4` across the whole room and two rows of 0.2 m strips per bay, 1.25 m and 2.75 m in (the kit README's strip positions, so each sits inside a 0.5 m tile). Rows run the room's direction, unbroken from 0.5 m off one wall to 0.5 m off the other.
+- **Panels.** Meeting rooms and the manager's office keep the floating `Ceiling_Panel_4x4`, one per bay.
+- **Lights.** One room light at the centre of every Tiles or Panels bay.
+
+Why lines are drawn rather than placed as kit pieces: the kit's `Slab_4x4_LightLine` carries one slot straight through a bay, so it cannot turn a corner, join another line or stop short. With the direction chosen bay by bay, lines met at junctions from different ways, the ring was four separate pieces, and every room bay had its own panel ring (the `Before` column of the sheets). The plan's lines are a list on the layout (`CeilingLines`); `FloorBuilder` draws all of them as one mesh in the kit's `Light_Strip` material 12 mm under the soffit, one draw call a floor. Every bay now has a plain `Slab_4x4` overhead. `KitPiece.Slab_4x4_LightLine` stays in the list unused because `FloorKit.asset` stores prefabs by position in it.
+
+Rejected: KitOffice's own rule of every line running east to west, wall to wall (lines would cut across the north-south corridors, which is what the first dressing pass set out to fix); pendants, beams and ceiling ribbons (KitOffice dropped them on 2026-11-15, [kit README](../../ArtSource/Kit/README.md), "Markings system"); one `Ceiling_LightStrip` prefab per strip (about 150 more objects a floor for the same picture).
+
+`FloorCeiling.Check` lists anything wrong with a plan: a line through a wall or over the wrong kind of ceiling, a corridor link with no spine, a hall bay with no lane, a room bay with no light. The sweep runs it on every floor. It is not part of a floor's own pass or fail, so it can never change which attempt wins.
+
 ## The algorithm
 
 Each step draws from one integer random stream seeded from `(seed, floor, attempt)`.
@@ -62,10 +78,11 @@ Each step draws from one integer random stream seeded from `(seed, floor, attemp
 4. **Lifts.** The exit lift takes a corner cell of a room (its door facing into that room, or onto a corridor). From floor 2 up, an arrival lift takes another, far from the exit.
 5. **Room kinds and names.** Each room is open plan (a window hall or lounge, no wall to the corridor) or enclosed (open office, meeting room, kitchen, print room, archive), with a wall finish that suits it. Names come from kind and compass position ("North-East Kitchen").
 6. **Walls and doors.** Edges are set from the two rooms either side. Then every room is given doors until it has at least two ways out, the first onto a corridor.
-7. **Fit-out.** Furniture patterns are placed, skipping any piece that would stand in front of a door. Then the loose props are cut to the cap and the rest become fixed pieces, and the wall marks (lightboxes, posters, numbers, names) are chosen.
-8. **Walk map.** The floor is rasterised to a 0.5 m grid with every wall and furniture footprint, the furniture grown by a player's radius.
-9. **Starts, briefcase, spots.** Chosen on the walk map by real walking distance (below).
-10. **Check.** If any guarantee fails, the attempt number goes up and the floor is generated again, up to 24 times. The same attempt wins on every machine because the check is part of the pure function.
+7. **Ceiling.** The ceiling plan above: spine, lanes, tiles, panels and room lights. No random numbers.
+8. **Fit-out.** Furniture patterns are placed, skipping any piece that would stand in front of a door. Then the loose props are cut to the cap and the rest become fixed pieces, and the wall marks (lightboxes, posters, numbers, names) are chosen.
+9. **Walk map.** The floor is rasterised to a 0.5 m grid with every wall and furniture footprint, the furniture grown by a player's radius.
+10. **Starts, briefcase, spots.** Chosen on the walk map by real walking distance (below).
+11. **Check.** If any guarantee fails, the attempt number goes up and the floor is generated again, up to 24 times. The same attempt wins on every machine because the check is part of the pure function.
 
 ## Guarantees and how each is met
 
@@ -103,9 +120,9 @@ The budget, and where the measured numbers below stand against it.
 | Thing | Budget | Measured |
 |---|---|---|
 | Kit pieces instantiated | 350 to 500 before the dressing; not re-set since | 469 to 685 with the dressing |
-| Generate (pure) | Under 5 ms | 4.7 to 4.9 ms with the dressing (about 3 ms before) |
-| Build | Under 150 ms, hidden by the transition screen | 10.1 to 11.7 ms with the dressing |
-| Draw calls | No number is set in [PERFORMANCE.md](PERFORMANCE.md) | 2,700 to 3,500 with the dressing |
+| Generate (pure) | Under 5 ms | 5.4 to 5.6 ms on 2026-11-24 with the ceiling plan, the same as without it; over budget |
+| Build | Under 150 ms, hidden by the transition screen | 12.8 to 16.0 ms with the ceiling plan |
+| Draw calls | No number is set in [PERFORMANCE.md](PERFORMANCE.md) | about 3,100 on average with the ceiling plan |
 | Loose props | 16 or fewer ([PROPS.md](PROPS.md)) | 16 spots offered |
 | Loot pickups | 8 or fewer (`FloorRaceProfile`) | Not built yet |
 | Realtime lights | No number set | One shadowless spot per closed room bay |
@@ -115,12 +132,13 @@ The budget, and where the measured numbers below stand against it.
 - [FloorGenTypes.cs](../../Assets/_Project/Scripts/FloorGen/FloorGenTypes.cs): the layout description.
 - [FloorGenProfile.cs](../../Assets/_Project/Scripts/FloorGen/FloorGenProfile.cs): the tuning asset, `Assets/_Project/Profiles/FloorRace/FloorGen.asset`.
 - [FloorGenerator.cs](../../Assets/_Project/Scripts/FloorGen/FloorGenerator.cs): seed and floor in, layout out.
+- [FloorCeiling.cs](../../Assets/_Project/Scripts/FloorGen/FloorCeiling.cs): the ceiling plan and its checks.
 - [FloorFitOut.cs](../../Assets/_Project/Scripts/FloorGen/FloorFitOut.cs): furniture patterns and authored spots.
 - [FloorNav.cs](../../Assets/_Project/Scripts/FloorGen/FloorNav.cs): the walk map, distances and the checks.
 - [FloorKit.cs](../../Assets/_Project/Scripts/FloorRace/FloorKit.cs): which kit prefab each piece is, `Assets/_Project/Profiles/FloorRace/FloorKit.asset`. **Seal the Deal > Floor Race > Fill Floor Kit** fills its empty slots by name and never replaces one someone set.
 - [FloorBuilder.cs](../../Assets/_Project/Scripts/FloorRace/FloorBuilder.cs): builds and tears down a floor.
 - [FloorBuildMeasure.cs](../../Assets/_Project/Editor/FloorRace/FloorBuildMeasure.cs): **Seal the Deal > Floor Race > Measure Floor Build (Play Mode)** writes `Temp/FloorGen/build_report.txt`.
-- [FloorLayoutPreview.cs](../../Assets/_Project/Editor/FloorRace/FloorLayoutPreview.cs): **Seal the Deal > Floor Race > Render Layout Previews** draws top-down PNGs of several seeds and floors to `Temp/FloorGen/` and writes a report of every check.
+- [FloorLayoutPreview.cs](../../Assets/_Project/Editor/FloorRace/FloorLayoutPreview.cs): **Seal the Deal > Floor Race > Render Layout Previews** draws a layout PNG and a ceiling PNG for several seeds and floors to `Temp/FloorGen/` and writes a report of every check. Unity empties `Temp/` when the Editor starts, so copy out anything worth keeping.
 
 ## Measured
 
@@ -192,7 +210,28 @@ Sixteen layouts (four seeds, floors 1, 2, 5 and 10) were drawn and looked at: ri
 - **The reflection probe's cost.** In `FloorRace.unity`, the 12 frames after a floor was built averaged 9.0 to 9.1 ms with the probe and 8.7 ms with it removed, worst frame about 15 ms either way (two warm pairs; a first cold run was slower in both build and frames).
 - Not checked: a client build (the dressing is built locally from the same layout, like the rest of the floor), and a person walking it.
 
+**The ceiling plan, 2026-11-24, same Editor session before and after** (before = the commit "Hand over the floor generator rework and flag its scope").
+
+| What | Per-bay ceiling | Ceiling plan |
+|---|---|---|
+| Floors passing every check (200 seeds x 10 floors) | 2,000 of 2,000 | 2,000 of 2,000 |
+| Passing on the first attempt, kit pieces a floor | 1,721, 602 | 1,721, 602 (the same floors) |
+| Ceiling plans with a fault | not checked | 0 of 2,000 |
+| Generate time a floor (edit mode, four runs then three) | 5.42 to 5.47 ms | 5.40 to 5.61 ms |
+| Build one floor (seeds 1, 2026, 77777 on floors 1, 5, 10; first cold build left out) | 11.7 to 14.6 ms, 13.4 average | 12.8 to 16.0 ms, 13.8 and 14.6 average over two runs |
+| Draw calls, average of four views | 3,264 | 3,063 and 3,093 |
+| Draw calls, worst view | 4,895 | 4,625 |
+| Lit lines and room lights a floor | none planned, 36 lights | 39 lines in one mesh, 36 lights |
+| Left after 18 builds and tear-downs | 0 objects, 0 meshes | 0 objects, 0 meshes |
+
+- Generate time is over the 5 ms budget on this PC today with or without the plan (4.7 to 4.9 ms was read earlier the same day). A reading taken while the Editor was hosting a game was 10 to 11 ms; time it in edit mode.
+- Looked at: seed 1 floor 1, seed 4242 floor 5 and seed 77777 floor 10, each from six views (two along corridors, a closed room, an open hall, the court, and straight up at the whole ceiling) before and after, beside six KitOffice views. Sheets are in [proof/floor_gen_2026-11-24/](../proof/floor_gen_2026-11-24/).
+- Not checked: a client build, and a person walking it.
+
 ## Known limitations
+
+- The spine, lanes and strips all use one material at one brightness, and a line ends square: there is no end cap or junction piece.
+- Generated ceilings have none of KitOffice's district bands along the soffit.
 
 - The reflection is taken once, as the floor is built, so it does not show players, loot or anything that moves.
 - Generated floors have the ring band but none of KitOffice's district colours, threshold strips or evacuation plans, which are drawn for its one plan.

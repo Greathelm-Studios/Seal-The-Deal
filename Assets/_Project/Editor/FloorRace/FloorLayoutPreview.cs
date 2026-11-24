@@ -62,19 +62,22 @@ namespace CloseTheDeal.Editor.FloorRace
                     FloorLayout layout = FloorGenerator.Generate(seed, number, profile);
                     string name = $"floor_seed{seed}_f{number:00}.png";
                     File.WriteAllBytes(Path.Combine(folder, name), Draw(layout));
+                    File.WriteAllBytes(Path.Combine(folder, $"ceiling_seed{seed}_f{number:00}.png"), DrawCeiling(layout));
                     Describe(layout, name, report);
                 }
 
             string sweep = Sweep(profile);
             report.Insert(0, sweep + "\n");
             File.WriteAllText(Path.Combine(folder, "report.txt"), report.ToString());
-            return sweep + $"\nWrote {Seeds.Length * Floors.Length} PNGs and report.txt to {Path.GetFullPath(folder)}";
+            return sweep + $"\nWrote {Seeds.Length * Floors.Length} layout and ceiling PNGs and report.txt to {Path.GetFullPath(folder)}";
         }
 
         static string Sweep(FloorGenProfile profile)
         {
             int total = 0, invalid = 0, maxAttempt = 0, firstTry = 0, pieces = 0, maxPieces = 0, minSpawn = int.MaxValue, mismatched = 0;
+            int ceilingFaulty = 0, lines = 0, lights = 0;
             var problems = new Dictionary<string, int>();
+            var faults = new List<string>();
             var watch = Stopwatch.StartNew();
             for (uint seed = 1; seed <= SweepSeeds; seed++)
                 for (int floor = 1; floor <= profile.FloorCount; floor++)
@@ -86,6 +89,19 @@ namespace CloseTheDeal.Editor.FloorRace
                     pieces += layout.Pieces.Count;
                     maxPieces = Mathf.Max(maxPieces, layout.Pieces.Count);
                     minSpawn = Mathf.Min(minSpawn, layout.SpawnSpots.Count);
+                    lines += layout.CeilingLines.Count;
+                    lights += layout.Lights.Count;
+                    faults.Clear();
+                    FloorCeiling.Check(layout, faults);
+                    if (faults.Count > 0)
+                    {
+                        ceilingFaulty++;
+                        foreach (string fault in faults)
+                        {
+                            problems.TryGetValue(fault, out int count);
+                            problems[fault] = count + 1;
+                        }
+                    }
                     if (!layout.Valid)
                     {
                         invalid++;
@@ -107,6 +123,7 @@ namespace CloseTheDeal.Editor.FloorRace
             text.AppendLine($"  Passed every check: {total - invalid} of {total}. On the first attempt: {firstTry}. Most attempts needed: {maxAttempt + 1}.");
             text.AppendLine($"  Generate time: {watch.Elapsed.TotalMilliseconds / (total + SweepSeeds):0.00} ms a floor on average (Editor, includes retries).");
             text.AppendLine($"  Kit pieces a floor: {pieces / total} on average, {maxPieces} at most. Fewest spawn spots on any floor: {minSpawn}.");
+            text.AppendLine($"  Ceiling plans with a fault: {ceilingFaulty} of {total}. Lit lines a floor: {lines / total} on average. Room lights a floor: {lights / total} on average.");
             text.AppendLine($"  Repeat runs that differed: {mismatched} of {SweepSeeds}.");
             foreach (KeyValuePair<string, int> pair in problems)
                 text.AppendLine($"  FAILED x{pair.Value}: {pair.Key}");
@@ -115,8 +132,14 @@ namespace CloseTheDeal.Editor.FloorRace
 
         static bool Same(FloorLayout a, FloorLayout b)
         {
-            if (a.Attempt != b.Attempt || a.Pieces.Count != b.Pieces.Count || a.SpawnSpots.Count != b.SpawnSpots.Count)
+            if (a.Attempt != b.Attempt || a.Pieces.Count != b.Pieces.Count || a.SpawnSpots.Count != b.SpawnSpots.Count || a.CeilingLines.Count != b.CeilingLines.Count)
                 return false;
+            for (int k = 0; k < a.CeilingLines.Count; k++)
+            {
+                CeilingLine p = a.CeilingLines[k], q = b.CeilingLines[k];
+                if (p.Kind != q.Kind || p.X0 != q.X0 || p.Y0 != q.Y0 || p.X1 != q.X1 || p.Y1 != q.Y1)
+                    return false;
+            }
             for (int k = 0; k < a.Pieces.Count; k++)
             {
                 KitPlacement p = a.Pieces[k], q = b.Pieces[k];
@@ -132,6 +155,20 @@ namespace CloseTheDeal.Editor.FloorRace
             foreach (string problem in layout.Problems)
                 report.AppendLine("   PROBLEM: " + problem);
             report.AppendLine($"   {layout.Pieces.Count} kit pieces, {layout.SpawnSpots.Count} spawn spots, {layout.LootSpots.Count} loot spots, {layout.PropSpots.Count} prop spots.");
+            int spine = 0, lanes = 0, strips = 0;
+            float spineMetres = 0f, longest = 0f;
+            foreach (CeilingLine line in layout.CeilingLines)
+            {
+                if (line.Kind == CeilingLineKind.Lane) lanes++;
+                else if (line.Kind == CeilingLineKind.Strip) strips++;
+                else
+                {
+                    spine++;
+                    spineMetres += line.Length;
+                }
+                longest = Mathf.Max(longest, line.Length);
+            }
+            report.AppendLine($"   Ceiling: {spine} spine runs ({spineMetres:0} m), {lanes} hall lanes, {strips} room strips, longest line {longest:0.0} m, {layout.Lights.Count} room lights.");
             report.AppendLine($"   Walking metres: start A to goal {layout.StartAToGoal:0.0}, start B to goal {layout.StartBToGoal:0.0}, starts apart {layout.StartsApart:0.0}.");
             if (layout.HasBriefcase)
                 report.AppendLine($"   Briefcase: {layout.CaseToGoal:0.0} m from the lift, {layout.CaseToStartA:0.0} m from A, {layout.CaseToStartB:0.0} m from B, in {layout.Rooms[layout.Briefcase.Room].Name}.");
@@ -218,14 +255,80 @@ namespace CloseTheDeal.Editor.FloorRace
             return png;
         }
 
-        static void Edge(Canvas canvas, FloorEdge edge, float x, float y, bool alongX)
+        // The ceiling as planned, north up like the layout drawing. Seen from below in play it is mirrored east to west.
+        static byte[] DrawCeiling(FloorLayout layout)
+        {
+            int width = (int)(layout.Width * PixelsPerMetre) + 2 * Margin, height = (int)(layout.Depth * PixelsPerMetre) + 2 * Margin;
+            var pixels = new Color32[width * height];
+            var canvas = new Canvas(pixels, width, height);
+            canvas.Fill(new Color32(22, 26, 36, 255));
+            const float C = FloorLayout.Cell, Tile = 0.5f, PanelGap = 0.2f, Hair = 0.03f;
+            var joint = new Color32(64, 74, 96, 255);
+            var wall = new Color32(150, 162, 186, 255);
+
+            for (int j = 0; j < layout.Rows; j++)
+                for (int i = 0; i < layout.Cols; i++)
+                {
+                    float x = i * C, y = j * C;
+                    switch (layout.CeilingOf[layout.CellIndex(i, j)])
+                    {
+                        case CeilingKind.Route: canvas.Rect(x, y, x + C, y + C, new Color32(44, 50, 66, 255)); break;
+                        case CeilingKind.Lanes: canvas.Rect(x, y, x + C, y + C, new Color32(54, 62, 80, 255)); break;
+                        case CeilingKind.Tiles:
+                            canvas.Rect(x, y, x + C, y + C, new Color32(78, 90, 114, 255));
+                            for (float at = 0f; at < C; at += Tile)
+                            {
+                                canvas.Rect(x + at - Hair, y, x + at + Hair, y + C, joint);
+                                canvas.Rect(x, y + at - Hair, x + C, y + at + Hair, joint);
+                            }
+                            break;
+                        case CeilingKind.Panels:
+                            canvas.Rect(x, y, x + C, y + C, new Color32(214, 232, 255, 255));
+                            canvas.Rect(x + PanelGap, y + PanelGap, x + C - PanelGap, y + C - PanelGap, new Color32(112, 124, 150, 255));
+                            break;
+                    }
+                }
+
+            for (int j = 0; j <= layout.Rows; j++)
+                for (int i = 0; i < layout.Cols; i++)
+                    Edge(canvas, layout.NorthEdges[i + j * layout.Cols], i * C, j * C, true, wall);
+            for (int j = 0; j < layout.Rows; j++)
+                for (int i = 0; i <= layout.Cols; i++)
+                    Edge(canvas, layout.WestEdges[i + j * (layout.Cols + 1)], i * C, j * C, false, wall);
+
+            foreach (CeilingLine line in layout.CeilingLines)
+            {
+                float half = FloorCeiling.WidthOf(line.Kind) * 0.5f;
+                Color32 colour = line.Kind == CeilingLineKind.Spine ? new Color32(255, 255, 255, 255)
+                    : line.Kind == CeilingLineKind.Lane ? new Color32(255, 236, 160, 255) : new Color32(160, 228, 255, 255);
+                if (line.AlongX) canvas.Rect(line.X0, line.Y0 - half, line.X1, line.Y0 + half, colour);
+                else canvas.Rect(line.X0 - half, line.Y0, line.X0 + half, line.Y1, colour);
+            }
+
+            foreach (FloorSpot spot in layout.Lights) canvas.Dot(spot.X, spot.Y, 3, new Color32(255, 140, 60, 255));
+            foreach (FloorRoom room in layout.Rooms)
+            {
+                if (room.Cells.Count == 0)
+                    continue;
+                int cell = room.Cells[0];
+                canvas.Number(room.Index, (cell % layout.Cols) * C + 0.3f, (cell / layout.Cols) * C + 0.3f, new Color32(255, 255, 255, 255));
+            }
+
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.SetPixels32(pixels);
+            byte[] png = texture.EncodeToPNG();
+            Object.DestroyImmediate(texture);
+            return png;
+        }
+
+        static void Edge(Canvas canvas, FloorEdge edge, float x, float y, bool alongX, Color32? tint = null)
         {
             if (edge.Kind == EdgeKind.Open)
                 return;
 
             int door = edge.Kind == EdgeKind.LiftDoor ? 2 : edge.DoorAt;
             float half = edge.Kind == EdgeKind.Solid || edge.Kind >= EdgeKind.FacadeWindow ? 0.14f : 0.08f;
-            Color32 colour = EdgeColour(edge.Kind);
+            Color32 colour = tint ?? EdgeColour(edge.Kind);
             void Piece(float from, float to)
             {
                 if (alongX) canvas.Rect(x + from, y - half, x + to, y + half, colour);
