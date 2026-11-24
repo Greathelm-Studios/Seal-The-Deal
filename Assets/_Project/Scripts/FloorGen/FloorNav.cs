@@ -85,6 +85,7 @@ namespace CloseTheDeal.FloorGen
         void AddStair(FloorStair stair)
         {
             int dx = Side.Dx[stair.Dir], dy = Side.Dy[stair.Dir];
+            ReserveBeside(stair, dx != 0);
             int a0 = (int)Math.Round(stair.X0 / Node), a1 = (int)Math.Round(stair.X1 / Node) - 1;
             int b0 = (int)Math.Round(stair.Y0 / Node), b1 = (int)Math.Round(stair.Y1 / Node) - 1;
             float length = dx != 0 ? stair.X1 - stair.X0 : stair.Y1 - stair.Y0;
@@ -112,6 +113,25 @@ namespace CloseTheDeal.FloorGen
                     Reserved[top] = true;
                     Reserved[top + dx + dy * W] = true;
                 }
+        }
+
+        // The row of nodes along the walkway next to a flight is within a body's width of its glass: walkable, but nobody spawns there.
+        void ReserveBeside(FloorStair stair, bool alongX)
+        {
+            int a0 = (int)Math.Round(stair.WalkX0 / Node), a1 = (int)Math.Round(stair.WalkX1 / Node) - 1;
+            int b0 = (int)Math.Round(stair.WalkY0 / Node), b1 = (int)Math.Round(stair.WalkY1 / Node) - 1;
+            if (alongX)
+            {
+                if (stair.WalkY0 >= stair.Y1 - 0.01f) b1 = b0;
+                else b0 = b1;
+            }
+            else if (stair.WalkX0 >= stair.X1 - 0.01f) a1 = a0;
+            else a0 = a1;
+
+            for (int level = 0; level < Levels; level++)
+                for (int b = b0; b <= b1; b++)
+                    for (int a = a0; a <= a1; a++)
+                        Reserved[Index(a, b, level)] = true;
         }
 
         public int NodeAt(float x, float y, int level)

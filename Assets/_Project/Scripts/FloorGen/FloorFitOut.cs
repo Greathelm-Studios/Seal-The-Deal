@@ -133,6 +133,15 @@ namespace CloseTheDeal.FloorGen
         static readonly Pattern PlanterByWall = new() { Items = new[] { new Item(KitPiece.Planter_Box, 2f, 0.6f, 0f, 0.52f, 0.32f, Need.Wall) } };
         static readonly Pattern WaterByWall = new() { Items = new[] { new Item(KitPiece.Water_Server, 1f, 0.45f, 180f, 0.18f, 0.18f, Need.OpaqueWall) } };
 
+        static readonly Pattern DeskByWall = new()
+        {
+            Items = new[] { new Item(KitPiece.Desk_Sculpt, 2f, 0.9f, 0f, 0.8f, 0.4f, Need.Wall) },
+            Props = new[] { new Loose(PropKind.Chair, 2f, 1.75f, 0f) }
+        };
+        static readonly Pattern StorageByWall = new() { Items = new[] { new Item(KitPiece.Storage_Low, 2f, 0.5f, 180f, 0.8f, 0.23f, Need.Wall) } };
+        static readonly Pattern[] WorkFallbacks = { DeskByWall, StorageByWall, PlanterByWall };
+        static readonly Pattern[] ServiceFallbacks = { StorageByWall, PlanterByWall };
+
         static readonly Pattern[] HallPatterns = { Bench, PodTable, LoungeCounter, PlanterByWall };
         static readonly Pattern[] CorridorPatterns = { PlanterByWall, WaterByWall };
 
@@ -180,17 +189,19 @@ namespace CloseTheDeal.FloorGen
                     if (pattern == null || layout.StairAt(i, j) >= 0)
                         continue;
 
-                    int turn = BestTurn(layout, pattern, i, j, rng.Range(0, 4));
-                    bool placedAny = pattern.Items.Length == 0;
-                    foreach (Item item in pattern.Items)
+                    int first = rng.Range(0, 4);
+                    if (!Furnish(layout, nav, keepClear, changed, pattern, i, j, first, level, out int turn))
                     {
-                        if (item.Need != Need.None && !Backed(layout, i, j, turn, item.Need))
+                        // A bay with doors has no room for the full arrangement; a closed room still gets something against a wall.
+                        Pattern[] fallbacks = room.Open ? null : FallbacksFor(room.Kind);
+                        pattern = null;
+                        for (int k = 0; fallbacks != null && k < fallbacks.Length && pattern == null; k++)
+                            if (Furnish(layout, nav, keepClear, changed, fallbacks[k], i, j, first, level, out turn))
+                                pattern = fallbacks[k];
+                        if (pattern == null)
                             continue;
-                        placedAny |= TryPlace(layout, nav, keepClear, changed, item, i * FloorLayout.Cell, j * FloorLayout.Cell, turn, level);
                     }
 
-                    if (!placedAny)
-                        continue;
                     foreach (Fixed fix in pattern.Dressing)
                     {
                         Turn(fix.U, fix.V, turn, out float u, out float v);
@@ -252,6 +263,48 @@ namespace CloseTheDeal.FloorGen
                 }
                 layout.Pieces.Add(new KitPlacement { Piece = KitPiece.Chair_Task, X = chair.X, Y = chair.Y, Height = chair.Height, Yaw = chair.Yaw, Still = true });
             }
+        }
+
+        static Pattern[] FallbacksFor(RoomKind kind)
+        {
+            switch (kind)
+            {
+                case RoomKind.OpenOffice:
+                case RoomKind.Meeting:
+                case RoomKind.ManagersOffice: return WorkFallbacks;
+                case RoomKind.Kitchen:
+                case RoomKind.Print:
+                case RoomKind.Archive: return ServiceFallbacks;
+                default: return null;
+            }
+        }
+
+        // Tries the pattern at its best turn, then the other three, and says which one took.
+        static bool Furnish(FloorLayout layout, FloorNav nav, bool[] keepClear, List<int> changed, Pattern pattern, int i, int j, int first, int level, out int turn)
+        {
+            turn = BestTurn(layout, pattern, i, j, first);
+            if (pattern.Items.Length == 0)
+                return true;
+
+            for (int k = 0; k < 4; k++)
+            {
+                int tried = (turn + k) & 3;
+                bool any = false;
+                foreach (Item item in pattern.Items)
+                {
+                    if (item.Need != Need.None && !Backed(layout, i, j, tried, item.Need))
+                        continue;
+                    any |= TryPlace(layout, nav, keepClear, changed, item, i * FloorLayout.Cell, j * FloorLayout.Cell, tried, level);
+                }
+
+                if (any)
+                {
+                    turn = tried;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         static void BlockChair(FloorLayout layout, PropSpot chair, List<int> changed)

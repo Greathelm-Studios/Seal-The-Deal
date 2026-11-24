@@ -33,7 +33,7 @@ Every floor of the building is a different office plan made from the KitOffice k
 
 - A wall's thickness goes into the enclosed room, so corridors keep their full 4 m.
 - **Lift tile:** one cell holding `Lift_Car` and two `Lift_Door_Panel` leaves, positioned as KitOffice places them (car centre 2.075 m in from the door line, leaves 0.225 m in).
-- **Fit-out:** furniture is placed per cell from a small set of patterns per room kind (bench, meeting table, kitchen counter, copier and storage, counter with pod seats, planter). Patterns also hold the **authored spots**: where a player may spawn, where loot may lie, where a loose prop stands. Patterns are a code table in `FloorFitOut.cs` for now (see Known limitations).
+- **Fit-out:** furniture is placed per cell from a small set of patterns per room kind, tried at each of the four turns. A closed room bay whose doors leave no room for its pattern falls back to a desk against a wall, then a low cabinet, then a planter, so it is not left bare. Patterns are a bench, meeting table, kitchen counter, copier and storage, counter with pod seats or planter. Patterns also hold the **authored spots**: where a player may spawn, where loot may lie, where a loose prop stands. Patterns are a code table in `FloorFitOut.cs` for now (see Known limitations).
 
 ## Dressing, matched to KitOffice
 
@@ -172,6 +172,7 @@ The budget, and where the measured numbers below stand against it.
 - [FloorKit.cs](../../Assets/_Project/Scripts/FloorRace/FloorKit.cs): which kit prefab each piece is, `Assets/_Project/Profiles/FloorRace/FloorKit.asset`. **Seal the Deal > Floor Race > Fill Floor Kit** fills its empty slots by name and never replaces one someone set.
 - [FloorBuilder.cs](../../Assets/_Project/Scripts/FloorRace/FloorBuilder.cs): builds and tears down a floor.
 - [FloorBuildMeasure.cs](../../Assets/_Project/Editor/FloorRace/FloorBuildMeasure.cs): **Seal the Deal > Floor Race > Measure Floor Build (Play Mode)** writes `Temp/FloorGen/build_report.txt`.
+- [FloorGallery.cs](../../Assets/_Project/Editor/FloorRace/FloorGallery.cs): **Seal the Deal > Floor Race > Build Ten Floors and Check (Play Mode)** builds every floor of one random building side by side under a "Floor Gallery" object in the open scene, 1,000 m up, tests each as built and writes `Temp/FloorGen/gallery_report.txt`. Nothing is saved to the scene; the floors go when Play Mode ends.
 - [FloorLayoutPreview.cs](../../Assets/_Project/Editor/FloorRace/FloorLayoutPreview.cs): **Seal the Deal > Floor Race > Render Layout Previews** draws a layout PNG and a ceiling PNG for several seeds and floors to `Temp/FloorGen/` and writes a report of every check. Unity empties `Temp/` when the Editor starts, so copy out anything worth keeping.
 
 ## Measured
@@ -303,6 +304,34 @@ Sixteen layouts (four seeds, floors 1, 2, 5 and 10) were drawn and looked at: ri
 - Hosted once in the Editor in `FloorRace.unity`: floor 1 (a gallery, exit lift upstairs) was built with both storeys and both stairs, the host spawned in the court with the HUD naming the room, floors stood 13.5 m apart, and the console had no errors. The match was not started.
 - The loose prop cap (16) and loot spots (24 offered) are unchanged, so they are spread over twice the area.
 - Not checked: frame time on two storeys, a client build, a person walking it, a full match on it (lift boarding on the upper storey, respawns, the briefcase falling through a stair hole), and floor 10 in play.
+
+**Ten floors in one scene, 2026-11-24, Editor Play Mode** (`Build Ten Floors and Check`; three buildings, seeds 90210, 31337 and 5446015, 30 floors, 60 storeys).
+
+The built checks, per floor: the generator's own problems and the ceiling plan's faults; a standing body (0.3 m radius, 0.45 to 1.65 m up) at every spawn and start spot touching nothing; floor within 8 cm under every spawn, start, loot and briefcase spot and something under every loose prop spot; each flight walked every 0.25 m for a surface that only rises, never by more than 0.75 m, with 1.9 m of headroom, ending on the upper floor, with glass between the upper walkway and the hole.
+
+| What | First run | After the fixes |
+|---|---|---|
+| Floors passing every built check, first building | 5 of 10 | 10 of 10 |
+| All three buildings | not run | 30 of 30 |
+| Stairs failing the walk | 0 | 0 |
+| Spots with no floor under them | 0 | 0 |
+| Room bays with no furniture, three buildings | 1,562 of 3,120 (50%) | 753 of 3,288 (23%) |
+| Floors passing the generator's checks (2,000) | 2,000 | 2,000 |
+| Passing on the first attempt, most attempts needed | 1,595, 5 | 1,286, 8 |
+| Generate time a floor | 19.4 ms | 20.0 ms |
+
+What the first run found and what was changed:
+
+- **Spawn spots against a stair's glass** (five floors, up to six spots each). A bay's centre spot on the walkway is 0.25 m from the flight's guard. The row of walk-map nodes beside each flight is now reserved on both storeys: walkable, but nothing spawns or is placed there.
+- **A team start spot against a wall** (one floor). The four start spots spread a metre round their anchor and could reach a bay's outer row, a quarter-metre from a wall whose thickness is on that side. Start spots now stay off that row. This fault predates two storeys; the earlier 5,217-spot test covered respawn spots and one start per team, not all four.
+- **Half of all room bays were bare** (two-thirds on cellular floors). A bench or table was dropped whenever its bay had a door, because the metre in front of a door is kept clear. The fit-out now tries every turn and then the wall-side fallbacks. The quarter still bare are mostly open hall bays, which are left empty on purpose a quarter of the time.
+
+Looked at: all ten floors of seed 5446015 from above, both storeys ([sheet](../proof/floor_gen_2026-11-24/ten_floors_seed5446015_from_above.png)). Stairs, holes, walkways and the ring band are where the plan puts them on every floor, and closed rooms are furnished.
+
+- The dark disc in the middle of each floor on that sheet shows only when looking straight down. No object is there; it is most likely the glossy floor mirroring its reflection probe, and that cause is a guess. It is not in any eye-height capture.
+- Open plan floors read thin from above: a wide hall with pod chairs and a few benches.
+- More floors now need a second attempt (36 in 100, was 20), because start spots have fewer places to stand. None fail.
+- Not checked: any of these floors in a match, from a client, or walked by a person.
 
 ## Known limitations
 

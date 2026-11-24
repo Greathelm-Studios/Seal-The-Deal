@@ -1242,6 +1242,10 @@ namespace CloseTheDeal.FloorGen
                 int na = a + GroupOffsets[k], nb = b + GroupOffsets[k + 1];
                 if (na < 0 || nb < 0 || na >= nav.W || nb >= nav.H)
                     continue;
+                // A bay's outer row of nodes is within a body's width of any wall on that side.
+                int ia = na % FloorNav.PerCell, ib = nb % FloorNav.PerCell;
+                if (ia == 0 || ib == 0 || ia == FloorNav.PerCell - 1 || ib == FloorNav.PerCell - 1)
+                    continue;
                 int n = nav.Index(na, nb, level);
                 if (nav.Blocked[n] || nav.Reserved[n] || layout.RoomAt(na / FloorNav.PerCell, nb / FloorNav.PerCell) != room)
                     continue;
