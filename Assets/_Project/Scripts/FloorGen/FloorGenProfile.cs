@@ -13,6 +13,19 @@ namespace CloseTheDeal.FloorGen
         [Tooltip("How many 4 m bays deep a floor is, north to south. 8 = 32 metres, the KitOffice plate.")]
         [Range(6, 10)] public int Rows = 8;
 
+        [Header("Layout types")]
+        [Tooltip("How often a floor is a core office: the corridor loop round a block of rooms, with rooms and halls along the windows. This is the share out of the four numbers added together; 0 = never. If all four are 0 every floor is this one.")]
+        [Range(0, 100)] public int CoreOfficeWeight = 40;
+
+        [Tooltip("How often a floor is open plan: wide window halls of desks with few walls, and a small block of rooms in the middle. Long sightlines, easy to cross, hard to hide in.")]
+        [Range(0, 100)] public int OpenPlanWeight = 20;
+
+        [Tooltip("How often a floor is cellular: small closed offices and meeting rooms nearly everywhere. Short sightlines and many doors to check.")]
+        [Range(0, 100)] public int CellularWeight = 20;
+
+        [Tooltip("How often a floor is a gallery: the corridor loop runs along the glass and the whole middle is blocks of rooms cut by cross corridors. The most turns and junctions, so the easiest to get lost in.")]
+        [Range(0, 100)] public int GalleryWeight = 20;
+
         [Header("Rooms")]
         [Tooltip("The most 4 m bays one room in the middle of the floor may cover. Higher = fewer, bigger rooms and longer sightlines.")]
         [Range(1, 6)] public int MaxCoreRoomCells = 4;

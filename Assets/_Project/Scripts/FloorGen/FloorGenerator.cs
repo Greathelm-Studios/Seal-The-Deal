@@ -90,8 +90,10 @@ namespace CloseTheDeal.FloorGen
             var rects = new List<Rect>();
             var inBand = new List<bool>();
 
-            int x0 = rng.Range(1, 3), x1 = cols - 1 - rng.Range(1, 3);
-            int y0 = top ? 2 : rng.Range(1, 3), y1 = rows - 1 - rng.Range(1, 3);
+            Style style = StyleOf(PickType(ref rng, profile), profile);
+            layout.PlanType = style.Type;
+            int x0 = Inset(ref rng, style), x1 = cols - 1 - Inset(ref rng, style);
+            int y0 = top ? 2 : Inset(ref rng, style), y1 = rows - 1 - Inset(ref rng, style);
             if (y1 - y0 < 2) y1 = rows - 2;
             if (x1 - x0 < 2) { x0 = 1; x1 = cols - 2; }
             layout.RingX0 = x0; layout.RingY0 = y0; layout.RingX1 = x1; layout.RingY1 = y1;
@@ -106,19 +108,19 @@ namespace CloseTheDeal.FloorGen
             var blocks = new List<Rect>();
             CutCore(layout, rects, inBand, ref court, ref rng, new Rect(x0 + 1, y0 + 1, x1 - 1, y1 - 1), blocks);
             foreach (Rect block in blocks)
-                SplitRooms(layout, rects, inBand, ref rng, block, profile.MaxCoreRoomCells);
+                SplitRooms(layout, rects, inBand, ref rng, block, style.MaxCoreRoomCells);
 
             int officeStart = top ? rng.Range(x0 + 1, Math.Max(x0 + 2, x1 - 1)) : -1;
-            BandAlong(layout, rects, inBand, ref rng, profile, 0, y0 - 1, x0, x1, officeStart);
-            BandAlong(layout, rects, inBand, ref rng, profile, y1 + 1, rows - 1, x0, x1, -1);
-            BandAcross(layout, rects, inBand, ref rng, profile, 0, x0 - 1, y0, y1);
-            BandAcross(layout, rects, inBand, ref rng, profile, x1 + 1, cols - 1, y0, y1);
+            BandAlong(layout, rects, inBand, ref rng, style.MaxBandRoomLength, 0, y0 - 1, x0, x1, officeStart);
+            BandAlong(layout, rects, inBand, ref rng, style.MaxBandRoomLength, y1 + 1, rows - 1, x0, x1, -1);
+            BandAcross(layout, rects, inBand, ref rng, style.MaxBandRoomLength, 0, x0 - 1, y0, y1);
+            BandAcross(layout, rects, inBand, ref rng, style.MaxBandRoomLength, x1 + 1, cols - 1, y0, y1);
 
             if (top && layout.OfficeRoom < 0)
                 layout.Problems.Add("No room for the manager's office.");
 
             PlaceLifts(layout, rects, ref rng, profile, top, floor);
-            NameRooms(layout, inBand, ref rng, profile);
+            NameRooms(layout, inBand, ref rng, style);
             SetEdges(layout, ref rng, profile);
             AddDoors(layout, ref rng);
             EmitStructure(layout);
@@ -137,6 +139,56 @@ namespace CloseTheDeal.FloorGen
             layout.Valid = layout.Problems.Count == 0;
             return layout;
         }
+
+        // What a layout type changes. Everything else comes from the profile unchanged.
+        struct Style
+        {
+            public FloorPlanType Type;
+            public int InsetMin, InsetMax;
+            public int MaxCoreRoomCells, MaxBandRoomLength, OpenBandRoomPercent, OpenCoreRoomPercent;
+        }
+
+        static FloorPlanType PickType(ref FloorRandom rng, FloorGenProfile profile)
+        {
+            int total = profile.CoreOfficeWeight + profile.OpenPlanWeight + profile.CellularWeight + profile.GalleryWeight;
+            int roll = rng.Range(0, Math.Max(total, 1));
+            if (total <= 0 || roll < profile.CoreOfficeWeight) return FloorPlanType.CoreOffice;
+            roll -= profile.CoreOfficeWeight;
+            if (roll < profile.OpenPlanWeight) return FloorPlanType.OpenPlan;
+            return roll - profile.OpenPlanWeight < profile.CellularWeight ? FloorPlanType.Cellular : FloorPlanType.Gallery;
+        }
+
+        static Style StyleOf(FloorPlanType type, FloorGenProfile profile)
+        {
+            var style = new Style
+            {
+                Type = type, InsetMin = 1, InsetMax = 2,
+                MaxCoreRoomCells = profile.MaxCoreRoomCells, MaxBandRoomLength = profile.MaxBandRoomLength,
+                OpenBandRoomPercent = profile.OpenBandRoomPercent, OpenCoreRoomPercent = profile.OpenCoreRoomPercent
+            };
+            switch (type)
+            {
+                case FloorPlanType.OpenPlan:
+                    style.InsetMin = 2;
+                    style.MaxBandRoomLength = Math.Min(profile.MaxBandRoomLength + 1, 4);
+                    style.OpenBandRoomPercent = Math.Max(profile.OpenBandRoomPercent, 85);
+                    style.OpenCoreRoomPercent = Math.Max(profile.OpenCoreRoomPercent, 40);
+                    break;
+                case FloorPlanType.Cellular:
+                    style.MaxCoreRoomCells = Math.Min(profile.MaxCoreRoomCells, 2);
+                    style.MaxBandRoomLength = Math.Min(profile.MaxBandRoomLength, 2);
+                    style.OpenBandRoomPercent = profile.OpenBandRoomPercent / 4;
+                    style.OpenCoreRoomPercent = 0;
+                    break;
+                case FloorPlanType.Gallery:
+                    style.InsetMin = style.InsetMax = 0;
+                    break;
+            }
+
+            return style;
+        }
+
+        static int Inset(ref FloorRandom rng, Style style) => rng.Range(style.InsetMin, style.InsetMax + 1);
 
         static FloorRoom AddRoom(FloorLayout layout, List<Rect> rects, List<bool> inBand, RoomKind kind, Rect rect, bool band, bool fill = true)
         {
@@ -217,7 +269,7 @@ namespace CloseTheDeal.FloorGen
         }
 
         // North and south bands run the full width; their end rooms must reach a ring column to have a way out.
-        static void BandAlong(FloorLayout layout, List<Rect> rects, List<bool> inBand, ref FloorRandom rng, FloorGenProfile profile,
+        static void BandAlong(FloorLayout layout, List<Rect> rects, List<bool> inBand, ref FloorRandom rng, int maxLength,
                               int rowFrom, int rowTo, int ringX0, int ringX1, int officeStart)
         {
             if (rowTo < rowFrom)
@@ -230,7 +282,7 @@ namespace CloseTheDeal.FloorGen
             cuts.Add(cur);
             while (cur < ringX1)
             {
-                int next = Math.Min(ringX1, cur + rng.Range(1, profile.MaxBandRoomLength + 1));
+                int next = Math.Min(ringX1, cur + rng.Range(1, maxLength + 1));
                 if (officeStart >= 0)
                 {
                     if (cur < officeStart) next = Math.Min(next, officeStart);
@@ -265,7 +317,7 @@ namespace CloseTheDeal.FloorGen
             }
         }
 
-        static void BandAcross(FloorLayout layout, List<Rect> rects, List<bool> inBand, ref FloorRandom rng, FloorGenProfile profile,
+        static void BandAcross(FloorLayout layout, List<Rect> rects, List<bool> inBand, ref FloorRandom rng, int maxLength,
                                int colFrom, int colTo, int ringY0, int ringY1)
         {
             if (colTo < colFrom)
@@ -274,7 +326,7 @@ namespace CloseTheDeal.FloorGen
             int cur = ringY0;
             while (cur <= ringY1)
             {
-                int next = Math.Min(ringY1 + 1, cur + rng.Range(1, profile.MaxBandRoomLength + 1));
+                int next = Math.Min(ringY1 + 1, cur + rng.Range(1, maxLength + 1));
                 AddRoom(layout, rects, inBand, RoomKind.WindowHall, new Rect(colFrom, cur, colTo, next - 1), true);
                 cur = next;
             }
@@ -383,7 +435,7 @@ namespace CloseTheDeal.FloorGen
             };
         }
 
-        static void NameRooms(FloorLayout layout, List<bool> inBand, ref FloorRandom rng, FloorGenProfile profile)
+        static void NameRooms(FloorLayout layout, List<bool> inBand, ref FloorRandom rng, Style style)
         {
             var used = new Dictionary<string, int>();
             foreach (FloorRoom room in layout.Rooms)
@@ -399,7 +451,7 @@ namespace CloseTheDeal.FloorGen
 
                 bool band = inBand[room.Index];
                 int cells = room.Cells.Count;
-                room.Open = rng.Percent(band ? profile.OpenBandRoomPercent : profile.OpenCoreRoomPercent);
+                room.Open = rng.Percent(band ? style.OpenBandRoomPercent : style.OpenCoreRoomPercent);
                 if (room.Open)
                 {
                     room.Kind = band && cells >= 2 ? RoomKind.WindowHall : RoomKind.Lounge;

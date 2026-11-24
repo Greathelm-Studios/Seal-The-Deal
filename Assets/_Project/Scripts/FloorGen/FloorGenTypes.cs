@@ -53,6 +53,15 @@ namespace CloseTheDeal.FloorGen
         Lightbox_Wall_Wave
     }
 
+    /// <summary>The shape of a floor's plan, picked by the seed.</summary>
+    public enum FloorPlanType : byte
+    {
+        CoreOffice,
+        OpenPlan,
+        Cellular,
+        Gallery
+    }
+
     public enum RoomKind : byte
     {
         Ring,
@@ -227,6 +236,7 @@ namespace CloseTheDeal.FloorGen
         public bool Valid;
         public readonly List<string> Problems = new();
 
+        public FloorPlanType PlanType;
         public int Cols, Rows;
         public int RingX0, RingY0, RingX1, RingY1;
         public int[] RoomOf;

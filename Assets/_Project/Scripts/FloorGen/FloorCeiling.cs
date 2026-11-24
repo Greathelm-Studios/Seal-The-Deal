@@ -51,7 +51,7 @@ namespace CloseTheDeal.FloorGen
             Rows(layout, CeilingKind.Tiles, CeilingLineKind.Strip, StripAt);
         }
 
-        // A room's lines follow the corridor it fronts; with no corridor to follow, its window band, then its longer side.
+        // A closed room's rows run its longer side. Otherwise lines follow the corridor the room fronts, then its window band, then its longer side.
         static bool RunsSouth(FloorLayout layout, FloorRoom room)
         {
             int east = 0, south = 0;
@@ -70,6 +70,7 @@ namespace CloseTheDeal.FloorGen
                 }
             }
 
+            if (!room.Open && i1 - i0 != j1 - j0) return j1 - j0 > i1 - i0;
             if (east != south) return south > east;
             if (j1 < layout.RingY0 || j0 > layout.RingY1) return false;
             if (i1 < layout.RingX0 || i0 > layout.RingX1) return true;

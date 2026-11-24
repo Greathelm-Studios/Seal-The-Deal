@@ -6,7 +6,7 @@ The floor generator for the floor race ([FLOOR_RACE.md](FLOOR_RACE.md)). The "Me
 
 ## What the player sees
 
-Every floor of the building is a different office plan made from the KitOffice kit: a corridor loop you can always find again, named rooms off it, window halls along the glass, and a lift hidden somewhere. Each room's name is over its door, service rooms stand out in cobalt with the floor number on them, and desks are dressed as they are in KitOffice. Floor 10 has the manager's office behind a cobalt portal door. Both players in a match see exactly the same floor.
+Every floor of the building is a different office plan made from the KitOffice kit, in one of four layout types picked by the seed: a corridor loop you can always find again, named rooms off it, window halls along the glass, and a lift hidden somewhere. Each room's name is over its door, service rooms stand out in cobalt with the floor number on them, and desks are dressed as they are in KitOffice. Floor 10 has the manager's office behind a cobalt portal door. Both players in a match see exactly the same floor.
 
 ## Rules it follows
 
@@ -52,13 +52,29 @@ Added on 2026-11-24 after generated floors were put beside KitOffice and read as
 - **Cover.** The lone `Cover_Block_2m` in the court and the halls, which read as a stray white box, is now a `Counter_Capsule_2m` (the same crouch cover), with pod seats in the halls.
 - **The manager's office** adds a wave lightbox behind the desk and two visitor seats.
 
+## Layout types
+
+Added on 2026-11-24. The floor's first random draw picks its type by the four weights on `FloorGen.asset` (40, 20, 20, 20). Every type keeps the ring, the two exits per room and every check; a type only changes where the ring sits and how the rooms round it are cut. [Drawings](../proof/floor_gen_2026-11-24/types_3_layout_drawings.png), [walked](../proof/floor_gen_2026-11-24/types_2_walked.png), [ceilings from below](../proof/floor_gen_2026-11-24/types_1_ceilings_from_below.png).
+
+| Type | Ring | Rooms | Plays as |
+|---|---|---|---|
+| Core office | One or two bays in from the glass | The profile's own values | The floor as it was before types existed |
+| Open plan | Two bays in from the glass | Window rooms up to one bay longer and at least 85 in 100 open; at least 40 in 100 core rooms open | Wide halls of desks, long sightlines, little to hide behind |
+| Cellular | One or two bays in | No room longer than two bays; a quarter of the profile's open window rooms and no open core rooms | Small closed rooms, short sightlines, many doors |
+| Gallery | On the glass, no window rooms | The whole middle is blocks of rooms cut by cross corridors | The most junctions; the corridor itself has open windows |
+
+- A type changes only the values in the table. The rest of the profile applies to every type, so raising `Open Band Room Percent` still opens up every floor.
+- On floor 10 the ring's north side stays two bays in for every type, because the manager's office needs that band.
+- A floor is retried with a new type draw when it fails a check, so no type can leave a seed without a floor.
+- Rejected for now: a different corridor topology per type (a spine, a figure of eight, twin cores with a court). Each needs the ring check and the fairness checks rewritten for its shape; these four reuse them unchanged.
+
 ## The ceiling plan
 
 `FloorCeiling.Plan` runs once per floor, after walls and doors and before furniture. It draws no random numbers, so adding it changed no floor: the same seeds give the same rooms, starts and furniture as before. [Drawing of seed 1, floor 1](../proof/floor_gen_2026-11-24/ceiling_plan_drawing_seed1_floor1.png); before, after and KitOffice side by side are the `ceiling_*` sheets in the same folder.
 
 - **The spine.** One lit line, 0.3 m wide, over the middle of every corridor. Over the ring it is a closed loop, the partner of the cobalt band on the floor. Every cross corridor's line runs into it, so the lit network overhead is the route network. East-west runs own each junction and north-south runs stop at their edge, so nothing overlaps.
-- **Lanes.** Open halls and lounges keep the bare soffit with one 0.2 m line down the middle of each bay. A room's lines follow the corridor it fronts (most shared bays wins), then its window band, then its longer side. A lane carries on through every neighbouring hall bay that runs the same way and stops 0.5 m short of a wall or of a hall whose lanes run across it.
-- **Tiles.** Offices, kitchens, print rooms and archives get the flush `Ceiling_Grid_4x4` across the whole room and two rows of 0.2 m strips per bay, 1.25 m and 2.75 m in (the kit README's strip positions, so each sits inside a 0.5 m tile). Rows run the room's direction, unbroken from 0.5 m off one wall to 0.5 m off the other.
+- **Lanes.** Open halls and lounges keep the bare soffit with one 0.2 m line down the middle of each bay. A hall's lines follow the corridor it fronts (most shared bays wins), then its window band, then its longer side. A lane carries on through every neighbouring hall bay that runs the same way and stops 0.5 m short of a wall or of a hall whose lanes run across it.
+- **Tiles.** Offices, kitchens, print rooms and archives get the flush `Ceiling_Grid_4x4` across the whole room and two rows of 0.2 m strips per bay, 1.25 m and 2.75 m in (the kit README's strip positions, so each sits inside a 0.5 m tile). Rows run the room's longer side, unbroken from 0.5 m off one wall to 0.5 m off the other; a square room follows the corridor it fronts. The first version followed the corridor in every room, which left a room one bay wide and two deep with four stubby rows across it.
 - **Panels.** Meeting rooms and the manager's office keep the floating `Ceiling_Panel_4x4`, one per bay.
 - **Lights.** One room light at the centre of every Tiles or Panels bay.
 
@@ -72,7 +88,7 @@ Rejected: KitOffice's own rule of every line running east to west, wall to wall 
 
 Each step draws from one integer random stream seeded from `(seed, floor, attempt)`.
 
-1. **Ring.** Pick a rectangle one or two cells in from each facade. Its border cells are the ring corridor.
+1. **Type and ring.** Pick the layout type, then a rectangle as far in from each facade as the type says. Its border cells are the ring corridor.
 2. **Core.** The cells inside the ring. If the block is three or more cells deep, a cross corridor (the court) cuts it so no block is more than two cells thick. A second cross corridor may cut a wide block. Each block is then split into rooms of one to four cells.
 3. **Outer band.** The cells between ring and facade are split into rooms along each side. Corner rooms always reach round to touch the ring.
 4. **Lifts.** The exit lift takes a corner cell of a room (its door facing into that room, or onto a corridor). From floor 2 up, an arrival lift takes another, far from the exit.
@@ -120,9 +136,9 @@ The budget, and where the measured numbers below stand against it.
 | Thing | Budget | Measured |
 |---|---|---|
 | Kit pieces instantiated | 350 to 500 before the dressing; not re-set since | 469 to 685 with the dressing |
-| Generate (pure) | Under 5 ms | 5.4 to 5.6 ms on 2026-11-24 with the ceiling plan, the same as without it; over budget |
-| Build | Under 150 ms, hidden by the transition screen | 12.8 to 16.0 ms with the ceiling plan |
-| Draw calls | No number is set in [PERFORMANCE.md](PERFORMANCE.md) | about 3,100 on average with the ceiling plan |
+| Generate (pure) | Under 5 ms | 5.1 to 5.4 ms with layout types (5.4 to 5.6 ms before them); over budget |
+| Build | Under 150 ms, hidden by the transition screen | 10.9 to 14.4 ms with layout types |
+| Draw calls | No number is set in [PERFORMANCE.md](PERFORMANCE.md) | 2,800 to 3,500 on average with layout types, 4,800 in the worst view |
 | Loose props | 16 or fewer ([PROPS.md](PROPS.md)) | 16 spots offered |
 | Loot pickups | 8 or fewer (`FloorRaceProfile`) | Not built yet |
 | Realtime lights | No number set | One shadowless spot per closed room bay |
@@ -228,7 +244,28 @@ Sixteen layouts (four seeds, floors 1, 2, 5 and 10) were drawn and looked at: ri
 - Looked at: seed 1 floor 1, seed 4242 floor 5 and seed 77777 floor 10, each from six views (two along corridors, a closed room, an open hall, the court, and straight up at the whole ceiling) before and after, beside six KitOffice views. Sheets are in [proof/floor_gen_2026-11-24/](../proof/floor_gen_2026-11-24/).
 - Not checked: a client build, and a person walking it.
 
+**Layout types, 2026-11-24, edit mode sweep and one clean Play Mode run.**
+
+| What | Result |
+|---|---|
+| Floors passing every check (200 seeds x 10 floors) | 2,000 of 2,000 |
+| By type | Core office 829, open plan 382, cellular 375, gallery 414; none failed |
+| Needing more than one attempt | 95, 33, 40 and 44; the worst floor needed 4 |
+| Ceiling plans with a fault | 0 of 2,000 |
+| Generate time a floor (three runs) | 5.07 to 5.38 ms |
+| Kit pieces a floor | 564 on average, 948 at most |
+| Fewest spawn spots on any floor | 33 (24 needed) |
+| Build one floor (seeds 1, 2026, 77777 on floors 1, 5, 10; first cold build left out) | 10.9 to 14.4 ms |
+| Draw calls, average of four views, and worst view | 2,803 to 3,521, and 4,800 |
+
+- Every earlier number in this doc was measured on core office floors only, which is all there was.
+- A first Play Mode reading of 5,800 to 7,000 draw calls was wrong: a floor left by the capture script stood in the same place. The run above was repeated in a fresh Play Mode session.
+- Looked at: one floor of each type as a layout drawing, a ceiling drawing, two eye-height views and the whole ceiling from below.
+- Not checked: a client build, a person walking any type, and whether the fairness numbers feel right on an open plan floor, where the starts can see each other sooner.
+
 ## Known limitations
+
+- A gallery's cross corridors all run the same way on most floors, because the middle block is cut across its shorter side first.
 
 - The spine, lanes and strips all use one material at one brightness, and a line ends square: there is no end cap or junction piece.
 - Generated ceilings have none of KitOffice's district bands along the soffit.

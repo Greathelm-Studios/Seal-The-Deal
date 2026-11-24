@@ -60,9 +60,9 @@ namespace CloseTheDeal.Editor.FloorRace
                 {
                     int number = Mathf.Min(floor, profile.FloorCount);
                     FloorLayout layout = FloorGenerator.Generate(seed, number, profile);
-                    string name = $"floor_seed{seed}_f{number:00}.png";
+                    string name = $"floor_seed{seed}_f{number:00}_{layout.PlanType}.png";
                     File.WriteAllBytes(Path.Combine(folder, name), Draw(layout));
-                    File.WriteAllBytes(Path.Combine(folder, $"ceiling_seed{seed}_f{number:00}.png"), DrawCeiling(layout));
+                    File.WriteAllBytes(Path.Combine(folder, $"ceiling_seed{seed}_f{number:00}_{layout.PlanType}.png"), DrawCeiling(layout));
                     Describe(layout, name, report);
                 }
 
@@ -78,6 +78,10 @@ namespace CloseTheDeal.Editor.FloorRace
             int ceilingFaulty = 0, lines = 0, lights = 0;
             var problems = new Dictionary<string, int>();
             var faults = new List<string>();
+            string[] typeNames = System.Enum.GetNames(typeof(FloorPlanType));
+            var ofType = new int[typeNames.Length];
+            var failedOfType = new int[typeNames.Length];
+            var retriedOfType = new int[typeNames.Length];
             var watch = Stopwatch.StartNew();
             for (uint seed = 1; seed <= SweepSeeds; seed++)
                 for (int floor = 1; floor <= profile.FloorCount; floor++)
@@ -85,6 +89,9 @@ namespace CloseTheDeal.Editor.FloorRace
                     FloorLayout layout = FloorGenerator.Generate(seed * 2654435761u, floor, profile);
                     total++;
                     if (layout.Attempt == 0) firstTry++;
+                    else retriedOfType[(int)layout.PlanType]++;
+                    ofType[(int)layout.PlanType]++;
+                    if (!layout.Valid) failedOfType[(int)layout.PlanType]++;
                     maxAttempt = Mathf.Max(maxAttempt, layout.Attempt);
                     pieces += layout.Pieces.Count;
                     maxPieces = Mathf.Max(maxPieces, layout.Pieces.Count);
@@ -123,6 +130,8 @@ namespace CloseTheDeal.Editor.FloorRace
             text.AppendLine($"  Passed every check: {total - invalid} of {total}. On the first attempt: {firstTry}. Most attempts needed: {maxAttempt + 1}.");
             text.AppendLine($"  Generate time: {watch.Elapsed.TotalMilliseconds / (total + SweepSeeds):0.00} ms a floor on average (Editor, includes retries).");
             text.AppendLine($"  Kit pieces a floor: {pieces / total} on average, {maxPieces} at most. Fewest spawn spots on any floor: {minSpawn}.");
+            for (int t = 0; t < typeNames.Length; t++)
+                text.AppendLine($"  {typeNames[t]}: {ofType[t]} floors, {failedOfType[t]} failed, {retriedOfType[t]} needed more than one attempt.");
             text.AppendLine($"  Ceiling plans with a fault: {ceilingFaulty} of {total}. Lit lines a floor: {lines / total} on average. Room lights a floor: {lights / total} on average.");
             text.AppendLine($"  Repeat runs that differed: {mismatched} of {SweepSeeds}.");
             foreach (KeyValuePair<string, int> pair in problems)
@@ -151,7 +160,7 @@ namespace CloseTheDeal.Editor.FloorRace
 
         static void Describe(FloorLayout layout, string file, StringBuilder report)
         {
-            report.AppendLine($"== {file}: seed {layout.Seed}, floor {layout.Floor}, attempt {layout.Attempt + 1}, {(layout.Valid ? "PASSED" : "FAILED")}");
+            report.AppendLine($"== {file}: seed {layout.Seed}, floor {layout.Floor}, {layout.PlanType}, attempt {layout.Attempt + 1}, {(layout.Valid ? "PASSED" : "FAILED")}");
             foreach (string problem in layout.Problems)
                 report.AppendLine("   PROBLEM: " + problem);
             report.AppendLine($"   {layout.Pieces.Count} kit pieces, {layout.SpawnSpots.Count} spawn spots, {layout.LootSpots.Count} loot spots, {layout.PropSpots.Count} prop spots.");

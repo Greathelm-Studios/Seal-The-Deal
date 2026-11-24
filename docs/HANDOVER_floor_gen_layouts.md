@@ -33,7 +33,9 @@ How it is wired, so you know where to cut:
 
 **Ceiling plan (next step 2): built on 2026-11-24, not committed when this was written.** `FloorCeiling.cs` plans the whole ceiling in one pass and `FloorBuilder` draws its lit lines as one mesh; the layout preview tool draws it and the sweep checks it. Design, numbers and what was looked at: [systems/FLOOR_GEN.md](systems/FLOOR_GEN.md), "The ceiling plan". Harvey has not walked it yet and it has not been seen from a client.
 
-Not started: next steps 3, 4 and 5.
+**Layout types (next step 3): a first set of four built on 2026-11-24** (core office, open plan, cellular, gallery), picked by the seed with weights on `FloorGen.asset`. They vary where the ring sits and how rooms are cut; they do not change the corridor topology, and they have no room templates of their own. [systems/FLOOR_GEN.md](systems/FLOOR_GEN.md), "Layout types". Not walked, not seen from a client.
+
+Not started: next steps 4 and 5, and a layout type with a different corridor shape (KitOffice's twin-core court).
 
 ## What was checked
 
