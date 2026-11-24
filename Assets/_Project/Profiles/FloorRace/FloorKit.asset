@@ -50,4 +50,129 @@ MonoBehaviour:
   - {fileID: 9022734008587511144, guid: bfd962f9f379b9b469001188deefcd72, type: 3}
   - {fileID: 4525314554834132142, guid: 191c9f82debd0b847a5a8e38e14d909a, type: 3}
   - {fileID: 2868005037516622898, guid: 2f10039ebb8f74b47ad498d8a238b11b, type: 3}
+  - {fileID: 1168085108137811305, guid: 094d48afd68040a41b4bc4eda5156b07, type: 3}
+  - {fileID: 1042948512563583461, guid: 41e4514f65204974b88899a724ac5bd6, type: 3}
+  - {fileID: 3096254067431895067, guid: 9744a16942f78d64da1eb1aa532a32cb, type: 3}
+  - {fileID: 2777908167875625425, guid: bbbe7b1c33f301c408f895eeaa5b6256, type: 3}
+  - {fileID: 9097476797456887644, guid: 4850be49cfce1c94aba7942d8d76cd61, type: 3}
+  - {fileID: 5025679346811726288, guid: 15d822cc182187245bc9eedfa4d7e9ce, type: 3}
+  - {fileID: 1945005387608679438, guid: 3c4df924ae984bd4a9ac70ce58010f33, type: 3}
+  - {fileID: 7684732835094581206, guid: 1ca34e261ae9ffb4097f916da34ac74f, type: 3}
+  - {fileID: 5330185897500461430, guid: 86960247b16616d43b5a7a7407138324, type: 3}
   BuildingBelow: {fileID: 2100000, guid: 69b03e28be2ae824a95c75765de67aa7, type: 2}
+  Labels:
+  - Piece: 34
+    Material: {fileID: 2100000, guid: f1ed11fd9f96cc54fa0dc435f859f162, type: 2}
+    Centre: {x: 0, y: 0.9, z: 0.404}
+    Size: {x: 0.68, y: 1.5}
+    Back: 0
+  - Piece: 26
+    Material: {fileID: 2100000, guid: daaa949bee87e68449617b7e8d87a529, type: 2}
+    Centre: {x: -0.08, y: 0.6, z: 0.454}
+    Size: {x: 1.6, y: 0.36}
+    Back: 0
+  - Piece: 31
+    Material: {fileID: 2100000, guid: 0f44e71126e2fc64f9d2a0b74813c4b6, type: 2}
+    Centre: {x: 0.05, y: 1.635, z: 0.33900002}
+    Size: {x: 0.6, y: 0.09}
+    Back: 0
+  - Piece: 32
+    Material: {fileID: 2100000, guid: 16581534806edf54db517be995569c19, type: 2}
+    Centre: {x: 0, y: 0.765, z: 0.17899999}
+    Size: {x: 0.16, y: 0.08}
+    Back: 0
+  - Piece: 45
+    Material: {fileID: 2100000, guid: a55af213c2657ce41aeaf8cb17d1cf3b, type: 2}
+    Centre: {x: 1.8, y: 2.1, z: 0.063999996}
+    Size: {x: 3.48, y: 2.88}
+    Back: 0
+  - Piece: 11
+    Material: {fileID: 2100000, guid: 9813da2dd1830b54ba33cf08d01bef8b, type: 2}
+    Centre: {x: 2, y: 1.25, z: -0.036}
+    Size: {x: 4, y: 0.7}
+    Back: 0
+  - Piece: 11
+    Material: {fileID: 2100000, guid: 9813da2dd1830b54ba33cf08d01bef8b, type: 2}
+    Centre: {x: 2, y: 1.25, z: -0.063999996}
+    Size: {x: 4, y: 0.7}
+    Back: 1
+  - Piece: 12
+    Material: {fileID: 2100000, guid: 10424c88bc547344392d36b12ce6f495, type: 2}
+    Centre: {x: 1, y: 1.25, z: -0.036}
+    Size: {x: 2, y: 0.7}
+    Back: 0
+  - Piece: 12
+    Material: {fileID: 2100000, guid: 10424c88bc547344392d36b12ce6f495, type: 2}
+    Centre: {x: 1, y: 1.25, z: -0.063999996}
+    Size: {x: 2, y: 0.7}
+    Back: 1
+  - Piece: 19
+    Material: {fileID: 2100000, guid: 61ceba5817326f64b82b04de36650a78, type: 2}
+    Centre: {x: 0.18, y: 1.25, z: -0.036}
+    Size: {x: 0.36, y: 0.7}
+    Back: 0
+  - Piece: 19
+    Material: {fileID: 2100000, guid: 61ceba5817326f64b82b04de36650a78, type: 2}
+    Centre: {x: 0.18, y: 1.25, z: -0.063999996}
+    Size: {x: 0.36, y: 0.7}
+    Back: 1
+  - Piece: 19
+    Material: {fileID: 2100000, guid: 61ceba5817326f64b82b04de36650a78, type: 2}
+    Centre: {x: 1.8199999, y: 1.25, z: -0.036}
+    Size: {x: 0.36, y: 0.7}
+    Back: 0
+  - Piece: 19
+    Material: {fileID: 2100000, guid: 61ceba5817326f64b82b04de36650a78, type: 2}
+    Centre: {x: 1.8199999, y: 1.25, z: -0.063999996}
+    Size: {x: 0.36, y: 0.7}
+    Back: 1
+  Posters:
+  - {fileID: 2100000, guid: 2fbddb2fe3bd9d2418048bdd64e565e4, type: 2}
+  - {fileID: 2100000, guid: f153fc866ec92854c8b9138723f33300, type: 2}
+  - {fileID: 2100000, guid: 509c230e77b0b0e4d9665b2676473d25, type: 2}
+  - {fileID: 2100000, guid: dc494f0a35982a34783c64b9a5e40e55, type: 2}
+  - {fileID: 2100000, guid: 583883a5d26f88844b593deefb11fddd, type: 2}
+  - {fileID: 2100000, guid: b3db070620281d046bcf3977ded86f2a, type: 2}
+  - {fileID: 2100000, guid: 6606c67997c243d4a955ba7d858ba3bc, type: 2}
+  - {fileID: 2100000, guid: be1a0594afba0f34ca4f3e727a35ab94, type: 2}
+  - {fileID: 2100000, guid: c388c35701671494f84c88e98258b684, type: 2}
+  - {fileID: 2100000, guid: 3ec7eae76ab995c4b9f2d4b00aa01f42, type: 2}
+  - {fileID: 2100000, guid: 9e28528ea37e202439141f7a4fdd06e3, type: 2}
+  - {fileID: 2100000, guid: 74b4938e02fa0b54398fac83b6f35059, type: 2}
+  SignFont: {fileID: 11400000, guid: 98b2d8341cc274cb4af51ebffa193947, type: 2}
+  NumberColour: {r: 1, g: 1, b: 1, a: 1}
+  NameColour: {r: 0.07, g: 0.11, b: 0.27, a: 1}
+  IndicatorColour: {r: 0.45, g: 0.95, b: 1, a: 1}
+  RingBand: {fileID: 2100000, guid: a08f53e6c1760e84abfd13c79254d67a, type: 2}
+  SloganBand: {fileID: 2100000, guid: 69b03e28be2ae824a95c75765de67aa7, type: 2}
+  Slogans:
+  - TEAM PLAYERS ONLY
+  - NOBODY GETS BLAMED ALONE
+  - THE WORK OF THREE. THE SALARY OF ONE.
+  - OUR DOOR IS ALWAYS OPEN. PLEASE CLOSE IT.
+  - OVERTIME IS ITS OWN REWARD
+  - "WORK \xB7 LIFE \xB7 WORK"
+  - WORK FROM ANYWHERE. ALWAYS.
+  - WE PAY IN EXPOSURE, PIZZA AND EXPERIENCE
+  - YOUR WORK MATTERS (TO US)
+  - SMILE. IT'S BILLABLE.
+  - ONE BIG FAMILY
+  - DYSFUNCTION INCLUDED
+  - MANDATORY FUN BEGINS AT 17:00 SHARP
+  - GOOD ENOUGH IS THE NEW EXCELLENT
+  - LUNCH IS A MEETING
+  - STAY HUNGRY
+  - SAME MEETING. NEW TEMPLATE.
+  - WE'LL REMEMBER YOU AT THE NEXT RESTRUCTURING
+  - EVERY DEADLINE WAS YESTERDAY
+  - PASSION IS UNPAID
+  LightOdd: {r: 0.52, g: 0.62, b: 1, a: 1}
+  LightEven: {r: 0.5, g: 0.84, b: 1, a: 1}
+  LightIntensity: 6
+  LightRange: 6
+  LightAngle: 100
+  BounceIntensity: 2.5
+  BounceRange: 7
+  BounceColour: {r: 0.86, g: 0.91, b: 1, a: 1}
+  FloorReflections: 1
+  ReflectionSize: 256

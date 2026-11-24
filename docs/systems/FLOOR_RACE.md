@@ -171,7 +171,7 @@ On 2026-11-22, in the commit "Remove the two-tower mode", after the floor race h
 
 ## Known limitations
 
-- Glass does not break on generated floors and no lights are added ([FLOOR_GEN.md](FLOOR_GEN.md)).
+- Glass does not break on generated floors ([FLOOR_GEN.md](FLOOR_GEN.md)).
 - Lift doors move once per tick with no smoothing, and are not rewound when a client's movement is replayed, so a client stepping through closing doors can be corrected by a few centimetres.
 - The floor-change screen covers the view but players can still move and shoot under it for the second and a half it takes.
 - Joining mid-match puts the player at their firm's start for the floor, alive, wherever the fight is.

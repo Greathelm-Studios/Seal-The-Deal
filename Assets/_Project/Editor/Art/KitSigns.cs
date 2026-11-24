@@ -13,6 +13,9 @@ namespace CloseTheDeal.Editor.Art
         const string TextureSource = "ArtSource/Kit/signs/textures";
         const string Folder = "Assets/_Project/Art/Signs";
 
+        /// <summary>Where this tool keeps its sign materials, one per texture name.</summary>
+        public const string MaterialFolder = Folder;
+
         static readonly Vector2 ZoneSize = new Vector2(3.2f, 4.0f);
         const float ZoneBottom = 0.1f;
         const float WallGap = 0.006f;
@@ -58,6 +61,14 @@ namespace CloseTheDeal.Editor.Art
             ["Partition_Glass_Door_2m"] = Concat(Glazing("Glazing_Jamb", GlazingJamb * 0.5f, GlazingJamb),
                                                  Glazing("Glazing_Jamb", 2f - GlazingJamb * 0.5f, GlazingJamb)),
         };
+
+        /// <summary>Every piece label: the piece's name, its material's name, and where the panel sits on the piece.</summary>
+        public static IEnumerable<(string piece, string material, Vector3 centre, Vector2 size, bool back)> PieceLabels()
+        {
+            foreach (var pair in Labels)
+                foreach (Label label in pair.Value)
+                    yield return (pair.Key, label.Texture, label.Centre, label.Size, label.Back);
+        }
 
         const float GlassFront = -0.04f, GlassBack = -0.06f;
         const float GlazingCentreY = 1.25f, GlazingHeight = 0.7f;

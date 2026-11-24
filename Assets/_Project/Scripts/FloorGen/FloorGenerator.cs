@@ -127,6 +127,8 @@ namespace CloseTheDeal.FloorGen
             if (!layout.Nav.AllConnected())
                 layout.Problems.Add("The bare floor is not one connected area.");
             FloorFitOut.Place(layout, profile, ref rng, KeepClear(layout));
+            FloorFitOut.Settle(layout, profile, ref rng);
+            AddMarks(layout, ref rng);
             var allLoot = new List<FloorSpot>();
             PlaceSpots(layout, ref rng, profile, allLoot);
             PlaceStarts(layout, ref rng, profile, floor, allLoot);
@@ -498,7 +500,8 @@ namespace CloseTheDeal.FloorGen
             bool portal = a.Kind == RoomKind.ManagersOffice || b.Kind == RoomKind.ManagersOffice;
             if (!a.IsPublic && !b.IsPublic)
                 return new FloorEdge { Kind = EdgeKind.Solid, ThickTowardHigh = a.Kind != RoomKind.ManagersOffice, Portal = portal };
-            return new FloorEdge { Kind = a.IsPublic ? b.Front : a.Front, ThickTowardHigh = a.IsPublic, Portal = portal };
+            EdgeKind front = a.IsPublic ? b.Front : a.Front;
+            return new FloorEdge { Kind = front, ThickTowardHigh = a.IsPublic, Portal = portal, Accent = !portal && front == EdgeKind.Solid };
         }
 
         static FloorEdge LiftEdge(FloorLayout layout, int i, int j, int side, bool neighbourWalkable)
@@ -595,16 +598,24 @@ namespace CloseTheDeal.FloorGen
                 for (int i = 0; i < layout.Cols; i++)
                 {
                     int room = layout.RoomOf[layout.CellIndex(i, j)];
-                    Add(layout, KitPiece.Slab_4x4_LightLine, i * C, j * C, 0f, FloorToFloor);
-                    if (room < 0)
+                    FloorRoom r = room >= 0 ? layout.Rooms[room] : null;
+                    // Routes and open halls keep a bare soffit whose light line follows the way you walk.
+                    if (r != null && !r.IsPublic)
+                        Add(layout, KitPiece.Slab_4x4, i * C, j * C, 0f, FloorToFloor);
+                    else if (r != null && LinesRunSouth(layout, r, i, j))
+                        Add(layout, KitPiece.Slab_4x4_LightLine, (i + 1) * C, j * C, 90f, FloorToFloor);
+                    else
+                        Add(layout, KitPiece.Slab_4x4_LightLine, i * C, j * C, 0f, FloorToFloor);
+                    if (r == null)
                         continue;
 
                     Add(layout, KitPiece.Slab_4x4, i * C, j * C, 0f);
-                    FloorRoom r = layout.Rooms[room];
-                    if (r.IsCorridor)
+                    if (r.IsPublic)
                         continue;
-                    Add(layout, KitPiece.Ceiling_Panel_4x4, i * C, j * C, 0f, Soffit);
-                    if (r.Kind == RoomKind.OpenOffice || r.Kind == RoomKind.Meeting || r.Kind == RoomKind.ManagersOffice)
+                    bool carpeted = r.Kind == RoomKind.OpenOffice || r.Kind == RoomKind.Meeting || r.Kind == RoomKind.ManagersOffice;
+                    Add(layout, carpeted ? KitPiece.Ceiling_Panel_4x4 : KitPiece.Ceiling_Grid_4x4, i * C, j * C, 0f, Soffit);
+                    layout.Lights.Add(new FloorSpot { X = (i + 0.5f) * C, Y = (j + 0.5f) * C, Room = room });
+                    if (carpeted)
                         Add(layout, KitPiece.Carpet_Overlay_4x4, i * C, j * C, 0f);
                 }
 
@@ -655,6 +666,31 @@ namespace CloseTheDeal.FloorGen
             if (layout.HasArrivalLift) Shaft(layout, layout.ArrivalLift);
         }
 
+        // A corridor bay follows the corridor. An open hall takes one direction for the whole room: along its windows, or its longer side.
+        static bool LinesRunSouth(FloorLayout layout, FloorRoom room, int i, int j)
+        {
+            if (room.IsCorridor)
+                return Corridor(layout, i, j - 1) + Corridor(layout, i, j + 1) > Corridor(layout, i - 1, j) + Corridor(layout, i + 1, j);
+
+            int i0 = layout.Cols, i1 = -1, j0 = layout.Rows, j1 = -1;
+            foreach (int cell in room.Cells)
+            {
+                int ci = cell % layout.Cols, cj = cell / layout.Cols;
+                i0 = Math.Min(i0, ci); i1 = Math.Max(i1, ci);
+                j0 = Math.Min(j0, cj); j1 = Math.Max(j1, cj);
+            }
+
+            if (j1 < layout.RingY0 || j0 > layout.RingY1) return false;
+            if (i1 < layout.RingX0 || i0 > layout.RingX1) return true;
+            return j1 - j0 > i1 - i0;
+        }
+
+        static int Corridor(FloorLayout layout, int i, int j)
+        {
+            int room = layout.RoomAt(i, j);
+            return room >= 0 && layout.Rooms[room].IsCorridor ? 1 : 0;
+        }
+
         static bool Windowed(FloorLayout layout, int ai, int aj, int bi, int bj, int side)
         {
             return layout.EdgeOf(ai, aj, side).Kind == EdgeKind.FacadeWindow || layout.EdgeOf(bi, bj, side).Kind == EdgeKind.FacadeWindow;
@@ -680,7 +716,7 @@ namespace CloseTheDeal.FloorGen
             {
                 KitPiece piece = edge.DoorAt != 0
                     ? (edge.Portal ? KitPiece.Wall_Door_4m_PortalHead : KitPiece.Wall_Door_4m)
-                    : (edge.Portal ? KitPiece.Wall_Solid_4m_Cobalt : KitPiece.Wall_Solid_4m);
+                    : (edge.Portal || edge.Accent ? KitPiece.Wall_Solid_4m_Cobalt : KitPiece.Wall_Solid_4m);
                 Add(layout, piece, x, y, yaw);
                 return;
             }
@@ -753,6 +789,113 @@ namespace CloseTheDeal.FloorGen
             return clear;
         }
 
+        const float WallThick = 0.2f, MarkGap = 0.008f;
+        const int LightboxPercent = 40, PosterPercent = 40, PosterCount = 12;
+        const float LightboxInset = 0.2f;
+        const float PosterWidth = 0.9f, PosterTall = 1.2f, PosterHeight = 1.7f;
+        const float NumberSize = 2.6f, NumberHeight = 2.2f;
+        const float NameWidth = 2.4f, NameTall = 0.22f, NameHeight = 2.5f;
+        const float SloganTall = 0.62f, SloganHeight = 3.95f;
+        const int SloganPicks = 1000;
+
+        // Posters on bare outside walls, the floor number on each coloured room, and a name over every door off a walkway.
+        static void AddMarks(FloorLayout layout, ref FloorRandom rng)
+        {
+            const float C = FloorLayout.Cell;
+            var numbered = new HashSet<int>();
+            string number = layout.Floor.ToString("00");
+            for (int j = 0; j < layout.Rows; j++)
+                for (int i = 0; i < layout.Cols; i++)
+                {
+                    int room = layout.RoomOf[layout.CellIndex(i, j)];
+                    if (room < 0)
+                        continue;
+
+                    FloorRoom here = layout.Rooms[room];
+                    for (int side = 0; side < 4; side++)
+                    {
+                        FloorEdge edge = layout.EdgeOf(i, j, side);
+                        int dx = Side.Dx[side], dy = Side.Dy[side];
+                        float mx = (i + 0.5f + dx * 0.5f) * C, my = (j + 0.5f + dy * 0.5f) * C;
+                        if (edge.Kind == EdgeKind.FacadeSolid)
+                        {
+                            if (here.Kind == RoomKind.ManagersOffice)
+                                continue;
+                            int roll = rng.Range(0, 100);
+                            if (roll < LightboxPercent && WallIsBare(layout.Nav, i, j, side, 0, FloorNav.PerCell - 1))
+                                AddLightbox(layout, i, j, side);
+                            else if (roll < LightboxPercent + PosterPercent && WallIsBare(layout.Nav, i, j, side, 2, 5))
+                                layout.Marks.Add(new WallMark
+                                {
+                                    Kind = MarkKind.Poster, X = mx - dx * (WallThick + MarkGap), Y = my - dy * (WallThick + MarkGap),
+                                    Height = PosterHeight, Width = PosterWidth, Tall = PosterTall, NormalX = -dx, NormalY = -dy,
+                                    Index = rng.Range(0, PosterCount)
+                                });
+                            continue;
+                        }
+
+                        int other = layout.RoomAt(i + dx, j + dy);
+                        if (!here.IsPublic || other < 0 || layout.Rooms[other].IsPublic)
+                            continue;
+
+                        if (edge.DoorAt != 0)
+                        {
+                            bool alongX = dx == 0;
+                            layout.Marks.Add(new WallMark
+                            {
+                                Kind = MarkKind.RoomName, X = (alongX ? i * C + edge.DoorAt : mx) - dx * MarkGap, Y = (alongX ? my : j * C + edge.DoorAt) - dy * MarkGap,
+                                Height = NameHeight, Width = NameWidth, Tall = NameTall, NormalX = -dx, NormalY = -dy,
+                                Index = edge.Kind == EdgeKind.Solid ? 0 : 1, Text = layout.Rooms[other].Name
+                            });
+                        }
+                        else if (edge.Accent)
+                        {
+                            layout.Marks.Add(new WallMark
+                            {
+                                Kind = MarkKind.Slogan, X = mx - dx * MarkGap, Y = my - dy * MarkGap,
+                                Height = SloganHeight, Width = C, Tall = SloganTall, NormalX = -dx, NormalY = -dy, Index = rng.Range(0, SloganPicks)
+                            });
+                            if (numbered.Add(other))
+                                layout.Marks.Add(new WallMark
+                                {
+                                    Kind = MarkKind.FloorNumber, X = mx - dx * MarkGap, Y = my - dy * MarkGap,
+                                    Height = NumberHeight, Width = NumberSize, Tall = NumberSize, NormalX = -dx, NormalY = -dy, Text = number
+                                });
+                        }
+                    }
+                }
+        }
+
+        // The lightbox hangs from one end and faces along its own +Z, so each side of the plate has its own corner and turn.
+        static void AddLightbox(FloorLayout layout, int i, int j, int side)
+        {
+            const float C = FloorLayout.Cell;
+            float x0 = i * C + LightboxInset, x1 = (i + 1) * C - LightboxInset, y0 = j * C + LightboxInset, y1 = (j + 1) * C - LightboxInset;
+            (float x, float y, float yaw) = side switch
+            {
+                Side.North => (x1, y0, 180f),
+                Side.South => (x0, y1, 0f),
+                Side.West => (x0, y0, 90f),
+                _ => (x1, y1, 270f)
+            };
+            layout.Pieces.Add(new KitPlacement { Piece = KitPiece.Lightbox_Wall_Wave, X = x, Y = y, Yaw = yaw, Still = true });
+        }
+
+        // True when nothing stands against this side of the bay between two half-metre steps along it.
+        static bool WallIsBare(FloorNav nav, int i, int j, int side, int from, int to)
+        {
+            const int P = FloorNav.PerCell;
+            for (int along = from; along <= to; along++)
+                for (int deep = 0; deep < 2; deep++)
+                {
+                    int a = side == Side.North || side == Side.South ? i * P + along : side == Side.West ? i * P + deep : i * P + P - 1 - deep;
+                    int b = side == Side.West || side == Side.East ? j * P + along : side == Side.North ? j * P + deep : j * P + P - 1 - deep;
+                    if (nav.Blocked[a + b * nav.W])
+                        return false;
+                }
+            return true;
+        }
+
         static readonly int[] SpawnNodes = { 4, 4, 2, 2, 5, 5, 2, 5, 5, 2 };
         static readonly int[] LootNodes = { 1, 1, 6, 6, 6, 1, 1, 6 };
 
@@ -800,10 +943,6 @@ namespace CloseTheDeal.FloorGen
                 if (!crowded)
                     layout.LootSpots.Add(spot);
             }
-
-            rng.Shuffle(layout.PropSpots);
-            if (layout.PropSpots.Count > profile.MaxProps)
-                layout.PropSpots.RemoveRange(profile.MaxProps, layout.PropSpots.Count - profile.MaxProps);
         }
 
         static readonly int[] GroupOffsets = { 0, 0, 2, 0, 0, 2, -2, 0, 0, -2, 2, 2, -2, -2, 2, -2, -2, 2 };

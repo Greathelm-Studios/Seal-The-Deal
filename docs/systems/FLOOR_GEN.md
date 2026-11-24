@@ -6,7 +6,7 @@ The floor generator for the floor race ([FLOOR_RACE.md](FLOOR_RACE.md)). The "Me
 
 ## What the player sees
 
-Every floor of the building is a different office plan made from the KitOffice kit: a corridor loop you can always find again, named rooms off it, window halls along the glass, and a lift hidden somewhere. Floor 10 has the manager's office behind a cobalt portal door. Both players in a match see exactly the same floor.
+Every floor of the building is a different office plan made from the KitOffice kit: a corridor loop you can always find again, named rooms off it, window halls along the glass, and a lift hidden somewhere. Each room's name is over its door, service rooms stand out in cobalt with the floor number on them, and desks are dressed as they are in KitOffice. Floor 10 has the manager's office behind a cobalt portal door. Both players in a match see exactly the same floor.
 
 ## Rules it follows
 
@@ -33,7 +33,24 @@ Every floor of the building is a different office plan made from the KitOffice k
 
 - A wall's thickness goes into the enclosed room, so corridors keep their full 4 m.
 - **Lift tile:** one cell holding `Lift_Car` and two `Lift_Door_Panel` leaves, positioned as KitOffice places them (car centre 2.075 m in from the door line, leaves 0.225 m in).
-- **Fit-out:** furniture is placed per cell from a small set of patterns per room kind (bench, meeting table, kitchen counter, copier and storage, cover block, planter). Patterns also hold the **authored spots**: where a player may spawn, where loot may lie, where a loose prop stands. Patterns are a code table in `FloorFitOut.cs` for now (see Known limitations).
+- **Fit-out:** furniture is placed per cell from a small set of patterns per room kind (bench, meeting table, kitchen counter, copier and storage, counter with pod seats, planter). Patterns also hold the **authored spots**: where a player may spawn, where loot may lie, where a loose prop stands. Patterns are a code table in `FloorFitOut.cs` for now (see Known limitations).
+
+## Dressing, matched to KitOffice
+
+Added on 2026-11-24 after generated floors were put beside KitOffice and read as bare. Each rule copies what `KitOfficeScene.cs` does by hand.
+
+- **Ceilings.** Corridors and open halls keep the bare soffit, and its light line follows the way you walk: along each corridor, and one direction for a whole hall (along its windows, or its longer side). Carpeted rooms (offices, meeting rooms, the manager's office) get the floating `Ceiling_Panel_4x4`. Kitchens, print rooms and archives get the flush `Ceiling_Grid_4x4`. Before this, every room bay had a floating panel and every light line ran east to west, so lines cut across the north and south corridors.
+- **Room lights.** One shadowless spot under the ceiling of every closed room bay, with KitOffice's light-pool values (intensity 6, range 6 m, 100 degree cone, its two firm tints by odd and even floor). The values are on `FloorKit.asset`.
+- **Colour.** A room whose front is a solid wall shows `Wall_Solid_4m_Cobalt` to the walkway, and one of those walls per room carries the floor number 2.6 m tall. Bare solid outside walls get a `Lightbox_Wall_Wave` (40 in 100) or a poster (40 in 100), skipped where furniture stands against the wall.
+- **Signs.** Each door off a walkway has the room's name over it: navy on white walls, white on the dark rail of a glass door. Each lift's indicator panel shows the floor ("5F"). Numbers and names are TextMesh Pro text in the UI's Saira face, so they are always right for the floor; KitOffice's own number, plate and lift textures say 1F and 2F and are not used.
+- **Slogans.** Every coloured wall bay has a pale stripe at 3.95 m with one line from the wall-text list in `ArtSource/Kit/posters/COPY.md`, picked by the seed. The lines are a list on `FloorKit.asset`.
+- **The ring band.** A 0.3 m cobalt stripe runs down the middle of the corridor loop, KitOffice's ring marking, so the loop can be found again from any corridor.
+- **Daylight on the ceilings.** Where the sun lands inside each window bay, a shadowless upward spot stands in for bounced sunlight, with `BounceLight.cs`'s values (intensity 2.5, range 7 m). It reads the scene's sun, so a scene with none gets none.
+- **Glossy floor.** Each floor has one box-projected reflection probe, rendered once when the floor is built, a face a frame. It is only made while **Realtime Reflection Probes** is ticked in Project Settings > Quality. Harvey had it switched on for the PC quality level on 2026-11-24; the Mobile level is still off, so floors are matte there. Unity's one-call cubemap capture was tried first and threw render errors under Forward+ lighting.
+- **Piece labels.** The builder adds KitOffice's label panels to pieces as it places them: the dot band on glass partitions, the vending machine, water server and reception desk labels, the lightbox graphic. `Fill Floor Kit` copies the list from `KitSigns` into `FloorKit.asset` when it is empty, with the materials KitOffice's build already wrote to `Art/Signs`.
+- **Desks.** A bench comes with keyboards, phones, document trays and PC towers as fixed pieces, and spots for four chairs and four monitors. The 16 loose props are still picked from all the spots on the floor; a chair or monitor spot that misses the cut gets the fixed `Chair_Task` or `Monitor_Flat` instead, so no desk is bare. A fixed chair closes the walk map round it, so nobody spawns inside one.
+- **Cover.** The lone `Cover_Block_2m` in the court and the halls, which read as a stray white box, is now a `Counter_Capsule_2m` (the same crouch cover), with pod seats in the halls.
+- **The manager's office** adds a wave lightbox behind the desk and two visitor seats.
 
 ## The algorithm
 
@@ -45,7 +62,7 @@ Each step draws from one integer random stream seeded from `(seed, floor, attemp
 4. **Lifts.** The exit lift takes a corner cell of a room (its door facing into that room, or onto a corridor). From floor 2 up, an arrival lift takes another, far from the exit.
 5. **Room kinds and names.** Each room is open plan (a window hall or lounge, no wall to the corridor) or enclosed (open office, meeting room, kitchen, print room, archive), with a wall finish that suits it. Names come from kind and compass position ("North-East Kitchen").
 6. **Walls and doors.** Edges are set from the two rooms either side. Then every room is given doors until it has at least two ways out, the first onto a corridor.
-7. **Fit-out.** Furniture patterns are placed, skipping any piece that would stand in front of a door.
+7. **Fit-out.** Furniture patterns are placed, skipping any piece that would stand in front of a door. Then the loose props are cut to the cap and the rest become fixed pieces, and the wall marks (lightboxes, posters, numbers, names) are chosen.
 8. **Walk map.** The floor is rasterised to a 0.5 m grid with every wall and furniture footprint, the furniture grown by a player's radius.
 9. **Starts, briefcase, spots.** Chosen on the walk map by real walking distance (below).
 10. **Check.** If any guarantee fails, the attempt number goes up and the floor is generated again, up to 24 times. The same attempt wins on every machine because the check is part of the pure function.
@@ -85,13 +102,13 @@ The budget, and where the measured numbers below stand against it.
 
 | Thing | Budget | Measured |
 |---|---|---|
-| Kit pieces instantiated | 350 to 500 | 399 to 441 |
-| Generate (pure) | Under 5 ms | 3.4 to 6.8 ms |
-| Build | Under 150 ms, hidden by the transition screen | 10.5 to 19.6 ms |
-| Draw calls | No number is set in [PERFORMANCE.md](PERFORMANCE.md) | About 2,700, 40% of KitOffice |
+| Kit pieces instantiated | 350 to 500 before the dressing; not re-set since | 469 to 685 with the dressing |
+| Generate (pure) | Under 5 ms | 4.7 to 4.9 ms with the dressing (about 3 ms before) |
+| Build | Under 150 ms, hidden by the transition screen | 10.1 to 11.7 ms with the dressing |
+| Draw calls | No number is set in [PERFORMANCE.md](PERFORMANCE.md) | 2,700 to 3,500 with the dressing |
 | Loose props | 16 or fewer ([PROPS.md](PROPS.md)) | 16 spots offered |
 | Loot pickups | 8 or fewer (`FloorRaceProfile`) | Not built yet |
-| Realtime lights | None added by the generator | None |
+| Realtime lights | No number set | One shadowless spot per closed room bay |
 
 ## Files
 
@@ -155,13 +172,33 @@ Sixteen layouts (four seeds, floors 1, 2, 5 and 10) were drawn and looked at: ri
 - Merged pieces are not picked up by it: with both on, draw calls were the same as with both off.
 - Counting free walk-map nodes with a running total instead of a scan was tried the same day and did not change generate time (about 3 ms a floor over 2,000 floors either way), so it was not kept. The time is in the flood fill itself.
 
+**The dressing, 2026-11-24, Editor Play Mode.**
+
+| What | Before | With the dressing |
+|---|---|---|
+| Floors passing every check (200 seeds x 10 floors) | 2,000 of 2,000 | 2,000 of 2,000 |
+| Kit pieces a floor, average | 410 | 602 |
+| Generate time a floor, average | 2.9 to 3.4 ms | 4.7 to 4.9 ms |
+| Build one floor (three seeds, floors 1, 5 and 10) | 4.3 to 9.6 ms | 10.1 to 11.7 ms |
+| Colliders | 372 to 404 | 476 to 671 |
+| Draw calls, average of four views | 2,351 to 2,778 | 2,704 to 3,477 |
+| Triangles, average | 590,000 to 780,000 | 1.1 to 2.2 million |
+
+- The extra generate time is mostly the walk map check for the fixed chairs. Checking every chair on its own took it to 5.5 to 6.8 ms, over budget; checking them all at once, and one by one only on a floor where that fails, brought it to 4.7 to 4.9 ms.
+- **Nobody spawns inside furniture.** 80 floors (20 seeds, floors 1, 4, 7 and 10) were built and a standing capsule tested at every spawn and start spot: 0 of 5,217 touched anything at 0.30 m or 0.40 m radius (the player's is 0.35). The same test with the capsule put on chairs and benches hit 497 of 497, so it can fail.
+- Frame time was compared by building one floor (seed 77777, floor 10) and switching the new chairs, monitors, desk items, lights and signs off and on in the same session, median of 300 frames. In an empty scene: about 7 ms a frame off and 8 ms on, with GPU time going from about 3 to 5.5 ms. In `FloorRace.unity` with the office look: 15 to 16 ms either way, inside the run-to-run spread. The Editor was slower that afternoon than in the morning's 3 ms readings, so only the off and on pairs compare.
+- Looked at: the same five floors (seeds 1, 2026, 4242, 9001 and 77777 on floors 1, 3, 5, 7 and 10) were captured before and after from five views each, beside five KitOffice views, plus close-ups of a door name, a poster, a lightbox, a floor number and a tiled service room. Captures are in `Temp/FloorGen/shots` and `shots2`, not committed.
+- The lift indicator, slogans, ring band and a glossy floor (with realtime probes switched on for the capture, then off again) were looked at in captures in `Temp/FloorGen/shots3`.
+- **The reflection probe's cost.** In `FloorRace.unity`, the 12 frames after a floor was built averaged 9.0 to 9.1 ms with the probe and 8.7 ms with it removed, worst frame about 15 ms either way (two warm pairs; a first cold run was slower in both build and frames).
+- Not checked: a client build (the dressing is built locally from the same layout, like the rest of the floor), and a person walking it.
+
 ## Known limitations
 
+- The reflection is taken once, as the floor is built, so it does not show players, loot or anything that moves.
+- Generated floors have the ring band but none of KitOffice's district colours, threshold strips or evacuation plans, which are drawn for its one plan.
 - Furniture patterns are a code table, not designer assets. A designer cannot add a room pattern without a programmer until there is an authoring tool.
 - Walls only run on the 4 m cell lines, so there are no 2 m corridors, alcoves or curved pieces.
 - Where two walls meet with their thickness on opposite sides, the outer corner shows a 0.2 m notch. The kit has no interior corner post.
 - One storey per floor: no stairs, court voids or bridges.
-- Labels and signs that KitOffice adds in the Editor (room plates, lift indicators, machine labels) are not placed at runtime.
 - Glass does not break on generated floors: the glass registry only indexes the old towers. Partitions stop players and shots; window bays are open.
-- No lights are added. A floor is lit by the scene's sun and ambient light only, so rooms away from the windows are flat.
 - Floors do not get harder as you climb ([FLOOR_RACE.md](FLOOR_RACE.md), open questions).

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using CloseTheDeal.Editor.Art;
 using CloseTheDeal.FloorGen;
 using CloseTheDeal.FloorRace;
 using UnityEditor;
@@ -16,6 +17,18 @@ namespace CloseTheDeal.Editor.FloorRace
         const string KitPrefabFolder = "Assets/_Project/Art/Kit/Prefabs";
         const string BelowMaterialPath = "Assets/_Project/Art/Kit/Materials/Wall_PaperWhite.mat";
         const string ReportPath = "Temp/FloorGen/build_report.txt";
+        const string SignFontPath = "Assets/_Project/UI/Fonts/SairaExpanded-Light SDF.asset";
+        const int PosterCount = 12;
+        const string RingBandPath = "Assets/_Project/Art/Signs/Band_Cobalt_Inlay.mat";
+        // ArtSource/Kit/posters/COPY.md, "Wall text".
+        static readonly string[] DefaultSlogans =
+        {
+            "TEAM PLAYERS ONLY", "NOBODY GETS BLAMED ALONE", "THE WORK OF THREE. THE SALARY OF ONE.", "OUR DOOR IS ALWAYS OPEN. PLEASE CLOSE IT.",
+            "OVERTIME IS ITS OWN REWARD", "WORK · LIFE · WORK", "WORK FROM ANYWHERE. ALWAYS.", "WE PAY IN EXPOSURE, PIZZA AND EXPERIENCE",
+            "YOUR WORK MATTERS (TO US)", "SMILE. IT'S BILLABLE.", "ONE BIG FAMILY", "DYSFUNCTION INCLUDED", "MANDATORY FUN BEGINS AT 17:00 SHARP",
+            "GOOD ENOUGH IS THE NEW EXCELLENT", "LUNCH IS A MEETING", "STAY HUNGRY", "SAME MEETING. NEW TEMPLATE.",
+            "WE'LL REMEMBER YOU AT THE NEXT RESTRUCTURING", "EVERY DEADLINE WAS YESTERDAY", "PASSION IS UNPAID"
+        };
         const int SettleFrames = 4, ViewsPerFloor = 4;
         const float Eye = 1.6f;
         static readonly uint[] Seeds = { 1u, 2026u, 77777u };
@@ -45,10 +58,53 @@ namespace CloseTheDeal.Editor.FloorRace
 
             if (kit.BuildingBelow == null)
                 kit.BuildingBelow = AssetDatabase.LoadAssetAtPath<Material>(BelowMaterialPath);
+            if (kit.Labels == null || kit.Labels.Length == 0)
+                kit.Labels = KitOfficeLabels(missing);
+            if (kit.Posters == null || kit.Posters.Length == 0)
+                kit.Posters = Posters(missing);
+            if (kit.RingBand == null)
+                kit.RingBand = AssetDatabase.LoadAssetAtPath<Material>(RingBandPath);
+            if (kit.SloganBand == null)
+                kit.SloganBand = AssetDatabase.LoadAssetAtPath<Material>(BelowMaterialPath);
+            if (kit.Slogans == null || kit.Slogans.Length == 0)
+                kit.Slogans = (string[])DefaultSlogans.Clone();
+            if (kit.SignFont == null)
+                kit.SignFont = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(SignFontPath);
             EditorUtility.SetDirty(kit);
             AssetDatabase.SaveAssetIfDirty(kit);
             return $"[Floor Race] Floor Kit: filled {filled} empty slots of {names.Length}." +
-                   (missing.Count > 0 ? " No kit prefab for: " + string.Join(", ", missing) + ". Run Import Kit." : "");
+                   (missing.Count > 0 ? " Not found: " + string.Join(", ", missing) + ". Run Import Kit, then Build Kit Office Scene for the sign materials." : "");
+        }
+
+        // The lift frame's label reads "1F", which is wrong on nine floors out of ten.
+        static PieceLabel[] KitOfficeLabels(List<string> missing)
+        {
+            var labels = new List<PieceLabel>();
+            foreach (var (piece, material, centre, size, back) in KitSigns.PieceLabels())
+            {
+                if (piece.StartsWith("Lift_") || !System.Enum.TryParse(piece, out KitPiece kitPiece))
+                    continue;
+                var loaded = AssetDatabase.LoadAssetAtPath<Material>($"{KitSigns.MaterialFolder}/{material}.mat");
+                if (loaded == null)
+                {
+                    missing.Add(material + ".mat");
+                    continue;
+                }
+                labels.Add(new PieceLabel { Piece = kitPiece, Material = loaded, Centre = centre, Size = size, Back = back });
+            }
+            return labels.ToArray();
+        }
+
+        static Material[] Posters(List<string> missing)
+        {
+            var posters = new List<Material>();
+            for (int k = 1; k <= PosterCount; k++)
+            {
+                var poster = AssetDatabase.LoadAssetAtPath<Material>($"{KitSigns.MaterialFolder}/Poster_{k:00}.mat");
+                if (poster != null) posters.Add(poster);
+                else missing.Add($"Poster_{k:00}.mat");
+            }
+            return posters.ToArray();
         }
 
         [MenuItem("Seal the Deal/Floor Race/Measure Floor Build (Play Mode)")]

@@ -41,7 +41,16 @@ namespace CloseTheDeal.FloorGen
         Planter_Box,
         Column_Graphic,
         Ceiling_Panel_4x4,
-        Carpet_Overlay_4x4
+        Carpet_Overlay_4x4,
+        Ceiling_Grid_4x4,
+        Chair_Task,
+        Chair_Pod,
+        Monitor_Flat,
+        Keyboard,
+        Phone_Desk,
+        Doc_Tray,
+        PC_Tower,
+        Lightbox_Wall_Wave
     }
 
     public enum RoomKind : byte
@@ -98,6 +107,8 @@ namespace CloseTheDeal.FloorGen
         /// <summary>True when the wall's thickness goes south (north edges) or east (west edges).</summary>
         public bool ThickTowardHigh;
         public bool Portal;
+        /// <summary>A solid wall in the floor's accent colour.</summary>
+        public bool Accent;
 
         public bool Passable => Kind == EdgeKind.Open || Kind == EdgeKind.LiftDoor || DoorAt != 0;
     }
@@ -120,6 +131,28 @@ namespace CloseTheDeal.FloorGen
     {
         public PropKind Kind;
         public float X, Y, Height, Yaw;
+    }
+
+    public enum MarkKind : byte
+    {
+        /// <summary>A poster; Index picks which one.</summary>
+        Poster,
+        /// <summary>The floor's number, large, on a coloured wall.</summary>
+        FloorNumber,
+        /// <summary>A room's name over its door. Index is 1 when the door is in a glass wall, whose dark head rail needs light lettering.</summary>
+        RoomName,
+        /// <summary>A line of company wisdom in a stripe high on a coloured wall; Index picks which one.</summary>
+        Slogan
+    }
+
+    /// <summary>Something flat on a wall face. X, Y is its centre in plan metres on the face; (NormalX, NormalY) points out of the wall.</summary>
+    public struct WallMark
+    {
+        public MarkKind Kind;
+        public float X, Y, Height, Width, Tall;
+        public int NormalX, NormalY;
+        public int Index;
+        public string Text;
     }
 
     public struct FloorLift
@@ -183,6 +216,9 @@ namespace CloseTheDeal.FloorGen
         public readonly List<FloorSpot> SpawnSpots = new();
         public readonly List<FloorSpot> LootSpots = new();
         public readonly List<PropSpot> PropSpots = new();
+        /// <summary>Centres of the bays that get a ceiling light, in plan metres.</summary>
+        public readonly List<FloorSpot> Lights = new();
+        public readonly List<WallMark> Marks = new();
 
         public FloorNav Nav;
         public float StartAToGoal, StartBToGoal, StartsApart, CaseToGoal, CaseToStartA, CaseToStartB;
