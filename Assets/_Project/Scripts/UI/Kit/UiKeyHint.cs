@@ -14,7 +14,7 @@ namespace CloseTheDeal.UI
         [SerializeField] InputActionAsset _actions;
         [Tooltip("The action as Map/Action, e.g. Player/Interact or UI/Cancel. Empty: the hint shows its text unchanged.")]
         [SerializeField] string _action = string.Empty;
-        [Tooltip("For a two-way action (Lean): which side, 'negative' or 'positive'. Empty otherwise.")]
+        [Tooltip("For a two-way action: which side, 'negative' or 'positive'. Empty otherwise.")]
         [SerializeField] string _part = string.Empty;
         [Tooltip("Shown on keyboard and mouse instead of the binding's own name (e.g. 'Mouse' for look). Empty: the binding's name.")]
         [SerializeField] string _keyboardText = string.Empty;

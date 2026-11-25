@@ -17,7 +17,7 @@ Master index of every gameplay, networking, UI, art, and tooling feature in **Se
 
 | Feature | Scope | Status | Verification | Doc | Code | Open Gaps / Decisions |
 |---|---|---|---|---|---|---|
-| Predicted movement (walk, sprint, crouch, slide, lean, mantle) | v1 | Current | Compiled; solo scripted checks | [PLAYER_MOVEMENT.md](systems/PLAYER_MOVEMENT.md) | `Scripts/Player/` | Confirm feel and 8-player reconcile bandwidth in live 4v4 |
+| Predicted movement (walk, sprint, crouch, slide, mantle) | v1 | Current | Compiled; solo scripted checks | [PLAYER_MOVEMENT.md](systems/PLAYER_MOVEMENT.md) | `Scripts/Player/` | Confirm feel and 8-player reconcile bandwidth in live 4v4 |
 | Active ragdoll chasing animation clips (`RagdollWorld`) | v1 | Current | Compiled; solo frame strips | [CHARACTER_ANIMATION.md](systems/CHARACTER_ANIMATION.md) | `Scripts/Player/` | Needs live playtest; Kevin Iglesias clips need licence/replacement decision |
 | True-POV first-person arms and held weapon (`PlayerViewmodel`) | v1 | Current | Compiled; solo F5 polish; pistol grip hand seen in play as host, standing (2026-11-21) | [VIEWMODEL.md](systems/VIEWMODEL.md) | `Scripts/Player/Viewmodel/` | `WeaponView` now drives it (kick, slide, reload) and no longer draws its own gun when it is present (2026-11-22, compiled, unplayed); `Equip` still not called, so the AR-15 shows as the pistol; left hand still the crumpling mitten |
 | Head-mounted animated eye cards | v1 | Current | Compiled; solo checked | [CHARACTER_EYES.md](systems/CHARACTER_EYES.md) | `Scripts/Player/` | Needs visual check in multiplayer |

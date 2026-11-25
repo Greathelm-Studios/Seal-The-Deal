@@ -1,6 +1,6 @@
 # Player Movement
 
-**Status:** Current · **Last updated:** 2026-11-21 · **Verified against:** the movement lane branch (`claude/lane-movement-864d86`), scripted play sessions in `Lane_Movement.unity`
+**Status:** Current · **Last updated:** 2026-11-24 · **Verified against:** the movement lane branch (`claude/lane-movement-864d86`), scripted play sessions in `Lane_Movement.unity`
 
 ## What happens in the game
 
@@ -13,7 +13,6 @@ You see the game in **first person** from your own eye; your body is hidden from
 - **Slide**: crouch while moving at 7 m/s or more and you drop into a slide with a 2.5 m/s kick (9 → 11.4 m/s out of a sprint) that carries 17.8 m on the flat. Downhill pulls you faster (9.3 → 10.4 m/s down a 20° ramp). Jump out of a slide and you keep its speed. The kick has a 1.5 s cooldown so crouch-spamming gives nothing.
 - **Climb and vault**: press Space at anything between 0.4 and 1.6 m tall in front of you (or jump into it while holding a direction). A desk takes 0.32 s to get on top of; the 1.6 m ledge 0.41 s. The 0.6 m **window sill is vaulted**: at a sprint you are over it and on the street in 0.5 s, still moving at 8.5 m/s. A climb keeps most of your speed (9.0 m/s in, 8.1 m/s out). Anything taller is **refused**: you just jump, and the game raises a "can't climb that" event saying why.
 - **Spiral stairs**: a whole flight (4.5 m) takes 1.9 s up and 1.5 s down at a sprint, with the feet on the treads the whole way. Going up, the tight turn costs speed: 8.2 m/s on average, 6.1 m/s at the slowest (see Known limitations).
-- **Lean** with Q / E on the floor: the view slides 0.45 m and tilts 12°, and stops at a wall. Shots leave from the leaned eye; other players see the body tilt.
 - **Look**: mouse, or the right stick at 240°/s across and 150°/s up and down at full tilt. Straight up and straight down both work (±89°).
 - A blast **throws** you and takes control away for a moment; it interrupts a climb at once.
 - **Esc or the pad's Start** opens the menu. With the menu open every input reads as idle: a jump in progress lands, then you stand still, and nothing pressed while the menu was open fires afterwards.
@@ -32,7 +31,6 @@ Your own moves show the instant you press them. The host is still the judge: if 
 | Sprint | Left Shift | Left stick press | `Sprint` | motor |
 | Jump | Space | South (A / Cross) | `JumpHeld`, `Consume(Jump)` | motor |
 | Crouch / slide | Left Ctrl, C | Right stick press (R3) | `Crouch` | motor |
-| Lean | Q / E | LB / RB | `Lean` (−1, 0, +1) | motor |
 | Attack | Left mouse | Right trigger | `Consume(Attack)`, `Held(Attack)` | weapons (movement never reads it) |
 | AltFire | Right mouse | Left trigger | `Consume(AltFire)`, `Held(AltFire)` | weapons (shooting lane) |
 | Interact | F | North (Y / Triangle) | `Consume(Interact)` | pickups and doors |
@@ -49,8 +47,8 @@ Presses are latched every frame and kept until the owning system consumes them o
 
 | Thing | Owner | Synced | Rate |
 |---|---|---|---|
-| Player body (position, velocity, state, jump timers, lean, crouch, slide, climb target and exit speed, event counters) | **Host.** The owning client predicts its own body. Other clients run each other player a few ticks past that player's last input that has arrived, repeating it (presses left out) for up to a third of a second, then letting go | Host → everyone: custom-serialized `MoveReconcile` (`Lean` quantized to `sbyte`, `Crouch` to `byte`, `StateTicksLeft` to `ushort`, packed flags, omitting `Mantle` unless mantling and `PendingKnock` when zero: 14 B payload plus `PredictionRigidbody` on normal ticks) | Every tick, 60/s |
-| Player input (move, yaw, sprint, crouch, jump press and hold, lean side) | Owning client | Client → host, about 19 B | Every tick, 60/s |
+| Player body (position, velocity, state, jump timers, crouch, slide, climb target and exit speed, event counters) | **Host.** The owning client predicts its own body. Other clients run each other player a few ticks past that player's last input that has arrived, repeating it (presses left out) for up to a third of a second, then letting go | Host → everyone: custom-serialized `MoveReconcile` (`Crouch` quantized to `byte`, `StateTicksLeft` to `ushort`, packed flags, omitting `Mantle` unless mantling and `PendingKnock` when zero: 13 B payload plus `PredictionRigidbody` on normal ticks, by count: 14 B was measured before the lean byte was removed) | Every tick, 60/s |
+| Player input (move, yaw, sprint, crouch, jump press and hold) | Owning client | Client → host, about 18 B by count (19 B was measured before the lean byte was removed) | Every tick, 60/s |
 | Animation state (`PlayerAnimState`) | Nobody: every machine works it out each frame from the body state above | Nothing extra | None |
 | Jump, landing, climb, refusal events | Counted on the tick inside the reconcile, raised once per change on every machine | Inside the reconcile | None |
 | Knockback | **Host only.** Clients never decide a hit | Arrives as part of the body state | On hit |
@@ -63,7 +61,7 @@ FishNet runs physics itself at 60 ticks/s (TimeManager physics mode) so predicte
 ## Designer-authored vs runtime-derived (AGENTS.md §4)
 
 **Authored, never written by runtime:** every field on `MovementProfile` (eye height, stick dead zones and look feel included); the capsule size on the Player prefab (its height is the standing height); spawn points; the Player layer.
-**Derived at runtime:** jump launch speed; the ticks left of control loss, climb, coyote, jump buffer and slide-kick cooldown; the ledge stand point and climb exit speed; the lean and crouch amounts; the crouched capsule height (the prefab's height is kept as the standing height and never written).
+**Derived at runtime:** jump launch speed; the ticks left of control loss, climb, coyote, jump buffer and slide-kick cooldown; the ledge stand point and climb exit speed; the crouch amount; the crouched capsule height (the prefab's height is kept as the standing height and never written).
 
 Timed states count **ticks remaining**, so a reconcile restores the count and a replay counts it down again.
 
@@ -90,7 +88,7 @@ Quake-lineage acceleration, written for this game:
 
 ## For the rig (Alex's character) and for sound, VFX and UI
 
-`PlayerMotor.AnimState` is a read-only `PlayerAnimState`, rebuilt once a frame on every machine: planar speed, move relative to facing (x right, y forward, m/s), grounded (from the move state, so never true while rising off a hop), vertical speed, crouch amount and crouched, lean, mantling and which kind, sprinting, sliding, knocked. Feed an Animator from it; never write back. No bones are streamed.
+`PlayerMotor.AnimState` is a read-only `PlayerAnimState`, rebuilt once a frame on every machine: planar speed, move relative to facing (x right, y forward, m/s), grounded (from the move state, so never true while rising off a hop), vertical speed, crouch amount and crouched, mantling and which kind, sprinting, sliding, knocked. Feed an Animator from it; never write back. No bones are streamed.
 
 Events on `PlayerMotor` (C# `event`s, raised once per real change on every machine, never twice for a replayed tick): `Jumped`, `Landed(fall speed)`, `MantleStarted(kind)`, `MantleRefused(why)`, `CrouchChanged`, `SprintChanged`, `SlideChanged`, `KnockedDown`. On `PlayerInputReader` (owner only): `Pressed(button)`, `WeaponSlotPressed(slot)`.
 
@@ -109,7 +107,6 @@ Read from `PlayerMotor.Local` (null until the local player has spawned; subscrib
 | Sliding | `bool`, `AnimState.Sliding`; event `SlideChanged(bool)` | Host / predicted | Slide state in the reconcile | Once at the start, once at the end |
 | Mantling | `bool`, `AnimState.Mantling`, `AnimState.MantleKind` (`Climb`, `Vault`); event `MantleStarted(MantleKind)` | Host / predicted | Move state and a counter in the reconcile | Event once per climb start |
 | Mantle refused | event `MantleRefused(MantleRefusal)`: `TooHigh` or `NoRoom` | Host / predicted | Counter in the reconcile, raised once per refusal on every machine | When the owner pressed jump at something that could not be climbed. Show it to the owner only (`motor == PlayerMotor.Local`) |
-| Lean | `float` -1..+1, `AnimState.Lean` | Host / predicted | Reconcile | Eases at the lean speed |
 | Jump / landing | events `Jumped()`, `Landed(float fallSpeed m/s)` | Host / predicted | Counters in the reconcile | Once per jump and per landing, including each hop of a chain |
 | Knocked down | `bool`, `AnimState.Knocked`; event `KnockedDown()` | Host | Move state | Once per blast |
 | Speed for the crosshair | `AnimState.PlanarSpeed` against `MovementProfile.WalkSpeed` and `SprintSpeed` | | | A crosshair that opens with speed reads these three numbers once a frame; it should not hold its own copy of the thresholds |
@@ -158,7 +155,7 @@ Built from the UI kit's prefabs by `Seal the Deal > Lanes > Add Movement HUD To 
 
 Under [Assets/_Project/Scripts/Player/](../../Assets/_Project/Scripts/Player/):
 
-- `PlayerMotor.cs`: the predicted tick and states; `PlayerMotor.Mantle.cs` climbing and vaulting; `PlayerMotor.Slide.cs` sliding; `PlayerMotor.Feedback.cs` the animation state, events and the body's lean and crouch pose. `ApplyKnockback` is the only outside way to move a player, and only the host may call it.
+- `PlayerMotor.cs`: the predicted tick and states; `PlayerMotor.Mantle.cs` climbing and vaulting; `PlayerMotor.Slide.cs` sliding; `PlayerMotor.Feedback.cs` the animation state, events and the body's crouch pose. `ApplyKnockback` is the only outside way to move a player, and only the host may call it.
 - `LedgeProbe.cs`: finds what can be climbed or vaulted, and why not.
 - `PlayerAnimState.cs`: the read-only state a rig reads.
 - `PlayerInputReader.cs`: the one place input is read; see Controls.
@@ -167,7 +164,7 @@ Under [Assets/_Project/Scripts/Player/](../../Assets/_Project/Scripts/Player/):
 - `Dev/PlayerMovementSession.cs`: the scripted play session; its host-and-client run found that every reader shared one actions asset, so a remote body spawning switched off the local player's input. Each reader now takes its own copy of the asset (editor and development builds only; wakes only on `-movementSession`).
 - `Combat/Knockback.cs` (not this lane's): turns a blast into `ApplyKnockback` calls; unchanged.
 
-Prefab: `Player.prefab` is a 1.8 m capsule with the pivot at the feet, mass 80, frictionless, rotation frozen. Its `Graphics` child is the FishNet graphical object: FishNet moves it smoothly between ticks, so visuals and camera never step. Under it, a `Lean` pivot at hip height (0.9 m) holds `Body`, a nested instance of the character model [STDMC_Toon](../../Assets/_Project/Art/Characters/STDMC/STDMC_Toon.prefab) with its feet at the player's feet. `Graphics` also carries `PlayerAnimator` and `PlayerRagdoll`, which pose the model's skeleton and run its ragdoll each frame ([CHARACTER_ANIMATION.md](CHARACTER_ANIMATION.md)). The owner's copy renders shadow-only (a part set to cast no shadow is hidden outright), and every part gets its own prefab shadow setting back when the owner leaves.
+Prefab: `Player.prefab` is a 1.8 m capsule with the pivot at the feet, mass 80, frictionless, rotation frozen. Its `Graphics` child is the FishNet graphical object: FishNet moves it smoothly between ticks, so visuals and camera never step. Under it, a hip pivot at 0.9 m (the object is still named `Lean`, from when players could lean) holds `Body`, a nested instance of the character model [STDMC_Toon](../../Assets/_Project/Art/Characters/STDMC/STDMC_Toon.prefab) with its feet at the player's feet. `Graphics` also carries `PlayerAnimator` and `PlayerRagdoll`, which pose the model's skeleton and run its ragdoll each frame ([CHARACTER_ANIMATION.md](CHARACTER_ANIMATION.md)). The owner's copy renders shadow-only (a part set to cast no shadow is hidden outright), and every part gets its own prefab shadow setting back when the owner leaves.
 
 ## Checking it
 
@@ -189,7 +186,7 @@ Run by the scripted session: the editor as host and a development player as clie
 - **Snap on the client** (the distance the host's correction moved the body's latest predicted position, after replaying the inputs the host had not yet seen): **0 corrections over 1 cm** through sprint, slide and hop, three chained hops, air strafing, a sprinting climb, a slide, the desk climb and crouch; **2 corrections, worst 2.0 cm** on the spiral stairs going up. A deliberate host-side blast the client could not predict showed a 199.5 cm snap, so the measure does see a snap. The view never moved against the body on those frames.
 - **The older "corrections" figures in the first logs were wrong**: they compared against a tick-indexed history that was labelled two or more ticks off the host's. `LastCorrectionMetres` now uses FishNet's pre- and post-reconcile events instead.
 - **The host seeing the client:** the client's body moved smoothly on the host (no frame moved against its velocity in the final run; one frame stepped 8.5 times its speed, cause not found).
-- **Other players' crouch, lean and slide on a client:** seen in full since the input fix (client saw the host crouch to 1.00, lean to 1.00, slide at 11.4 m/s; before it, 0.13, 0.20 and no slide). The cause was FishNet handing over empty input, flagged Ticked but not Created, for ticks whose real input hadn't arrived; the motor ran those as "let go of everything". It now repeats the last real input for up to 20 ticks (see Who owns what).
+- **Other players' crouch and slide on a client:** seen in full since the input fix (client saw the host crouch to 1.00, slide at 11.4 m/s; before it, 0.13 and no slide). The cause was FishNet handing over empty input, flagged Ticked but not Created, for ticks whose real input hadn't arrived; the motor ran those as "let go of everything". It now repeats the last real input for up to 20 ticks (see Who owns what).
 - **Not seen at all:** a real second machine, Steam, more than 2 players, packet loss, or ping above about 120 ms.
 
 ## Level rules (for whoever builds floors)
@@ -205,8 +202,7 @@ Run by the scripted session: the editor as host and a development player as clie
 - **The animated body is wider than its collision.** The capsule is 0.7 m across; swinging arms and a leaning torso pass through walls and door frames.
 - Other players are run ahead on their last input; when they let go or turn sharply, the next host state pulls them back, which can show as a small correction on their body.
 - No ladders or ziplines yet; climbing means mantling.
-- **A leaning player's head is not hittable.** The collider stays an upright capsule, so the 0.45 m of head that pokes round a corner can see and shoot but can't be hit. Fix when real hit detection lands: a head hitbox on the lean pivot.
-- No gamepad lean testing yet; it is bound to the shoulder buttons. Interact moved from E to F to free E for lean; nothing used Interact yet.
+- **Leaning was removed on 2026-11-24** (Harvey's request): Q, E and the pad's shoulder buttons do nothing in play, and shots always leave from the upright eye. Interact stays on F. Compiled and the input, settings rows and menu hint checked in the Editor; not seen from a client.
 - **Sprint speed dips at the foot of the spiral stairs.** With `Ground Turn Rate` 720°/s a sprint holds its speed round the flight's turn (the flight now takes 1.66 s, was 1.84 s; mean 7.8 m/s), but the step from the floor onto the first tread still dips it to about 5.3 m/s for a moment. Measured on the lane's slice, which uses the template tool's stair numbers (2.6 m treads, 0.8 m column, 4.5 m floors); the scripted run in the greybox tower placed the body on top of something at the start and measured nothing, so the real tower is not measured.
 - **Bandwidth at 8 players** (about 3.1 Mbit/s up from the host before packing) is too much for many home connections. The fix, when needed: send other players' reconciles less often than every tick, or cut the reconcile down (the climb target and exit can be sent only while climbing).
 - No ladders, ziplines or wall jumps.

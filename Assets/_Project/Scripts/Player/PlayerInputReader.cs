@@ -78,7 +78,6 @@ namespace CloseTheDeal.Player
         InputAction _lookStick;
         InputAction _sprint;
         InputAction _crouch;
-        InputAction _lean;
         int _latchedSlot;
 
         /// <summary>
@@ -127,19 +126,6 @@ namespace CloseTheDeal.Player
         /// <summary>True while jump is held, so letting go early can cut a jump short.</summary>
         public bool JumpHeld => Held(PlayerPress.Jump);
 
-        /// <summary>-1 leaning left, +1 leaning right, 0 upright. Both held cancel out.</summary>
-        public sbyte Lean
-        {
-            get
-            {
-                if (!Captured)
-                    return 0;
-
-                float axis = _lean.ReadValue<float>();
-                return axis < -0.5f ? (sbyte)-1 : axis > 0.5f ? (sbyte)1 : (sbyte)0;
-            }
-        }
-
         void EnsureInitialized()
         {
             if (_own != null || _actions == null)
@@ -155,7 +141,6 @@ namespace CloseTheDeal.Player
             _lookStick = _map.FindAction("LookStick", true);
             _sprint = _map.FindAction("Sprint", true);
             _crouch = _map.FindAction("Crouch", true);
-            _lean = _map.FindAction("Lean", true);
             for (int i = 0; i < PressCount; i++)
                 _presses[i] = _map.FindAction(PressActionNames[i], true);
             for (int i = 0; i < SlotCount; i++)

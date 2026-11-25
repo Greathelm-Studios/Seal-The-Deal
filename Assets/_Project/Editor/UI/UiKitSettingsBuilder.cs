@@ -23,8 +23,7 @@ namespace CloseTheDeal.Editor.UI
         static readonly (string action, string part)[] Bindings =
         {
             ("Jump", null), ("Sprint", null), ("Crouch", null), ("Attack", null),
-            ("AltFire", null), ("Reload", null), ("Lean", "negative"), ("Lean", "positive"),
-            ("Voice", null),
+            ("AltFire", null), ("Reload", null), ("Voice", null),
         };
 
         internal static GameObject Build()

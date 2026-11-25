@@ -49,8 +49,8 @@ namespace CloseTheDeal.Player
         [Tooltip("How far the gun slides across the view as it trails a turn, in metres per degree it trails. Gives the arm some weight rather than twisting the gun on the spot. 0 turns it off.")]
         [Min(0f)] public float LookLagShift = 0.0012f;
 
-        [Tooltip("How much the gun stays upright when you lean, as a fraction of the lean's tilt. 0 tilts the gun fully with the view; 1 keeps it level with the floor.")]
-        [Range(0f, 1f)] public float LeanCounterRoll = 0.35f;
+        [Tooltip("How much the gun stays upright when the view rolls in a strafe or a slide, as a fraction of the view's roll. 0 tilts the gun fully with the view; 1 keeps it level with the floor.")]
+        [Range(0f, 1f)] public float ViewRollCounter = 0.35f;
 
         [Header("Sprint carry")]
         [Tooltip("Where the gun moves to at full sprint, in metres from its resting place: right, up, forward. It blends in between walking and sprint speed.")]

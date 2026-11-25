@@ -113,16 +113,6 @@ namespace CloseTheDeal.Player
         [Tooltip("How early before landing a jump press is remembered and fired on touchdown, in seconds. 0.12 makes chained hops easy; 0 = must press on the ground.")]
         public float JumpBufferTime = 0.15f;
 
-        [Header("Lean")]
-        [Tooltip("How far the head slides sideways at full lean, in metres. 0.45 clears a door frame from a body tucked behind it. Shots leave from the leaned eye.")]
-        public float LeanDistance = 0.45f;
-
-        [Tooltip("How far the view tilts at full lean, in degrees. 12 reads clearly; above 20 gets disorienting.")]
-        public float LeanAngle = 12f;
-
-        [Tooltip("How fast the lean goes in and out, in full leans per second. 6 = about a sixth of a second to full lean.")]
-        public float LeanSpeed = 6f;
-
         [Header("Climbing")]
         [Tooltip("Highest ledge the player can climb onto, in metres above their feet. Keep below the player's height (1.8) or they climb things they can't reach. Measured from the feet, so a full jump adds its height on top.")]
         public float MaxLedgeHeight = 1.6f;

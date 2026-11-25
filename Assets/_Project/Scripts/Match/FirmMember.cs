@@ -15,7 +15,7 @@ namespace CloseTheDeal.MatchMode
     [RequireComponent(typeof(PlayerMotor))]
     public sealed class FirmMember : NetworkBehaviour
     {
-        /// <summary>Lane-local bindings, defined in code until the movement lane folds them into the shared actions asset. E is lean-right, so interact is F.</summary>
+        /// <summary>Lane-local bindings, defined in code until the movement lane folds them into the shared actions asset.</summary>
         public const string InteractKey = "<Keyboard>/f";
         public const string InteractPad = "<Gamepad>/buttonNorth";
         public const string DropKey = "<Keyboard>/g";
@@ -46,7 +46,7 @@ namespace CloseTheDeal.MatchMode
         /// <summary>A player fell out of the building. Raised on every machine, for sound and effects.</summary>
         public static event Action<FirmMember> OnFellOut;
 
-        [Tooltip("Where a carried briefcase hangs on this player, as other players see it. Built by the lane setup tool under the body's lean pivot; leave empty and the briefcase hangs at the player's feet.")]
+        [Tooltip("Where a carried briefcase hangs on this player, as other players see it. Built by the lane setup tool under the body's hip pivot; leave empty and the briefcase hangs at the player's feet.")]
         [SerializeField] Transform _carryAnchor;
 
         static readonly List<FirmMember> Members = new();

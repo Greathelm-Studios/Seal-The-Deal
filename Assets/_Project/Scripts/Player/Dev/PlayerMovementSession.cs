@@ -60,7 +60,8 @@ namespace CloseTheDeal.Player.Dev
         Vector3 _lastCameraPosition;
         bool _hasCameraPosition;
         // What the local machine saw the other player do.
-        float _remoteMaxCrouch, _remoteMaxLean, _remoteMaxSpeed;
+        float _remoteMaxCrouch, _remoteMaxSpeed;
+        const float ControlCrouchSeconds = 2f;
         bool _remoteSprinted, _remoteMantled, _remoteAirborne, _remoteSlid;
         int _localJumps, _localLands, _localRefusals, _localMantles, _localKnocks;
         float _lastLandSpeed;
@@ -261,16 +262,16 @@ namespace CloseTheDeal.Player.Dev
 
         int _lastOwnPose = -1, _lastOtherPose = -1;
 
-        /// <summary>One line whenever a body's crouch, lean, slide, sprint, grounded or climb state changes, for lining one machine's view of a body up with the other's.</summary>
+        /// <summary>One line whenever a body's crouch, slide, sprint, grounded or climb state changes, for lining one machine's view of a body up with the other's.</summary>
         void LogPose(string who, in PlayerAnimState a, ref int last)
         {
-            int packed = Mathf.RoundToInt(a.Crouch * 4f) | (Mathf.RoundToInt((a.Lean + 1f) * 2f) << 4) | ((a.Sliding ? 1 : 0) << 8)
+            int packed = Mathf.RoundToInt(a.Crouch * 4f) | ((a.Sliding ? 1 : 0) << 8)
                 | ((a.Sprinting ? 1 : 0) << 9) | ((a.Grounded ? 1 : 0) << 10) | ((a.Mantling ? 1 : 0) << 11);
             if (packed == last)
                 return;
 
             last = packed;
-            Note($"pose {who}: crouch {a.Crouch:0.00} lean {a.Lean:0.00} slide {a.Sliding} sprint {a.Sprinting} grounded {a.Grounded} climbing {a.Mantling} speed {a.PlanarSpeed:0.0}");
+            Note($"pose {who}: crouch {a.Crouch:0.00} slide {a.Sliding} sprint {a.Sprinting} grounded {a.Grounded} climbing {a.Mantling} speed {a.PlanarSpeed:0.0}");
         }
 
         struct SavedPrefs
@@ -496,7 +497,6 @@ namespace CloseTheDeal.Player.Dev
 
             PlayerAnimState seen = _remote.AnimState;
             _remoteMaxCrouch = Mathf.Max(_remoteMaxCrouch, seen.Crouch);
-            _remoteMaxLean = Mathf.Max(_remoteMaxLean, Mathf.Abs(seen.Lean));
             _remoteMaxSpeed = Mathf.Max(_remoteMaxSpeed, seen.PlanarSpeed);
             _remoteSprinted |= seen.Sprinting;
             _remoteMantled |= seen.Mantling;
@@ -1004,7 +1004,6 @@ namespace CloseTheDeal.Player.Dev
             yield return WalkSprintChecks();
             yield return JumpChecks();
             yield return CrouchChecks();
-            yield return LeanCheck();
             yield return DeskClimbCheck();
             yield return SillVaultCheck();
             yield return LedgeClimbChecks();
@@ -1260,24 +1259,6 @@ namespace CloseTheDeal.Player.Dev
             ReleaseAll();
             yield return Wait(0.5f);
             Check("stands once clear of the roof", Me.Crouch < 0.01f, $"crouch {Me.Crouch:0.00}");
-        }
-
-        IEnumerator LeanCheck()
-        {
-            yield return Place(new Vector3(0f, 0.05f, -4f), 0f);
-            Vector3 upright = View.transform.position;
-            Press(Key.E);
-            yield return Wait(0.5f);
-            float right = View.transform.position.x - upright.x;
-            Capture("lean_right");
-            Release(Key.E);
-            Press(Key.Q);
-            yield return Wait(0.7f);
-            float left = View.transform.position.x - upright.x;
-            Note($"lean: camera yaw {View.Yaw:0.0}, motor lean {Me.Lean:0.00}, view offset {View.transform.position - upright}, feet {Feet}");
-            ReleaseAll();
-            Check("lean on Q and E", Mathf.Abs(right - Me.Profile.LeanDistance) < 0.03f && Mathf.Abs(left + Me.Profile.LeanDistance) < 0.03f, $"view slid {right:0.00} m right, {left:0.00} m left");
-            yield return Wait(0.4f);
         }
 
         /// <summary>Space in front of a desk: climb onto it.</summary>
@@ -1705,8 +1686,8 @@ namespace CloseTheDeal.Player.Dev
             Note($"menu opened in mid-air: state {Me.State}, speed {Me.PlanarSpeed:0.0} m/s, reader captured {PlayerInputReader.Captured}");
             yield return Until(() => _localLands > lands, 2f, "lands with the menu open");
             yield return Wait(0.8f);
-            Check("menu opened mid-jump leaves the player idle", Me.State == MoveState.Grounded && Me.PlanarSpeed < 0.05f && Mathf.Abs(Me.Lean) < 0.01f && _localJumps == jumps + 1,
-                $"state {Me.State}, speed {Me.PlanarSpeed:0.00} m/s, lean {Me.Lean:0.00}, jumps +{_localJumps - jumps} with Space still held");
+            Check("menu opened mid-jump leaves the player idle", Me.State == MoveState.Grounded && Me.PlanarSpeed < 0.05f && _localJumps == jumps + 1,
+                $"state {Me.State}, speed {Me.PlanarSpeed:0.00} m/s, jumps +{_localJumps - jumps} with Space still held");
 
             // Press again while it is open, then close it with nothing held: nothing may fire late.
             Release(Key.Space);
@@ -1800,17 +1781,13 @@ namespace CloseTheDeal.Player.Dev
 
             HookRemote(other);
             Note("client joined; host showcase starts");
-            StartCoroutine(ThrowTheClientWhenItLeans());
+            StartCoroutine(ThrowTheClientWhenItHoldsACrouch());
             Section("host showing off, client watching");
             StartCoroutine(FilmRemote());
 
             // Things for the client to see this body do, once it has had time to start watching.
             yield return Wait(3.5f);
             Press(Key.LeftCtrl);
-            yield return Wait(1f);
-            ReleaseAll();
-            yield return Wait(0.5f);
-            Press(Key.E);
             yield return Wait(1f);
             ReleaseAll();
             yield return Wait(0.5f);
@@ -1862,13 +1839,21 @@ namespace CloseTheDeal.Player.Dev
         }
 
         /// <summary>The client's control check: a throw the host decides that the client could not have predicted.</summary>
-        IEnumerator ThrowTheClientWhenItLeans()
+        IEnumerator ThrowTheClientWhenItHoldsACrouch()
         {
-            yield return Until(() => _remote == null || !_remote.IsSpawned || _remote.AnimState.Lean > 0.9f, 220f, null);
-            if (_remote == null || !_remote.IsSpawned)
+            float held = 0f;
+            float until = Time.time + 220f;
+            while (_remote != null && _remote.IsSpawned && held < ControlCrouchSeconds && Time.time < until)
+            {
+                PlayerAnimState seen = _remote.AnimState;
+                held = seen.Crouched && seen.Grounded && seen.PlanarSpeed < 0.1f ? held + Time.deltaTime : 0f;
+                yield return null;
+            }
+
+            if (_remote == null || !_remote.IsSpawned || held < ControlCrouchSeconds)
                 yield break;
 
-            Note("host sees the client lean fully; throwing it");
+            Note("host sees the client hold a crouch; throwing it");
             _remote.ApplyKnockback(new Vector3(0f, 6f, 8f), 0.7f);
         }
 
@@ -1947,9 +1932,9 @@ namespace CloseTheDeal.Player.Dev
             int routeBacksteps = _cameraBacksteps;
             int routeCorrections = Me.CorrectionCount;
             Section("control: a blast the client cannot predict");
-            // Leaning is the signal: the client leans nowhere else, and the host throws it when it sees it.
-            Press(Key.E);
-            yield return Until(() => _localKnocks > 0, 4f, "the host threw the leaning client");
+            // A long still crouch is the signal: the client holds one nowhere else, and the host throws it when it sees it.
+            Press(Key.LeftCtrl);
+            yield return Until(() => _localKnocks > 0, ControlCrouchSeconds + 4f, "the host threw the crouching client");
             ReleaseAll();
             yield return Wait(1.5f);
             float control = _sectionWorst;
@@ -1959,8 +1944,8 @@ namespace CloseTheDeal.Player.Dev
             Note($"MEASURE client prediction, whole route: {routeCorrections} corrections over a centimetre, worst {routeWorst * 100f:0.0} cm (before the control blast); view speed at most {_worstCameraRatio:0.00}x the body's, moved against the body on {routeBacksteps} frames; ping {InstanceFinder.TimeManager.RoundTripTime} ms");
             Check("no rubber-banding on the client", routeWorst < 0.05f && routeBacksteps == 0, $"worst correction {routeWorst * 100f:0.0} cm, backward view frames {routeBacksteps}");
             ReportRemote("client saw the host");
-            Check("the host's animation state reached the client", _remoteMaxCrouch > 0.99f && _remoteMaxLean > 0.99f && _remoteSprinted && _remoteSlid && _remoteMantled && _remoteAirborne,
-                $"slid {_remoteSlid}, crouch {_remoteMaxCrouch:0.00}, lean {_remoteMaxLean:0.00}, sprinted {_remoteSprinted}, climbed {_remoteMantled}, airborne {_remoteAirborne}");
+            Check("the host's animation state reached the client", _remoteMaxCrouch > 0.99f && _remoteSprinted && _remoteSlid && _remoteMantled && _remoteAirborne,
+                $"slid {_remoteSlid}, crouch {_remoteMaxCrouch:0.00}, sprinted {_remoteSprinted}, climbed {_remoteMantled}, airborne {_remoteAirborne}");
 
             // Drop the connection in the middle of a sprint.
             Press(Key.W, Key.LeftShift);
@@ -2030,7 +2015,7 @@ namespace CloseTheDeal.Player.Dev
 
         void ReportRemote(string who)
         {
-            Note($"{who}: crouch up to {_remoteMaxCrouch:0.00}, lean up to {_remoteMaxLean:0.00}, speed up to {_remoteMaxSpeed:0.0} m/s, sprinting {_remoteSprinted}, sliding {_remoteSlid}, climbing {_remoteMantled}, airborne {_remoteAirborne}");
+            Note($"{who}: crouch up to {_remoteMaxCrouch:0.00}, speed up to {_remoteMaxSpeed:0.0} m/s, sprinting {_remoteSprinted}, sliding {_remoteSlid}, climbing {_remoteMantled}, airborne {_remoteAirborne}");
         }
     }
 }

@@ -46,8 +46,6 @@ namespace CloseTheDeal.Player
             public bool Crouch;
             /// <summary>Jump is held down; letting go while rising cuts the jump short.</summary>
             public bool JumpHeld;
-            /// <summary>-1 lean left, +1 lean right, 0 upright.</summary>
-            public sbyte Lean;
             public OneShots OneShots;
             uint _tick;
 
@@ -66,8 +64,6 @@ namespace CloseTheDeal.Player
             /// <summary>A throw the host has decided but the body's next tick has not applied yet.</summary>
             public Vector3 PendingKnock;
             public JumpTimers Jump;
-            /// <summary>-127 to +127: quantized lean (-1 to +1).</summary>
-            public sbyte Lean;
             /// <summary>0 to 255: quantized crouch (0 standing to 1 fully crouched).</summary>
             public byte Crouch;
             public FeedbackCounters Counters;
@@ -142,8 +138,9 @@ namespace CloseTheDeal.Player
         [Tooltip("The smoothed visual the camera follows. FishNet moves this child between ticks so motion never steps.")]
         [SerializeField] Transform _cameraTarget;
 
-        [Tooltip("The part of the visual that tilts and slides when this player leans, pivoting at the hips, so other players see the peek. Built by the greybox tool; leave empty and leaning still works, it just isn't shown on the body.")]
-        [SerializeField] Transform _leanPivot;
+        [Tooltip("The part of the visual that squashes toward the feet when this player crouches, pivoting at the hips. Built by the greybox tool; leave empty and crouching still works, it just isn't shown on a body with no crouch animation.")]
+        [UnityEngine.Serialization.FormerlySerializedAs("_leanPivot")]
+        [SerializeField] Transform _hipPivot;
 
         [Tooltip("Tick to squash the body down when this player crouches, so a crouch shows on a body with no animation. Untick once the character has a crouch animation of its own.")]
         [SerializeField] bool _squashBodyWhenCrouched = true;
@@ -155,7 +152,6 @@ namespace CloseTheDeal.Player
         const float CorrectionNoticeMetres = 0.01f;
         const byte MantleRise = 0;
         const byte MantleStepOnto = 1;
-        const float LeanShotRadius = 0.1f;
         const float MaxSnapSpeed = 12f;
         const float SnapSlack = 0.005f;
         const float MaxGroundTurnAngle = 100f;
@@ -192,7 +188,6 @@ namespace CloseTheDeal.Player
         MantleData _mantle;
         Vector3 _pendingKnock;
         JumpTimers _jump;
-        float _lean;
         float _crouch;
         FeedbackCounters _counters;
         SlideData _slide;
@@ -214,9 +209,6 @@ namespace CloseTheDeal.Player
             _profile = runtimeCopy != null ? runtimeCopy : _authoredProfile;
             _input.Profile = _profile;
         }
-
-        /// <summary>-1 to +1: how far this player is leaning, and which way. Moves once per tick.</summary>
-        public float Lean => _lean;
 
         /// <summary>0 standing to 1 fully crouched. Moves once per tick.</summary>
         public float Crouch => _crouch;
@@ -274,7 +266,6 @@ namespace CloseTheDeal.Player
             _mantle = default;
             _pendingKnock = Vector3.zero;
             _jump = default;
-            _lean = 0f;
             _crouch = 0f;
             _counters = default;
             _slide = default;
@@ -358,7 +349,6 @@ namespace CloseTheDeal.Player
                 Sprint = _input.Sprint,
                 Crouch = _input.Crouch,
                 JumpHeld = _input.JumpHeld,
-                Lean = _input.Lean,
                 // Attack and the other buttons belong to the weapon and item systems; movement only takes Jump.
                 OneShots = new OneShots { Jump = _input.Consume(PlayerPress.Jump) }
             };
@@ -374,7 +364,6 @@ namespace CloseTheDeal.Player
                 Mantle = _mantle,
                 PendingKnock = _pendingKnock,
                 Jump = _jump,
-                Lean = (sbyte)Mathf.RoundToInt(Mathf.Clamp(_lean, -1f, 1f) * 127f),
                 Crouch = (byte)Mathf.RoundToInt(Mathf.Clamp01(_crouch) * 255f),
                 Counters = _counters,
                 Slide = _slide
@@ -411,7 +400,6 @@ namespace CloseTheDeal.Player
             float yaw = Mathf.MoveTowardsAngle(_rigidbody.rotation.eulerAngles.y, input.Yaw, _profile.TurnSpeed * dt);
             _body.MoveRotation(Quaternion.Euler(0f, yaw, 0f));
 
-            LeanStep(input, dt);
             CrouchStep(input, dt);
             EndTick();
         }
@@ -476,7 +464,6 @@ namespace CloseTheDeal.Player
             _mantle = data.Mantle;
             _pendingKnock = data.PendingKnock;
             _jump = data.Jump;
-            _lean = data.Lean / 127f;
             _crouch = data.Crouch / 255f;
             _counters = data.Counters;
             _slide = data.Slide;
@@ -752,12 +739,6 @@ namespace CloseTheDeal.Player
             _pendingKnock = Vector3.zero;
         }
 
-        void LeanStep(MoveInput input, float dt)
-        {
-            float target = _state == MoveState.Grounded ? Mathf.Clamp(input.Lean, -1, 1) : 0f;
-            _lean = Mathf.MoveTowards(_lean, target, _profile.LeanSpeed * dt);
-        }
-
         void CrouchStep(MoveInput input, float dt)
         {
             bool inControl = _state == MoveState.Grounded || _state == MoveState.Airborne;
@@ -789,24 +770,6 @@ namespace CloseTheDeal.Player
 
             _capsule.height = height;
             _capsule.center = new Vector3(0f, height * 0.5f, 0f);
-        }
-
-        /// <summary>
-        /// Where shots should leave from: the eye, slid sideways by the current lean but never
-        /// through a wall. <paramref name="yaw"/> is the facing, in degrees around the vertical.
-        /// </summary>
-        public Vector3 LeanedEyePosition(float yaw)
-        {
-            Vector3 head = _rigidbody.position + Vector3.up * EyeHeight;
-            float reach = _profile.LeanDistance * Mathf.Abs(_lean);
-            if (reach < 0.001f)
-                return head;
-
-            Vector3 direction = Quaternion.Euler(0f, yaw, 0f) * Vector3.right * Mathf.Sign(_lean);
-            if (Physics.SphereCast(head, LeanShotRadius, direction, out RaycastHit wall, reach, _groundMask, QueryTriggerInteraction.Ignore))
-                reach = wall.distance;
-
-            return head + direction * reach;
         }
 
         GroundHit ProbeGround(float reach)
@@ -926,7 +889,6 @@ namespace CloseTheDeal.Player
 
             w.WriteUInt8Unpacked(value.Jump.Coyote);
             w.WriteUInt8Unpacked(value.Jump.Buffer);
-            w.WriteInt8Unpacked(value.Lean);
             w.WriteUInt8Unpacked(value.Crouch);
             w.WriteUInt8Unpacked(value.Counters.Jumps);
             w.WriteUInt8Unpacked(value.Counters.Mantles);
@@ -971,7 +933,6 @@ namespace CloseTheDeal.Player
 
             data.Jump.Coyote = r.ReadUInt8Unpacked();
             data.Jump.Buffer = r.ReadUInt8Unpacked();
-            data.Lean = r.ReadInt8Unpacked();
             data.Crouch = r.ReadUInt8Unpacked();
             data.Counters.Jumps = r.ReadUInt8Unpacked();
             data.Counters.Mantles = r.ReadUInt8Unpacked();

@@ -127,7 +127,7 @@ namespace CloseTheDeal.Player
         /// <summary>Per-frame action and look-trail offset in view space (fire kick, reload dip, sprint carry, climb drop, look shift) for the body view.</summary>
         public Vector3 BodyViewMotionOffset { get; private set; }
 
-        /// <summary>Per-frame weapon rotation in view space for the body view, combining <see cref="RestTurn"/> with look lag, lean counter-roll, sprint carry, fire kick, reload tilt, and climb tilt.</summary>
+        /// <summary>Per-frame weapon rotation in view space for the body view, combining <see cref="RestTurn"/> with look lag, view-roll counter, sprint carry, fire kick, reload tilt, and climb tilt.</summary>
         public Quaternion BodyViewMotionRotation { get; private set; } = Quaternion.identity;
 
         /// <summary>The muzzle of the held weapon, or null while none is equipped.</summary>
@@ -443,8 +443,8 @@ namespace CloseTheDeal.Player
             float kick = KickAmount(dt);
             StepReload(dt);
 
-            float leanTilt = Mathf.DeltaAngle(0f, _baseCamera.transform.eulerAngles.z);
-            float bodyRoll = _lag.y * _profile.LookLagRoll - leanTilt * _profile.LeanCounterRoll;
+            float viewRoll = Mathf.DeltaAngle(0f, _baseCamera.transform.eulerAngles.z);
+            float bodyRoll = _lag.y * _profile.LookLagRoll - viewRoll * _profile.ViewRollCounter;
 
             // The reload's knock comes along the grip, the way the left hand pushes the magazine in.
             Vector3 reloadShift = _held != null ? _held.ReloadShift : _profile.ReloadShift;

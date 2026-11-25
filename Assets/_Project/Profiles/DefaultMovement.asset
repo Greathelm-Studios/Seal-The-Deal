@@ -44,9 +44,6 @@ MonoBehaviour:
   JumpReleaseKeep: 0.5
   CoyoteTime: 0.12
   JumpBufferTime: 0.15
-  LeanDistance: 0.45
-  LeanAngle: 12
-  LeanSpeed: 6
   MaxLedgeHeight: 1.6
   MinLedgeHeight: 0.4
   LedgeReach: 0.7

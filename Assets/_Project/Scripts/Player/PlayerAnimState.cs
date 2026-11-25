@@ -20,8 +20,6 @@ namespace CloseTheDeal.Player
         public readonly bool Crouched;
         /// <summary>0 standing to 1 fully crouched, for blending the duck.</summary>
         public readonly float Crouch;
-        /// <summary>-1 full lean left to +1 full lean right.</summary>
-        public readonly float Lean;
         public readonly bool Mantling;
         /// <summary>Which climb is playing while <see cref="Mantling"/> is true.</summary>
         public readonly MantleKind MantleKind;
@@ -31,7 +29,7 @@ namespace CloseTheDeal.Player
         /// <summary>Thrown by a blast and not in control.</summary>
         public readonly bool Knocked;
 
-        public PlayerAnimState(Vector3 velocity, Quaternion facing, MoveState state, bool grounded, float crouch, float lean, MantleKind mantleKind, bool sliding, float sprintThreshold)
+        public PlayerAnimState(Vector3 velocity, Quaternion facing, MoveState state, bool grounded, float crouch, MantleKind mantleKind, bool sliding, float sprintThreshold)
         {
             Vector3 local = Quaternion.Inverse(facing) * new Vector3(velocity.x, 0f, velocity.z);
             LocalMove = new Vector2(local.x, local.z);
@@ -42,7 +40,6 @@ namespace CloseTheDeal.Player
             Grounded = state == MoveState.Grounded || (state == MoveState.Knocked && grounded);
             Crouch = crouch;
             Crouched = crouch > 0.5f;
-            Lean = lean;
             Mantling = state == MoveState.Mantling;
             MantleKind = mantleKind;
             Knocked = state == MoveState.Knocked;

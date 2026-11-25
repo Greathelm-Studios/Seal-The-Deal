@@ -16,7 +16,7 @@ namespace CloseTheDeal.UI
         {
             [Tooltip("The action in the Player map, e.g. Jump.")]
             public string Action;
-            [Tooltip("For a two-way action (Lean): which side, 'negative' or 'positive'. Empty otherwise.")]
+            [Tooltip("For a two-way action: which side, 'negative' or 'positive'. Empty otherwise.")]
             public string Part;
             [Tooltip("The row's whole object, shown or hidden with it.")]
             public GameObject Root;
@@ -452,7 +452,6 @@ namespace CloseTheDeal.UI
                 case "AltFire": return "Use item";
                 case "Throw": return "Drop / Throw";
                 case "Voice": return "Mute / Push to talk";
-                case "Lean": return string.Equals(part, "negative", StringComparison.OrdinalIgnoreCase) ? "Lean left" : "Lean right";
                 default: return action;
             }
         }

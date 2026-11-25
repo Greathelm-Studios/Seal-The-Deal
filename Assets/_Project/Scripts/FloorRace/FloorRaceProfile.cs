@@ -53,7 +53,7 @@ namespace CloseTheDeal.FloorRace
         [Tooltip("Seconds a player may be outside the floor's walls before it counts as falling to their death. Longer shows more of the fall.")]
         [Range(0f, 5f)] public float FallSeconds = 1.2f;
 
-        [Tooltip("How far outside the walls still counts as inside, in metres. Higher forgives leaning out of a window.")]
+        [Tooltip("How far outside the walls still counts as inside, in metres. Higher is more forgiving at windows and ledges.")]
         [Range(0f, 3f)] public float OutsideMargin = 0.75f;
 
         [Tooltip("How far below the floor a player must drop to be killed at once, in metres.")]

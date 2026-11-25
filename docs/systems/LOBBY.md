@@ -64,6 +64,6 @@ Late joiners receive the full `SyncList` on spawn; clients defer arrival greetin
 - Kicked players can rejoin immediately (banning requires persistent Steam ID tracking).
 - `TeamSpawner` ignores lobby firms while waiting in reception; `LobbyRunFlow.HostStartRun` applies lobby firm choices when the match starts ([INTEGRATION.md](INTEGRATION.md)).
 - One shared reception room is used (owner preference over per-firm ground floors).
-- Interact is **F** (gamepad north button), matching shared actions where **E** is lean-right; host panel gamepad binding is **D-pad Up hold (0.5 s)**.
+- Interact is **F** (gamepad north button); host panel gamepad binding is **D-pad Up hold (0.5 s)**.
 - Fonts use stand-in Liberation Sans; the secretary reuses the player STDMC model with idle breathing only (no seated desk animation or glasses).
 - Lobby remains joinable after a match starts (matching netcode behaviour).

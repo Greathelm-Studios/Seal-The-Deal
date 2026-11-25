@@ -81,7 +81,7 @@ namespace CloseTheDeal.Combat
         [Tooltip("How far back in time the host will look for where a target stood when the shooter fired, in seconds. 0.25 covers a 200 ms connection. Higher is kinder to laggy shooters but lets them hit people who have already reached cover. The host keeps half a second at most.")]
         [Range(0f, 0.5f)] [SerializeField] float _lagAllowanceSeconds = 0.25f;
 
-        [Tooltip("How far the shooter's eye may be from where the host has their body, in metres, before the host fires from its own position instead. Covers leaning and the shooter's own movement during lag; 2.5 allows sprinting on a 200 ms connection.")]
+        [Tooltip("How far the shooter's eye may be from where the host has their body, in metres, before the host fires from its own position instead. Covers the shooter's own movement during lag; 2.5 allows sprinting on a 200 ms connection.")]
         [Range(0.5f, 5f)] [SerializeField] float _originTolerance = 2.5f;
 
         /// <summary>The gun in hand changed (null for empty hands), with its slot. Every machine.</summary>
@@ -823,8 +823,8 @@ namespace CloseTheDeal.Combat
 
         /// <summary>
         /// Where the host lets a shot start. The shooter's own eye position is used when it is
-        /// close enough to where the host has the body, allowing for the lean and for how far a
-        /// moving body travels in the shooter's lag, and when nothing solid stands between the
+        /// close enough to where the host has the body, allowing for how far a moving body
+        /// travels in the shooter's lag, and when nothing solid stands between the
         /// host's eye and it (glass doesn't count). Otherwise the host's own eye: a shot can't
         /// start on the far side of a wall or a locked door.
         /// </summary>
@@ -1107,7 +1107,7 @@ namespace CloseTheDeal.Combat
         /// <summary>Same number on the shooter's game and the host's, different for every shot and every player.</summary>
         uint ShotSeed(ushort seq) => unchecked((uint)OwnerId * 0x9E3779B1u + seq);
 
-        /// <summary>Where the host has this player's eye, without the lean.</summary>
+        /// <summary>Where the host has this player's eye.</summary>
         Vector3 HostEye()
         {
             float height = _motor != null ? _motor.EyeHeight : FallbackEyeHeight;

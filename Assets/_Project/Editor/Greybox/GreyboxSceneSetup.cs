@@ -161,7 +161,7 @@ namespace CloseTheDeal.Editor.Greybox
             SetReference(serializedMotor, "_profile", movement);
             SetInt(serializedMotor, "_groundMask", ~(1 << PlayerLayer));
             SetReference(serializedMotor, "_cameraTarget", graphics);
-            SetReference(serializedMotor, "_leanPivot", leanPivot);
+            SetReference(serializedMotor, "_hipPivot", leanPivot);
             serializedMotor.ApplyModifiedPropertiesWithoutUndo();
 
             AddAnimator(graphics, motor);

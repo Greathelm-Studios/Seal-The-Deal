@@ -4,13 +4,13 @@ using UnityEngine;
 
 namespace CloseTheDeal.Player
 {
-    /// <summary>Local-only first-person camera following the owning player's eye, lean, crouch, and body-view head smoothing.</summary>
+    /// <summary>Local-only first-person camera following the owning player's eye, crouch, and body-view head smoothing.</summary>
     [RequireComponent(typeof(Camera))]
     public sealed partial class PlayerCamera : MonoBehaviour
     {
         public static PlayerCamera Instance { get; private set; }
 
-        [Tooltip("Closest the eye gets to a wall when leaning into it, in metres. Keep above the camera's near clip distance or the wall shows through.")]
+        [Tooltip("Closest the camera gets to a wall while it is pulled back watching the ragdoll, in metres. Keep above the camera's near clip distance or the wall shows through.")]
         [SerializeField] float _wallClearance = 0.2f;
 
         [Header("Ragdoll view")]
@@ -41,7 +41,6 @@ namespace CloseTheDeal.Player
         bool _forcedBodyShown;
         float _yaw;
         float _pitch;
-        float _shownLean;
         float _shownCrouch;
         float _restFov;
         float _edgeHeld;
@@ -80,7 +79,7 @@ namespace CloseTheDeal.Player
             int player = playerLayer >= 0 ? 1 << playerLayer : 0;
             int prop = propLayer >= 0 ? 1 << propLayer : 0;
             _aimMask = ~player;            // Skips all players so you never aim at yourself; the shot from your eye still hits anyone in its path.
-            _wallMask = ~(player | prop);  // Only the building stops a lean; furniture doesn't.
+            _wallMask = ~(player | prop);  // Only the building stops the ragdoll camera; furniture doesn't.
         }
 
         void OnDestroy()
@@ -129,7 +128,6 @@ namespace CloseTheDeal.Player
             Hud.CrosshairFeed.EnsureInScene();
             _yaw = target.eulerAngles.y;
             _pitch = 0f;
-            _shownLean = 0f;
             _shownCrouch = motor.Crouch;
             _slideRoll = 0f;
             _strafeRoll = 0f;
@@ -188,8 +186,7 @@ namespace CloseTheDeal.Player
             float dt = Time.deltaTime;
             Look(profile, dt);
 
-            // The motor's lean and crouch move once per tick; ease toward them at the same pace so the view never steps.
-            _shownLean = Mathf.MoveTowards(_shownLean, _motor.Lean, profile.LeanSpeed * dt);
+            // The motor's crouch moves once per tick; ease toward it at the same pace so the view never steps.
             _shownCrouch = Mathf.MoveTowards(_shownCrouch, _motor.Crouch, profile.CrouchRate * dt);
             float eye = _motor.StandingEyeHeight - _motor.CrouchEyeDrop * _shownCrouch;
             Vector3 head = _target.position + Vector3.up * eye;
@@ -210,23 +207,12 @@ namespace CloseTheDeal.Player
                 quick -= flatForward * (quickForward * 0.65f);
                 head += _headOffset + quick * _headFollow;
             }
-            // In the body view the real head has already leaned with the body; sliding the eye
-            // as well would lean it twice. The tilt below still applies.
-            float reach = _headBone != null ? 0f : profile.LeanDistance * Mathf.Abs(_shownLean);
-            Vector3 leanOffset = Vector3.zero;
-            if (reach > 0.001f)
-            {
-                Vector3 direction = Quaternion.Euler(0f, _yaw, 0f) * Vector3.right * Mathf.Sign(_shownLean);
-                if (Physics.SphereCast(head, _wallClearance, direction, out RaycastHit wall, reach, _wallMask, QueryTriggerInteraction.Ignore))
-                    reach = wall.distance;
-                leanOffset = direction * reach;
-            }
 
             float roll = Reduced ? 0f : SlideRoll(profile, dt) + StrafeRoll(profile, dt);
-            Quaternion rotation = Quaternion.Euler(_pitch, _yaw, -_shownLean * profile.LeanAngle + roll);
+            Quaternion rotation = Quaternion.Euler(_pitch, _yaw, roll);
             // The movement kick moves the eye along the view's own axes; it never turns the view.
             Vector3 kick = rotation * StepFeedback(profile, dt);
-            Vector3 fpPosition = head + leanOffset + kick;
+            Vector3 fpPosition = head + kick;
 
             bool wantRagdoll = _health != null && _health.IsIncapacitated && _ragdoll != null && _ragdoll.Running;
             if (wantRagdoll)

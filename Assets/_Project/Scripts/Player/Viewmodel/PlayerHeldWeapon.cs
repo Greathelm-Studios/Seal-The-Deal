@@ -71,7 +71,7 @@ namespace CloseTheDeal.Player
         Quaternion _supportRotation;
         bool _hasSupport;
         bool _leftArm;
-        Transform _leanPivot;
+        Transform _bodyPivot;
         Transform _gun;
         Vector3 _gripPosition;
         Quaternion _gripRotation;
@@ -149,14 +149,12 @@ namespace CloseTheDeal.Player
                 _leftHandScale = _support.Hand.localScale;
             }
 
-            // The model hangs off the pivot the motor tilts for a lean; its height on the
-            // prefab is fixed, a lean only slides it sideways.
             // The pivot is the child of this object that the model is somewhere under; the
             // Animator itself may sit deeper inside the model.
-            _leanPivot = avatar.transform;
-            while (_leanPivot.parent != null && _leanPivot.parent != transform)
-                _leanPivot = _leanPivot.parent;
-            _pivotHeight = _leanPivot.localPosition.y;
+            _bodyPivot = avatar.transform;
+            while (_bodyPivot.parent != null && _bodyPivot.parent != transform)
+                _bodyPivot = _bodyPivot.parent;
+            _pivotHeight = _bodyPivot.localPosition.y;
 
             FindHandMeshes(transform);
             _health = _motor.GetComponent<Health>();
@@ -508,8 +506,8 @@ namespace CloseTheDeal.Player
                 }
                 else
                 {
-                    Vector3 up = _leanPivot.up;
-                    eye = _leanPivot.position + up * (_motor.EyeHeight - _pivotHeight);
+                    Vector3 up = _bodyPivot.up;
+                    eye = _bodyPivot.position + up * (_motor.EyeHeight - _pivotHeight);
                     Vector3 aim = _motor.AimDirection;
                     if (Vector3.Cross(aim, up).sqrMagnitude < 1e-6f)
                         aim = transform.forward;

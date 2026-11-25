@@ -97022,8 +97022,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: '<b>WASD</b> move    <b>Shift</b> sprint    <b>Mouse</b> look    <b>Q /
-    E</b> lean
+  m_text: '<b>WASD</b> move    <b>Shift</b> sprint    <b>Mouse</b> look
 
     <b>Space</b> jump, hold to keep hopping    <b>Space at a ledge</b>
     climb
@@ -97034,7 +97033,6 @@ MonoBehaviour:
     <b>Pad</b>  sticks move and look   
     <b>A</b> jump    <b>B</b> crouch    <b>L3</b> sprint
 
-    <b>LB / RB</b> lean   
     <b>RT</b> fire    <b>Start</b> menu'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

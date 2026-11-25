@@ -135,7 +135,7 @@ Controls, Video and Audio:
 | Master, Music, Effects, Voice, Interface | `ctd.audio.*` | Lane 9's `UiAudio.SetVolume` |
 
 Interact (F) and Drop / Throw (G) have no Controls row: the pickups, firm and lobby code read those keys directly, so a row would rebind nothing. Being unlisted, F and G are refused to other actions ("F is kept for Interact"). They come back when ItemCarrier, FirmMember and LobbyInput read the player's binding.
-Left out until their game-side value exists: field of view (the camera keeps its own rest FOV; needs a hook from lane 1), stick dead zone (needs the profile value to show), lean / sprint / crouch toggle (hold only), screen shake (lane 2's shake has no player scale), secretary subtitles (LobbyHud draws them with no switch), play audio in the background, Interface size (no scaler hook), the crosshair editor, pad rebinding.
+Left out until their game-side value exists: field of view (the camera keeps its own rest FOV; needs a hook from lane 1), stick dead zone (needs the profile value to show), sprint / crouch toggle (hold only), screen shake (lane 2's shake has no player scale), secretary subtitles (LobbyHud draws them with no switch), play audio in the background, Interface size (no scaler hook), the crosshair editor, pad rebinding.
 Changes apply at once (no Apply step; the mockup's Apply / unsaved-changes flow is not used) and are written to disk when Settings closes and when the game quits, so dragging a slider doesn't write the disk on every step.
 
 ## Tools

@@ -32,7 +32,6 @@ namespace CloseTheDeal.Editor.Lanes
             ("Sprint", "Sprint", "", ""),
             ("Crouch", "Crouch", "", ""),
             ("Slide: sprint, then crouch", "Crouch", "", ""),
-            ("Lean left and right", "Lean", "", ""),
             ("Fire", "Attack", "", ""),
             ("Aim or alternate fire", "AltFire", "", ""),
             ("Use", "Interact", "", ""),
