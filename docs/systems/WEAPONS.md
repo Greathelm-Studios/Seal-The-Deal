@@ -122,6 +122,10 @@ Find the local player's `WeaponHolder` and `Health` on `PlayerMotor.Local`.
 
 **Sounds (`CombatSounds` + `CombatSoundSet` + `WeaponDefinition`):** Plays 3D shot, impact (world/body), dry fire, weapon draw, 3-stage reload (15%, 60%, 85%, cancelled on `ReloadCancelled`/`Died`), and glass shatter (`GlassPane.AnyBroken`), plus 2D hurt, death, and respawn sounds. Hit marker and kill ticks play through `UiSound` (`HitMarker`, `HitMarkerHead`, `KillConfirm`).
 
+- **Pistol audio (2026-11-28, mono 48 kHz WAVs; measured and QA-checked, not yet listened to by a human in Play Mode):**
+  - `Weapon_PistolShot.wav`: layered `lumina-sfx` design (`pistol-9mm`, `arcade-sidearm-dry-paper-target-report`, `small-door-latch-close` slide snap; CC0-1.0 recordings by TheGreenEyedGhost, fthgurdy, chewiesmissus on Freesound).
+  - `Weapon_PistolMagOut.wav`, `Weapon_PistolMagIn.wav`, `Weapon_ReloadSlide.wav`: `earshot` recipes built from public-domain recordings (`switch/push`, `lock/latch`, `slide/panel`, `click/thock`, `gun/reload`). `AR15.asset` keeps the shared `Weapon_ReloadMagOut.wav` / `Weapon_ReloadMagIn.wav` / `Weapon_ReloadCharge.wav` placeholders.
+
 ## The first-person arms model (viewmodel)
 
 When the player has a `PlayerViewmodel` (as `Player.prefab` does), `WeaponView` finds it and wires it: it draws neither its own first-person gun nor the third-person gun at `_thirdPersonAnchor` (the arms model draws the gun in the view and in the body's hand), so **Draw Held Gun** is ignored. It sets `Driven` while a gun is held (empty hands give the stand-in keys back), calls `Fire(GunKick)` on the owner's predicted shots and dry fires with the gun's **Feel: the gun in the hand** values, `CycleSlide()` on every shot on every machine, and `Reload(seconds)` / `CancelReload()` on the owner. Tracers, the flash and impacts leave from `PlayerViewmodel.Muzzle`. View kick, shake and FOV punch are unchanged. `SetExternalMuzzle` remains for an arms model that is not a `PlayerViewmodel`.

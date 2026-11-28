@@ -163,8 +163,8 @@ MonoBehaviour:
   ShotSound: {fileID: 8300000, guid: 440f94a7491c14792b1dcdc73fb1bb8a, type: 3}
   DryFireSound: {fileID: 8300000, guid: 1969725066cc54f6a9432240f8489bba, type: 3}
   DrawSound: {fileID: 8300000, guid: 51dbba3416c654e26962f360be259b28, type: 3}
-  MagazineOutSound: {fileID: 8300000, guid: efb188f0d11a84b5e96bd13925741ad7, type: 3}
-  MagazineInSound: {fileID: 8300000, guid: ad622dd94d2e4486d97af071a39f81f4, type: 3}
+  MagazineOutSound: {fileID: 8300000, guid: b4e7c19a2d5f4a839106c5e3f8a21d04, type: 3}
+  MagazineInSound: {fileID: 8300000, guid: e91a5d3b7c424f68a201d7b4c9e35f12, type: 3}
   ReloadEndSound: {fileID: 8300000, guid: c364ebc54a80941b585e7626e5f26cfb, type: 3}
   ViewPrefab: {fileID: 3327180144815012493, guid: c12e6a57a813649e9be11a5669a5387f, type: 3}
   ViewOffset: {x: 0.2, y: -0.17, z: 0.42}
